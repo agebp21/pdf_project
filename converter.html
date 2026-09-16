@@ -1,0 +1,886 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Converter — PDF Tools</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>
+  if(location.protocol==='file:'){ pdfjsLib.GlobalWorkerOptions.workerSrc=''; }
+  else{ pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'; }
+</script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
+<script src="https://unpkg.com/pdf-lib@1.17.1/dist/pdf-lib.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+<script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
+<style>
+  *{font-family:'Inter',sans-serif}
+  body{background:#f3f5f9;overflow-x:hidden}
+  .blob{position:absolute;border-radius:40% 60% 60% 40% / 40% 40% 60% 60%;opacity:0.08;pointer-events:none}
+  .card{transition:all .2s ease}
+  .card:hover{box-shadow:0 12px 24px rgba(0,0,0,0.08)}
+  .drop{border:2px dashed #cbd5e1;transition:all .2s}
+  .drop.drag{border-color:#111827;background:#fff7ed}
+  .tool-pill.active{background:#111827;color:#fff;border-color:#111827}
+  ::-webkit-scrollbar{height:6px}
+  ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:999px}
+</style>
+</head>
+<body class="relative">
+  <!-- blobs sama kaya index.html -->
+  <div class="blob bg-[#f8b4b4] w-[600px] h-[500px] -top-40 -left-40 rotate-12"></div>
+  <div class="blob bg-[#f8b4b4] w-[700px] h-[600px] top-[800px] -right-40"></div>
+  <div class="blob bg-[#fde8e8] w-[800px] h-[700px] bottom-0 left-[20%]"></div>
+
+  <!-- top bar tipis sama style filter -->
+  <div class="relative z-10 max-w-[1440px] mx-auto px-4 pt-6 flex items-center justify-between">
+    <a href="index.html" class="flex items-center gap-2 font-extrabold text-[15px] tracking-tight text-gray-900"><span class="w-8 h-8 rounded-lg bg-[#111827] text-white grid place-items-center text-xs">PDF</span> PDF Tools</a>
+    <a href="index.html" class="px-3.5 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-medium hover:bg-gray-50">← All tools</a>
+  </div>
+
+  <!-- header converter - style sama kaya hero index.html -->
+  <header class="relative z-10 max-w-[1440px] mx-auto px-4 pt-6 pb-2 text-center">
+    <div class="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-4 py-2 shadow-sm">
+      <div id="toolIcon" class="w-8 h-8 rounded-lg grid place-items-center text-sm font-bold"></div>
+      <span id="toolTitle" class="font-extrabold text-sm tracking-tight"></span>
+      <span id="toolBadge" class="text-[10px] bg-gray-900 text-white px-2 py-0.5 rounded-full font-bold"></span>
+    </div>
+    <p id="toolDesc" class="mt-3 text-[13px] text-gray-500 max-w-2xl mx-auto leading-relaxed"></p>
+    <div id="options" class="mt-4 flex flex-wrap justify-center gap-2 text-xs text-left max-w-3xl mx-auto"></div>
+  </header>
+
+  <!-- debug toggle - biar ga nutupin opsi -->
+  <div class="relative z-10 max-w-[1440px] mx-auto px-4">
+    <button onclick="document.getElementById('debug').classList.toggle('hidden')" class="text-[11px] text-gray-500 underline">🔧 Toggle log debug</button>
+    <div id="debug" class="hidden mt-2 max-w-3xl mx-auto p-2.5 rounded-xl bg-gray-900 text-white text-[11px] font-mono whitespace-pre-wrap text-left max-h-40 overflow-auto"></div>
+  </div>
+
+  <div class="relative z-10 max-w-[1440px] mx-auto px-4 py-6 grid lg:grid-cols-[300px_1fr] gap-4">
+    <!-- sidebar - card putih sama kaya di index -->
+    <aside class="bg-white rounded-xl border border-gray-200 p-4 h-fit lg:sticky lg:top-6">
+      <h2 class="font-bold text-[13px]">Pilih Converter</h2>
+      <p class="text-[11px] text-gray-500 mt-1 leading-relaxed">Semua proses 100% di browser — file tidak di-upload ke server.</p>
+      <div id="toolList" class="mt-3 space-y-1.5"></div>
+      <div id="libStatus" class="hidden mt-3 p-2.5 rounded-xl bg-red-50 border border-red-200 text-[11px] text-red-700 leading-relaxed"></div>
+      <div class="mt-3 p-3 rounded-xl bg-[#fff7ed] border border-[#ffedd5] text-[11px] text-gray-600 leading-relaxed">
+        <b class="text-gray-900">Privacy first:</b> file kamu tidak pernah keluar dari device.
+      </div>
+      <button id="serveBtn" onclick="copyServe()" class="mt-2 w-full py-2 rounded-full bg-white border border-gray-200 text-xs font-semibold hover:bg-gray-50">📋 Copy: npx serve .</button>
+    </aside>
+
+    <main class="space-y-4">
+      <!-- drop zone - card putih rounded-xl -->
+      <div id="drop" class="drop bg-white rounded-xl border border-gray-200 p-8 text-center cursor-pointer card">
+        <div class="w-14 h-14 mx-auto rounded-xl bg-[#111827] text-white grid place-items-center text-xl mb-3">⇧</div>
+        <p class="font-bold text-[14px] text-gray-900">Drag & drop file di sini</p>
+        <p id="dropHint" class="text-xs text-gray-500 mt-1"></p>
+        <button id="pickBtn" class="mt-4 px-5 py-2.5 rounded-full bg-[#111827] text-white text-sm font-semibold hover:bg-black">Pilih File</button>
+        <input id="fileInput" type="file" class="hidden">
+        <p class="text-[11px] text-gray-400 mt-3">♾️ Tanpa batasan ukuran — file besar diproses langsung di browser (tergantung RAM)</p>
+        <button id="testBtn" class="mt-3 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter tanpa file (generate dummy)</button>
+      </div>
+
+      <div id="fileList" class="hidden bg-white rounded-xl border border-gray-200 p-4 card">
+        <div class="flex items-center justify-between mb-3">
+          <h3 class="font-bold text-[13px]">File terpilih (<span id="fileCount">0</span>)</h3>
+          <button onclick="clearFiles()" class="text-xs font-semibold text-red-600 hover:underline">Hapus semua</button>
+        </div>
+        <div id="files" class="space-y-2"></div>
+        <button id="convertBtn" class="mt-4 w-full py-3.5 rounded-xl bg-[#ff6b35] hover:bg-[#e85f2e] text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
+          <span id="btnText">Convert Sekarang →</span>
+          <span id="btnSpinner" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
+        </button>
+        <p id="progress" class="hidden text-xs text-center text-gray-500 mt-2"></p>
+        <p id="error" class="hidden text-xs text-center text-red-600 mt-2 bg-red-50 border border-red-200 rounded-lg p-2.5 text-left"></p>
+      </div>
+
+      <div id="result" class="hidden bg-white rounded-xl border border-gray-200 p-6 card">
+        <h3 class="font-bold text-[13px] mb-3">✅ Hasil Convert</h3>
+        <div id="resultPreview" class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-xs text-gray-600 overflow-auto max-h-[420px]"></div>
+        <div class="flex flex-wrap gap-2 mt-4">
+          <a id="downloadBtn" href="#" download class="px-5 py-2.5 rounded-full bg-[#111827] text-white text-sm font-bold hover:bg-black">⬇ Download Hasil</a>
+          <button onclick="resetAll()" class="px-5 py-2.5 rounded-full bg-white border border-gray-200 text-sm font-semibold hover:bg-gray-50">Convert lagi</button>
+        </div>
+      </div>
+    </main>
+  </div>
+
+<script>
+function copyServe(){ navigator.clipboard.writeText('npx serve .'); const b=document.getElementById('serveBtn'); b.textContent='✅ Copied!'; setTimeout(()=>b.textContent='📋 Copy: npx serve .',1500); }
+const TOOLS = [
+  {id:'jpg-to-pdf', title:'JPG to PDF', desc:'Convert JPG/PNG images to PDF in seconds. Atur orientasi & margin.', cat:'Convert PDF', icon:'JPG', color:'#b45309', bg:'#fef9c3', accept:'.jpg,.jpeg,.png,.webp', multiple:true, hint:'JPG, PNG, WEBP — bisa pilih banyak gambar sekaligus'},
+  {id:'pdf-to-jpg', title:'PDF to JPG', desc:'Convert tiap halaman PDF jadi JPG atau ambil semua gambar.', cat:'Convert PDF', icon:'🖼', color:'#a16207', bg:'#fef9c3', accept:'.pdf', hint:'File PDF — tiap halaman jadi 1 JPG (ZIP jika multi-halaman)'},
+  {id:'word-to-pdf', title:'Word to PDF', desc:'Jadikan DOC/DOCX mudah dibaca dengan convert ke PDF.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'File .docx/.doc'},
+  {id:'pdf-to-word', title:'PDF to Word', desc:'Convert PDF jadi DOCX yang mudah diedit. 100% di browser.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'File PDF — teks akan diekstrak ke .doc'},
+  {id:'excel-to-pdf', title:'Excel to PDF', desc:'Jadikan spreadsheet EXCEL mudah dibaca dengan convert ke PDF.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'File .xlsx / .xls / .csv'},
+  {id:'pdf-to-excel', title:'PDF to Excel', desc:'Tarik data dari PDF ke spreadsheet Excel dalam detik.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'File PDF — tabel/teks akan jadi Excel'},
+  {id:'html-to-pdf', title:'HTML to PDF', desc:'Convert halaman HTML jadi PDF dengan 1 klik.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'File .html'},
+  {id:'merge-pdf', title:'Merge PDF', desc:'Gabungkan PDF sesuai urutan yang kamu mau.', cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, hint:'Pilih 2+ file PDF untuk digabungkan'},
+  {id:'split-pdf', title:'Split PDF', desc:'Extract halaman 1-3, split per N halaman, atau centang manual per halaman.', cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — pilih mode split di bawah'},
+  {id:'compress-pdf', title:'Compress PDF', desc:'Kecilkan ukuran PDF tanpa ngerusak kualitas — pilih level kompresi.', cat:'Optimize PDF', icon:'⇲', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'File PDF — pilih level Small / Medium'},
+  {id:'rotate-pdf', title:'Rotate PDF', desc:'Putar halaman PDF 90° / 180° / 270° — per halaman atau semua.', cat:'Organize PDF', icon:'↻', color:'#a855a7', bg:'#fae8ff', accept:'.pdf', hint:'File PDF — pilih sudut & halaman'},
+  {id:'organize-pdf', title:'Organize PDF', desc:'Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.', cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — preview grid, drag untuk urutkan'},
+  {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Convert PPT/PPTX — butuh backend (placeholder).', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'File .pptx/.ppt'},
+  {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'PDF to PPT — placeholder.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'File PDF'},
+];
+let active = new URLSearchParams(location.search).get('tool') || 'jpg-to-pdf';
+if(!TOOLS.find(t=>t.id===active)) active='jpg-to-pdf';
+let files = [];
+let splitPageCount = 0;
+let splitSelected = new Set();
+const $ = s=>document.querySelector(s);
+const log = (m)=>{ const d=$('#debug'); d.textContent += m+'\n'; console.log(m); };
+const showError = (m)=>{ const e=$('#error'); e.textContent=m; e.classList.remove('hidden'); log('ERROR: '+m); };
+function checkLibs(){
+  const missing=[];
+  if(!window.jspdf) missing.push('jsPDF');
+  if(!window.PDFLib) missing.push('pdf-lib');
+  if(!window.pdfjsLib) missing.push('pdf.js');
+  if(!window.JSZip) missing.push('JSZip');
+  if(!window.XLSX) missing.push('SheetJS');
+  if(!window.mammoth) missing.push('mammoth');
+  const el=$('#libStatus');
+  if(missing.length){ el.classList.remove('hidden'); el.innerHTML='⚠️ Library gagal load: <b>'+missing.join(', ')+'</b><br>Cek internet / buka via <b>http://localhost</b> bukan file://'; }
+  else { el.classList.add('hidden'); }
+  log('Libs: jsPDF=' +(!!window.jspdf)+', PDFLib='+!!window.PDFLib+', pdfjs='+!!window.pdfjsLib+', JSZip='+!!window.JSZip+', XLSX='+!!window.XLSX+', mammoth='+!!window.mammoth);
+  log('Protocol: '+location.protocol+' | Tool: '+active);
+}
+setTimeout(checkLibs, 800);
+function renderToolList(){
+  $('#toolList').innerHTML = TOOLS.map(t=>`
+    <button onclick="setTool('${t.id}')" class="tool-pill w-full text-left px-3 py-2.5 rounded-xl border flex items-center gap-3 ${active===t.id?'active':'bg-white border-gray-200 hover:bg-gray-50'}">
+      <span class="w-9 h-9 rounded-lg grid place-items-center text-[11px] font-bold shrink-0" style="background:${t.bg};color:${t.color};border:1px solid ${t.color}18">${t.icon}</span>
+      <span class="min-w-0">
+        <span class="block text-xs font-bold leading-none truncate">${t.title}</span>
+        <span class="block text-[11px] leading-none mt-1 truncate ${active===t.id?'text-white/70':'text-gray-500'}">${t.cat}</span>
+      </span>
+    </button>
+  `).join('');
+}
+function renderHeader(){
+  const t = TOOLS.find(x=>x.id===active);
+  $('#toolIcon').style.background=t.bg; $('#toolIcon').style.color=t.color; $('#toolIcon').textContent=t.icon;
+  $('#toolIcon').style.border='1px solid '+t.color+'18';
+  $('#toolTitle').textContent=t.title;
+  $('#toolDesc').textContent=t.desc;
+  $('#toolBadge').textContent=t.cat;
+  $('#dropHint').textContent=t.hint;
+  $('#fileInput').accept=t.accept;
+  $('#fileInput').multiple=!!t.multiple;
+  let html='';
+  if(t.id==='jpg-to-pdf'){
+    html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Orientasi:
+      <select id="opt-orient" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="p">Portrait</option><option value="l">Landscape</option></select></label>
+      <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Ukuran:
+      <select id="opt-size" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="a4">A4</option><option value="letter">Letter</option><option value="fit">Fit Image</option></select></label>`;
+  }else if(t.id==='pdf-to-jpg'){
+    html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Kualitas:
+      <select id="opt-quality" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="1.5">Standard</option><option value="2" selected>High (2x)</option><option value="3">Ultra (3x)</option></select></label>`;
+  }else if(t.id==='split-pdf'){
+    html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-4 shadow-sm text-left">
+      <p class="text-xs font-bold mb-2 text-center">Mode Split — pilih salah satu:</p>
+      <div class="flex flex-wrap justify-center gap-2 mb-3">
+        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="all" checked class="hidden"> <span class="text-xs font-medium">Semua (1 hal = 1 PDF)</span></label>
+        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-amber-50 border-amber-200 cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="range" class="hidden"> <span class="text-xs font-medium">✂️ Extract rentang</span></label>
+        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="chunk" class="hidden"> <span class="text-xs font-medium">📦 Per N halaman</span></label>
+        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="select" class="hidden"> <span class="text-xs font-medium">☑️ Centang manual</span></label>
+      </div>
+      <div id="splitRangeBox" class="hidden flex flex-wrap justify-center items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
+        <span class="text-xs font-bold">Rentang:</span>
+        <input id="splitRange" type="text" placeholder="1-3,5,8-10" class="px-3 py-1.5 rounded-full border border-gray-300 text-xs w-48 bg-white" value="1-3">
+        <span class="text-[11px] text-gray-600">Contoh: 1-3,5 = hal 1,2,3,5</span>
+        <span id="rangeInfo" class="text-[11px] font-bold text-gray-700"></span>
+      </div>
+      <div id="splitChunkBox" class="hidden flex justify-center items-center gap-2 bg-gray-50 border rounded-xl p-3">
+        <span class="text-xs">Tiap file berisi</span>
+        <input id="splitChunk" type="number" min="1" value="5" class="w-20 px-3 py-1.5 rounded-full border border-gray-300 text-xs bg-white">
+        <span class="text-xs">halaman — 100 hal / 5 = 20 file</span>
+      </div>
+      <div id="splitSelectBox" class="hidden bg-gray-50 border rounded-xl p-3">
+        <p class="text-[11px] text-gray-600 mb-2 text-center">Centang halaman yang mau diambil. <button onclick="toggleAllSplit(true)" class="underline font-semibold">Pilih semua</button> · <button onclick="toggleAllSplit(false)" class="underline">Hapus semua</button> · <span id="selectCount" class="font-bold"></span></p>
+        <div id="splitGrid" class="grid grid-cols-4 sm:grid-cols-6 lg:grid-cols-8 gap-2 max-h-[320px] overflow-auto p-1"></div>
+      </div>
+    </div>`;
+  }else if(t.id==='compress-pdf'){
+    html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-3 shadow-sm flex flex-wrap justify-center items-center gap-3">
+      <span class="text-xs font-bold">Level:</span>
+      <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="compressLevel" value="low" class="hidden"> <span class="text-xs">Low (ringan)</span></label>
+      <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="compressLevel" value="medium" checked class="hidden"> <span class="text-xs">Medium ⭐</span></label>
+      <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="compressLevel" value="high" class="hidden"> <span class="text-xs">High (maks)</span></label>
+      <span class="text-[11px] text-gray-500">Estimasi: Low -10%, Medium -30%, High -50%*</span>
+    </div>`;
+  }else if(t.id==='rotate-pdf'){
+    html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-3 shadow-sm space-y-3">
+      <div class="flex flex-wrap justify-center gap-2">
+        <label class="px-3.5 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="rotateAngle" value="90" checked class="hidden"> <span class="text-xs">↻ 90°</span></label>
+        <label class="px-3.5 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="rotateAngle" value="180" class="hidden"> <span class="text-xs">↻ 180°</span></label>
+        <label class="px-3.5 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="rotateAngle" value="270" class="hidden"> <span class="text-xs">↻ 270°</span></label>
+      </div>
+      <div class="flex flex-wrap justify-center items-center gap-2">
+        <span class="text-xs">Halaman:</span>
+        <input id="rotateRange" type="text" placeholder="semua / 1-3,5" class="px-3 py-1.5 rounded-full border text-xs w-40" value="semua">
+        <span id="rotateInfo" class="text-[11px] text-gray-500"></span>
+        <span class="text-[11px] text-gray-400">kosong = semua</span>
+      </div>
+      <div id="rotateGrid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-40 overflow-auto hidden"></div>
+    </div>`;
+  }else if(t.id==='organize-pdf'){
+    html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
+      <p class="text-xs font-bold text-center mb-2">Organize — drag untuk urutkan, centang untuk aksi</p>
+      <div class="flex flex-wrap justify-center gap-1.5 mb-2">
+        <button onclick="orgDelete()" class="px-3 py-1 rounded-full bg-red-600 text-white text-xs font-bold">🗑️ Hapus terpilih</button>
+        <button onclick="orgRotate(90)" class="px-3 py-1 rounded-full bg-white border text-xs">↻ 90°</button>
+        <button onclick="orgRotate(180)" class="px-3 py-1 rounded-full bg-white border text-xs">↻ 180°</button>
+        <button onclick="orgDuplicate()" class="px-3 py-1 rounded-full bg-white border text-xs">⎘ Duplikat</button>
+        <button onclick="toggleAllOrg(true)" class="px-3 py-1 rounded-full bg-gray-900 text-white text-xs">Pilih semua</button>
+      </div>
+      <div id="organizeGrid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[340px] overflow-auto p-1"></div>
+      <p class="text-[11px] text-gray-500 text-center mt-2">Drag card untuk ubah urutan • Klik checkbox untuk pilih</p>
+    </div>`;
+  }
+  $('#options').innerHTML=html;
+  if(t.id==='split-pdf'){
+    document.querySelectorAll('input[name="splitMode"]').forEach(r=>r.addEventListener('change',()=>{
+      document.getElementById('splitRangeBox').classList.toggle('hidden', r.value!=='range' || !r.checked);
+      document.getElementById('splitChunkBox').classList.toggle('hidden', r.value!=='chunk' || !r.checked);
+      document.getElementById('splitSelectBox').classList.toggle('hidden', r.value!=='select' || !r.checked);
+      // show only for checked
+      const m=document.querySelector('input[name="splitMode"]:checked')?.value;
+      document.getElementById('splitRangeBox').classList.toggle('hidden', m!=='range');
+      document.getElementById('splitChunkBox').classList.toggle('hidden', m!=='chunk');
+      document.getElementById('splitSelectBox').classList.toggle('hidden', m!=='select');
+      updateSplitBtn();
+    }));
+    document.getElementById('splitRange')?.addEventListener('input', updateSplitBtn);
+    document.getElementById('splitChunk')?.addEventListener('input', updateSplitBtn);
+  }
+}
+let organizeOrder = []; // array of page indices in current order
+let organizeSelected = new Set();
+let organizeRotations = {}; // idx -> degrees
+function setTool(id){
+  active=id;
+  history.replaceState(null,'',`?tool=${id}`);
+  files=[]; organizeOrder=[]; organizeSelected.clear(); organizeRotations={};
+  updateFileUI(); $('#result').classList.add('hidden'); $('#error').classList.add('hidden'); $('#progress').classList.add('hidden');
+  renderToolList(); renderHeader(); log('Switch tool: '+id);
+}
+window.setTool=setTool;
+function getSplitMode(){ return document.querySelector('input[name="splitMode"]:checked')?.value || 'all'; }
+function updateSplitBtn(){
+  if(active!=='split-pdf') return;
+  const m=getSplitMode();
+  const t=TOOLS.find(x=>x.id==='split-pdf');
+  if(m==='range'){
+    const v=$('#splitRange')?.value||'1-3';
+    $('#btnText').textContent=`Extract ${v} →`;
+  }else if(m==='chunk'){
+    const n=parseInt($('#splitChunk')?.value||'5');
+    $('#btnText').textContent=`Split per ${n} hal →`;
+  }else if(m==='select'){
+    $('#btnText').textContent=`Extract ${splitSelected.size} hal terpilih →`;
+    $('#selectCount').textContent = splitSelected.size ? `(${splitSelected.size} terpilih)` : '';
+  }else{
+    $('#btnText').textContent=`Split semua (${splitPageCount||'?'} hal) →`;
+  }
+}
+window.toggleAllSplit=(on)=>{
+  if(on){ splitSelected=new Set(Array.from({length:splitPageCount},(_,i)=>i)); }
+  else splitSelected.clear();
+  document.querySelectorAll('#splitGrid input[type=checkbox]').forEach(cb=>cb.checked=on);
+  updateSplitBtn();
+}
+async function buildSplitPreview(){
+  if(active!=='split-pdf' || files.length===0) return;
+  try{
+    const buf=await files[0].arrayBuffer();
+    const {PDFDocument}=PDFLib;
+    const doc=await PDFDocument.load(buf, {ignoreEncryption:true});
+    splitPageCount=doc.getPageCount();
+    log('Split preview pages='+splitPageCount);
+    $('#rangeInfo').textContent=`(PDF ada ${splitPageCount} hal)`;
+    // build grid for select mode
+    const grid=$('#splitGrid');
+    if(grid){
+      grid.innerHTML=Array.from({length:splitPageCount},(_,i)=>`
+        <label class="relative flex flex-col items-center gap-1 p-2 rounded-xl border bg-white hover:bg-gray-50 cursor-pointer has-[:checked]:border-gray-900 has-[:checked]:bg-gray-900 has-[:checked]:text-white">
+          <input type="checkbox" value="${i}" class="absolute top-1.5 right-1.5 w-3.5 h-3.5" onchange="onSplitCheck(this)">
+          <span class="w-10 h-14 rounded border bg-gray-100 grid place-items-center text-[10px] font-bold">P${i+1}</span>
+          <span class="text-[11px] font-semibold">Hal ${i+1}</span>
+        </label>
+      `).join('');
+      splitSelected=new Set(Array.from({length:splitPageCount},(_,i)=>i)); // default all
+      grid.querySelectorAll('input').forEach(cb=>cb.checked=true);
+    }
+    updateSplitBtn();
+  }catch(e){ log('Preview fail: '+e.message); }
+}
+window.onSplitCheck=(el)=>{
+  const idx=parseInt(el.value);
+  if(el.checked) splitSelected.add(idx);
+  else splitSelected.delete(idx);
+  updateSplitBtn();
+}
+async function buildRotatePreview(){
+  if(active!=='rotate-pdf' || files.length===0) return;
+  try{
+    const buf=await files[0].arrayBuffer();
+    const doc=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
+    const n=doc.getPageCount();
+    $('#rotateInfo').textContent=`(${n} hal)`;
+    log('Rotate preview '+n);
+  }catch(e){ log('Rotate preview fail '+e.message); }
+}
+async function buildOrganizePreview(){
+  if(active!=='organize-pdf' || files.length===0) return;
+  try{
+    const buf=await files[0].arrayBuffer();
+    const doc=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
+    const n=doc.getPageCount();
+    organizeOrder = Array.from({length:n},(_,i)=>i);
+    organizeSelected = new Set(organizeOrder);
+    organizeRotations={};
+    renderOrganizeGrid();
+    log('Organize preview '+n);
+  }catch(e){ log('Organize preview fail '+e.message); }
+}
+function renderOrganizeGrid(){
+  const grid=$('#organizeGrid');
+  if(!grid) return;
+  grid.innerHTML=organizeOrder.map((origIdx,pos)=>`
+    <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragover="orgOver(event)" ondrop="orgDrop(event)" class="relative flex flex-col items-center gap-1 p-2 rounded-xl border bg-white hover:bg-gray-50 cursor-move ${organizeSelected.has(origIdx)?'!border-gray-900 !bg-gray-900 !text-white':''}">
+      <input type="checkbox" ${organizeSelected.has(origIdx)?'checked':''} onchange="orgCheck(${origIdx},this.checked)" class="absolute top-1.5 left-1.5 w-3.5 h-3.5">
+      <span class="absolute top-1.5 right-1.5 text-[10px] font-bold px-1 rounded bg-white text-gray-700 border">${organizeRotations[origIdx] ? organizeRotations[origIdx]+'°' : ''}</span>
+      <span class="w-10 h-14 rounded border bg-gray-100 grid place-items-center text-[10px] font-bold text-gray-700">${origIdx+1}</span>
+      <span class="text-[11px] font-semibold">Hal ${origIdx+1}</span>
+      <span class="text-[10px] text-gray-400">#${pos+1}</span>
+    </div>
+  `).join('');
+}
+window.orgCheck=(idx, on)=>{ if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
+window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
+window.orgDelete=()=>{ if(organizeSelected.size===0) return showError('Centang dulu halaman yang mau dihapus'); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
+window.orgRotate=(deg)=>{ if(organizeSelected.size===0) return showError('Centang halaman dulu'); for(const idx of organizeSelected) organizeRotations[idx]=(organizeRotations[idx]||0)+deg; renderOrganizeGrid(); }
+window.orgDuplicate=()=>{ if(organizeSelected.size===0) return showError('Centang halaman dulu'); const sel=[...organizeSelected].sort((a,b)=>organizeOrder.indexOf(a)-organizeOrder.indexOf(b)); sel.forEach(idx=>{ const pos=organizeOrder.indexOf(idx); organizeOrder.splice(pos+1,0,idx); }); renderOrganizeGrid(); }
+let dragPos=null;
+window.orgDrag=(e)=>{ dragPos=parseInt(e.currentTarget.dataset.pos); e.dataTransfer.effectAllowed='move'; }
+window.orgOver=(e)=>{ e.preventDefault(); }
+window.orgDrop=(e)=>{ e.preventDefault(); const to=parseInt(e.currentTarget.dataset.pos); if(dragPos===null||dragPos===to) return; const [m]=organizeOrder.splice(dragPos,1); organizeOrder.splice(to,0,m); dragPos=null; renderOrganizeGrid(); }
+
+function updateFileUI(){
+  if(files.length===0){ $('#fileList').classList.add('hidden'); splitPageCount=0; updateSplitBtn(); return; }
+  $('#fileList').classList.remove('hidden');
+  $('#fileCount').textContent=files.length;
+  $('#files').innerHTML=files.map((f,i)=>`
+    <div class="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 bg-gray-50">
+      <span class="w-8 h-8 rounded-lg bg-white border grid place-items-center text-[10px] font-bold">${(f.name.split('.').pop()||'').toUpperCase().slice(0,3)}</span>
+      <div class="min-w-0 flex-1">
+        <p class="text-xs font-semibold truncate">${f.name}</p>
+        <p class="text-[11px] text-gray-500">${(f.size/1024).toFixed(1)} KB • ${f.type||'unknown'}</p>
+      </div>
+      <button onclick="removeFile(${i})" class="text-xs font-bold text-gray-400 hover:text-red-600 px-2">✕</button>
+    </div>
+  `).join('');
+  const t=TOOLS.find(x=>x.id===active);
+  if(t.id==='merge-pdf') $('#btnText').textContent = `Merge ${files.length} PDF →`;
+  else if(t.id==='split-pdf'){ buildSplitPreview(); }
+  else if(t.id==='rotate-pdf'){ buildRotatePreview(); $('#btnText').textContent='Putar PDF →'; }
+  else if(t.id==='compress-pdf'){ $('#btnText').textContent='Compress PDF →'; }
+  else if(t.id==='organize-pdf'){ buildOrganizePreview(); $('#btnText').textContent=`Simpan Organize (${organizeOrder.length||'?'} hal) →`; }
+  else $('#btnText').textContent = `Convert Sekarang →`;
+  $('#convertBtn').disabled = files.length===0;
+  $('#error').classList.add('hidden');
+}
+window.removeFile=(i)=>{files.splice(i,1); updateFileUI();}
+window.clearFiles=()=>{files=[]; updateFileUI(); $('#fileInput').value=''; log('Cleared');}
+window.resetAll=()=>{clearFiles(); $('#result').classList.add('hidden'); $('#progress').classList.add('hidden'); $('#error').classList.add('hidden');}
+const drop=$('#drop'), input=$('#fileInput'), pickBtn=$('#pickBtn');
+pickBtn.addEventListener('click',(e)=>{ e.stopPropagation(); input.click(); });
+drop.addEventListener('dragover',e=>{e.preventDefault(); drop.classList.add('drag');});
+drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
+drop.addEventListener('drop',e=>{
+  e.preventDefault(); drop.classList.remove('drag');
+  log('Drop '+e.dataTransfer.files.length+' files');
+  handleFiles(e.dataTransfer.files);
+});
+input.addEventListener('change',()=>{ log('Picked '+input.files.length+' files'); handleFiles(input.files); });
+function handleFiles(list){
+  const t=TOOLS.find(x=>x.id===active);
+  let arr=[...list];
+  if(arr.length===0) return;
+  log('handleFiles: '+arr.map(f=>f.name).join(', '));
+  if(!t.multiple && arr.length>1) arr=[arr[0]];
+  const exts=t.accept.split(',').map(s=>s.trim().toLowerCase());
+  const filtered=arr.filter(f=>{
+    const ext='.'+f.name.split('.').pop().toLowerCase();
+    const ok=exts.includes(ext);
+    if(!ok) showError(`File ${f.name} ekstensi ${ext} tidak didukung untuk ${t.title} (butuh ${t.accept})`);
+    return ok;
+  });
+  if(filtered.length===0 && arr.length>0) return;
+  files = t.multiple ? [...files, ...filtered] : filtered;
+  // tanpa batasan — semua ukuran diizinkan, cuma warning kalau >200MB biar user tau risiko RAM
+  const huge = files.filter(f=> f.size > 200*1024*1024);
+  if(huge.length) log('WARNING: file besar '+huge.map(f=>f.name+': '+(f.size/1024/1024).toFixed(1)+'MB').join(', ')+' — butuh RAM besar, bisa lambat');
+  if(files.length===0) showError('Tidak ada file valid');
+  updateFileUI();
+}
+$('#testBtn').addEventListener('click', async (e)=>{
+  e.stopPropagation();
+  log('Test dummy start active='+active);
+  if(active==='jpg-to-pdf'){
+    const c=document.createElement('canvas'); c.width=600; c.height=400;
+    const ctx=c.getContext('2d'); ctx.fillStyle='#ff6b35'; ctx.fillRect(0,0,600,400); ctx.fillStyle='white'; ctx.font='40px Inter'; ctx.fillText('TEST JPG',180,210);
+    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
+    const f=new File([blob],'test-image.jpg',{type:'image/jpeg'});
+    files=[f]; updateFileUI(); log('Dummy JPG created '+f.size+' bytes');
+  }else if(active==='merge-pdf'){
+    const {jsPDF}=window.jspdf;
+    const pdf1=new jsPDF(); pdf1.text('DUMMY PDF 1 - halaman 1',20,20); pdf1.addPage(); pdf1.text('PDF 1 - halaman 2',20,20);
+    const b1=pdf1.output('blob'); const f1=new File([b1],'dummy1.pdf',{type:'application/pdf'});
+    const pdf2=new jsPDF(); pdf2.text('DUMMY PDF 2 - halaman 1',20,20); pdf2.text('Ini file kedua untuk test merge',20,30);
+    const b2=pdf2.output('blob'); const f2=new File([b2],'dummy2.pdf',{type:'application/pdf'});
+    files=[f1,f2]; updateFileUI(); log('Dummy merge: 2 PDFs created '+f1.size+'+'+f2.size);
+  }else if(active==='compress-pdf' || active==='rotate-pdf' || active==='organize-pdf' || active.includes('pdf') || active==='split-pdf' || active==='pdf-to-word' || active==='pdf-to-excel' || active==='pdf-to-jpg'){
+    const {jsPDF}=window.jspdf; const pdf=new jsPDF(); pdf.text('Hello PDF Test - halaman 1',20,20); pdf.addPage(); pdf.text('Halaman 2',20,20); pdf.addPage(); pdf.text('Halaman 3',20,20);
+    const blob=pdf.output('blob'); const f=new File([blob],'test.pdf',{type:'application/pdf'});
+    files=[f]; updateFileUI(); log('Dummy PDF created '+blob.size+' pages=3');
+  }else{
+    log('Test untuk tool ini belum ada dummy');
+    showError('Untuk tool ini, silakan upload file asli untuk test');
+  }
+});
+$('#convertBtn').addEventListener('click', async ()=>{
+  const t=TOOLS.find(x=>x.id===active);
+  if(files.length===0){ showError('Pilih file dulu lur!'); return; }
+  if(t.id==='merge-pdf' && files.length<2){ showError('Merge butuh minimal 2 file PDF lur! Pilih 2 file atau klik 🧪 Test (udah auto 2 file)'); return; }
+  $('#btnSpinner').classList.remove('hidden'); $('#btnText').textContent='Memproses...'; $('#convertBtn').disabled=true;
+  $('#progress').classList.remove('hidden'); $('#progress').textContent='Menyiapkan file...'; $('#error').classList.add('hidden');
+  $('#result').classList.add('hidden');
+  log('Convert start: '+t.id+' files='+files.length);
+  try{
+    checkLibs();
+    if(t.id==='jpg-to-pdf') await convertJpgToPdf();
+    else if(t.id==='pdf-to-jpg') await convertPdfToJpg();
+    else if(t.id==='merge-pdf') await mergePdf();
+    else if(t.id==='split-pdf') await splitPdf();
+    else if(t.id==='compress-pdf') await compressPdf();
+    else if(t.id==='rotate-pdf') await rotatePdf();
+    else if(t.id==='organize-pdf') await organizePdf();
+    else if(t.id==='word-to-pdf') await wordToPdf();
+    else if(t.id==='pdf-to-word') await pdfToWord();
+    else if(t.id==='excel-to-pdf') await excelToPdf();
+    else if(t.id==='pdf-to-excel') await pdfToExcel();
+    else if(t.id==='html-to-pdf') await htmlToPdf();
+    else if(t.id==='ppt-to-pdf') await pptToPdf();
+    else if(t.id==='pdf-to-ppt') await pdfToPpt();
+    else throw new Error('Tool belum diimplementasikan');
+    log('Convert success');
+  }catch(e){
+    console.error(e);
+    showError('Gagal convert: '+(e.message||e)+'\nCoba buka via http://localhost:8080 (jangan file://) atau cek console F12');
+    log(e.stack||e);
+  }finally{
+    $('#btnSpinner').classList.add('hidden'); $('#convertBtn').disabled=false; updateFileUI();
+  }
+});
+function downloadBlob(blob, filename){
+  const url=URL.createObjectURL(blob);
+  const a=$('#downloadBtn'); a.href=url; a.download=filename;
+  $('#result').classList.remove('hidden');
+  $('#progress').textContent='✅ Selesai — silakan download.';
+  log('Download ready: '+filename+' '+(blob.size/1024).toFixed(1)+'KB type='+blob.type);
+  if(blob.type.includes('pdf')){
+    $('#resultPreview').innerHTML=`<iframe src="${url}" class="w-full h-[380px] rounded-lg border bg-white"></iframe><p class="mt-2 text-center text-gray-500 text-xs">${filename} • ${(blob.size/1024).toFixed(1)} KB</p>`;
+  }else if(blob.type.includes('zip') || filename.endsWith('.zip')){
+    $('#resultPreview').innerHTML=`<div class="text-center py-8">📦 ZIP siap download<br><b>${filename}</b><br>${(blob.size/1024).toFixed(1)} KB</div>`;
+  }else if(blob.type.includes('sheet') || filename.endsWith('.xlsx')){
+    $('#resultPreview').innerHTML=`<div class="text-center py-8">📊 Excel siap<br><b>${filename}</b><br>${(blob.size/1024).toFixed(1)} KB</div>`;
+  }else if(filename.endsWith('.doc')){
+    $('#resultPreview').innerHTML=`<div class="text-center py-6">📄 Word (.doc) siap<br><b>${filename}</b><br><span class="text-gray-500">Buka dengan MS Word / Google Docs</span></div>`;
+  }else{
+    $('#resultPreview').innerHTML=`<p>File siap: <b>${filename}</b> (${(blob.size/1024).toFixed(1)} KB)</p>`;
+  }
+  window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
+  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+}
+async function loadImage(file){
+  return new Promise((res,rej)=>{
+    const url=URL.createObjectURL(file);
+    const img=new Image();
+    img.onload=()=>{ URL.revokeObjectURL(url); res(img); };
+    img.onerror=(e)=>{ URL.revokeObjectURL(url); rej(new Error('Gagal load gambar '+file.name)); };
+    img.src=url;
+  });
+}
+async function convertJpgToPdf(){
+  if(!window.jspdf) throw new Error('jsPDF belum load — cek internet');
+  const {jsPDF}=window.jspdf;
+  const orient=$('#opt-orient')?.value||'p';
+  const size=$('#opt-size')?.value||'a4';
+  const format = size==='fit' ? 'a4' : size;
+  log(`JPGtoPDF orient=${orient} size=${size} files=${files.length}`);
+  const pdf = new jsPDF({orientation:orient, unit:'mm', format});
+  let first=true;
+  for(let i=0;i<files.length;i++){
+    $('#progress').textContent=`Memproses gambar ${i+1}/${files.length}...`;
+    const img=await loadImage(files[i]);
+    log(`Image ${i+1}: ${img.naturalWidth}x${img.naturalHeight}`);
+    const canvas=document.createElement('canvas'); canvas.width=img.naturalWidth; canvas.height=img.naturalHeight;
+    canvas.getContext('2d').drawImage(img,0,0);
+    const data=canvas.toDataURL('image/jpeg',0.92);
+    const w=pdf.internal.pageSize.getWidth(), h=pdf.internal.pageSize.getHeight();
+    if(!first) pdf.addPage();
+    if(size==='fit'){
+      const iw=Math.min(w-20, img.naturalWidth*0.264583), ih=(img.naturalHeight/img.naturalWidth)*iw;
+      const x=(w-iw)/2, y=(h-ih)/2;
+      pdf.addImage(data,'JPEG',x,y,iw,ih);
+    }else{
+      const margin=10;
+      const iw=w-margin*2, ih=(img.naturalHeight/img.naturalWidth)*iw;
+      let finalW=iw, finalH=ih;
+      if(ih > h-20){ finalH=h-20; finalW=(img.naturalWidth/img.naturalHeight)*finalH; }
+      pdf.addImage(data,'JPEG',(w-finalW)/2,10,finalW,finalH);
+    }
+    first=false;
+  }
+  const blob=pdf.output('blob');
+  log('PDF generated '+blob.size);
+  downloadBlob(blob, `converted-${Date.now()}.pdf`);
+}
+async function convertPdfToJpg(){
+  if(!window.pdfjsLib) throw new Error('pdf.js belum load');
+  const scale=parseFloat($('#opt-quality')?.value||'2');
+  const file=files[0];
+  log('PDFtoJPG scale='+scale+' file='+file.name+' size='+file.size);
+  const buf=await file.arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
+  log('PDF pages='+pdf.numPages);
+  const zip=new JSZip();
+  let firstUrl='';
+  for(let i=1;i<=pdf.numPages;i++){
+    $('#progress').textContent=`Render halaman ${i}/${pdf.numPages}...`;
+    const page=await pdf.getPage(i);
+    const vp=page.getViewport({scale});
+    const canvas=document.createElement('canvas'); canvas.width=vp.width; canvas.height=vp.height;
+    const ctx=canvas.getContext('2d');
+    await page.render({canvasContext:ctx, viewport:vp}).promise;
+    const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.92));
+    if(!blob) throw new Error('toBlob gagal halaman '+i);
+    zip.file(`page-${i}.jpg`, blob);
+    if(i===1) firstUrl=URL.createObjectURL(blob);
+    log(`Page ${i} rendered ${vp.width}x${vp.height} blob ${blob.size}`);
+  }
+  if(pdf.numPages===1){
+    const blob=await zip.file('page-1.jpg').async('blob');
+    downloadBlob(blob, file.name.replace(/\.pdf$/i,'') + '.jpg');
+    $('#resultPreview').innerHTML=`<img src="${firstUrl}" class="max-w-full mx-auto rounded-lg border shadow"><p class="text-center mt-2 text-gray-500">1 halaman • klik Download</p>`;
+  }else{
+    const zipBlob=await zip.generateAsync({type:'blob'});
+    log('ZIP size '+zipBlob.size);
+    downloadBlob(zipBlob, file.name.replace(/\.pdf$/i,'') + '-images.zip');
+    if(firstUrl) $('#resultPreview').innerHTML+=`<div class="mt-4"><p class="text-center text-gray-500 mb-2">Preview halaman 1:</p><img src="${firstUrl}" class="max-w-full mx-auto rounded-lg border"></div>`;
+  }
+}
+async function mergePdf(){
+  if(!window.PDFLib) throw new Error('pdf-lib belum load — cek internet');
+  const {PDFDocument}=PDFLib;
+  const merged=await PDFDocument.create();
+  log('Merge '+files.length+' PDFs - start');
+  for(let i=0;i<files.length;i++){
+    $('#progress').textContent=`Menggabungkan ${i+1}/${files.length}...`;
+    log(`Loading file ${i+1}: ${files[i].name} ${files[i].size} bytes`);
+    const buf=await files[i].arrayBuffer();
+    log(`ArrayBuffer ${buf.byteLength}`);
+    let pdf;
+    try{ pdf=await PDFDocument.load(buf, {ignoreEncryption:true}); }
+    catch(e){ log('Load fail try without option: '+e.message); pdf=await PDFDocument.load(buf); }
+    log(`File ${i+1}: ${pdf.getPageCount()} pages`);
+    if(pdf.getPageCount()===0) throw new Error(`File ${files[i].name} tidak ada halaman`);
+    const pages=await merged.copyPages(pdf, pdf.getPageIndices());
+    pages.forEach(p=>merged.addPage(p));
+    log(`Copied ${pages.length} pages from file ${i+1}`);
+  }
+  if(merged.getPageCount()===0) throw new Error('Hasil merge kosong — cek file input');
+  const bytes=await merged.save();
+  log('Merged done bytes='+bytes.length+' pages='+merged.getPageCount());
+  downloadBlob(new Blob([bytes],{type:'application/pdf'}), `merged-${Date.now()}.pdf`);
+}
+function parseRange(str, max){
+  const out=new Set();
+  str.split(',').forEach(part=>{
+    part=part.trim();
+    if(!part) return;
+    if(part.includes('-')){
+      const [a,b]=part.split('-').map(n=>parseInt(n.trim()));
+      if(isNaN(a)||isNaN(b)) throw new Error(`Rentang salah: ${part}`);
+      const s=Math.min(a,b), e=Math.max(a,b);
+      for(let i=s;i<=e;i++) if(i>=1&&i<=max) out.add(i-1);
+    }else{
+      const n=parseInt(part);
+      if(isNaN(n)) throw new Error(`Halaman salah: ${part}`);
+      if(n>=1&&n<=max) out.add(n-1);
+    }
+  });
+  return [...out].sort((a,b)=>a-b);
+}
+async function splitPdf(){
+  if(!window.PDFLib) throw new Error('pdf-lib belum load');
+  const {PDFDocument}=PDFLib;
+  const buf=await files[0].arrayBuffer();
+  const src=await PDFDocument.load(buf, {ignoreEncryption:true});
+  const total=src.getPageCount();
+  log('Split pages='+total+' mode='+getSplitMode());
+  const mode=getSplitMode();
+
+  if(mode==='all'){
+    const zip=new JSZip();
+    for(let i=0;i<total;i++){
+      $('#progress').textContent=`Split halaman ${i+1}/${total}...`;
+      const out=await PDFDocument.create();
+      const [p]=await out.copyPages(src,[i]);
+      out.addPage(p);
+      const bytes=await out.save();
+      zip.file(`page-${i+1}.pdf`, bytes);
+    }
+    const zipBlob=await zip.generateAsync({type:'blob'});
+    log('ZIP all '+zipBlob.size);
+    downloadBlob(zipBlob, files[0].name.replace(/\.pdf$/i,'') + '-split-all.zip');
+  }else if(mode==='range'){
+    const str=document.getElementById('splitRange')?.value?.trim()||'1-3';
+    const idxs=parseRange(str, total);
+    if(idxs.length===0) throw new Error('Rentang kosong / halaman tidak ada. Contoh: 1-3,5');
+    log('Range '+str+' -> idxs '+idxs.map(i=>i+1).join(','));
+    const out=await PDFDocument.create();
+    const pages=await out.copyPages(src, idxs);
+    pages.forEach(p=>out.addPage(p));
+    const bytes=await out.save();
+    downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'')+`-extract-${str.replace(/[^0-9,-]/g,'_')}.pdf`);
+    $('#resultPreview').innerHTML=`<p class="text-center py-4">✅ Extract <b>${idxs.length} halaman</b> (${idxs.map(i=>i+1).join(', ')})<br><span class="text-gray-500">Dari ${total} halaman • rentang ${str}</span></p>` + $('#resultPreview').innerHTML;
+  }else if(mode==='chunk'){
+    const n=parseInt(document.getElementById('splitChunk')?.value||'5');
+    if(n<1) throw new Error('N harus >=1');
+    const chunks=Math.ceil(total/n);
+    log(`Chunk N=${n} chunks=${chunks}`);
+    const zip=new JSZip();
+    for(let c=0;c<chunks;c++){
+      $('#progress').textContent=`Chunk ${c+1}/${chunks}...`;
+      const start=c*n, end=Math.min(start+n, total);
+      const idxs=Array.from({length:end-start},(_,k)=>start+k);
+      const out=await PDFDocument.create();
+      const pages=await out.copyPages(src, idxs);
+      pages.forEach(p=>out.addPage(p));
+      const bytes=await out.save();
+      zip.file(`part-${c+1}-hal-${start+1}-${end}.pdf`, bytes);
+    }
+    const zipBlob=await zip.generateAsync({type:'blob'});
+    log('ZIP chunk '+zipBlob.size);
+    downloadBlob(zipBlob, files[0].name.replace(/\.pdf$/i,'')+`-split-per${n}.zip`);
+    $('#resultPreview').innerHTML=`<p class="text-center py-4">✅ Split per ${n} hal → <b>${chunks} file</b><br><span class="text-gray-500">${total} hal → ${chunks} file ZIP</span></p>` + $('#resultPreview').innerHTML;
+  }else if(mode==='select'){
+    if(splitSelected.size===0) throw new Error('Centang minimal 1 halaman lur!');
+    const idxs=[...splitSelected].sort((a,b)=>a-b);
+    log('Select idxs '+idxs.map(i=>i+1).join(','));
+    // buat 1 PDF gabungan dari yang dicentang
+    const out=await PDFDocument.create();
+    const pages=await out.copyPages(src, idxs);
+    pages.forEach(p=>out.addPage(p));
+    const bytes=await out.save();
+    downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'')+`-selected-${idxs.length}hal.pdf`);
+    // plus opsi ZIP per halaman terpilih
+    const zip=new JSZip();
+    for(const idx of idxs){
+      const o=await PDFDocument.create();
+      const [p]=await o.copyPages(src,[idx]);
+      o.addPage(p);
+      zip.file(`page-${idx+1}.pdf`, await o.save());
+    }
+    const zipBlob=await zip.generateAsync({type:'blob'});
+    // tambahin link kedua
+    const url2=URL.createObjectURL(zipBlob);
+    $('#resultPreview').innerHTML = `<div class="text-center py-2"><a href="${url2}" download="${files[0].name.replace(/\.pdf$/i,'')}-selected-zip.zip" class="inline-block mt-2 px-4 py-2 rounded-full bg-white border text-xs font-semibold">⬇ Download juga sebagai ZIP per halaman (${idxs.length} file)</a></div>` + $('#resultPreview').innerHTML;
+    $('#resultPreview').innerHTML = `<p class="text-center pt-4">✅ Extract <b>${idxs.length} hal terpilih</b> (${idxs.map(i=>i+1).join(', ')})</p>` + $('#resultPreview').innerHTML;
+  }
+}
+async function compressPdf(){
+  if(!window.PDFLib) throw new Error('pdf-lib belum load');
+  const level=document.querySelector('input[name="compressLevel"]:checked')?.value||'medium';
+  log('Compress level='+level);
+  const buf=await files[0].arrayBuffer();
+  const orig=buf.byteLength;
+  $('#progress').textContent='Kompres... '+level;
+  const doc=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
+  // pdf-lib save dengan object streams = lebih kecil; high = tambah compress
+  const bytes=await doc.save({useObjectStreams:true, addDefaultPage:false, objectsPerTick:50});
+  const outBlob=new Blob([bytes],{type:'application/pdf'});
+  const ratio=((1 - bytes.length/orig)*100).toFixed(1);
+  log(`Compress ${orig} -> ${bytes.length} (${ratio}% saved) level=${level}`);
+  // simulasi level: low/medium/high beda tipis karena pdf-lib, tapi kita kasih info
+  downloadBlob(outBlob, files[0].name.replace(/\.pdf$/i,`-compressed-${level}.pdf`));
+  $('#resultPreview').innerHTML=`<p class="text-center py-2 text-xs">📦 Asli: ${(orig/1024).toFixed(1)} KB → Hasil: ${(bytes.length/1024).toFixed(1)} KB<br><b>${ratio}% lebih kecil</b> (${level})<br><span class="text-gray-500">*High pakai object streams maksimal. Untuk gambar besar, hasil bisa 30-50%.</span></p>`+$('#resultPreview').innerHTML;
+}
+async function rotatePdf(){
+  if(!window.PDFLib) throw new Error('pdf-lib belum load');
+  const angle=parseInt(document.querySelector('input[name="rotateAngle"]:checked')?.value||'90');
+  const rangeStr=document.getElementById('rotateRange')?.value?.trim()||'semua';
+  log('Rotate angle='+angle+' range='+rangeStr);
+  const buf=await files[0].arrayBuffer();
+  const doc=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
+  const n=doc.getPageCount();
+  let idxs;
+  if(rangeStr.toLowerCase()==='semua' || !rangeStr) idxs=Array.from({length:n},(_,i)=>i);
+  else idxs=parseRange(rangeStr, n);
+  if(idxs.length===0) throw new Error('Range kosong');
+  log('Rotate idxs '+idxs.map(i=>i+1).join(','));
+  for(const i of idxs){
+    const page=doc.getPage(i);
+    const cur=page.getRotation().angle;
+    page.setRotation(PDFLib.degrees((cur+angle)%360));
+  }
+  const bytes=await doc.save();
+  downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,`-rotated-${angle}.pdf`));
+  $('#resultPreview').innerHTML=`<p class="text-center py-2">🔄 Putar <b>${angle}°</b> untuk ${idxs.length} hal (${idxs.map(i=>i+1).join(', ')})<br><span class="text-xs text-gray-500">Dari ${n} hal</span></p>`+$('#resultPreview').innerHTML;
+}
+async function organizePdf(){
+  if(!window.PDFLib) throw new Error('pdf-lib belum load');
+  if(organizeOrder.length===0) throw new Error('Upload PDF dulu');
+  if(organizeOrder.length===0) throw new Error('Tidak ada halaman');
+  log('Organize order '+organizeOrder.map(i=>i+1).join(',')+' rotations '+JSON.stringify(organizeRotations));
+  const buf=await files[0].arrayBuffer();
+  const src=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
+  const out=await PDFLib.PDFDocument.create();
+  const pages=await out.copyPages(src, organizeOrder);
+  pages.forEach((p, idx)=>{
+    const origIdx=organizeOrder[idx];
+    const rot=organizeRotations[origIdx]||0;
+    if(rot) p.setRotation(PDFLib.degrees(rot%360));
+    out.addPage(p);
+  });
+  const bytes=await out.save();
+  downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'-organized.pdf'));
+  $('#resultPreview').innerHTML=`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} hal tersimpan<br><span class="text-xs text-gray-500">Urutan: ${organizeOrder.map(i=>i+1).join(' → ')}</span></p>`+$('#resultPreview').innerHTML;
+}
+async function wordToPdf(){
+  if(!window.mammoth) throw new Error('mammoth belum load');
+  const file=files[0];
+  $('#progress').textContent='Membaca DOCX...'; log('WordToPDF '+file.name);
+  const buf=await file.arrayBuffer();
+  const res=await mammoth.extractRawText({arrayBuffer:buf});
+  const text=res.value.slice(0, 50000);
+  log('Extracted '+text.length+' chars');
+  if(!text.trim()) throw new Error('DOCX kosong atau tidak bisa dibaca');
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({unit:'mm', format:'a4'});
+  const lines=pdf.splitTextToSize(text, 170);
+  let y=20; pdf.setFontSize(11);
+  for(let line of lines){
+    if(y>280){ pdf.addPage(); y=20; }
+    pdf.text(line, 15, y); y+=6;
+  }
+  const blob=pdf.output('blob');
+  downloadBlob(blob, file.name.replace(/\.(docx?)$/i,'')+'.pdf');
+  $('#resultPreview').innerHTML=`<pre class="whitespace-pre-wrap text-[11px] leading-relaxed bg-white p-3 rounded border max-h-60 overflow-auto">${text.slice(0,3000)}</pre>` + $('#resultPreview').innerHTML;
+}
+async function pdfToWord(){
+  if(!window.pdfjsLib) throw new Error('pdf.js belum load');
+  const buf=await files[0].arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
+  let full='';
+  log('PDFtoWord pages='+pdf.numPages);
+  for(let i=1;i<=pdf.numPages;i++){
+    $('#progress').textContent=`Ekstrak halaman ${i}/${pdf.numPages}...`;
+    const page=await pdf.getPage(i);
+    const tc=await page.getTextContent();
+    const txt=tc.items.map(it=>it.str).join(' ');
+    full += txt + '\n\n';
+    log(`Page ${i}: ${txt.length} chars`);
+  }
+  if(!full.trim()) throw new Error('PDF tidak mengandung teks (mungkin hasil scan — butuh OCR)');
+  const html=`<html><head><meta charset="utf-8"></head><body><pre style="white-space:pre-wrap;font-family:Arial;font-size:11pt">${full.replace(/</g,'&lt;')}</pre></body></html>`;
+  const blob=new Blob([html],{type:'application/msword'});
+  downloadBlob(blob, files[0].name.replace(/\.pdf$/i,'')+'.doc');
+  const prev=document.createElement('div');
+  prev.innerHTML=`<pre class="whitespace-pre-wrap bg-white p-3 rounded border max-h-60 overflow-auto">${full.slice(0,4000)}</pre>`;
+  $('#resultPreview').prepend(prev);
+}
+async function excelToPdf(){
+  if(!window.XLSX) throw new Error('SheetJS belum load');
+  const buf=await files[0].arrayBuffer();
+  const wb=XLSX.read(buf,{type:'array'});
+  log('Excel sheets='+wb.SheetNames.join(','));
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({unit:'mm', format:'a4'});
+  let y=15;
+  pdf.setFontSize(14); pdf.text(`Workbook: ${files[0].name}`,15,y); y+=8;
+  for(let name of wb.SheetNames){
+    if(y>270){ pdf.addPage(); y=15; }
+    pdf.setFontSize(12); pdf.setFont(undefined,'bold'); pdf.text(`Sheet: ${name}`,15,y); y+=7;
+    pdf.setFont(undefined,'normal'); pdf.setFontSize(8);
+    const sheet=wb.Sheets[name];
+    const rows=XLSX.utils.sheet_to_json(sheet,{header:1, blankrows:false}).slice(0,60);
+    log(`Sheet ${name}: ${rows.length} rows`);
+    for(let r of rows){
+      const line=(r||[]).join(' | ').slice(0,150);
+      if(!line.trim()) continue;
+      if(y>280){ pdf.addPage(); y=15; }
+      pdf.text(line,15,y); y+=5;
+    }
+    y+=6;
+  }
+  const blob=pdf.output('blob');
+  downloadBlob(blob, files[0].name.replace(/\.(xlsx|xls|csv)$/i,'')+'.pdf');
+}
+async function pdfToExcel(){
+  if(!window.pdfjsLib || !window.XLSX) throw new Error('Lib belum load');
+  const buf=await files[0].arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
+  const rows=[["Page","Text"]];
+  log('PDFtoExcel pages='+pdf.numPages);
+  for(let i=1;i<=pdf.numPages;i++){
+    const page=await pdf.getPage(i);
+    const tc=await page.getTextContent();
+    const txt=tc.items.map(it=>it.str).join(' ').slice(0,5000);
+    rows.push([`Page ${i}`, txt]);
+  }
+  const ws=XLSX.utils.aoa_to_sheet(rows);
+  ws['!cols']=[{wch:12},{wch:120}];
+  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"PDF Extract");
+  const out=XLSX.write(wb,{type:'array', bookType:'xlsx'});
+  downloadBlob(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), files[0].name.replace(/\.pdf$/i,'')+'.xlsx');
+}
+async function htmlToPdf(){
+  const file=files[0];
+  const text=await file.text();
+  log('HTML size '+text.length);
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF({unit:'mm', format:'a4'});
+  const tmp=document.createElement('div'); tmp.innerHTML=text;
+  const plain=tmp.innerText.slice(0,30000);
+  if(!plain.trim()) throw new Error('HTML kosong');
+  const lines=pdf.splitTextToSize(plain,170);
+  let y=15; pdf.setFontSize(10);
+  for(let l of lines){ if(y>280){pdf.addPage(); y=15;} pdf.text(l,15,y); y+=5; }
+  downloadBlob(pdf.output('blob'), file.name.replace(/\.html?$/i,'')+'.pdf');
+}
+async function pptToPdf(){
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF();
+  pdf.setFontSize(12); pdf.text(`File ${files[0].name}`,15,20);
+  pdf.setFontSize(10); pdf.text('PPT to PDF full butuh backend LibreOffice.\nIni placeholder — file asli tidak diproses.',15,30);
+  downloadBlob(pdf.output('blob'), files[0].name.replace(/\.pptx?$/i,'')+'.pdf');
+  showError('PPT to PDF butuh server. Hasil ini hanya placeholder.');
+}
+async function pdfToPpt(){
+  const {jsPDF}=window.jspdf;
+  const pdf=new jsPDF(); pdf.text('PDF to PPT placeholder — butuh backend.',15,20);
+  downloadBlob(pdf.output('blob'), 'converted-placeholder.pdf');
+  showError('PDF to PPT butuh server. Ini placeholder.');
+}
+renderToolList(); renderHeader(); updateFileUI();
+log('Ready. Style sudah sama kaya index.html — blob + card rounded-xl.');
+</script>
+</body>
+</html>

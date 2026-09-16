@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>PDF Tools - Every tool you need to work with PDFs in one place</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{font-family:'Inter',sans-serif}
+  body{background:#f3f5f9;overflow-x:hidden}
+  .blob{position:absolute;border-radius:40% 60% 60% 40% / 40% 40% 60% 60%;opacity:0.08;pointer-events:none}
+  .card{transition:all .2s ease}
+  .card:hover{transform:translateY(-3px);box-shadow:0 12px 24px rgba(0,0,0,0.08);border-color:#e5e7eb}
+  .card.active{border-color:#111827;box-shadow:0 4px 16px rgba(0,0,0,0.08)}
+  .filter-btn{transition:all .15s}
+  .filter-btn.active{background:#111827;color:white;border-color:#111827}
+  .icon-box{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
+  ::-webkit-scrollbar{height:6px}
+  ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:999px}
+</style>
+</head>
+<body class="relative">
+  <!-- soft blobs -->
+  <div class="blob bg-[#f8b4b4] w-[600px] h-[500px] -top-40 -left-40 rotate-12"></div>
+  <div class="blob bg-[#f8b4b4] w-[700px] h-[600px] top-[800px] -right-40"></div>
+  <div class="blob bg-[#fde8e8] w-[800px] h-[700px] bottom-0 left-[20%]"></div>
+
+  <header class="relative z-10 pt-10 pb-6 px-4 text-center max-w-5xl mx-auto">
+    <h1 class="text-[28px] md:text-[32px] font-extrabold text-gray-900 leading-tight">Every tool you need to work with PDFs in one place</h1>
+    <p class="mt-2 text-[14px] text-gray-500 max-w-2xl mx-auto leading-relaxed">Every tool you need to use PDFs, at your fingertips. All are 100% FREE and easy to use! Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks.</p>
+    
+    <div class="mt-6 flex flex-wrap justify-center gap-2" id="filters">
+      <!-- injected by JS -->
+    </div>
+  </header>
+
+  <main class="relative z-10 max-w-[1440px] mx-auto px-4 pb-16">
+    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
+      <!-- cards injected -->
+    </div>
+    <p id="empty" class="hidden text-center text-gray-400 mt-12">Tidak ada tool di kategori ini.</p>
+  </main>
+
+  <script>
+    const categories = ["All","Workflows","Organize PDF","Optimize PDF","Convert PDF","Edit PDF","PDF Security","PDF Intelligence"];
+
+    const tools = [
+      {id:"merge-pdf", title:"Merge PDF", desc:"Combine PDFs in the order you want with the easiest PDF merger available.", cat:["Organize PDF"], color:"#f97316", icon:"↘↖", bg:"#fff1e6"},
+      {id:"split-pdf", title:"Split PDF", desc:"Separate one page or a whole set for easy conversion into independent PDF files.", cat:["Organize PDF"], color:"#f97316", icon:"↗↙", bg:"#fff1e6"},
+      {id:"compress-pdf", title:"Compress PDF", desc:"Reduce file size while optimizing for maximal PDF quality.", cat:["Optimize PDF"], color:"#84a98c", icon:"⇲", bg:"#e8f5e9"},
+      {id:"pdf-to-word", title:"PDF to Word", desc:"Easily convert your PDF files into easy to edit DOC and DOCX documents. The converted WORD document is almost 100% accurate.", cat:["Convert PDF"], color:"#2563eb", icon:"W", bg:"#dbeafe"},
+      {id:"pdf-to-ppt", title:"PDF to PowerPoint", desc:"Turn your PDF files into easy to edit PPT and PPTX slideshows.", cat:["Convert PDF"], color:"#f97316", icon:"P", bg:"#ffedd5"},
+      {id:"pdf-to-excel", title:"PDF to Excel", desc:"Pull data straight from PDFs into Excel spreadsheets in a few short seconds.", cat:["Convert PDF"], color:"#16a34a", icon:"X", bg:"#dcfce7"},
+
+      {id:"word-to-pdf", title:"Word to PDF", desc:"Make DOC and DOCX files easy to read by converting them to PDF.", cat:["Convert PDF"], color:"#2563eb", icon:"W", bg:"#dbeafe"},
+      {id:"ppt-to-pdf", title:"PowerPoint to PDF", desc:"Make PPT and PPTX slideshows easy to view by converting them to PDF.", cat:["Convert PDF"], color:"#f97316", icon:"P", bg:"#ffedd5"},
+      {id:"excel-to-pdf", title:"Excel to PDF", desc:"Make EXCEL spreadsheets easy to read by converting them to PDF.", cat:["Convert PDF"], color:"#16a34a", icon:"X", bg:"#dcfce7"},
+      {id:"edit-pdf", title:"Edit PDF", desc:"Add text, images, shapes or freehand annotations to a PDF document. Edit the size, font, and color of the added content.", cat:["Edit PDF"], color:"#a855a7", icon:"✎", bg:"#fae8ff", featured:true},
+      {id:"pdf-to-jpg", title:"PDF to JPG", desc:"Convert each PDF page into a JPG or extract all images contained in a PDF.", cat:["Convert PDF"], color:"#eab308", icon:"🖼", bg:"#fef9c3"},
+      {id:"jpg-to-pdf", title:"JPG to PDF", desc:"Convert JPG images to PDF in seconds. Easily adjust orientation and margins.", cat:["Convert PDF"], color:"#eab308", icon:"JPG", bg:"#fef9c3"},
+
+      {id:"sign-pdf", title:"Sign PDF", desc:"Sign yourself or request electronic signatures from others.", cat:["PDF Security","Edit PDF"], color:"#1e5a8a", icon:"✒", bg:"#dbeafe"},
+      {id:"watermark", title:"Watermark", desc:"Stamp an image or text over your PDF in seconds. Choose the typography, transparency and position.", cat:["Edit PDF"], color:"#a855a7", icon:"👤", bg:"#fae8ff"},
+      {id:"rotate-pdf", title:"Rotate PDF", desc:"Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!", cat:["Organize PDF"], color:"#a855a7", icon:"↻", bg:"#fae8ff"},
+      {id:"html-to-pdf", title:"HTML to PDF", desc:"Convert webpages in HTML to PDF. Copy and paste the URL of the page you want and convert it to PDF with a click.", cat:["Convert PDF"], color:"#eab308", icon:"HTML", bg:"#fef9c3"},
+      {id:"unlock-pdf", title:"Unlock PDF", desc:"Remove PDF password security, giving you the freedom to use your PDFs as you want.", cat:["PDF Security"], color:"#1e5a8a", icon:"🔓", bg:"#dbeafe"},
+      {id:"protect-pdf", title:"Protect PDF", desc:"Protect PDF files with a password. Encrypt PDF documents to prevent unauthorized access.", cat:["PDF Security"], color:"#1e5a8a", icon:"🛡", bg:"#dbeafe"},
+
+      {id:"organize-pdf", title:"Organize PDF", desc:"Sort pages of your PDF file however you like. Delete PDF pages or add PDF pages to your document at your convenience.", cat:["Organize PDF"], color:"#f97316", icon:"A↕B", bg:"#ffedd5"},
+      {id:"pdf-to-pdfa", title:"PDF to PDF/A", desc:"Transform your PDF to PDF/A, the ISO-standardized version of PDF for long-term archiving. Your PDF will preserve formatting when accessed in the future.", cat:["Convert PDF"], color:"#64748b", icon:"/A", bg:"#e2e8f0"},
+      {id:"repair-pdf", title:"Repair PDF", desc:"Repair a damaged PDF and recover data from corrupt PDF. Fix PDF files with our Repair tool.", cat:["Optimize PDF"], color:"#16a34a", icon:"🛠", bg:"#dcfce7"},
+      {id:"page-numbers", title:"Page numbers", desc:"Add page numbers into PDFs with ease. Choose your positions, dimensions, typography.", cat:["Edit PDF","Organize PDF"], color:"#a855a7", icon:"1 2", bg:"#fae8ff"},
+      {id:"scan-to-pdf", title:"Scan to PDF", desc:"Capture document scans from your mobile device and send them instantly to your browser.", cat:["Convert PDF"], color:"#f97316", icon:"⎙", bg:"#ffedd5"},
+      {id:"ocr-pdf", title:"OCR PDF", desc:"Easily convert scanned PDF into searchable and selectable documents.", cat:["PDF Intelligence","Convert PDF"], color:"#16a34a", icon:"OCR", bg:"#dcfce7"},
+
+      {id:"compare-pdf", title:"Compare PDF", desc:"Show a side-by-side document comparison and easily spot changes between different file versions.", cat:["Organize PDF"], color:"#1e5a8a", icon:"◫", bg:"#dbeafe"},
+      {id:"redact-pdf", title:"Redact PDF", desc:"Redact text and graphics to permanently remove sensitive information from a PDF.", cat:["PDF Security","Edit PDF"], color:"#2563eb", icon:"█", bg:"#dbeafe"},
+      {id:"crop-pdf", title:"Crop PDF", desc:"Crop margins of PDF documents or select specific areas, then apply the changes to one page or the whole document.", cat:["Edit PDF","Organize PDF"], color:"#a855a7", icon:"◧", bg:"#fae8ff"},
+      {id:"pdf-forms", title:"PDF Forms", desc:"Detect forms fields automatically, create interactive fillable PDFs, or fill PDF forms yourself. Add text fields, checkboxes, multiple choice fields, and lists.", cat:["Edit PDF"], color:"#a855a7", icon:"Ab", bg:"#fae8ff", badge:"New!"},
+      {id:"ai-summarizer", title:"AI Summarizer", desc:"Quickly generate concise summaries from articles, paragraphs, and essays, providing clear and precise key points in seconds.", cat:["PDF Intelligence"], color:"#7c3aed", icon:"✦", bg:"#ede9fe", badge:"New!"},
+      {id:"translate-pdf", title:"Translate PDF", desc:"Easily translate PDF files powered by AI. Keep fonts, layout, and formatting perfectly intact.", cat:["PDF Intelligence"], color:"#7c3aed", icon:"A", bg:"#ede9fe", badge:"New!"},
+
+      {id:"notebook", title:"Notebook PDF", desc:"Chat dengan PDF-mu kaya NotebookLM. Upload PDF → auto ringkas, tanya jawab, bikin podcast & mindmap.", cat:["PDF Intelligence"], color:"#7c3aed", icon:"✦", bg:"#ede9fe", badge:"New!", href:"notebook.html"},
+      {id:"pdf-to-md", title:"PDF to Markdown", desc:"Easily turn PDFs into Markdown files. Perfect for notes, docs, and LLMs. Headings, tables, lists, and links preserved automatically.", cat:["Convert PDF","PDF Intelligence"], color:"#7c3aed", icon:"{ }", bg:"#ede9fe", badge:"New!"},
+      {id:"workflow", title:"Create a workflow", desc:"Create custom workflows with your favorite tools, automate tasks, and reuse them anytime.", cat:["Workflows"], color:"#f97316", icon:"↗", bg:"#ffedd5", workflow:true},
+    ];
+
+    let active = "All";
+    const grid = document.getElementById('grid');
+    const filterWrap = document.getElementById('filters');
+
+    function renderFilters(){
+      filterWrap.innerHTML = categories.map(c => `
+        <button onclick="setFilter('${c}')" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-medium border ${active===c?'active':'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}">${c}</button>
+      `).join('');
+    }
+
+    function renderGrid(){
+      const filtered = active==="All" ? tools : tools.filter(t=>t.cat.includes(active));
+      document.getElementById('empty').classList.toggle('hidden', filtered.length!==0);
+      
+      grid.innerHTML = filtered.map(t => {
+        const href = t.href || (t.workflow ? `converter.html?tool=merge-pdf` : `converter.html?tool=${t.id || ''}`);
+        if(t.workflow){
+          return `<a href="${href}" class="card relative rounded-xl bg-[#ffe4e0] border border-[#ffd0c8] p-5 flex flex-col h-[160px] overflow-hidden group">
+            <div class="absolute inset-0 opacity-30 pointer-events-none" style="background:radial-gradient(circle at 80% 20%, #ff9a8a 1px, transparent 1px);background-size:22px 22px"></div>
+            <div class="absolute bottom-3 right-3 w-12 h-12 border border-dashed border-[#ffb4a8] rounded-xl opacity-60"></div>
+            <h3 class="text-[13px] font-bold text-gray-900 relative z-10">${t.title}</h3>
+            <p class="text-[10.5px] leading-snug text-gray-600 mt-1.5 relative z-10 line-clamp-3">${t.desc}</p>
+            <span class="mt-auto text-[11px] font-semibold text-gray-900 flex items-center gap-1 relative z-10">Create workflow <span class="group-hover:translate-x-0.5 transition">↗</span></span>
+          </a>`;
+        }
+        return `<a href="${href}" class="card relative bg-white rounded-xl border ${t.featured?'border-gray-900':'border-gray-200'} p-5 flex flex-col h-[160px] group">
+          ${t.badge?`<span class="absolute top-2.5 right-2.5 text-[9px] font-bold bg-[#e0f2fe] text-[#0284c7] px-1.5 py-0.5 rounded">New!</span>`:''}
+          <div class="icon-box" style="background:${t.bg};color:${t.color};border:1px solid ${t.color}18">
+            <span class="text-[13px] font-bold leading-none">${t.icon}</span>
+          </div>
+          <h3 class="mt-3 text-[13px] font-bold text-gray-900 leading-tight">${t.title}</h3>
+          <p class="mt-1 text-[10.5px] leading-snug text-gray-500 line-clamp-3">${t.desc}</p>
+        </a>`;
+      }).join('');
+    }
+
+    window.setFilter = (c)=>{
+      active=c;
+      renderFilters();
+      renderGrid();
+      window.scrollTo({top:0, behavior:'smooth'});
+    }
+
+    renderFilters();
+    renderGrid();
+  </script>
+</body>
+</html>

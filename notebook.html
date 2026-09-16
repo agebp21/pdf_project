@@ -1,0 +1,504 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Notebook PDF — mirip NotebookLM</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
+<script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'</script>
+<style>
+ *{font-family:'Inter',sans-serif}
+ body{background:#f3f5f9;overflow-x:hidden}
+ .blob{position:absolute;border-radius:40% 60% 60% 40% / 40% 40% 60% 60%;opacity:0.08;pointer-events:none}
+ .card{transition:all .2s}
+ .src-active{border-color:#111827!important;background:#f8fafc}
+</style>
+</head>
+<body class="relative">
+<div class="blob bg-[#f8b4b4] w-[600px] h-[500px] -top-40 -left-40"></div>
+<div class="blob bg-[#fde8e8] w-[700px] h-[500px] top-[400px] -right-40"></div>
+
+<div class="relative z-10 max-w-[1440px] mx-auto px-4 pt-6 flex items-center justify-between">
+  <a href="index.html" class="flex items-center gap-2 font-extrabold text-sm"><span class="w-8 h-8 rounded-lg bg-[#111827] text-white grid place-items-center text-xs">PDF</span> PDF Tools <span class="ml-2 px-2 py-0.5 rounded-full bg-[#7c3aed] text-white text-[10px]">Notebook ✨ New!</span></a>
+  <a href="index.html" class="px-3.5 py-1.5 rounded-full bg-white border text-xs font-medium">← All tools</a>
+</div>
+
+<header class="relative z-10 max-w-[1440px] mx-auto px-4 pt-6 text-center">
+  <h1 class="text-[26px] font-extrabold">Notebook PDF <span class="text-[#7c3aed]">— Chat dengan PDF-mu</span></h1>
+  <p class="text-[13px] text-gray-500 max-w-2xl mx-auto mt-1">Upload PDF (portofolio, skripsi, paper) → auto rangkum, tanya jawab, bikin podcast & mindmap. 100% di browser, privacy first — kaya NotebookLM.</p>
+</header>
+
+<div class="relative z-10 max-w-[1440px] mx-auto px-4 py-6 grid lg:grid-cols-[320px_1fr_380px] gap-4">
+  <!-- LEFT: SOURCES -->
+  <div class="space-y-4">
+    <div class="bg-white rounded-xl border p-4">
+      <h2 class="font-bold text-sm flex items-center justify-between">📚 Sources <span id="srcCount" class="text-xs bg-gray-100 px-2 py-0.5 rounded-full">0</span></h2>
+      <div id="drop" class="mt-3 border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:bg-gray-50">
+        <p class="text-sm font-bold">+ Tambah PDF</p>
+        <p class="text-[11px] text-gray-500 mt-1">Drag & drop atau klik — tanpa batas ukuran</p>
+        <input id="fileInput" type="file" accept=".pdf" multiple class="hidden">
+      </div>
+      <div id="srcList" class="mt-3 space-y-2"></div>
+      <div id="srcEmpty" class="text-xs text-gray-400 mt-3">Belum ada PDF. Upload portofoliomu (54 hal) buat coba.</div>
+    </div>
+
+    <div class="bg-white rounded-xl border p-4">
+      <h3 class="font-bold text-xs">⚡ Auto-generated</h3>
+      <div class="flex gap-1.5 mt-2 mb-2">
+        <button onclick="setSumLen('short')" id="sumShort" class="flex-1 py-1.5 rounded-full border text-[11px]">Pendek</button>
+        <button onclick="setSumLen('medium')" id="sumMed" class="flex-1 py-1.5 rounded-full bg-gray-900 text-white text-[11px]">Sedang</button>
+        <button onclick="setSumLen('long')" id="sumLong" class="flex-1 py-1.5 rounded-full border text-[11px]">Panjang</button>
+      </div>
+      <div class="grid grid-cols-2 gap-2 text-xs">
+        <button onclick="genSummary()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>Ringkasan</b><br><span id="sumLabel" class="text-[11px] text-gray-500">per halaman</span></button>
+        <button onclick="genOutline()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>Outline</b><br><span class="text-[11px] text-gray-500">Daftar isi</span></button>
+        <button onclick="genFAQ()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>FAQ</b><br><span class="text-[11px] text-gray-500">5 Q&A</span></button>
+        <button onclick="genTimeline()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>Timeline</b><br><span class="text-[11px] text-gray-500">Kronologi</span></button>
+      </div>
+    </div>
+
+    <div class="bg-white rounded-xl border p-4">
+      <h3 class="font-bold text-xs">🤖 Mode AI <span class="text-[11px] font-normal text-gray-500">— extractive vs LLM</span></h3>
+      <label class="flex items-center gap-2 mt-2 p-2 rounded-xl border cursor-pointer has-[:checked]:bg-[#ede9fe] has-[:checked]:border-[#7c3aed]">
+        <input type="checkbox" id="aiToggle" onchange="toggleAI()" class="w-4 h-4">
+        <span class="text-xs"><b>Pakai AI Gemini</b> <span class="text-gray-500">— ringkasan abstrak, bukan baris</span></span>
+      </label>
+      <div id="aiBox" class="hidden mt-2 space-y-2">
+        <input id="apiKey" type="password" placeholder="Paste Gemini API key (free di aistudio.google.com)" class="w-full px-3 py-2 rounded-xl border text-xs">
+        <p class="text-[11px] text-gray-500">Free key: <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline text-[#7c3aed]">aistudio.google.com</a> → Create key. Key disimpan di browser (localStorage), tidak dikirim ke server kami.</p>
+        <div class="flex gap-1.5">
+          <button onclick="testAI()" class="flex-1 py-1.5 rounded-full bg-[#7c3aed] text-white text-xs font-bold">Test koneksi</button>
+          <button onclick="clearAI()" class="px-3 py-1.5 rounded-full border text-xs">Hapus</button>
+        </div>
+        <p id="aiStatus" class="text-[11px]"></p>
+      </div>
+      <p class="text-[11px] text-gray-400 mt-2">Tanpa AI = extractive (ambil baris). Dengan AI = abstrak per halaman (ngarang dikit tapi nyambung).</p>
+    </div>
+
+    <div class="bg-[#ede9fe] rounded-xl border border-[#ddd6fe] p-4">
+      <h3 class="font-bold text-xs text-[#5b21b6]">🎙️ Studio</h3>
+      <button onclick="genPodcast()" class="mt-2 w-full py-2.5 rounded-full bg-[#7c3aed] text-white text-xs font-bold hover:bg-[#6d28d9]">▶️ Buat Podcast (TTS)</button>
+      <button onclick="genMindmap()" class="mt-2 w-full py-2.5 rounded-full bg-white border text-xs font-bold">🧠 Mind Map</button>
+      <button onclick="genFlashcards()" class="mt-2 w-full py-2.5 rounded-full bg-white border text-xs font-bold">🗂️ Flashcards</button>
+      <p class="text-[11px] text-[#6d28d9] mt-2">Podcast pakai suara browser (Web Speech API) — tanpa API key.</p>
+    </div>
+  </div>
+
+  <!-- CENTER: NOTEBOOK -->
+  <div class="bg-white rounded-xl border flex flex-col min-h-[620px]">
+    <div class="p-4 border-b flex items-center justify-between">
+      <h2 class="font-bold text-sm">📝 Notebook</h2>
+      <div class="flex gap-1.5">
+        <button onclick="clearNotebook()" class="px-3 py-1 rounded-full border text-xs">Clear</button>
+        <button onclick="exportMD()" class="px-3 py-1 rounded-full bg-gray-900 text-white text-xs">Export MD</button>
+      </div>
+    </div>
+    <div id="notebook" class="flex-1 p-4 overflow-auto space-y-4 text-sm leading-relaxed">
+      <div class="rounded-xl bg-gray-50 border p-4 text-center">
+        <p class="font-bold">Selamat datang di Notebook PDF</p>
+        <p class="text-xs text-gray-500 mt-1">Upload PDF di kiri → klik <b>Ringkasan</b> atau langsung chat di kanan.<br>Coba upload <b>Sarvamaya - Portfolio.pdf (54 hal)</b> yang tadi.</p>
+        <div class="mt-3 flex flex-wrap justify-center gap-2 text-xs">
+          <span class="px-2.5 py-1 rounded-full bg-white border">1. Upload PDF</span>
+          <span class="px-2.5 py-1 rounded-full bg-white border">2. Auto Ringkas</span>
+          <span class="px-2.5 py-1 rounded-full bg-white border">3. Chat & Podcast</span>
+        </div>
+      </div>
+    </div>
+    <div class="p-3 border-t flex gap-2">
+      <input id="noteInput" type="text" placeholder="Tulis catatan manual..." class="flex-1 px-3 py-2 rounded-full border text-sm">
+      <button onclick="addNote()" class="px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-bold">+ Add</button>
+    </div>
+  </div>
+
+  <!-- RIGHT: CHAT -->
+  <div class="bg-white rounded-xl border flex flex-col min-h-[620px]">
+    <div class="p-4 border-b">
+      <h2 class="font-bold text-sm">💬 Chat dengan PDF</h2>
+      <p class="text-[11px] text-gray-500">Tanya apa aja, AI jawab dari isi PDF-mu (RAG lokal, no API key).</p>
+      <div class="mt-2 flex gap-1.5 flex-wrap">
+        <button onclick="ask('Ringkas PDF ini dalam 3 poin')" class="px-2.5 py-1 rounded-full bg-gray-900 text-white text-xs">Ringkas 3 poin</button>
+        <button onclick="ask('Apa skill utama di PDF ini?')" class="px-2.5 py-1 rounded-full bg-white border text-xs">Skill utama?</button>
+        <button onclick="ask('Buatkan 5 pertanyaan interview dari PDF ini')" class="px-2.5 py-1 rounded-full bg-white border text-xs">Interview Q</button>
+      </div>
+    </div>
+    <div id="chat" class="flex-1 p-4 overflow-auto space-y-3 text-sm">
+      <div class="p-3 rounded-xl bg-[#f3f5f9] border text-xs">👋 Hai! Upload PDF dulu, terus tanya apa aja. Contoh: <i>"Apa pengalaman kerja terbaru?"</i></div>
+    </div>
+    <div class="p-3 border-t">
+      <div class="flex gap-2">
+        <input id="chatInput" type="text" placeholder="Tanya tentang PDF..." class="flex-1 px-3 py-2.5 rounded-full border text-sm" onkeydown="if(event.key==='Enter') sendChat()">
+        <button onclick="sendChat()" class="w-10 h-10 rounded-full bg-[#7c3aed] text-white grid place-items-center font-bold">↑</button>
+      </div>
+      <p class="text-[10px] text-gray-400 mt-1.5">RAG lokal: cari chunk paling relevan + extractive answer. Bisa sambung Gemini/OpenAI kalau mau (tanya lur).</p>
+    </div>
+  </div>
+</div>
+
+<script>
+let sources = []; // {name, pages, text, chunks}
+let fullText = "";
+let useAI = localStorage.getItem('nb_useAI')==='1';
+let geminiKey = localStorage.getItem('nb_geminiKey')||'';
+
+const $ = s=>document.querySelector(s);
+function log(m){ console.log(m); }
+function toggleAI(){
+  useAI=$('#aiToggle').checked;
+  localStorage.setItem('nb_useAI', useAI?'1':'0');
+  $('#aiBox').classList.toggle('hidden', !useAI);
+  if(useAI && geminiKey) $('#apiKey').value=geminiKey;
+}
+function clearAI(){ localStorage.removeItem('nb_geminiKey'); localStorage.removeItem('nb_useAI'); $('#apiKey').value=''; $('#aiToggle').checked=false; useAI=false; $('#aiBox').classList.add('hidden'); $('#aiStatus').textContent='Dihapus'; }
+async function testAI(){
+  const k=$('#apiKey').value.trim();
+  if(!k) return $('#aiStatus').textContent='⚠️ Paste key dulu';
+  localStorage.setItem('nb_geminiKey', k); geminiKey=k;
+  $('#aiStatus').textContent='⏳ Test...';
+  try{
+    const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${k}`,{
+      method:'POST', headers:{'Content-Type':'application/json'},
+      body:JSON.stringify({contents:[{parts:[{text:'Jawab: ok'}]}]})
+    });
+    const j=await r.json();
+    if(j.error) throw new Error(j.error.message);
+    $('#aiStatus').textContent='✅ Koneksi OK — siap pakai AI';
+    $('#aiStatus').className='text-[11px] text-green-600';
+  }catch(e){ $('#aiStatus').textContent='❌ Gagal: '+e.message; $('#aiStatus').className='text-[11px] text-red-600'; }
+}
+$('#apiKey')?.addEventListener('input', e=>{ geminiKey=e.target.value.trim(); localStorage.setItem('nb_geminiKey', geminiKey); });
+// init
+setTimeout(()=>{ if(useAI){ $('#aiToggle').checked=true; $('#aiBox').classList.remove('hidden'); if(geminiKey) $('#apiKey').value=geminiKey; } }, 300);
+
+async function callGemini(prompt, text){
+  const k=localStorage.getItem('nb_geminiKey')||geminiKey;
+  if(!k) throw new Error('API key kosong — paste di kiri');
+  const body={contents:[{parts:[{text: prompt + "\n\nTEKS HALAMAN:\n" + text.slice(0,6000)}]}], generationConfig:{temperature:0.4, maxOutputTokens:400}};
+  const r=await fetch(`https://generativelanguage.googleapis.com/v1beta/models/gemini-1.5-flash:generateContent?key=${k}`,{
+    method:'POST', headers:{'Content-Type':'application/json'}, body:JSON.stringify(body)
+  });
+  const j=await r.json();
+  if(j.error) throw new Error(j.error.message);
+  return j.candidates?.[0]?.content?.parts?.[0]?.text?.trim() || '';
+}
+
+$('#drop').addEventListener('click',()=>$('#fileInput').click());
+$('#drop').addEventListener('dragover',e=>{e.preventDefault(); e.currentTarget.classList.add('bg-gray-50')});
+$('#drop').addEventListener('dragleave',e=>e.currentTarget.classList.remove('bg-gray-50'));
+$('#drop').addEventListener('drop',e=>{e.preventDefault(); handleFiles(e.dataTransfer.files)});
+$('#fileInput').addEventListener('change',()=>handleFiles($('#fileInput').files));
+
+async function handleFiles(list){
+  for(const f of [...list]){
+    if(!f.name.toLowerCase().endsWith('.pdf')){ alert(f.name+' bukan PDF'); continue; }
+    const buf=await f.arrayBuffer();
+    const pdf=await pdfjsLib.getDocument({data:buf}).promise;
+    let text="";
+    for(let i=1;i<=pdf.numPages;i++){
+      const page=await pdf.getPage(i);
+      const tc=await page.getTextContent();
+      const t=tc.items.map(x=>x.str).join(' ');
+      text += `\n\n[HAL ${i}]\n`+t;
+    }
+    const chunks = chunkText(text, 800, 150);
+    sources.push({name:f.name, pages:pdf.numPages, text, chunks, size:f.size});
+    log(`Loaded ${f.name} ${pdf.numPages} hal, ${text.length} chars, ${chunks.length} chunks`);
+  }
+  renderSources();
+  if(sources.length) autoNotebook();
+}
+
+function chunkText(t, size, overlap){
+  const out=[];
+  for(let i=0;i<t.length;i+=size-overlap) out.push(t.slice(i,i+size));
+  return out;
+}
+
+function renderSources(){
+  $('#srcCount').textContent=sources.length;
+  $('#srcEmpty').classList.toggle('hidden', sources.length>0);
+  $('#srcList').innerHTML=sources.map((s,i)=>`
+    <div class="p-2.5 rounded-xl border ${i===0?'src-active':''} flex items-start gap-2">
+      <span class="w-8 h-8 rounded-lg bg-[#ede9fe] text-[#7c3aed] grid place-items-center text-xs font-bold">PDF</span>
+      <div class="flex-1 min-w-0">
+        <p class="text-xs font-bold truncate">${s.name}</p>
+        <p class="text-[11px] text-gray-500">${s.pages} hal • ${(s.text.length/1000).toFixed(1)}k chars • ${s.chunks.length} chunks</p>
+      </div>
+      <button onclick="removeSrc(${i})" class="text-gray-400 hover:text-red-600 text-xs">✕</button>
+    </div>
+  `).join('');
+  fullText = sources.map(s=>s.text).join('\n\n---\n\n');
+}
+
+window.removeSrc=(i)=>{ sources.splice(i,1); renderSources(); }
+
+function addToNotebook(title, html){
+  const el=document.createElement('div');
+  el.className='rounded-xl border p-4 bg-white';
+  el.innerHTML=`<div class="flex items-center justify-between mb-2"><h3 class="font-bold text-sm">${title}</h3><span class="text-[11px] text-gray-400">${new Date().toLocaleTimeString()}</span></div><div class="text-sm leading-relaxed prose prose-sm max-w-none">${html}</div>`;
+  $('#notebook').prepend(el);
+}
+
+function autoNotebook(){
+  genSummary();
+}
+
+let sumLen='medium';
+window.setSumLen=(v)=>{
+  sumLen=v;
+  document.getElementById('sumShort').className = v==='short' ? 'flex-1 py-1.5 rounded-full bg-gray-900 text-white text-[11px]' : 'flex-1 py-1.5 rounded-full border text-[11px]';
+  document.getElementById('sumMed').className = v==='medium' ? 'flex-1 py-1.5 rounded-full bg-gray-900 text-white text-[11px]' : 'flex-1 py-1.5 rounded-full border text-[11px]';
+  document.getElementById('sumLong').className = v==='long' ? 'flex-1 py-1.5 rounded-full bg-gray-900 text-white text-[11px]' : 'flex-1 py-1.5 rounded-full border text-[11px]';
+  document.getElementById('sumLabel').textContent = v==='short' ? '2 poin/hal' : v==='long' ? '4 poin/hal' : '3 poin/hal';
+}
+function cleanText(t){
+  // hapus marker HAL, normalize spasi, hapus line duplikat yang muncul >3x (header/footer)
+  t=t.replace(/\[HAL \d+\]/g,' ');
+  const lines=t.split('\n').map(l=>l.trim()).filter(Boolean);
+  const cnt={}; lines.forEach(l=>{ if(l.length>15 && l.length<120) cnt[l]=(cnt[l]||0)+1 });
+  const filtered=lines.filter(l=> (cnt[l]||0) < 4); // buang header yang keulang tiap hal
+  return filtered.join('\n');
+}
+function summarize(text, sentences=5, excludeSet=new Set()){
+  text=cleanText(text);
+  const rawSents=text.split(/[.!\n]+/).map(s=>s.trim()).filter(s=>s.length>45 && s.length<300 && s.split(' ').length>6).slice(0,500);
+  // dedup exact
+  const seen=new Set(); const sents=[];
+  for(const s of rawSents){ const k=s.toLowerCase(); if(!seen.has(k) && !excludeSet.has(k)){ seen.add(k); sents.push(s); } }
+  if(sents.length===0) return text.slice(0,800);
+  const stop=new Set(['yang','dan','untuk','dengan','adalah','dari','pada','ini','itu','sebagai','dalam','akan','juga','karena','oleh','tidak','telah','sudah','dapat','lebih','antara','adalah','tersebut','berbasis','teknologi','karya','digunakan']);
+  const freq={};
+  text.toLowerCase().split(/\W+/).forEach(w=>{ if(w.length>3 && !stop.has(w)) freq[w]=(freq[w]||0)+1 });
+  // scoring + MMR untuk anti-duplikat mirip
+  let scored=sents.map(s=>{
+    const words=s.toLowerCase().split(/\W+/);
+    const score=words.reduce((a,w)=>a+(freq[w]||0),0) / Math.sqrt(words.length);
+    return {s, score};
+  }).sort((a,b)=>b.score-a.score);
+  const picked=[];
+  for(const cand of scored){
+    if(picked.length>=sentences) break;
+    const tooSimilar=picked.some(p=>{
+      const a=new Set(p.s.toLowerCase().split(/\W+/)), b=new Set(cand.s.toLowerCase().split(/\W+/));
+      const inter=[...a].filter(x=>b.has(x)).length;
+      const union=new Set([...a,...b]).size;
+      return inter/union > 0.6;
+    });
+    if(!tooSimilar) picked.push(cand);
+  }
+  picked.sort((a,b)=>sents.indexOf(a.s)-sents.indexOf(b.s));
+  return picked.map(x=>`• ${x.s}.`).join('<br>');
+}
+function getPerPageTexts(){
+  const pages=[];
+  for(const src of sources){
+    const parts=src.text.split(/\[HAL \d+\]/).map(p=>p.trim()).filter(Boolean);
+    // fallback kalau split gagal, bagi rata
+    if(parts.length===0) parts.push(src.text);
+    parts.forEach((txt,i)=>{
+      // cari nomor hal asli dari marker
+      const m=src.text.matchAll(/\[HAL (\d+)\]/g);
+      const nums=[...m].map(x=>parseInt(x[1]));
+      const pageNum= nums[i] || i+1;
+      pages.push({page:pageNum, src:src.name, text:txt});
+    });
+  }
+  // sort by page
+  pages.sort((a,b)=>a.page-b.page);
+  return pages;
+}
+
+async function summarizePerPage(){
+  const pages=getPerPageTexts();
+  const per = sumLen==='short' ? 2 : sumLen==='long' ? 4 : 3;
+  const aiMode = useAI && (localStorage.getItem('nb_geminiKey')||geminiKey);
+  let html=`<div class="space-y-2">`;
+  html+=`<p class="text-[11px] ${aiMode?'text-[#7c3aed]':'text-gray-500'}">${aiMode?'🤖 AI Gemini — abstrak per halaman':'📄 Extractive — ambil baris'} • ${pages.length} hal • ${per} poin/hal ${aiMode?'• butuh internet':''}</p>`;
+  if(aiMode) html+=`<div id="aiProg" class="text-[11px] text-[#7c3aed]">🤖 Memanggil Gemini untuk ${pages.length} hal... <span id="aiPct">0%</span></div>`;
+  html+=`<div id="perPageList" class="space-y-2 max-h-[520px] overflow-auto pr-1">`;
+  // placeholder, isi nanti
+  pages.forEach(({page, src, text})=>{
+    const cleaned=cleanText(text);
+    if(cleaned.length<60){
+      html+=`<details class="rounded-xl border bg-gray-50 p-2.5"><summary class="cursor-pointer text-xs font-bold">Hal ${page} <span class="font-normal text-gray-500">— ${src}</span> <span class="text-[11px] bg-white border px-1.5 py-0.5 rounded-full">kosong / gambar</span></summary><p class="text-[11px] text-gray-500 mt-1">Halaman ini minim teks (mungkin gambar). Cek PDF asli hal ${page}.</p></details>`;
+      return;
+    }
+    if(!aiMode){
+      const sum=summarize(cleaned, per);
+      html+=`<details class="rounded-xl border bg-white p-3 group" ${page<=3?'open':''}>
+        <summary class="cursor-pointer flex items-center justify-between gap-2 list-none">
+          <span class="text-xs font-bold">Hal ${page} <span class="font-normal text-gray-500">— ${src.slice(0,22)}</span></span>
+          <span class="text-[11px] bg-gray-100 px-2 py-0.5 rounded-full">${per} poin</span>
+        </summary>
+        <div class="mt-2 text-[13px] leading-relaxed border-t pt-2">${sum}</div>
+        <div class="mt-2 flex gap-1.5">
+          <button onclick="ask('Jelaskan halaman ${page} lebih detail')" class="text-[11px] px-2 py-1 rounded-full bg-gray-900 text-white">Chat hal ${page}</button>
+          <button onclick="copyPage(${page})" class="text-[11px] px-2 py-1 rounded-full border">Copy</button>
+        </div>
+      </details>`;
+    } else {
+      html+=`<div id="ai-page-${page}" class="rounded-xl border bg-white p-3">
+        <div class="flex items-center justify-between"><span class="text-xs font-bold">Hal ${page}</span><span class="text-[11px] bg-[#ede9fe] text-[#5b21b6] px-2 py-0.5 rounded-full">AI...</span></div>
+        <p class="text-[11px] text-gray-400 mt-1">⏳ Menunggu Gemini...</p>
+      </div>`;
+    }
+  });
+  html+=`</div></div>`;
+  return html;
+}
+window.copyPage=(p)=>{
+  const pages=getPerPageTexts();
+  const found=pages.find(x=>x.page===p);
+  if(found) navigator.clipboard.writeText(found.text).then(()=>alert('Hal '+p+' tercopy!'));
+}
+
+window.genSummary=async ()=>{
+  if(!fullText) return alert('Upload PDF dulu lur!');
+  const pages=getPerPageTexts();
+  const useAIMode = useAI && (localStorage.getItem('nb_geminiKey')||geminiKey);
+  if(!useAIMode){
+    const html=await summarizePerPage();
+    addToNotebook(`📄 Ringkasan per Halaman (${sumLen} • ${pages.length} hal • extractive)`, `${html}<p class="text-[11px] text-gray-500 mt-2">Dari ${sources.length} sumber • ${pages.length} hal • ${perLabel()} per hal • tanpa AI</p>`);
+    return;
+  }
+  // AI mode: buat placeholder dulu, lalu isi per halaman via Gemini
+  const html=await summarizePerPage();
+  const id='ai-note-'+Date.now();
+  addToNotebook(`📄 Ringkasan per Halaman (AI • ${pages.length} hal)`, `<div id="${id}">${html}</div><p class="text-[11px] text-gray-500 mt-2">AI Gemini • ${perLabel()} per hal • abstrak</p>`);
+  // panggil Gemini per halaman (batched 3 paralel)
+  const per = sumLen==='short' ? 2 : sumLen==='long' ? 4 : 3;
+  let done=0;
+  const queue=[...pages];
+  async function worker(){
+    while(queue.length){
+      const {page, text}=queue.shift();
+      const el=document.getElementById(`ai-page-${page}`);
+      if(!el) continue;
+      try{
+        const cleaned=cleanText(text);
+        if(cleaned.length<60){ el.innerHTML=`<div class="text-xs font-bold">Hal ${page}</div><p class="text-[11px] text-gray-400">kosong / gambar</p>`; }
+        else{
+          const aiText=await callGemini(`Ringkas halaman ${page} ini dalam ${per} poin bahasa Indonesia, singkat padat, jangan ngarang diluar teks. Format bullet "• ".`, cleaned);
+          const bullets=aiText.split('\n').filter(l=>l.trim()).map(l=>l.replace(/^[-•\d.]+/,'').trim()).filter(Boolean).slice(0,per).map(l=>`• ${l}`).join('<br>');
+          el.innerHTML=`<div class="flex items-center justify-between"><span class="text-xs font-bold">Hal ${page} ✅</span><span class="text-[11px] bg-green-100 text-green-700 px-2 py-0.5 rounded-full">AI</span></div><div class="mt-2 text-[13px] leading-relaxed">${bullets||aiText.replace(/\n/g,'<br>')}</div><div class="mt-2 flex gap-1.5"><button onclick="ask('Jelaskan halaman ${page} lebih detail')" class="text-[11px] px-2 py-1 rounded-full bg-gray-900 text-white">Chat hal ${page}</button></div>`;
+        }
+      }catch(e){
+        el.innerHTML=`<div class="text-xs font-bold">Hal ${page} ❌</div><p class="text-[11px] text-red-600">${e.message}</p><p class="text-[11px] text-gray-500">Fallback extractive:</p><div class="text-xs">${summarize(cleanText(text), per)}</div>`;
+      }
+      done++; const pct=Math.round(done/pages.length*100);
+      const pEl=document.getElementById('aiPct'); if(pEl) pEl.textContent=pct+'%';
+    }
+  }
+  // 3 worker paralel biar cepat tapi ga kena rate limit
+  await Promise.all([worker(), worker(), worker()]);
+}
+function perLabel(){ return sumLen==='short' ? '2 poin' : sumLen==='long' ? '4 poin' : '3 poin'; }
+window.genOutline=()=>{
+  if(!fullText) return alert('Upload PDF dulu!');
+  const cleaned=cleanText(fullText);
+  const lines=cleaned.split('\n').map(l=>l.trim()).filter(l=>l.length>20 && l.length<140 && /^[A-Z0-9]/.test(l) && l.split(' ').length>3 && l.split(' ').length<18);
+  const seen=new Set(); const uniq=[];
+  for(const l of lines){ const k=l.toLowerCase(); if(!seen.has(k)){ seen.add(k); uniq.push(l); } if(uniq.length>=15) break; }
+  if(uniq.length===0) return addToNotebook('📑 Outline', `<p class="text-xs text-gray-500">Outline tidak terdeteksi — coba pakai Ringkasan.</p>`);
+  addToNotebook('📑 Outline', `<ol class="list-decimal ml-4 space-y-1 text-[13px]">${uniq.map(l=>`<li>${l.slice(0,110)}</li>`).join('')}</ol><p class="text-[11px] text-gray-500 mt-2">${uniq.length} bab/section terdeteksi</p>`);
+}
+window.genFAQ=()=>{
+  if(!fullText) return alert('Upload PDF dulu!');
+  const cleaned=cleanText(fullText);
+  const used=new Set();
+  const ans1=summarize(cleaned.slice(0, cleaned.length*0.3),2, used); ans1.split('<br>').forEach(s=>used.add(s.toLowerCase()));
+  const mid=cleaned.slice(cleaned.length*0.3, cleaned.length*0.7);
+  const who = findRelevant('fokus utama pencipta karya seni pameran').map(r=>r.c).join(' ').slice(0,400) || cleaned.split('\n').find(l=>l.includes('Sarvamaya')||l.includes('WAHYUDIN')) || '—';
+  const ans3=summarize(mid,3, used); ans3.split('<br>').forEach(s=>used.add(s.toLowerCase()));
+  const when = [...cleaned.matchAll(/(20\d{2}|Januari|Februari|Maret|April|Mei|Juni|Juli|Agustus|September|Oktober|November|Desember)/g)].slice(0,4).map(m=>m[0]).join(', ') || 'Tidak terdeteksi tahun';
+  const ans5=summarize(cleaned.slice(cleaned.length*0.7),2, used);
+  const qas=[
+    ['Apa topik utama dokumen ini?', ans1 || summarize(cleaned,2,used)],
+    ['Siapa / apa fokus utamanya?', `<span class="text-xs">${who.slice(0,500)}</span>`],
+    ['Apa skill / poin penting?', ans3],
+    ['Kapan / dimana konteksnya?', when + ' — ' + (cleaned.match(/Yogyakarta|Jakarta|Surabaya|Institut[^.\n]{0,60}/)?.[0]||'')],
+    ['Apa kesimpulan?', ans5]
+  ];
+  addToNotebook('❓ FAQ', qas.map(([q,a])=>`<p class="font-bold mt-2 text-sm">Q: ${q}</p><p class="text-gray-700 text-[13px]">${a}</p>`).join(''));
+}
+window.genTimeline=()=>{
+  if(!fullText) return alert('Upload PDF dulu!');
+  const years=[...fullText.matchAll(/(20\d{2})/g)].map(m=>m[1]).slice(0,10);
+  addToNotebook('⏰ Timeline', years.length? years.map(y=>`• <b>${y}</b> — disebut di dokumen`).join('<br>') : 'Tidak ada tahun terdeteksi, coba chat "kapan pengalaman terakhir?"');
+}
+window.genMindmap=()=>{
+  if(!fullText) return alert('Upload PDF dulu!');
+  const topics=[...new Set(fullText.toLowerCase().split(/\W+/).filter(w=>w.length>5).slice(0,30))].slice(0,8);
+  const html=`<div class="flex flex-col items-center gap-2 py-2">
+    <div class="px-4 py-2 rounded-full bg-gray-900 text-white text-xs font-bold">📄 ${sources[0]?.name||'Dokumen'}</div>
+    <div class="w-px h-4 bg-gray-300"></div>
+    <div class="grid grid-cols-2 gap-2 w-full max-w-sm">
+      ${topics.map(t=>`<div class="px-3 py-2 rounded-xl border bg-[#ede9fe] text-center text-xs font-semibold">${t}</div>`).join('')}
+    </div>
+  </div>`;
+  addToNotebook('🧠 Mind Map', html);
+}
+window.genFlashcards=()=>{
+  if(!fullText) return alert('Upload PDF dulu!');
+  const sents=fullText.split(/[.!\n]+/).filter(s=>s.length>40).slice(0,6);
+  addToNotebook('🗂️ Flashcards', sents.map((s,i)=>`<div class="p-2.5 rounded-xl border bg-gray-50 mb-2"><b>Q${i+1}:</b> Apa maksud: "${s.slice(0,60)}..."?<br><span class="text-gray-600">A: ${s.slice(0,120)}.</span></div>`).join(''));
+}
+let utter=null;
+window.genPodcast=()=>{
+  if(!fullText) return alert('Upload PDF dulu!');
+  const text=summarize(fullText,4).replace(/<br>/g,' ').replace(/•/g,'').slice(0,400);
+  if(window.speechSynthesis.speaking) window.speechSynthesis.cancel();
+  utter=new SpeechSynthesisUtterance(text);
+  utter.lang='id-ID'; utter.rate=1;
+  window.speechSynthesis.speak(utter);
+  addToNotebook('🎙️ Podcast', `<p class="text-xs">Memutar ringkasan jadi audio... <button onclick="speechSynthesis.cancel()" class="underline">Stop</button></p><p class="mt-2 p-2 bg-gray-50 rounded border text-xs">${text}</p>`);
+}
+window.clearNotebook=()=>{ $('#notebook').innerHTML='<div class="rounded-xl bg-gray-50 border p-4 text-center text-xs text-gray-500">Notebook dibersihkan.</div>'; }
+window.exportMD=()=>{
+  const txt=[...document.querySelectorAll('#notebook > div')].map(d=>d.innerText).join('\n\n---\n\n');
+  const blob=new Blob([txt],{type:'text/markdown'});
+  const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download='notebook.md'; a.click();
+}
+window.addNote=()=>{
+  const v=$('#noteInput').value.trim();
+  if(!v) return;
+  addToNotebook('✏️ Catatan', `<p>${v}</p>`);
+  $('#noteInput').value='';
+}
+
+// CHAT RAG sederhana
+function findRelevant(query){
+  if(!fullText) return [];
+  const q=query.toLowerCase().split(/\W+/).filter(w=>w.length>2);
+  const scored=sources.flatMap(s=>s.chunks.map(c=>{
+    const score=q.reduce((a,w)=>a + (c.toLowerCase().includes(w)?1:0),0);
+    return {c, score, name:s.name};
+  })).filter(x=>x.score>0).sort((a,b)=>b.score-a.score).slice(0,3);
+  return scored.length? scored : [{c: fullText.slice(0,800), score:0, name:sources[0]?.name}];
+}
+
+function renderChat(role, text, sources){
+  const el=document.createElement('div');
+  el.className= role==='user' ? 'ml-8 p-3 rounded-xl bg-gray-900 text-white text-xs' : 'mr-4 p-3 rounded-xl bg-[#f3f5f9] border text-xs';
+  el.innerHTML = `<b>${role==='user'?'Kamu':'Notebook'}:</b> ${text}` + (sources? `<div class="mt-2 text-[11px] text-gray-500 border-t pt-1">Sumber: ${sources.map(s=>s.name).join(', ')}</div>` : '');
+  $('#chat').appendChild(el);
+  $('#chat').scrollTop=$('#chat').scrollHeight;
+}
+
+window.ask=(q)=>{ $('#chatInput').value=q; sendChat(); }
+window.sendChat=()=>{
+  const q=$('#chatInput').value.trim();
+  if(!q) return;
+  if(!fullText) { renderChat('assistant','Upload PDF dulu lur biar bisa jawab!'); return; }
+  renderChat('user', q);
+  $('#chatInput').value='';
+  const rel=findRelevant(q);
+  // jawaban extractive: gabung chunk relevan + ringkas
+  const ctx=rel.map(r=>r.c).join('\n---\n').slice(0,1500);
+  const answer = `Berdasarkan PDF-mu:<br><br>${ctx.slice(0,600).replace(/\n/g,'<br>')}<br><br><i>Ringkasan jawaban: ${summarize(ctx,2)}</i>`;
+  setTimeout(()=>renderChat('assistant', answer, rel), 400);
+}
+</script>
+</body>
+</html>
