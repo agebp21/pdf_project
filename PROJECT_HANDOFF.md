@@ -266,6 +266,13 @@ User: PDF must become Word, Excel, PPT — all real. Implemented in `converter.h
 User's PPT notes showed `TV PROGRAM x3`, `GRAPHIC PACKAGE x3`, `TELKOMSEL AWARDS 2021 x3`: design PDFs draw display type multiple times (shadows/outlines), and raw extraction repeats it. Added `dedupeLine()` in the shared core (consecutive-word + whole-line exact-repeat collapse) — fixes Word, Excel, and PPT notes at once.
 - Verified: 7-case mock OK (repeats collapse, prose untouched), inline `node --check` OK, HTTP 200. NOT verified: real-file browser reconvert (user to retest). Pushed per auto-push rule.
 
+### 17 September 2026 — borongan: coming-soon guard + multi-column tables
+
+User said "gas kabeh". Two items shipped in `converter.html`:
+- Coming-soon guard: unknown `?tool=` ids (the 18 dead cards) no longer silently open the wrong tool — a banner names the requested tool and says it isn't built yet (roadmap, not swapped). Sidebar still offers the 14 working tools.
+- Multi-column tables: shared core splits visual lines at wide X gutters (`cellsOf`, gap>50, max 6, spaced-type legacy path protected). Excel `PDF Extract` table gains dynamic `Col 1..N` when columns exist, prose keeps one `Text` column. Word/PPT/notes/side-cells still use the joined line.
+- Verified: splitter mock OK (table→2 cells, prose→1, spaced→PORTFOLIO), inline `node --check` OK, HTTP 200. NOT verified: real bank-statement/table PDF end-to-end. Pushed per auto-push rule.
+
 ### 17 September 2026 — full catalog audit (18 cards don't exist)
 
 Scripted check (`audit-ids.py`): index catalog has 35 cards, converter implements 14 tools. **18 cards have no converter entry and no direct page — clicking them silently opens JPG to PDF** (`active='jpg-to-pdf'` fallback, no notice): workflow, edit-pdf, sign-pdf, watermark, unlock-pdf, protect-pdf, pdf-to-pdfa, repair-pdf, page-numbers, scan-to-pdf, ocr-pdf, compare-pdf, redact-pdf, crop-pdf, pdf-forms, ai-summarizer, translate-pdf, pdf-to-md. Entire PDF Security shelf is dead.

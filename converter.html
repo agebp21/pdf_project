@@ -134,7 +134,14 @@ const TOOLS = [
   {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'Real .pptx: every page as a slide image with editable speaker notes.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'PDF file — slides keep the design, notes hold the text (needs internet)'},
 ];
 let active = new URLSearchParams(location.search).get('tool') || 'jpg-to-pdf';
-if(!TOOLS.find(t=>t.id===active)) active='jpg-to-pdf';
+// Honest fallback: 18 catalog cards link to tools not built yet. Instead of
+// silently opening the wrong tool, remember the request and banner it.
+let comingSoonName=null;
+if(!TOOLS.find(t=>t.id===active)){
+  comingSoonName=active.split('-').map(w=>w==='pdf'?'PDF':(w==='ocr'?'OCR':(w==='ai'?'AI':(w==='md'?'Markdown':w[0].toUpperCase()+w.slice(1))))).join(' ');
+  log('Unknown tool requested: '+active+' — showing Image to PDF with a coming-soon notice');
+  active='jpg-to-pdf';
+}
 let files = [];
 let splitPageCount = 0;
 let splitSelected = new Set();
@@ -249,6 +256,12 @@ function renderHeader(){
     </div>`;
   }
   $('#options').innerHTML=html;
+  if(comingSoonName){
+    const banner=document.createElement('div');
+    banner.className='w-full bg-[#1A3C34] text-[#FFF7EA] border-[1.5px] border-[#1C1917] rounded-2xl px-5 py-3 text-center text-[12.5px] leading-relaxed shadow-[4px_4px_0_#1C1917]';
+    banner.append('⚠️ ', Object.assign(document.createElement('b'), {textContent:comingSoonName}), ' isn\u2019t built yet — you\u2019re looking at Image to PDF instead. It\u2019s on the roadmap, not silently swapped.');
+    $('#options').prepend(banner);
+  }
   if(t.id==='split-pdf'){
     document.querySelectorAll('input[name="splitMode"]').forEach(r=>r.addEventListener('change',()=>{
       document.getElementById('splitRangeBox').classList.toggle('hidden', r.value!=='range' || !r.checked);
@@ -1044,6 +1057,31 @@ function b64ToU8(b64){
   for(let k=0;k<bin.length;k++) out[k]=bin.charCodeAt(k);
   return out;
 }
+// Split a visual line into table-ish columns at wide X gaps (gutters are far
+// wider than normal word spaces). Returns cell strings, capped at 6.
+function cellsOf(items){
+  const COL_GAP=50, MAX_COLS=6;
+  // Legacy path: spaced display type arrives as single-char items — never
+  // split those into columns, rejoin them as one cell instead.
+  if(items.length>1 && items.every(x=>x.str.length===1)){
+    const one=items.map(x=>x.str).join('').replace(/\s+/g,' ').trim();
+    return one?[one]:[];
+  }
+  const cols=[[]];
+  for(const it of items){
+    const cur=cols[cols.length-1];
+    if(cur.length){
+      const prev=cur[cur.length-1];
+      const gap=(it.transform?it.transform[4]:0)-((prev.transform?prev.transform[4]:0)+(prev.width||0));
+      if(gap>COL_GAP && cols.length<MAX_COLS) cols.push([]);
+    }
+    cols[cols.length-1].push(it);
+  }
+  return cols.map(col=>{
+    const single=col.length>1 && col.every(x=>x.str.length===1);
+    return (single?col.map(x=>x.str).join(''):col.map(x=>x.str).join(' ')).replace(/\s+/g,' ').trim();
+  }).filter(s=>s);
+}
 // Design PDFs draw display type 2-3x (shadows, outlines, gradients), so raw
 // extraction repeats it: "TV PROGRAM TV PROGRAM TV PROGRAM". Collapse those.
 function dedupeLine(txt){
@@ -1085,15 +1123,14 @@ async function pdfContentPages(pdf, progress){
     let lineNo=0;
     for(const [,items] of sorted){
       items.sort((a,b)=>(a.transform?a.transform[4]:0)-(b.transform?b.transform[4]:0));
-      // Design PDFs often store spaced display type as single-char items
-      // ("P O R T F O L I O") — rejoin those so output doesn't keep the gaps.
-      const allSingle=items.length>1 && items.every(it=>it.str.length===1);
-      const raw=(allSingle?items.map(it=>it.str).join(''):items.map(it=>it.str).join(' ')).replace(/\s+/g,' ').trim().slice(0,2000);
-      const txt=dedupeLine(raw);
+      const cellTexts=cellsOf(items).map(c=>c.slice(0,500));
+      // Single-column lines keep the legacy spaced-type rejoin via cellsOf;
+      // the joined text is what Word/PPT/notes show.
+      const txt=dedupeLine(cellTexts.join(' ').slice(0,2000));
       if(!txt) continue;
       totalChars+=txt.length; lineNo++;
       if(lineNo>300) break;
-      lines.push({line:lineNo, source:'Text', text:txt});
+      lines.push({line:lineNo, source:'Text', text:txt, cells:cellTexts});
     }
     if(!lines.length){
       // No embedded text — this page is an image/scan. Try OCR instead of garbage.
@@ -1101,7 +1138,7 @@ async function pdfContentPages(pdf, progress){
         progress(`Page ${i} has no text — loading OCR...`);
         await ensureTesseract();
         const ocrLines=await ocrPageToLines(page, i);
-        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; lines.push({line:k+1, source:'OCR', text:txt.slice(0,2000)}); });
+        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; lines.push({line:k+1, source:'OCR', text:txt.slice(0,2000), cells:[txt.slice(0,500)]}); });
         if(lines.length){ ocrPages++; log(`Page ${i}: OCR ${lines.length} lines`); }
         else emptyPages++;
       }catch(cause){ emptyPages++; log(`Page ${i}: OCR failed — ${cause.message}`); }
@@ -1187,17 +1224,31 @@ async function pdfToExcel(){
     r+=1;
   });
   // Sheet 2: searchable text as a REAL Excel table (editable, sortable, filterable).
+  // Lines with detected table columns become Col 1..N; prose stays one Text column.
   const wt=wb.addWorksheet('PDF Extract');
-  wt.columns=[{width:10},{width:8},{width:10},{width:120}];
-  if(textRows.length){
+  let maxCols=1;
+  pageTexts.forEach(ls=>ls.forEach(l=>{ maxCols=Math.max(maxCols, Math.min(6, (l.cells||[l.text]).length)); }));
+  const multi=maxCols>1;
+  wt.columns=multi?[{width:10},{width:8},{width:10},...Array.from({length:maxCols},()=>({width:40}))]:[{width:10},{width:8},{width:10},{width:120}];
+  const tableRows=[];
+  content.pages.forEach((pg,idx)=>{
+    const i=idx+1;
+    pg.lines.forEach(l=>{
+      const cells=(l.cells||[l.text]).slice(0,maxCols);
+      while(cells.length<maxCols) cells.push('');
+      tableRows.push(multi?[i, l.line, l.source, ...cells]:[i, l.line, l.source, l.text]);
+      textRows.push(multi?[i, l.line, l.source, cells.join(' | ')]:[i, l.line, l.source, l.text]);
+    });
+  });
+  if(tableRows.length){
     wt.addTable({
       name:'PdfExtract',
       ref:'A1',
       headerRow:true,
       totalsRow:false,
       style:{theme:'TableStyleMedium9', showRowStripes:true},
-      columns:[{name:'Page', filterButton:true},{name:'Line', filterButton:true},{name:'Source', filterButton:true},{name:'Text', filterButton:true}],
-      rows:textRows,
+      columns:multi?[{name:'Page', filterButton:true},{name:'Line', filterButton:true},{name:'Source', filterButton:true},...Array.from({length:maxCols},(_,k)=>({name:'Col '+(k+1), filterButton:true}))]:[{name:'Page', filterButton:true},{name:'Line', filterButton:true},{name:'Source', filterButton:true},{name:'Text', filterButton:true}],
+      rows:tableRows,
     });
   }else{
     wt.addRow(['Page','Line','Source','Text']).font={bold:true};
@@ -1209,8 +1260,8 @@ async function pdfToExcel(){
     wn.columns=[{width:130}];
     wn.addRow(['Note: how this Excel was made']).font={bold:true};
     wn.addRow([`Pages: ${pdf.numPages}. Text pages: ${pdf.numPages-emptyPages-ocrPages}. OCR pages: ${ocrPages}. Empty pages: ${emptyPages}. Average ${Math.round(avg)} text chars per page.`]);
-    wn.addRow([`Sheet 'Pages (Images)' holds every page as an image plus editable text cells underneath — editing those cells never changes the picture.`]);
-    wn.addRow([`Sheet 'PDF Extract' holds searchable text. Rows marked 'OCR' were read from page images (English + Indonesian). Proofread numbers carefully.`]);
+    wn.addRow([`Sheet 'Pages (Images)' holds every page as an image plus editable text cells beside each picture — editing those cells never changes the picture.`]);
+    wn.addRow([`Sheet 'PDF Extract' is a real Excel table. Wide-gutter lines are split into Col 1..N; rows marked 'OCR' were read from page images (English + Indonesian). Proofread numbers carefully.`]);
     wn.addRow([`Pages that are pure artwork are left without text on purpose — guessing would print fake rows.`]);
   }
   const out=await wb.xlsx.writeBuffer();
