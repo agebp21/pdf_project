@@ -20,14 +20,15 @@ function install(test){
 }
 async function main(){
  const test=runtime('flipbook.html',null,1200),w=test.w,files=install(test);
- test.load('assets/flipbook.js');
+ test.load('assets/export/layout.js');test.load('assets/editor.js');test.load('assets/flipbook.js');
  const input=w.document.querySelector('#pdf-file');
  const source=fixture(8,960,540);source.name='QA landscape.pdf';
  Object.defineProperty(input,'files',{configurable:true,value:[source]});input.dispatchEvent(new w.Event('change'));
  await until(test,()=>/8 (halaman siap|pages ready)/.test(w.document.querySelector('#load-status').textContent),'load PDF');
  test.pump(100);
  assert.equal(w.document.querySelector('#reader-error').hidden,true,w.document.querySelector('#reader-error').textContent);
- assert.equal(w.document.querySelector('#overlay-form').hidden,true);assert.equal(w.document.querySelector('.playback').hidden,true);
+ // overlay-form is replaced by editor-fields; playback is still hidden
+ assert.equal(w.document.querySelector('#editor-fields').disabled,false);assert.equal(w.document.querySelector('.playback').hidden,true);
  const height=w.document.querySelector('#reader-stage').style.height;
  w.document.querySelector('#next').click();test.pump(1400);
  assert.equal(w.engine.getCurrentPageIndex(),1);assert.equal(w.document.querySelector('#reader-stage').style.height,height);

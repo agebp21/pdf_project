@@ -1,0 +1,502 @@
+/* ═══════════════════════════════════════════════════
+   Flipbook Editor — Canva-like overlay editor
+   ═══════════════════════════════════════════════════ */
+
+/* ── Mode toggle bar ─────────────────────────────── */
+.editor-mode-bar {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 6px 12px;
+  background: #f5f0e8;
+  border-bottom: 1px solid #ddd8cc;
+  font-size: 12px;
+}
+.editor-mode-bar .mode-btn {
+  padding: 5px 14px;
+  border-radius: 20px;
+  border: 1px solid #c8bfac;
+  background: white;
+  color: #5b4e3a;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.15s, color 0.15s;
+}
+.editor-mode-bar .mode-btn.active {
+  background: #4a7c59;
+  color: white;
+  border-color: #4a7c59;
+}
+.editor-mode-bar .mode-label {
+  color: #8c7b5e;
+  font-size: 11px;
+  margin-left: auto;
+}
+
+/* ── Editor view (single-page edit canvas) ─────── */
+#editor-view {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+  background: #2d2d2d;
+  min-height: 420px;
+  position: relative;
+  overflow: hidden;
+}
+#editor-view.hidden { display: none; }
+
+.editor-page-wrap {
+  position: relative;
+  box-shadow: 0 8px 32px #0006;
+  background: white;
+  user-select: none;
+  touch-action: none;
+}
+.editor-page-wrap > img {
+  display: block;
+  width: 100%;
+  height: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* ── Editor Stage (transparent overlay on page) ── */
+.editor-stage {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  z-index: 5;
+  cursor: default;
+}
+.editor-stage.panning { cursor: move; }
+
+/* ── Read-mode element container (in flipbook) ─── */
+.page-elements {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  z-index: 4;
+  overflow: hidden;
+}
+.page-elements.interactive { pointer-events: auto; }
+
+/* ── Elements (shared base) ─────────────────────── */
+.ed-el, .fb-el {
+  position: absolute;
+  box-sizing: border-box;
+  cursor: move;
+  outline: none;
+  min-width: 20px;
+  min-height: 14px;
+}
+
+/* Text element */
+.ed-el.ed-text, .fb-el.fb-text {
+  padding: 4px 6px;
+  line-height: 1.35;
+  word-break: break-word;
+  white-space: pre-wrap;
+}
+
+/* Hotspot / link button element */
+.ed-el.ed-hotspot, .fb-el.fb-hotspot {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  text-align: center;
+  border-radius: 6px;
+  padding: 4px 10px;
+  word-break: break-word;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── Editor-mode element states ──────────────────── */
+.editor-stage .ed-el {
+  border: 1.5px dashed transparent;
+  transition: border-color 0.12s;
+}
+.editor-stage .ed-el:hover {
+  border-color: #4a7c5988;
+}
+.editor-stage .ed-el.selected {
+  border-color: #4a7c59;
+  border-style: solid;
+  z-index: 10;
+}
+
+/* ── Resize Handles ──────────────────────────────── */
+.ed-handle {
+  position: absolute;
+  width: 10px;
+  height: 10px;
+  background: white;
+  border: 2px solid #4a7c59;
+  border-radius: 2px;
+  z-index: 20;
+  pointer-events: all;
+}
+.ed-handle[data-pos="tl"] { top: -5px; left: -5px; cursor: nwse-resize; }
+.ed-handle[data-pos="tc"] { top: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+.ed-handle[data-pos="tr"] { top: -5px; right: -5px; cursor: nesw-resize; }
+.ed-handle[data-pos="ml"] { top: calc(50% - 5px); left: -5px; cursor: ew-resize; }
+.ed-handle[data-pos="mr"] { top: calc(50% - 5px); right: -5px; cursor: ew-resize; }
+.ed-handle[data-pos="bl"] { bottom: -5px; left: -5px; cursor: nesw-resize; }
+.ed-handle[data-pos="bc"] { bottom: -5px; left: calc(50% - 5px); cursor: ns-resize; }
+.ed-handle[data-pos="br"] { bottom: -5px; right: -5px; cursor: nwse-resize; }
+
+/* Rotation handle */
+.ed-rotate {
+  position: absolute;
+  top: -28px;
+  left: calc(50% - 7px);
+  width: 14px;
+  height: 14px;
+  background: white;
+  border: 2px solid #4a7c59;
+  border-radius: 50%;
+  cursor: grab;
+  z-index: 20;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 9px;
+  color: #4a7c59;
+}
+.ed-rotate:active { cursor: grabbing; }
+
+/* Connector line from element to rotation handle */
+.ed-rotate::after {
+  content: '';
+  position: absolute;
+  top: 100%;
+  left: 50%;
+  width: 1px;
+  height: 14px;
+  background: #4a7c59;
+  transform: translateX(-50%);
+}
+
+/* ── Text editing mode ───────────────────────────── */
+.ed-el.editing {
+  cursor: text;
+  border-style: solid !important;
+  border-color: #2563eb !important;
+}
+.ed-el.editing:focus { outline: none; }
+
+/* ── Inspector Panel (in sidebar) ───────────────── */
+.ed-inspector {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 10px 0;
+  border-top: 1px solid #ddd8cc;
+  margin-top: 10px;
+}
+.ed-inspector.hidden { display: none; }
+
+.ed-inspector h3 {
+  font-size: 11px;
+  font-weight: 600;
+  color: #5b4e3a;
+  text-transform: uppercase;
+  letter-spacing: .04em;
+  margin: 0;
+}
+
+.ed-inspector label {
+  font-size: 11px;
+  color: #6b5e4a;
+  display: block;
+  margin-bottom: 3px;
+}
+
+.ed-inspector input[type="text"],
+.ed-inspector input[type="number"],
+.ed-inspector input[type="url"],
+.ed-inspector select,
+.ed-inspector textarea {
+  width: 100%;
+  box-sizing: border-box;
+  border: 1px solid #d4cec4;
+  border-radius: 6px;
+  padding: 6px 8px;
+  font-size: 12px;
+  background: white;
+  color: #2d2a25;
+}
+
+.ed-inspector textarea {
+  resize: vertical;
+  min-height: 52px;
+  font-family: inherit;
+}
+
+.ed-inspector .row {
+  display: flex;
+  gap: 6px;
+  align-items: center;
+}
+.ed-inspector .row label { margin: 0; flex: 1; }
+.ed-inspector .row input[type="number"] { width: 60px; flex: none; }
+.ed-inspector .row input[type="color"] {
+  width: 32px;
+  height: 28px;
+  border: 1px solid #d4cec4;
+  border-radius: 4px;
+  padding: 2px;
+  cursor: pointer;
+  flex: none;
+  background: none;
+}
+
+.ed-inspector .toggle-row {
+  display: flex;
+  gap: 6px;
+}
+.ed-inspector .toggle-btn {
+  flex: 1;
+  padding: 5px;
+  border: 1px solid #d4cec4;
+  border-radius: 5px;
+  background: white;
+  font-size: 11px;
+  cursor: pointer;
+  color: #5b4e3a;
+  text-align: center;
+}
+.ed-inspector .toggle-btn.on {
+  background: #4a7c59;
+  color: white;
+  border-color: #4a7c59;
+}
+
+.ed-inspector .align-row {
+  display: flex;
+  gap: 4px;
+}
+.ed-inspector .align-btn {
+  flex: 1;
+  padding: 4px;
+  border: 1px solid #d4cec4;
+  border-radius: 4px;
+  background: white;
+  cursor: pointer;
+  font-size: 12px;
+  text-align: center;
+}
+.ed-inspector .align-btn.on {
+  background: #e8f0ea;
+  border-color: #4a7c59;
+  color: #4a7c59;
+}
+
+/* ── Toolbar (add element buttons) ───────────────── */
+.ed-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding: 8px 0;
+}
+.ed-toolbar button {
+  flex: 1;
+  min-width: 80px;
+  padding: 8px 6px;
+  border: 1px dashed #b0a898;
+  border-radius: 8px;
+  background: #faf8f5;
+  color: #5b4e3a;
+  font-size: 11px;
+  cursor: pointer;
+  transition: background 0.12s, border-color 0.12s;
+}
+.ed-toolbar button:hover {
+  background: #eef4ee;
+  border-color: #4a7c59;
+  color: #2d5a3d;
+}
+.ed-toolbar button:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* ── Page strip (mini page list) ─────────────────── */
+.page-strip {
+  display: flex;
+  gap: 5px;
+  flex-wrap: wrap;
+  padding: 8px 0;
+  max-height: 80px;
+  overflow-y: auto;
+}
+.page-strip-btn {
+  width: 36px;
+  height: 36px;
+  border: 1.5px solid #d0cab8;
+  border-radius: 4px;
+  background: #faf8f5;
+  font-size: 10px;
+  color: #6b5e4a;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  flex-direction: column;
+  gap: 1px;
+}
+.page-strip-btn.active {
+  border-color: #4a7c59;
+  background: #eef4ee;
+  color: #2d5a3d;
+  font-weight: 600;
+}
+.page-strip-btn .has-els {
+  width: 5px;
+  height: 5px;
+  border-radius: 50%;
+  background: #e0825a;
+  position: absolute;
+  top: 3px;
+  right: 3px;
+}
+
+/* ── Delete / Clear buttons ──────────────────────── */
+.ed-delete-btn {
+  width: 100%;
+  padding: 7px;
+  border: 1px solid #f0c4b8;
+  border-radius: 6px;
+  background: #fff8f6;
+  color: #c0442a;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.ed-delete-btn:hover { background: #ffe8e0; }
+.ed-delete-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+.ed-extract-btn {
+  width: 100%;
+  padding: 7px;
+  border: 1px solid #d4cec4;
+  border-radius: 6px;
+  background: #faf8f5;
+  color: #5b4e3a;
+  font-size: 11px;
+  cursor: pointer;
+  margin-top: 4px;
+}
+.ed-extract-btn:hover { background: #eef4ee; }
+.ed-extract-btn:disabled { opacity: .45; cursor: not-allowed; }
+
+/* ── Read-mode element animations ────────────────── */
+
+/* Elements start invisible, animation adds them */
+.fb-el {
+  opacity: 0;
+  pointer-events: none;
+}
+.fb-el.fb-animated {
+  opacity: 1;
+  pointer-events: auto;
+}
+.fb-el.fb-link { cursor: pointer; }
+
+/* Animation: fadeIn */
+@keyframes fb-fadeIn {
+  from { opacity: 0; }
+  to   { opacity: 1; }
+}
+/* Animation: slideUp */
+@keyframes fb-slideUp {
+  from { opacity: 0; transform: translateY(24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Animation: slideDown */
+@keyframes fb-slideDown {
+  from { opacity: 0; transform: translateY(-24px); }
+  to   { opacity: 1; transform: translateY(0); }
+}
+/* Animation: slideLeft */
+@keyframes fb-slideLeft {
+  from { opacity: 0; transform: translateX(24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+/* Animation: slideRight */
+@keyframes fb-slideRight {
+  from { opacity: 0; transform: translateX(-24px); }
+  to   { opacity: 1; transform: translateX(0); }
+}
+/* Animation: zoomIn */
+@keyframes fb-zoomIn {
+  from { opacity: 0; transform: scale(0.7); }
+  to   { opacity: 1; transform: scale(1); }
+}
+/* Animation: bounce */
+@keyframes fb-bounce {
+  0%   { opacity: 0; transform: scale(0.6); }
+  60%  { opacity: 1; transform: scale(1.08); }
+  80%  { transform: scale(0.96); }
+  100% { transform: scale(1); }
+}
+/* Animation: pulse (subtle attention) */
+@keyframes fb-pulse {
+  0%,100% { opacity: 1; transform: scale(1); }
+  50%      { transform: scale(1.05); }
+}
+
+.fb-el.fb-anim-fadeIn    { animation: fb-fadeIn    var(--fb-dur,0.6s) ease both; }
+.fb-el.fb-anim-slideUp   { animation: fb-slideUp   var(--fb-dur,0.5s) ease both; }
+.fb-el.fb-anim-slideDown { animation: fb-slideDown var(--fb-dur,0.5s) ease both; }
+.fb-el.fb-anim-slideLeft { animation: fb-slideLeft var(--fb-dur,0.5s) ease both; }
+.fb-el.fb-anim-slideRight{ animation: fb-slideRight var(--fb-dur,0.5s) ease both; }
+.fb-el.fb-anim-zoomIn    { animation: fb-zoomIn    var(--fb-dur,0.5s) cubic-bezier(.34,1.56,.64,1) both; }
+.fb-el.fb-anim-bounce    { animation: fb-bounce    var(--fb-dur,0.6s) cubic-bezier(.34,1.2,.64,1) both; }
+.fb-el.fb-anim-pulse     { animation: fb-pulse     var(--fb-dur,1.2s) ease-in-out infinite; }
+
+/* Respect reduced-motion */
+@media (prefers-reduced-motion: reduce) {
+  .fb-el.fb-anim-fadeIn,
+  .fb-el.fb-anim-slideUp,
+  .fb-el.fb-anim-slideDown,
+  .fb-el.fb-anim-slideLeft,
+  .fb-el.fb-anim-slideRight,
+  .fb-el.fb-anim-zoomIn,
+  .fb-el.fb-anim-bounce,
+  .fb-el.fb-anim-pulse {
+    animation: none;
+    opacity: 1;
+  }
+}
+
+/* ── Editor status feedback ───────────────────────── */
+#editor-status {
+  font-size: 11px;
+  color: #5b7264;
+  min-height: 1.4em;
+}
+
+/* ── No-element placeholder ───────────────────────── */
+.ed-empty-hint {
+  position: absolute;
+  inset: 0;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  color: #888;
+  font-size: 13px;
+  pointer-events: none;
+  gap: 6px;
+  opacity: .7;
+}
+.ed-empty-hint span { font-size: 28px; }

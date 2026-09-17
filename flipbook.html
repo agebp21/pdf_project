@@ -7,12 +7,14 @@
   <link rel="stylesheet" href="assets/flipbook.css">
   <link rel="stylesheet" href="assets/export/book-effects.css">
   <link rel="stylesheet" href="assets/theme-cream.css">
+  <link rel="stylesheet" href="assets/editor.css">
   <script defer src="assets/vendor/pdf.min.js"></script>
   <script defer src="assets/vendor/page-flip.browser.js"></script>
   <script defer src="assets/flipbook-transfer.js"></script>
   <script defer src="assets/vendor/jszip.min.js"></script>
   <script defer src="assets/flipbook-export.js"></script>
   <script defer src="assets/export/layout.js"></script>
+  <script defer src="assets/editor.js"></script>
   <script defer src="assets/flipbook.js"></script>
 </head>
 <body>
@@ -21,26 +23,111 @@
     <div class="heading"><div><p class="eyebrow">✦ PDF TO FLIPBOOK • INTERACTIVE</p><h1>Your doc, turned into a living book.</h1><p>Upload a PDF or continue straight from a convert result. Cover first, then the inside — just like a real book.</p></div><a class="offline" href="animation.html">See animation example ↗</a></div>
     <div class="workspace">
       <aside>
+        <!-- Step 01: Choose document -->
         <div class="panel-heading"><span class="step">01</span><h2>Choose document</h2></div>
         <label for="pdf-file">PDF file</label><input id="pdf-file" type="file" accept="application/pdf,.pdf">
         <p class="muted">Pick a PDF to turn into a flipbook. Files are processed on your device.</p>
         <p id="load-status" class="feedback" role="status">No PDF selected yet.</p>
         <label for="project-file">Open a saved project (.flipbook)</label><input id="project-file" type="file" accept=".flipbook">
-        <!-- Editor animasi disembunyikan sementara atas permintaan pengguna. -->
-        <form id="overlay-form" hidden style="display:none">
-          <fieldset id="overlay-fields" disabled>
-            <div class="panel-heading"><span class="step">02</span><h2>Tambahkan animasi</h2></div>
-            <label for="target-page">Halaman tujuan</label><select id="target-page"></select>
-            <label for="stat-label">Judul statistik</label><input id="stat-label" maxlength="40" value="Peserta terlibat" required>
-            <label for="stat-value">Angka akhir</label><input id="stat-value" type="number" min="0" max="999999" value="1250" required>
-            <label for="position">Posisi</label><select id="position"><option value="bottom-right">Kanan bawah</option><option value="bottom-left">Kiri bawah</option><option value="top-right">Kanan atas</option><option value="top-left">Kiri atas</option></select>
-            <button class="primary apply" type="submit">Terapkan ke halaman</button>
-            <button id="remove-overlay" class="secondary" type="button">Hapus animasi halaman ini</button>
-          </fieldset>
-        </form>
+
+        <!-- Step 02: Add Animations & Links (replaces old hidden overlay-form) -->
+        <fieldset id="editor-fields" disabled>
+          <div class="panel-heading"><span class="step">02</span><h2>Add animations &amp; links</h2></div>
+          <p class="muted">Pick a page below, then add text or interactive buttons on top of it. Switch to Read mode to preview.</p>
+
+          <!-- Page strip -->
+          <label>Pages</label>
+          <div id="page-strip" class="page-strip" aria-label="Select page to edit"></div>
+          <p id="editor-status" style="font-size:11px;color:#5b7264;min-height:1.2em;"></p>
+
+          <!-- Toolbar: add elements -->
+          <div class="ed-toolbar">
+            <button id="add-text"    type="button" disabled>＋ Text</button>
+            <button id="add-hotspot" type="button" disabled>＋ Link button</button>
+          </div>
+
+          <!-- Element inspector (hidden until element selected) -->
+          <div id="ed-inspector" class="ed-inspector hidden">
+            <h3>Element</h3>
+
+            <label>Content</label>
+            <textarea id="insp-content" rows="2" placeholder="Element text…"></textarea>
+
+            <div class="row">
+              <label>Font size</label>
+              <input id="insp-fontsize" type="number" min="6" max="200" value="18">
+              <label>Color</label>
+              <input id="insp-color" type="color" value="#1a1a1a">
+            </div>
+
+            <div class="row">
+              <label>Background</label>
+              <input id="insp-bgcolor" type="color" value="#ffffff">
+              <label>Opacity %</label>
+              <input id="insp-opacity" type="number" min="0" max="100" value="100">
+            </div>
+
+            <div class="toggle-row">
+              <button id="insp-bold"   class="toggle-btn" type="button"><b>B</b></button>
+              <button id="insp-italic" class="toggle-btn" type="button"><i>I</i></button>
+            </div>
+
+            <label>Align</label>
+            <div class="align-row">
+              <button id="insp-align-left"   class="align-btn on" type="button" title="Left">&#8676;</button>
+              <button id="insp-align-center" class="align-btn"    type="button" title="Center">&#8677;</button>
+              <button id="insp-align-right"  class="align-btn"    type="button" title="Right">&#8677;</button>
+            </div>
+
+            <h3>Animation</h3>
+            <label>Type</label>
+            <select id="insp-anim-type">
+              <option value="none">None</option>
+              <option value="fadeIn" selected>Fade in</option>
+              <option value="slideUp">Slide up</option>
+              <option value="slideDown">Slide down</option>
+              <option value="slideLeft">Slide from right</option>
+              <option value="slideRight">Slide from left</option>
+              <option value="zoomIn">Zoom in</option>
+              <option value="bounce">Bounce</option>
+              <option value="pulse">Pulse (loop)</option>
+            </select>
+            <div class="row">
+              <label>Delay (ms)</label>
+              <input id="insp-anim-delay" type="number" min="0" max="5000" step="100" value="0">
+              <label>Duration (ms)</label>
+              <input id="insp-anim-dur"   type="number" min="100" max="5000" step="100" value="600">
+            </div>
+
+            <h3>Link</h3>
+            <label>Action on click</label>
+            <select id="insp-link-type">
+              <option value="none">None</option>
+              <option value="url">Open URL</option>
+              <option value="page">Go to page</option>
+            </select>
+            <div id="insp-link-url-row" class="hidden">
+              <label>URL</label>
+              <input id="insp-link-url" type="url" placeholder="https://…">
+            </div>
+            <div id="insp-link-page-row" class="hidden">
+              <label>Page number (1-based)</label>
+              <input id="insp-link-page" type="number" min="1" value="1">
+            </div>
+
+            <button id="ed-delete-btn"   class="ed-delete-btn"   type="button">Delete element</button>
+            <button id="ed-clear-btn"    class="ed-delete-btn"   type="button">Clear this page</button>
+          </div>
+
+          <!-- PDF extraction helpers -->
+          <button id="ed-extract-page" class="ed-extract-btn" type="button" disabled>Extract text from this page</button>
+          <button id="ed-extract-all"  class="ed-extract-btn" type="button" disabled>Extract text from all pages</button>
+        </fieldset>
+
+        <!-- Step 03: Save & export -->
         <p class="muted">Save your project so the document can be reopened later.</p>
         <fieldset id="export-fields" disabled>
-          <div class="panel-heading"><span class="step">02</span><h2>Save & export</h2></div>
+          <div class="panel-heading"><span class="step">03</span><h2>Save &amp; export</h2></div>
           <label for="export-title">Book title</label><input id="export-title" maxlength="200" value="Interactive book">
           <button id="save-project" class="secondary" type="button">Save project as…</button>
           <button id="export-html" class="primary apply" type="button">Save offline HTML as…</button>
@@ -53,10 +140,47 @@
         <p id="export-status" class="feedback" role="status"></p>
         <a id="build-download" class="secondary" style="text-align:center" hidden download>Download build result</a>
       </aside>
+
+      <!-- Preview / Editor area -->
       <section class="preview" aria-label="Book from PDF">
-        <div class="preview-top"><span id="document-name">FLIPBOOK PREVIEW</span><span id="page-status" aria-live="polite">—</span></div>
-        <div id="reader-stage" class="stage"><div id="empty-book"><span>▤</span><h2>Open your first PDF</h2><p>PDF pages will appear here as a flippable book.</p><a href="converter.html?tool=word-to-pdf">Have a Word file? Convert it first →</a></div></div>
-        <div class="controls"><div class="navigation"><button id="prev" disabled aria-label="Previous page">←</button><button id="home" disabled aria-label="Back to cover" title="Back to cover">Home</button><button id="next" disabled aria-label="Next page">→</button></div><div class="playback" hidden style="display:none"><button id="replay" disabled>↻ Putar animasi</button><button id="fullscreen">Layar penuh</button></div><a href="animation.html" class="back-link" hidden style="display:none">Demo infografis</a></div>
+        <div class="preview-top">
+          <span id="document-name">FLIPBOOK PREVIEW</span>
+          <span id="page-status" aria-live="polite">—</span>
+        </div>
+
+        <!-- Mode toggle bar (hidden until PDF loaded) -->
+        <div id="editor-mode-bar" class="editor-mode-bar" hidden>
+          <button id="mode-read" class="mode-btn active" type="button">📖 Read</button>
+          <button id="mode-edit" class="mode-btn"        type="button">✏️ Edit</button>
+          <span class="mode-label" id="mode-hint">Switch to Edit to add animations &amp; links</span>
+        </div>
+
+        <!-- Reader (flipbook) -->
+        <div id="reader-stage" class="stage">
+          <div id="empty-book"><span>▤</span><h2>Open your first PDF</h2><p>PDF pages will appear here as a flippable book.</p><a href="converter.html?tool=word-to-pdf">Have a Word file? Convert it first →</a></div>
+        </div>
+
+        <!-- Editor single-page view (hidden until edit mode) -->
+        <div id="editor-view" class="hidden">
+          <div class="editor-page-wrap" id="editor-page-wrap">
+            <img class="editor-page-img" src="" alt="Page" draggable="false">
+            <div class="editor-stage" id="editor-stage"></div>
+          </div>
+        </div>
+
+        <!-- Controls -->
+        <div class="controls">
+          <div class="navigation">
+            <button id="prev" disabled aria-label="Previous page">←</button>
+            <button id="home" disabled aria-label="Back to cover" title="Back to cover">Home</button>
+            <button id="next" disabled aria-label="Next page">→</button>
+          </div>
+          <div class="playback" hidden style="display:none">
+            <button id="replay" disabled>↻ Putar animasi</button>
+            <button id="fullscreen">Layar penuh</button>
+          </div>
+          <a href="animation.html" class="back-link" hidden style="display:none">Demo infografis</a>
+        </div>
         <p id="reader-error" role="alert" hidden></p>
       </section>
     </div>

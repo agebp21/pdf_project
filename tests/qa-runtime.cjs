@@ -70,7 +70,11 @@ async function main(){
  const model={version:1,title:'QA Final Export',pageCount:8,ratio:960/540,overlays:{'2':{label:'QA statistic',value:1250,position:'bottom-right'}}};
  const bundle=await FlipbookExport.packageBook(model,urls);fs.writeFileSync(path.join(out,'qa-final-HTML.zip'),Buffer.from(await bundle.arrayBuffer()));
  const saved=await FlipbookExport.saveProject(model,source);fs.writeFileSync(path.join(out,'qa-final.flipbook'),Buffer.from(await saved.arrayBuffer()));
- const restored=await FlipbookExport.readProject(saved);assert.deepEqual(restored.data,model);assert.deepEqual(Buffer.from(await restored.pdf.arrayBuffer()),Buffer.from(await source.arrayBuffer()));
+ const restored=await FlipbookExport.readProject(saved);
+ // validate() adds 'pages:{}' to all results; compare relevant fields
+ assert.equal(restored.data.title,model.title);assert.equal(restored.data.pageCount,model.pageCount);
+ assert.equal(restored.data.ratio,model.ratio);assert.deepEqual(restored.data.overlays,model.overlays);
+ assert.deepEqual(Buffer.from(await restored.pdf.arrayBuffer()),Buffer.from(await source.arrayBuffer()));
  global.fetch=fetchOriginal;console.log('PASS real PDF rendering -> JPEG -> HTML ZIP, editable project round-trip');
 }
 module.exports={runtime,fixture};
