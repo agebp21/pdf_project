@@ -169,6 +169,10 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - Users clicked picture text trying to edit (editable cells were below, hidden). Now A–H picture + J–M editable text same rows; overflow full-width below. Smoke + syntax + HTTP OK. No browser E2E. Committed + pushed.
 
+### 17 September 2026 — Word + PPT borongan (pushed)
+
+- Shared pdfContentPages core; Word via docx 9.7.1 (MIT); PPT via PptxGenJS 4.0.1 (MIT); both lazy CDN. Placeholders gone. Node smoke OK both, syntax + HTTP + 13 Python OK. No browser E2E. Committed + pushed.
+
 ### 17 September 2026 — formal Excel Table (pushed)
 
 - PDF Extract is now a real Table (PdfExtract, Medium9, filters). Verified table1.xml in output zip. Smoke + syntax + HTTP OK. Multi-column reconstruction still future. Committed + pushed.

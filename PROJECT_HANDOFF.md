@@ -252,6 +252,15 @@ User: images work, but text can't be edited (expected — JPEG pixels aren't edi
 User screenshot showed them clicking text inside the picture trying to edit it (understandable — editable cells were hidden below tall images). Fix: `Pages (Images)` now puts the picture in A–H and editable text cells in J–M on the SAME rows — visible without scrolling. Overflow past 20 lines continues full-width below; artwork pages get a full-width note row. README updated.
 - Verified: smoke OK (13-col + J:M merge), inline `node --check` OK, HTTP 200. NOT verified: real-file browser run. Pushed per auto-push rule.
 
+### 17 September 2026 — Word + PPT borongan (shared core)
+
+User: PDF must become Word, Excel, PPT — all real. Implemented in `converter.html`:
+- Shared `pdfContentPages()` core (text lines + OCR gate + page images in ONE pdf.js pass; also speeds up Excel). `pdfToExcel` refactored onto it — output unchanged.
+- PDF→Word v2 via docx **9.7.1** (MIT, dolanmiu/docx, jsDelivr IIFE, lazy-load): real `.docx` with Page headings, embedded page images, editable paragraphs (OCR lines gray italic). Old HTML-`.doc` path gone.
+- PDF→PPT v2 via PptxGenJS **4.0.1** (MIT, gitbrent/pptxgenjs, jsDelivr min bundle, lazy-load): real `.pptx`, one slide per page, contain-fit image (nothing cropped), editable text in speaker notes. Placeholder gone — no more fake PDFs.
+- Safe DOM previews for `.docx`/`.pptx`; generic preview branch de-XSSed (filenames via textContent).
+- Verified: Node smoke OK for both libs (valid PK outputs), inline `node --check` OK, HTTP 200, 13 Python tests OK. NOT verified: real-file browser runs (CDN + render time). Pushed per auto-push rule.
+
 ### 17 September 2026 — formal Excel Table (user: "ditambahi table")
 
 User wants real editable tables in Excel. Fix: `PDF Extract` sheet is now a formal Excel Table (`PdfExtract`, style TableStyleMedium9, banded rows, filter buttons on Page/Line/Source/Text) via `ws.addTable` — sortable, filterable, editable cells. Side-by-side editable cells on `Pages (Images)` stay as-is.

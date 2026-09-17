@@ -121,7 +121,7 @@ const TOOLS = [
   {id:'jpg-to-pdf', title:'JPG to PDF', desc:'Convert JPG/PNG images to PDF in seconds. Atur orientasi & margin.', cat:'Convert PDF', icon:'JPG', color:'#b45309', bg:'#fef9c3', accept:'.jpg,.jpeg,.png,.webp', multiple:true, hint:'JPG, PNG, WEBP — bisa pilih banyak gambar sekaligus'},
   {id:'pdf-to-jpg', title:'PDF to JPG', desc:'Convert tiap halaman PDF jadi JPG atau ambil semua gambar.', cat:'Convert PDF', icon:'🖼', color:'#a16207', bg:'#fef9c3', accept:'.pdf', hint:'File PDF — tiap halaman jadi 1 JPG (ZIP jika multi-halaman)'},
   {id:'word-to-pdf', title:'Word to PDF', desc:'Turn DOC/DOCX files into easy-to-read PDFs (plain text for now).', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'DOCX/DOC file (text extracted, formatting not kept yet)'},
-  {id:'pdf-to-word', title:'PDF to Word', desc:'Convert PDF jadi DOCX yang mudah diedit. 100% di browser.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'File PDF — teks akan diekstrak ke .doc'},
+  {id:'pdf-to-word', title:'PDF to Word', desc:'Real .docx with page images plus editable text (OCR fallback).', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'PDF file — images kept, text editable (needs internet)'},
   {id:'excel-to-pdf', title:'Excel to PDF', desc:'Turn EXCEL spreadsheets into easy-to-read PDFs (first 60 rows).', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file'},
   {id:'pdf-to-excel', title:'PDF to Excel', desc:'Every PDF page kept as an image in Excel, plus searchable text and OCR.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pages embedded as images, text/OCR on extra sheets (needs internet)'},
   {id:'html-to-pdf', title:'HTML to PDF', desc:'Convert halaman HTML jadi PDF dengan 1 klik.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'File .html'},
@@ -131,7 +131,7 @@ const TOOLS = [
   {id:'rotate-pdf', title:'Rotate PDF', desc:'Putar halaman PDF 90° / 180° / 270° — per halaman atau semua.', cat:'Organize PDF', icon:'↻', color:'#a855a7', bg:'#fae8ff', accept:'.pdf', hint:'File PDF — pilih sudut & halaman'},
   {id:'organize-pdf', title:'Organize PDF', desc:'Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.', cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — preview grid, drag untuk urutkan'},
   {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Real PPTX→PDF via local LibreOffice (needs the project server).', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'PPTX/PPT file — converted on your computer via the local server + LibreOffice'},
-  {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'PDF to PPT — placeholder.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'File PDF'},
+  {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'Real .pptx: every page as a slide image with editable speaker notes.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'PDF file — slides keep the design, notes hold the text (needs internet)'},
 ];
 let active = new URLSearchParams(location.search).get('tool') || 'jpg-to-pdf';
 if(!TOOLS.find(t=>t.id===active)) active='jpg-to-pdf';
@@ -529,9 +529,19 @@ function downloadBlob(blob, filename){
   }else if(blob.type.includes('sheet') || filename.endsWith('.xlsx')){
     $('#resultPreview').innerHTML=`<div class="text-center py-8">📊 Excel siap<br><b>${filename}</b><br>${(blob.size/1024).toFixed(1)} KB</div>`;
   }else if(filename.endsWith('.doc')){
-    $('#resultPreview').innerHTML=`<div class="text-center py-6">📄 Word (.doc) siap<br><b>${filename}</b><br><span class="text-gray-500">Buka dengan MS Word / Google Docs</span></div>`;
+    $('#resultPreview').innerHTML=`<div class="text-center py-6">📄 Word (.doc) siap<br><span class="text-gray-500">Buka dengan MS Word / Google Docs</span></div>`;
+  }else if(filename.endsWith('.docx')){
+    const box=document.createElement('div'); box.className='text-center py-6';
+    box.append('📝 Word (.docx) ready — open with MS Word / Google Docs');
+    $('#resultPreview').replaceChildren(box);
+  }else if(filename.endsWith('.pptx')){
+    const box=document.createElement('div'); box.className='text-center py-6';
+    box.append('📊 PowerPoint (.pptx) ready — page images with editable notes');
+    $('#resultPreview').replaceChildren(box);
   }else{
-    $('#resultPreview').innerHTML=`<p>File siap: <b>${filename}</b> (${(blob.size/1024).toFixed(1)} KB)</p>`;
+    const box=document.createElement('p');
+    box.append('File ready: ', Object.assign(document.createElement('b'), {textContent:filename}), ` (${(blob.size/1024).toFixed(1)} KB)`);
+    $('#resultPreview').replaceChildren(box);
   }
   window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
   if(blob.size>150*1024*1024){
@@ -820,25 +830,32 @@ async function wordToPdf(){
 }
 async function pdfToWord(){
   if(!window.pdfjsLib) throw new Error('pdf.js not loaded');
+  await ensureDocx();
   const buf=await files[0].arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
-  let full='';
   log('PDFtoWord pages='+pdf.numPages);
-  for(let i=1;i<=pdf.numPages;i++){
-    $('#progress').textContent=`Extracting page ${i}/${pdf.numPages}...`;
-    const page=await pdf.getPage(i);
-    const tc=await page.getTextContent();
-    const txt=tc.items.map(it=>it.str).join(' ');
-    full += txt + '\n\n';
-    log(`Page ${i}: ${txt.length} chars`);
-  }
-  if(!full.trim()) throw new Error('PDF has no text (maybe a scan — try OCR via PDF to Excel)');
-  const html=`<html><head><meta charset="utf-8"></head><body><pre style="white-space:pre-wrap;font-family:Arial;font-size:11pt">${full.replace(/</g,'&lt;')}</pre></body></html>`;
-  const blob=new Blob([html],{type:'application/msword'});
-  downloadBlob(blob, files[0].name.replace(/\.pdf$/i,'')+'.doc');
-  const prev=document.createElement('div');
-  prev.innerHTML=`<pre class="whitespace-pre-wrap bg-white p-3 rounded border max-h-60 overflow-auto">${full.slice(0,4000)}</pre>`;
-  $('#resultPreview').prepend(prev);
+  const content=await pdfContentPages(pdf, (m)=>{ $('#progress').textContent=m; });
+  if(!content.pages.length) throw new Error('Nothing could be read from this PDF. It may be blank or damaged.');
+  const {Document, Packer, Paragraph, TextRun, HeadingLevel, ImageRun}=window.docx;
+  const children=[];
+  content.pages.forEach((pg,idx)=>{
+    children.push(new Paragraph({heading:HeadingLevel.HEADING_1, children:[new TextRun('Page '+(idx+1))]}));
+    if(pg.image){
+      const w=Math.min(600, pg.image.w);
+      children.push(new Paragraph({children:[new ImageRun({data:b64ToU8(pg.image.b64), transformation:{width:Math.round(w), height:Math.round(pg.image.h*(w/pg.image.w))}, type:'jpg'})]}));
+    }
+    if(pg.lines.length){
+      pg.lines.slice(0,300).forEach(l=>{
+        const ocr=l.source==='OCR';
+        children.push(new Paragraph({children:[new TextRun({text:(ocr?'[OCR] ':'')+l.text, color:ocr?'808080':undefined, italics:ocr||undefined})]}));
+      });
+    }else{
+      children.push(new Paragraph({children:[new TextRun({text:'(No editable text on this page — pure artwork.)', color:'808080', italics:true})]}));
+    }
+  });
+  const blob=await Packer.toBlob(new Document({creator:'PDF Tools', title:files[0].name, sections:[{children}]}));
+  $('#progress').textContent='Done.';
+  downloadBlob(blob, files[0].name.replace(/\.pdf$/i,'')+'.docx');
 }
 async function excelToPdf(){
   if(!window.XLSX) throw new Error('SheetJS not loaded');
@@ -928,69 +945,114 @@ function ensureExcelJS(){
   }
   return _exceljsLoading;
 }
-async function pdfToExcel(){
-  if(!window.pdfjsLib) throw new Error('Libraries not loaded yet');
-  await ensureExcelJS();
-  const buf=await files[0].arrayBuffer();
-  const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
-  const textRows=[]; // [page, line, source, text]
-  const pageTexts=Array.from({length:pdf.numPages},()=>[]); // editable text per page
-  log('PDFtoExcel pages='+pdf.numPages);
+// docx 9.7.1 (MIT, https://github.com/dolanmiu/docx) — real .docx output.
+// Pinned jsDelivr IIFE build, lazy-loaded only when this tool runs.
+let _docxLoading=null;
+function ensureDocx(){
+  if(window.docx) return Promise.resolve();
+  if(!_docxLoading){
+    _docxLoading=new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js';
+      s.onload=resolve;
+      s.onerror=()=>reject(new Error('Could not load the Word engine. Check your internet connection.'));
+      document.head.appendChild(s);
+    });
+  }
+  return _docxLoading;
+}
+// PptxGenJS 4.0.1 (MIT, https://github.com/gitbrent/pptxgenjs) — real .pptx output.
+// Pinned jsDelivr browser build, lazy-loaded only when this tool runs.
+let _pptxLoading=null;
+function ensurePptx(){
+  if(window.PptxGenJS) return Promise.resolve();
+  if(!_pptxLoading){
+    _pptxLoading=new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/pptxgenjs@4.0.1/dist/pptxgen.min.js';
+      s.onload=resolve;
+      s.onerror=()=>reject(new Error('Could not load the PowerPoint engine. Check your internet connection.'));
+      document.head.appendChild(s);
+    });
+  }
+  return _pptxLoading;
+}
+function b64ToU8(b64){
+  const bin=atob(b64), out=new Uint8Array(bin.length);
+  for(let k=0;k<bin.length;k++) out[k]=bin.charCodeAt(k);
+  return out;
+}
+// Shared core: text lines (embedded + OCR fallback) and page images for one PDF.
+// pages[i] = {image:{w,h,b64}|null, lines:[{line,source,text}]}.
+async function pdfContentPages(pdf, progress){
+  const pages=[];
   let totalChars=0, emptyPages=0, ocrPages=0;
   for(let i=1;i<=pdf.numPages;i++){
-    $('#progress').textContent=`Extracting page ${i}/${pdf.numPages}...`;
+    progress(`Extracting page ${i}/${pdf.numPages}...`);
     const page=await pdf.getPage(i);
     const tc=await page.getTextContent();
     // Group items into visual lines by Y position (transform[5]).
-    const lines=new Map();
+    const grouped=new Map();
     for(const it of tc.items){
       if(!it.str || !it.str.trim()) continue;
       const y=Math.round((it.transform ? it.transform[5] : 0) / 2) * 2;
-      if(!lines.has(y)) lines.set(y,[]);
-      lines.get(y).push(it);
+      if(!grouped.has(y)) grouped.set(y,[]);
+      grouped.get(y).push(it);
     }
-    const sorted=[...lines.entries()].sort((a,b)=>b[0]-a[0]);
+    const sorted=[...grouped.entries()].sort((a,b)=>b[0]-a[0]);
+    const lines=[];
     let lineNo=0;
     for(const [,items] of sorted){
       items.sort((a,b)=>(a.transform?a.transform[4]:0)-(b.transform?b.transform[4]:0));
       // Design PDFs often store spaced display type as single-char items
-      // ("P O R T F O L I O") — rejoin those so Excel doesn't keep the gaps.
+      // ("P O R T F O L I O") — rejoin those so output doesn't keep the gaps.
       const allSingle=items.length>1 && items.every(it=>it.str.length===1);
       const txt=(allSingle?items.map(it=>it.str).join(''):items.map(it=>it.str).join(' ')).replace(/\s+/g,' ').trim().slice(0,2000);
       if(!txt) continue;
       totalChars+=txt.length; lineNo++;
       if(lineNo>300) break;
-      textRows.push([i, lineNo, 'Text', txt]);
-      pageTexts[i-1].push({line:lineNo, source:'Text', text:txt});
+      lines.push({line:lineNo, source:'Text', text:txt});
     }
-    if(lineNo===0){
+    if(!lines.length){
       // No embedded text — this page is an image/scan. Try OCR instead of garbage.
       try{
-        $('#progress').textContent=`Page ${i} has no text — loading OCR...`;
+        progress(`Page ${i} has no text — loading OCR...`);
         await ensureTesseract();
         const ocrLines=await ocrPageToLines(page, i);
-        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; textRows.push([i, k+1, 'OCR', txt.slice(0,2000)]); pageTexts[i-1].push({line:k+1, source:'OCR', text:txt.slice(0,2000)}); });
-        if(ocrLines.length){ ocrPages++; log(`Page ${i}: OCR ${ocrLines.length} lines`); }
+        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; lines.push({line:k+1, source:'OCR', text:txt.slice(0,2000)}); });
+        if(lines.length){ ocrPages++; log(`Page ${i}: OCR ${lines.length} lines`); }
         else emptyPages++;
       }catch(cause){ emptyPages++; log(`Page ${i}: OCR failed — ${cause.message}`); }
     }
-    else log(`Page ${i}: ${lineNo} lines`);
-    page.cleanup();
-  }
-  // Render every page as an image — the page stays exactly as designed.
-  const images=[];
-  for(let i=1;i<=pdf.numPages;i++){
-    $('#progress').textContent=`Rendering image ${i}/${pdf.numPages}...`;
-    const page=await pdf.getPage(i);
+    else log(`Page ${i}: ${lines.length} lines`);
+    progress(`Rendering image ${i}/${pdf.numPages}...`);
     const base=page.getViewport({scale:1});
     const scale=Math.min(1.5, 1200/Math.max(base.width,base.height));
     const viewport=page.getViewport({scale});
     const canvas=document.createElement('canvas');
     canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height);
     await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
-    images.push({w:canvas.width, h:canvas.height, b64:canvas.toDataURL('image/jpeg',0.82).split(',')[1]});
+    const image={w:canvas.width, h:canvas.height, b64:canvas.toDataURL('image/jpeg',0.82).split(',')[1]};
     page.cleanup(); canvas.width=canvas.height=0;
+    pages.push({image, lines});
   }
+  return {pages, totalChars, emptyPages, ocrPages};
+}
+async function pdfToExcel(){
+  if(!window.pdfjsLib) throw new Error('Libraries not loaded yet');
+  await ensureExcelJS();
+  const buf=await files[0].arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
+  log('PDFtoExcel pages='+pdf.numPages);
+  const content=await pdfContentPages(pdf, (m)=>{ $('#progress').textContent=m; });
+  const {totalChars, emptyPages, ocrPages}=content;
+  const textRows=[], pageTexts=[], images=[];
+  content.pages.forEach((pg,idx)=>{
+    const i=idx+1;
+    pg.lines.forEach(l=>{ textRows.push([i, l.line, l.source, l.text]); });
+    pageTexts.push(pg.lines);
+    if(pg.image) images.push(pg.image);
+  });
   if(!images.length && !textRows.length) throw new Error('Nothing could be read from this PDF. It may be blank or damaged.');
   const wb=new ExcelJS.Workbook();
   wb.creator='PDF Tools';
@@ -1119,10 +1181,35 @@ async function pptToPdf(){
   downloadBlob(new Blob([blob],{type:'application/pdf'}), file.name.replace(/\.(pptx?)$/i,'')+'.pdf');
 }
 async function pdfToPpt(){
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF(); pdf.text('PDF to PPT placeholder — butuh backend.',15,20);
-  downloadBlob(pdf.output('blob'), 'converted-placeholder.pdf');
-  showError('PDF to PPT butuh server. Ini placeholder.');
+  if(!window.pdfjsLib) throw new Error('pdf.js not loaded');
+  await ensurePptx();
+  const buf=await files[0].arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
+  log('PDFtoPpt pages='+pdf.numPages);
+  const content=await pdfContentPages(pdf, (m)=>{ $('#progress').textContent=m; });
+  if(!content.pages.length) throw new Error('Nothing could be read from this PDF. It may be blank or damaged.');
+  const pptx=new window.PptxGenJS();
+  const SW=13.33, SH=7.5; // wide slides; page images fit inside untouched
+  pptx.defineLayout({name:'PDFPAGES', width:SW, height:SH});
+  pptx.layout='PDFPAGES';
+  content.pages.forEach((pg,idx)=>{
+    const slide=pptx.addSlide();
+    slide.background={color:'FFFFFF'};
+    if(pg.image){
+      // Contain-fit: whole page visible, nothing cropped or stretched.
+      const s=Math.min(SW/(pg.image.w/150), SH/(pg.image.h/150));
+      const w=pg.image.w/150*s, h=pg.image.h/150*s;
+      slide.addImage({data:'image/jpeg;base64,'+pg.image.b64, x:(SW-w)/2, y:(SH-h)/2, w, h});
+    }
+    const notes=[...pg.lines.slice(0,120).map(l=>(l.source==='OCR'?'[OCR] ':'')+l.text)];
+    slide.addNotes(notes.length?notes.join('\n'):'(No editable text on this page — pure artwork.)');
+    log(`Slide ${idx+1} done`);
+  });
+  $('#progress').textContent='Building presentation...';
+  const presBytes=await pptx.write({outputType:'arraybuffer'});
+  const blob=new Blob([presBytes], {type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
+  $('#progress').textContent='Done.';
+  downloadBlob(blob, files[0].name.replace(/\.pdf$/i,'')+'.pptx');
 }
 renderToolList(); renderHeader(); updateFileUI();
 log('Ready. Style sudah sama kaya index.html — blob + card rounded-xl.');
