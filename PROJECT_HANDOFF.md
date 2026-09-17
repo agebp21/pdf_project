@@ -246,3 +246,8 @@ User clarified: images must stay images — every PDF page viewable in Excel, co
 
 User: images work, but text can't be edited (expected — JPEG pixels aren't editable). Fix in `converter.html`: under each page image, the `Pages (Images)` sheet now adds merged, wrapped, editable cells with that page's text lines (`[Text|line N]` / `[OCR|line N]`); artwork-only pages get an empty editable placeholder row instead. Editing cells never alters the picture above (noted in sheet + README).
 - Verified: ExcelJS mergeCells smoke OK, inline `node --check` OK, HTTP 200. NOT verified: real-file browser run. Pushed per auto-push rule.
+
+### 17 September 2026 — side-by-side layout (image left, text right)
+
+User screenshot showed them clicking text inside the picture trying to edit it (understandable — editable cells were hidden below tall images). Fix: `Pages (Images)` now puts the picture in A–H and editable text cells in J–M on the SAME rows — visible without scrolling. Overflow past 20 lines continues full-width below; artwork pages get a full-width note row. README updated.
+- Verified: smoke OK (13-col + J:M merge), inline `node --check` OK, HTTP 200. NOT verified: real-file browser run. Pushed per auto-push rule.

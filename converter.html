@@ -984,13 +984,21 @@ async function pdfToExcel(){
   const wb=new ExcelJS.Workbook();
   wb.creator='PDF Tools';
   // Sheet 1: the pages themselves, as images, in order.
-  const COLS=8, COLW=13, IMG_W=720, ROWS_PER_IMG=20;
+  // Layout: picture on the left (A–H), editable text on the right (J–M)
+  // so nobody has to scroll to find what they can type in.
+  const COLW=13, IMG_W=720, ROWS_PER_IMG=20; // 8 cols image (A–H) + spacer (I) + 4 cols text (J–M)
   const ws=wb.addWorksheet('Pages (Images)');
-  ws.columns=Array.from({length:COLS},()=>({width:COLW}));
+  ws.columns=Array.from({length:8},()=>({width:COLW})).concat([{width:3}].concat(Array.from({length:4},()=>({width:22}))));
   let r=1;
-  const LAST_COL='H';
-  function editableRow(text, bold){
-    ws.mergeCells('A'+r+':'+LAST_COL+r);
+  function textCell(row, text, bold){
+    ws.mergeCells('J'+row+':M'+row);
+    const cell=ws.getCell('J'+row);
+    cell.value=text; cell.alignment={wrapText:true, vertical:'top'};
+    if(bold) cell.font={bold:true};
+    ws.getRow(row).height=Math.max(ws.getRow(row).height||15, 15);
+  }
+  function wideRow(text, bold){
+    ws.mergeCells('A'+r+':M'+r);
     const cell=ws.getCell('A'+r);
     cell.value=text; cell.alignment={wrapText:true, vertical:'top'};
     if(bold) cell.font={bold:true};
@@ -1000,22 +1008,26 @@ async function pdfToExcel(){
   images.forEach((im,idx)=>{
     ws.getCell('A'+r).value='Page '+(idx+1);
     ws.getCell('A'+r).font={bold:true, size:14};
-    r+=1;
+    ws.getCell('J'+r).value='✎ Editable text — type here (the picture stays as-is)';
+    ws.getCell('J'+r).font={bold:true};
+    const top=r+1;
     const h=Math.round(im.h*(IMG_W/im.w));
     const imgId=wb.addImage({base64:im.b64, extension:'jpeg'});
-    ws.addImage(imgId, {tl:{col:0, row:r-1}, ext:{width:IMG_W, height:h}, editAs:'oneCell'});
+    ws.addImage(imgId, {tl:{col:0, row:top-1}, ext:{width:IMG_W, height:h}, editAs:'oneCell'});
     const pt=Math.min(409, (h*0.75)/ROWS_PER_IMG);
-    for(let k=0;k<ROWS_PER_IMG;k++) ws.getRow(r+k).height=pt;
-    r+=ROWS_PER_IMG+1;
-    // Editable text under the image: real cells you can type in.
-    // (Editing these never alters the picture above — pixels are pixels.)
-    const lines=pageTexts[idx]||[];
-    if(lines.length){
-      editableRow('Editable text — Page '+(idx+1)+' (edit here, the image above stays as-is)', true);
-      lines.slice(0,60).forEach(l=>editableRow('['+l.source+' | line '+l.line+'] '+l.text, false));
-      if(lines.length>60) editableRow('... +'+(lines.length-60)+' more lines on sheet PDF Extract', false);
-    }else{
-      editableRow('No editable text on this page (pure artwork). Type your own notes here if needed.', false);
+    for(let k=0;k<ROWS_PER_IMG;k++) ws.getRow(top+k).height=pt;
+    // Editable text beside the picture: real cells you can type in.
+    // (Editing these never alters the picture — pixels are pixels.)
+    const lines=(pageTexts[idx]||[]).slice(0,300);
+    lines.slice(0,ROWS_PER_IMG).forEach((l,k)=>textCell(top+k, '['+l.source+' | line '+l.line+'] '+l.text, false));
+    let rend=top+ROWS_PER_IMG;
+    r=rend;
+    const rest=lines.slice(ROWS_PER_IMG,60);
+    if(rest.length){
+      wideRow('More editable text — Page '+(idx+1)+' (continued)', true);
+      rest.forEach(l=>wideRow('['+l.source+' | line '+l.line+'] '+l.text, false));
+    }else if(!lines.length){
+      wideRow('No editable text on this page (pure artwork). Type your own notes here if needed.', false);
     }
     r+=1;
   });
