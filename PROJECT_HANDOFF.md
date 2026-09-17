@@ -125,8 +125,7 @@ Transfer ini bukan penyimpanan proyek. Pengguna sekarang dapat menyimpan file `.
 ## Status Git saat handoff ini ditulis
 
 - Branch `main`, remote `origin` ke repo PDF Project.
-- Commit awal `90668de` sudah pernah di-push dan diverifikasi sama dengan GitHub.
-- Perubahan flipbook, animasi, converter, ekspor/proyek, layanan build, wrapper native, pengujian, serta dokumentasi masih lokal dan belum di-commit/push saat catatan ini diperbarui.
+- Terakhir: `11669dc` (coming-soon guard + multi-column Excel) sudah di-push; `git status` bersih saat dicek. Aturan sesi ini: setiap update yang oke langsung commit + push.
 - Periksa `git status`/`git log` lagi sebelum bekerja; status ini adalah snapshot, bukan status real-time.
 
 ## Kandidat pekerjaan selanjutnya
@@ -138,8 +137,8 @@ Daftar ini untuk perencanaan, bukan instruksi mengerjakan semuanya sekaligus:
 3. Autosave/pemulihan edit lebih lanjut; simpan/buka proyek manual sudah ada.
 4. Editor elemen animasi grafik/proses pada PDF, posisi dan ukuran yang bisa diatur.
 5. QA hasil HTML/APK/Windows pada browser/perangkat nyata dan penyiapan signing rilis.
-6. Konversi Word/PPT yang lebih andal sebelum menjual subscription.
-7. Login, paket, billing, dan distribusi APK setelah kebutuhan serta layanan pendukung ditetapkan.
+6. Konversi Word/PPT yang lebih andal sebelum menjual subscription. (Progres 17 Sep: PDF→Word/PPT/Excel rebuilt + PPTX→PDF via LibreOffice; sisa: Word fidelity/format dan 18 kartu mati dibangun per rak.)
+7. Login, paket, billing, dan distribusi APK setelah kebutuhan serta layanan pendukung ditetapkan. (Dikonfirmasi: ditunda — benahi dalam dulu.)
 
 ### 17 September 2026 — navigasi tengah dan Home
 
