@@ -177,6 +177,10 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - 35 cards vs 14 tools: 18 cards silently fall back to JPG-to-PDF (incl. all 4 security cards). 14 real ones graded strong/half/weak in handoff. Next: coming-soon guard, then build per shelf. Committed + pushed.
 
+### 17 September 2026 — Image to PDF all types (pushed)
+
+- Renamed (id kept for links). Native: JPG/PNG/WebP/GIF/BMP/SVG/AVIF/ICO; TIFF via UTIF 3.1.0 (MIT), HEIC via heic2any 0.0.4 (MIT), both lazy. First-frame rule, white flatten, sizeless-SVG error. UTIF smoke OK, syntax + HTTP OK. No real HEIC/TIFF browser test. Committed + pushed.
+
 ### 17 September 2026 — formal Excel Table (pushed)
 
 - PDF Extract is now a real Table (PdfExtract, Medium9, filters). Verified table1.xml in output zip. Smoke + syntax + HTTP OK. Multi-column reconstruction still future. Committed + pushed.

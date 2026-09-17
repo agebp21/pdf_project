@@ -118,7 +118,7 @@
 <script>
 function copyServe(){ navigator.clipboard.writeText('npx serve .'); const b=document.getElementById('serveBtn'); b.textContent='✅ Copied!'; setTimeout(()=>b.textContent='📋 Copy: npx serve .',1500); }
 const TOOLS = [
-  {id:'jpg-to-pdf', title:'JPG to PDF', desc:'Convert JPG/PNG images to PDF in seconds. Atur orientasi & margin.', cat:'Convert PDF', icon:'JPG', color:'#b45309', bg:'#fef9c3', accept:'.jpg,.jpeg,.png,.webp', multiple:true, hint:'JPG, PNG, WEBP — bisa pilih banyak gambar sekaligus'},
+  {id:'jpg-to-pdf', title:'Image to PDF', desc:'Any image to PDF in seconds: JPG, PNG, WebP, GIF, BMP, SVG, AVIF, TIFF, HEIC. Set orientation & margins.', cat:'Convert PDF', icon:'IMG', color:'#b45309', bg:'#fef9c3', accept:'.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.avif,.ico,.tif,.tiff,.heic,.heif', multiple:true, hint:'All image types — TIFF decoded locally, HEIC converted in-browser, animated/multi-page uses first frame'},
   {id:'pdf-to-jpg', title:'PDF to JPG', desc:'Convert tiap halaman PDF jadi JPG atau ambil semua gambar.', cat:'Convert PDF', icon:'🖼', color:'#a16207', bg:'#fef9c3', accept:'.pdf', hint:'File PDF — tiap halaman jadi 1 JPG (ZIP jika multi-halaman)'},
   {id:'word-to-pdf', title:'Word to PDF', desc:'Turn DOC/DOCX files into easy-to-read PDFs (plain text for now).', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'DOCX/DOC file (text extracted, formatting not kept yet)'},
   {id:'pdf-to-word', title:'PDF to Word', desc:'Real .docx with page images plus editable text (OCR fallback).', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'PDF file — images kept, text editable (needs internet)'},
@@ -551,14 +551,77 @@ function downloadBlob(blob, filename){
     $('#result').append(warn);
   }
 }
-async function loadImage(file){
-  return new Promise((res,rej)=>{
-    const url=URL.createObjectURL(file);
+// UTIF.js 3.1.0 (MIT, https://github.com/photopea/UTIF.js) — decodes TIFF,
+// which browsers can't read natively. Lazy-loaded only for .tif/.tiff files.
+let _utifLoading=null;
+function ensureUTIF(){
+  if(window.UTIF) return Promise.resolve();
+  if(!_utifLoading){
+    _utifLoading=new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/utif@3.1.0/UTIF.js';
+      s.onload=resolve;
+      s.onerror=()=>reject(new Error('Could not load the TIFF decoder. Check your internet connection.'));
+      document.head.appendChild(s);
+    });
+  }
+  return _utifLoading;
+}
+// heic2any 0.0.4 (MIT, https://github.com/alexcorvi/heic2any) — converts
+// iPhone HEIC/HEIF to JPEG in-browser. Lazy-loaded only for .heic/.heif files.
+let _heicLoading=null;
+function ensureHeic(){
+  if(window.heic2any) return Promise.resolve();
+  if(!_heicLoading){
+    _heicLoading=new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/heic2any@0.0.4/dist/heic2any.min.js';
+      s.onload=resolve;
+      s.onerror=()=>reject(new Error('Could not load the HEIC converter. Check your internet connection.'));
+      document.head.appendChild(s);
+    });
+  }
+  return _heicLoading;
+}
+// Load any supported image into a canvas: native formats via <img>,
+// HEIC via heic2any, TIFF via UTIF (first page). Transparency → white.
+async function loadDrawable(file){
+  const lower=file.name.toLowerCase();
+  const loadImg=(blob)=>new Promise((res,rej)=>{
+    const url=URL.createObjectURL(blob);
     const img=new Image();
     img.onload=()=>{ URL.revokeObjectURL(url); res(img); };
-    img.onerror=(e)=>{ URL.revokeObjectURL(url); rej(new Error('Failed to load image '+file.name)); };
+    img.onerror=()=>{ URL.revokeObjectURL(url); rej(new Error('Failed to load image '+file.name)); };
     img.src=url;
   });
+  let img;
+  if(lower.endsWith('.heic')||lower.endsWith('.heif')){
+    await ensureHeic();
+    const jpeg=await window.heic2any({blob:file, toType:'image/jpeg', quality:0.92});
+    img=await loadImg(Array.isArray(jpeg)?jpeg[0]:jpeg);
+  }else if(lower.endsWith('.tif')||lower.endsWith('.tiff')){
+    await ensureUTIF();
+    const buf=await file.arrayBuffer();
+    const ifds=window.UTIF.decode(buf);
+    if(!ifds.length) throw new Error('Could not read TIFF '+file.name);
+    if(ifds.length>1) log('TIFF has '+ifds.length+' pages — using the first one');
+    window.UTIF.decodeImage(buf, ifds[0]);
+    const rgba=window.UTIF.toRGBA8(ifds[0]);
+    const canvas=document.createElement('canvas');
+    canvas.width=ifds[0].width; canvas.height=ifds[0].height;
+    const ctx=canvas.getContext('2d');
+    ctx.putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer), canvas.width, canvas.height), 0, 0);
+    return canvas;
+  }else{
+    img=await loadImg(file);
+  }
+  if(!img.naturalWidth||!img.naturalHeight) throw new Error('Image has no readable size (SVGs need width/height): '+file.name);
+  const canvas=document.createElement('canvas');
+  canvas.width=img.naturalWidth; canvas.height=img.naturalHeight;
+  const ctx=canvas.getContext('2d');
+  ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+  ctx.drawImage(img,0,0);
+  return canvas;
 }
 async function convertJpgToPdf(){
   if(!window.jspdf) throw new Error('jsPDF not loaded — check internet');
@@ -571,22 +634,21 @@ async function convertJpgToPdf(){
   let first=true;
   for(let i=0;i<files.length;i++){
     $('#progress').textContent=`Processing image ${i+1}/${files.length}...`;
-    const img=await loadImage(files[i]);
-    log(`Image ${i+1}: ${img.naturalWidth}x${img.naturalHeight}`);
-    const canvas=document.createElement('canvas'); canvas.width=img.naturalWidth; canvas.height=img.naturalHeight;
-    canvas.getContext('2d').drawImage(img,0,0);
+    const canvas=await loadDrawable(files[i]);
+    const iw0=canvas.width, ih0=canvas.height;
+    log(`Image ${i+1}: ${iw0}x${ih0}`);
     const data=canvas.toDataURL('image/jpeg',0.92);
     const w=pdf.internal.pageSize.getWidth(), h=pdf.internal.pageSize.getHeight();
     if(!first) pdf.addPage();
     if(size==='fit'){
-      const iw=Math.min(w-20, img.naturalWidth*0.264583), ih=(img.naturalHeight/img.naturalWidth)*iw;
+      const iw=Math.min(w-20, iw0*0.264583), ih=(ih0/iw0)*iw;
       const x=(w-iw)/2, y=(h-ih)/2;
       pdf.addImage(data,'JPEG',x,y,iw,ih);
     }else{
       const margin=10;
-      const iw=w-margin*2, ih=(img.naturalHeight/img.naturalWidth)*iw;
+      const iw=w-margin*2, ih=(ih0/iw0)*iw;
       let finalW=iw, finalH=ih;
-      if(ih > h-20){ finalH=h-20; finalW=(img.naturalWidth/img.naturalHeight)*finalH; }
+      if(ih > h-20){ finalH=h-20; finalW=(iw0/ih0)*finalH; }
       pdf.addImage(data,'JPEG',(w-finalW)/2,10,finalW,finalH);
     }
     first=false;

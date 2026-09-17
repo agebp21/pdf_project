@@ -267,6 +267,12 @@ Scripted check (`audit-ids.py`): index catalog has 35 cards, converter implement
 - The 14 real ones: jpg/pdf-to-jpg/merge/split/rotate/organize strong; pdf-to-word/pdf-to-excel/pdf-to-ppt rebuilt strong; word-to-pdf plain-text only (mammoth raw, 50k cap; `.doc` input will fail); excel-to-pdf 60-row text dump; html-to-pdf innerText only; compress levels barely differ (known QA note); ppt-to-pdf needs server+LibreOffice.
 - Recommended next: honest "coming soon" guard for missing ids, then build one shelf at a time. No code changed in this audit. Pushed per auto-push rule.
 
+### 17 September 2026 — Image to PDF for all image types
+
+User: rename JPG→PDF so it covers every image type. Done in `converter.html` (+ index card); tool id `jpg-to-pdf` kept so old `?tool=` links keep working.
+- Native via `<img>`: JPG/JPEG/PNG/WebP/GIF/BMP/SVG/AVIF/ICO. Special decoders lazy-loaded: TIFF via UTIF.js **3.1.0** (MIT, photopea/UTIF.js, jsDelivr), iPhone HEIC/HEIF via heic2any **0.0.4** (MIT, alexcorvi/heic2any, jsDelivr). Animated GIF / multi-page TIFF: first frame only (logged). Transparency flattened to white (was black). Sizeless SVGs rejected with a clear message.
+- Verified: UTIF encode→decode round-trip smoke OK (exact API used); inline `node --check` OK; HTTP 200. NOT verified: real HEIC file end-to-end (no sample here), real TIFF in browser. Pushed per auto-push rule.
+
 ### 17 September 2026 — formal Excel Table (user: "ditambahi table")
 
 User wants real editable tables in Excel. Fix: `PDF Extract` sheet is now a formal Excel Table (`PdfExtract`, style TableStyleMedium9, banded rows, filter buttons on Page/Line/Source/Text) via `ws.addTable` — sortable, filterable, editable cells. Side-by-side editable cells on `Pages (Images)` stay as-is.
