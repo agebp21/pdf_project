@@ -234,3 +234,10 @@ User's real result: OCR hallucinated garbage rows (`4 = >. Nin A`, `| a. ©)`) o
 User showed the real page: a full-artwork Telkomsel Awards poster (no table at all). Honest expectation set: no tool turns poster artwork into a meaningful spreadsheet; best case is a few display words (`Telkomsel/AWARDS/2021/26th ANNIVERSARY`) tagged OCR.
 - Fix: line filter counts digits too (≥3 alnum chars, ≥40% alnum ratio) so years like `2021` survive; page-level confidence/wordish gate unchanged.
 - Verified: gate mock v2 OK (poster → 4 lines incl `2021`, garbage → 0, normal → 2), inline `node --check` OK, HTTP 200. NOT verified: real browser reconvert. Pushed per auto-push rule.
+
+### 17 September 2026 — pages-as-images in Excel (ExcelJS)
+
+User clarified: images must stay images — every PDF page viewable in Excel, content untouched. Implemented in `converter.html` (`pdfToExcel`):
+- New dependency: ExcelJS **4.4.0**, MIT, upstream `https://github.com/exceljs/exceljs`, lazy-loaded from `https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js` (CDN verified HTTP 200, ~948KB, loads only when this tool runs). SheetJS can't embed images, so ExcelJS now builds the whole workbook; SheetJS stays for Excel-to-PDF.
+- Output sheets: `Pages (Images)` (each page rendered JPEG ≤1200px, labeled, row heights fitted), `PDF Extract` (searchable text/OCR), conditional `README`. Also fixed: embedded-text rows were mislabeled `OCR`, now correctly `Text`.
+- Verified: ExcelJS API smoke test in Node OK (valid PK zip with image + text sheets), inline `node --check` OK, HTTP 200. NOT verified: real-file browser run (needs CDN + render time for 50+ pages), large-file memory. Pushed per auto-push rule.

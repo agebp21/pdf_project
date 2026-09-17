@@ -123,7 +123,7 @@ const TOOLS = [
   {id:'word-to-pdf', title:'Word to PDF', desc:'Jadikan DOC/DOCX mudah dibaca dengan convert ke PDF.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'File .docx/.doc'},
   {id:'pdf-to-word', title:'PDF to Word', desc:'Convert PDF jadi DOCX yang mudah diedit. 100% di browser.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'File PDF — teks akan diekstrak ke .doc'},
   {id:'excel-to-pdf', title:'Excel to PDF', desc:'Jadikan spreadsheet EXCEL mudah dibaca dengan convert ke PDF.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'File .xlsx / .xls / .csv'},
-  {id:'pdf-to-excel', title:'PDF to Excel', desc:'Pull text from PDFs into a spreadsheet. Text-less pages are read with OCR.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — text/tables become Excel, image pages go through OCR (needs internet)'},
+  {id:'pdf-to-excel', title:'PDF to Excel', desc:'Every PDF page kept as an image in Excel, plus searchable text and OCR.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pages embedded as images, text/OCR on extra sheets (needs internet)'},
   {id:'html-to-pdf', title:'HTML to PDF', desc:'Convert halaman HTML jadi PDF dengan 1 klik.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'File .html'},
   {id:'merge-pdf', title:'Merge PDF', desc:'Gabungkan PDF sesuai urutan yang kamu mau.', cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, hint:'Pilih 2+ file PDF untuk digabungkan'},
   {id:'split-pdf', title:'Split PDF', desc:'Extract halaman 1-3, split per N halaman, atau centang manual per halaman.', cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — pilih mode split di bawah'},
@@ -899,11 +899,30 @@ async function ocrPageToLines(page, pageNum){
   log(`Page ${pageNum}: OCR conf=${Math.round(meanConf)} lines=${raw.length} kept=${kept.length} readable=${readable}`);
   return readable?kept.slice(0,300):[];
 }
+// ExcelJS 4.4.0 (MIT, https://github.com/exceljs/exceljs)
+// Lazy-loaded for PDF to Excel because SheetJS community edition cannot embed
+// images — and the user wants every PDF page kept as an image inside Excel.
+// Pinned jsDelivr build, loads only when this tool runs.
+let _exceljsLoading=null;
+function ensureExcelJS(){
+  if(window.ExcelJS) return Promise.resolve();
+  if(!_exceljsLoading){
+    _exceljsLoading=new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js';
+      s.onload=resolve;
+      s.onerror=()=>reject(new Error('Could not load the Excel image engine. Check your internet connection.'));
+      document.head.appendChild(s);
+    });
+  }
+  return _exceljsLoading;
+}
 async function pdfToExcel(){
-  if(!window.pdfjsLib || !window.XLSX) throw new Error('Libraries not loaded yet');
+  if(!window.pdfjsLib) throw new Error('Libraries not loaded yet');
+  await ensureExcelJS();
   const buf=await files[0].arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
-  const rows=[["Page","Line","Source","Text"]];
+  const textRows=[]; // [page, line, source, text]
   log('PDFtoExcel pages='+pdf.numPages);
   let totalChars=0, emptyPages=0, ocrPages=0;
   for(let i=1;i<=pdf.numPages;i++){
@@ -929,7 +948,7 @@ async function pdfToExcel(){
       if(!txt) continue;
       totalChars+=txt.length; lineNo++;
       if(lineNo>300) break;
-      rows.push([i, lineNo, 'Text', txt]);
+      textRows.push([i, lineNo, 'Text', txt]);
     }
     if(lineNo===0){
       // No embedded text — this page is an image/scan. Try OCR instead of garbage.
@@ -937,30 +956,64 @@ async function pdfToExcel(){
         $('#progress').textContent=`Page ${i} has no text — loading OCR...`;
         await ensureTesseract();
         const ocrLines=await ocrPageToLines(page, i);
-        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; rows.push([i, k+1, 'OCR', txt.slice(0,2000)]); });
+        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; textRows.push([i, k+1, 'OCR', txt.slice(0,2000)]); });
         if(ocrLines.length){ ocrPages++; log(`Page ${i}: OCR ${ocrLines.length} lines`); }
         else emptyPages++;
       }catch(cause){ emptyPages++; log(`Page ${i}: OCR failed — ${cause.message}`); }
     }
     else log(`Page ${i}: ${lineNo} lines`);
+    page.cleanup();
   }
-  if(rows.length<2) throw new Error('No text found — not even OCR could read this PDF. It may be blank or damaged.');
-  const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:10},{wch:8},{wch:10},{wch:120}];
-  const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"PDF Extract");
-  // Honest flag: say which pages came from OCR and which stayed empty.
+  // Render every page as an image — the page stays exactly as designed.
+  const images=[];
+  for(let i=1;i<=pdf.numPages;i++){
+    $('#progress').textContent=`Rendering image ${i}/${pdf.numPages}...`;
+    const page=await pdf.getPage(i);
+    const base=page.getViewport({scale:1});
+    const scale=Math.min(1.5, 1200/Math.max(base.width,base.height));
+    const viewport=page.getViewport({scale});
+    const canvas=document.createElement('canvas');
+    canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height);
+    await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+    images.push({w:canvas.width, h:canvas.height, b64:canvas.toDataURL('image/jpeg',0.82).split(',')[1]});
+    page.cleanup(); canvas.width=canvas.height=0;
+  }
+  if(!images.length && !textRows.length) throw new Error('Nothing could be read from this PDF. It may be blank or damaged.');
+  const wb=new ExcelJS.Workbook();
+  wb.creator='PDF Tools';
+  // Sheet 1: the pages themselves, as images, in order.
+  const COLS=8, COLW=13, IMG_W=720, ROWS_PER_IMG=20;
+  const ws=wb.addWorksheet('Pages (Images)');
+  ws.columns=Array.from({length:COLS},()=>({width:COLW}));
+  let r=1;
+  images.forEach((im,idx)=>{
+    ws.getCell('A'+r).value='Page '+(idx+1);
+    ws.getCell('A'+r).font={bold:true, size:14};
+    r+=1;
+    const h=Math.round(im.h*(IMG_W/im.w));
+    const imgId=wb.addImage({base64:im.b64, extension:'jpeg'});
+    ws.addImage(imgId, {tl:{col:0, row:r-1}, ext:{width:IMG_W, height:h}, editAs:'oneCell'});
+    const pt=Math.min(409, (h*0.75)/ROWS_PER_IMG);
+    for(let k=0;k<ROWS_PER_IMG;k++) ws.getRow(r+k).height=pt;
+    r+=ROWS_PER_IMG+2;
+  });
+  // Sheet 2: searchable text (embedded or OCR) for copy-paste.
+  const wt=wb.addWorksheet('PDF Extract');
+  wt.columns=[{width:10},{width:8},{width:10},{width:120}];
+  wt.addRow(['Page','Line','Source','Text']).font={bold:true};
+  textRows.forEach(row=>wt.addRow(row));
+  // Sheet 3 (only when needed): honest notes about thin/OCR/empty pages.
   const avg=totalChars/pdf.numPages;
   if(avg<120 || emptyPages>0 || ocrPages>0){
-    const note=[
-      ["Note: how this Excel was made"],
-      [`Text pages: ${pdf.numPages-emptyPages-ocrPages}/${pdf.numPages}. OCR pages: ${ocrPages}. Empty pages: ${emptyPages}. Average ${Math.round(avg)} chars per page.`],
-      ["Rows marked 'OCR' were read from page images (English + Indonesian). Proofread numbers carefully."],
-      ["Pages that are pure artwork are left empty on purpose — guessing would print fake rows."],
-      ["Design portfolios and artwork can't become neat tables — OCR reads what it sees, line by line."],
-    ];
-    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(note),"README");
+    const wn=wb.addWorksheet('README');
+    wn.columns=[{width:130}];
+    wn.addRow(['Note: how this Excel was made']).font={bold:true};
+    wn.addRow([`Pages: ${pdf.numPages}. Text pages: ${pdf.numPages-emptyPages-ocrPages}. OCR pages: ${ocrPages}. Empty pages: ${emptyPages}. Average ${Math.round(avg)} text chars per page.`]);
+    wn.addRow([`Sheet 'Pages (Images)' holds every page as an image — nothing redesigned.`]);
+    wn.addRow([`Sheet 'PDF Extract' holds searchable text. Rows marked 'OCR' were read from page images (English + Indonesian). Proofread numbers carefully.`]);
+    wn.addRow([`Pages that are pure artwork are left without text on purpose — guessing would print fake rows.`]);
   }
-  const out=XLSX.write(wb,{type:'array', bookType:'xlsx'});
+  const out=await wb.xlsx.writeBuffer();
   downloadBlob(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), files[0].name.replace(/\.pdf$/i,'')+'.xlsx');
 }
 async function htmlToPdf(){
