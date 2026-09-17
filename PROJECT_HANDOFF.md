@@ -263,3 +263,8 @@ Honest audit of `converter.html`: Word to PDF works but strips to plain text (ma
 - Implemented: `POST /api/convert/pptx-to-pdf` in `server.py` (loopback + token, `.pptx`/`.ppt` + magic validation, streams upload to temp, `soffice --headless --convert-to pdf`, PDF download response, always cleans temp; `office` flag added to `/api/capabilities`). Frontend `pptToPdf` uploads to the server, shows clear install/run-server errors, and no longer emits fake PDFs (also fixed user-filename innerHTML → textContent). PDF→PPT still placeholder (follow-up).
 - Prereq: LibreOffice installed (`soffice` in PATH) + `python server.py`. README updated.
 - Verified: 13 Python tests OK (8 old + 5 new: token/type/magic/503/success-stub), `py_compile` OK, inline `node --check` OK, HTTP 200. NOT verified: real soffice end-to-end (no LibreOffice on this machine). Pushed per auto-push rule.
+
+### 17 September 2026 — soffice PATH fallback (Windows)
+
+User installed LibreOffice but server still reported `office:false`: the Windows installer does not add `soffice` to PATH. Added `find_soffice()` checking `PATH` plus `ProgramFiles`/`ProgramFiles(x86)` `LibreOffice/program/soffice.exe`; used by capabilities + converter. Tests updated to patch `find_soffice`.
+- Verified: `find_soffice()` locates the real install here, 13 tests OK. User must restart `server.py` (server code changed). Pushed per auto-push rule.

@@ -144,7 +144,7 @@ class ConvertApiTests(unittest.TestCase):
         self.assertEqual(status, 400)
 
     def test_missing_libreoffice(self):
-        with mock.patch.object(server.shutil, 'which', return_value=None):
+        with mock.patch.object(server, 'find_soffice', return_value=None):
             status, _, body = self.post(b'PK\x03\x04fake-pptx', self.headers())
         self.assertEqual(status, 503)
         self.assertIn(b'LibreOffice', body)
@@ -158,7 +158,7 @@ class ConvertApiTests(unittest.TestCase):
             stub.returncode = 0
             return stub
 
-        with mock.patch.object(server.shutil, 'which', return_value='/usr/bin/soffice'), \
+        with mock.patch.object(server, 'find_soffice', return_value='/usr/bin/soffice'), \
                 mock.patch.object(server.subprocess, 'run', side_effect=fake_run):
             status, headers, body = self.post(b'PK\x03\x04fake-pptx', self.headers())
         self.assertEqual(status, 200)

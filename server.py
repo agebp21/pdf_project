@@ -114,6 +114,24 @@ OFFICE_INSTALL_HINT = ('LibreOffice (soffice) tidak ditemukan di komputer ini. '
                        'Pasang dari https://libreoffice.org/download, lalu restart server.')
 
 
+def find_soffice():
+    """Locate LibreOffice, including default Windows install folders.
+
+    The Windows installer does not add soffice to PATH, so check the
+    well-known locations as a fallback.
+    """
+    found = shutil.which('soffice') or shutil.which('soffice.bin')
+    if found:
+        return found
+    if os.name == 'nt':
+        for base in (os.environ.get('ProgramFiles', r'C:\Program Files'),
+                     os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)')):
+            candidate = Path(base) / 'LibreOffice/program/soffice.exe'
+            if candidate.is_file():
+                return str(candidate)
+    return None
+
+
 def safe_office_name(raw, default='document.pptx'):
     name = re.sub(r'[^A-Za-z0-9._-]', '_', unquote(raw or ''))[:100] or default
     return name if name.lower().endswith(('.pptx', '.ppt')) else default
@@ -133,7 +151,7 @@ def office_to_pdf(source, filename):
         raise ValueError('File bukan PPTX valid (arsip ZIP tidak terbaca).')
     if ext == '.ppt' and magic != b'\xd0\xcf\x11\xe0':
         raise ValueError('File bukan PPT valid.')
-    soffice = shutil.which('soffice') or shutil.which('soffice.bin')
+    soffice = find_soffice()
     if not soffice:
         raise RuntimeError(OFFICE_INSTALL_HINT)
     with tempfile.TemporaryDirectory(prefix='ppt-convert-') as temporary:
@@ -232,7 +250,7 @@ class Handler(SimpleHTTPRequestHandler):
         path = unquote(urlsplit(self.path).path)
         if path == '/api/capabilities':
             flutter = bool(shutil.which('flutter'))
-            office = bool(shutil.which('soffice') or shutil.which('soffice.bin'))
+            office = bool(find_soffice())
             self.send_json(200, dict(apk=flutter, exe=flutter and os.name == 'nt', office=office, token=TOKEN))
             return
         match = re.fullmatch(r'/api/jobs/([a-f0-9]{32})(?:/(download|log))?', path)

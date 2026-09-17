@@ -177,6 +177,10 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - Audited Word (half) + PPT (placeholder). New server endpoint via local LibreOffice; frontend uploads, no more fake PDFs. 13 Python tests OK, syntax + HTTP OK. No real soffice here — user needs LibreOffice installed. Committed + pushed.
 
+### 17 September 2026 — soffice fallback (pushed)
+
+- Installer doesn't add PATH on Windows; server now checks Program Files locations too. Tests patch find_soffice. 13 OK. User must restart server.py. Committed + pushed.
+
 ### 17 September 2026 — seamless marquee
 
 - Problem: running text jumped (single copy animated to -50%). Fix: duplicated track content (2nd copy aria-hidden), track animates 0 → -50% for a seamless loop.
