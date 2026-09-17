@@ -258,3 +258,16 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 - User requested commit/push of Watermark, Page Numbers, Crop and a checklist of what works. Added FEATURE_CHECKLIST.md with tested scope, partial features, unbuilt backlog, evidence, and runtime limitations; linked README and marked early QA_REPORT as historical. Corrected stale PPT-placeholder guidance in AGENTS.md.
 - Reran PDF edit core/UI suites, converter limits, real converter transformations, export/save-location/idle, actual engine runtime, editor integration, and 16 Python tests: all passed. Updated qa-editor's ready-message check for the existing English UI; no product changes in this verification pass.
 - This publication includes the new PDF tools and their tests from the previous task. Commit/push to origin/main is authorized in this task; use Git history for the resulting hash. Earlier notes saying those changes were uncommitted describe their original handoff time.
+
+### 17 September 2026 — Editor animasi & interaktif gaya Canva (pushed 3a99db7)
+
+- Pemilik: sesi ini. File baru: `assets/editor.css`, `assets/editor.js`. File dimodifikasi: `flipbook.html`, `assets/flipbook.js`, `assets/flipbook-export.js`, `assets/export/viewer.js`, `tests/export.test.cjs`, `tests/qa-editor.cjs`, `tests/qa-runtime.cjs`.
+- Format project.json diperluas ke v2: `pages[index].elements[]` per halaman, backward compat v1 (stat overlays tetap berjalan).
+- Editor: panel "Tambahkan animasi" (step 02) diganti editor Canva-like. Toggle Edit/Read mode di preview bar. Elemen teks + hotspot (link button) bisa di-drag, resize, rotate. Double-click teks untuk edit inline.
+- Inspector sidebar: font size, warna, background, opacity, bold/italic, align, animasi (fadeIn/slideUp/slideDown/slideLeft/slideRight/zoomIn/bounce/pulse + delay + durasi), link (URL eksternal atau goto halaman).
+- Ekstraksi teks PDF otomatis via PDF.js `getTextContent()` per halaman atau semua halaman.
+- Read mode: elemen dirender sebagai overlay CSS di atas gambar halaman, animasi trigger saat halaman dibuka, link klik berfungsi.
+- Ekspor HTML/APK/Windows: `editor.css` ikut dikemas; viewer.js merender elemen + animasi + link di semua output.
+- Tes: export.test.cjs PASS (v2 round-trip, validasi overlay), qa-runtime.cjs PASS (7 viewport combo + real PDF), qa-editor.cjs PASS (load PDF, edit mode, project save/restore, HTML export, invalid file recovery), 16 Python tests OK. HTTP 200 flipbook.html, editor.js, editor.css. `node --check` semua file OK.
+- Belum diuji: QA visual browser/device (drag, resize, animasi nyata), ekstraksi teks dari PDF asli kompleks, pengujian di APK/Windows build lama.
+
