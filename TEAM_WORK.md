@@ -181,6 +181,11 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - Installer doesn't add PATH on Windows; server now checks Program Files locations too. Tests patch find_soffice. 13 OK. User must restart server.py. Committed + pushed.
 
+### 17 September 2026 — wrong-tool + leftover Indonesian strings (pushed)
+
+- User ran PDF-to-PowerPoint (still placeholder) instead of PowerPoint-to-PDF. Pointed to the right tool.
+- Screenshot exposed leftover Indonesian dynamic strings (button reset, progress, flipbook button, split/organize panels, error throws). All translated to English; TOOLS descs/hints + debug logs stay deferred. Syntax + HTTP OK. No browser E2E. Committed + pushed.
+
 ### 17 September 2026 — seamless marquee
 
 - Problem: running text jumped (single copy animated to -50%). Fix: duplicated track content (2nd copy aria-hidden), track animates 0 → -50% for a seamless loop.
