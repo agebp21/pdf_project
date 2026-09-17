@@ -241,3 +241,8 @@ User clarified: images must stay images — every PDF page viewable in Excel, co
 - New dependency: ExcelJS **4.4.0**, MIT, upstream `https://github.com/exceljs/exceljs`, lazy-loaded from `https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js` (CDN verified HTTP 200, ~948KB, loads only when this tool runs). SheetJS can't embed images, so ExcelJS now builds the whole workbook; SheetJS stays for Excel-to-PDF.
 - Output sheets: `Pages (Images)` (each page rendered JPEG ≤1200px, labeled, row heights fitted), `PDF Extract` (searchable text/OCR), conditional `README`. Also fixed: embedded-text rows were mislabeled `OCR`, now correctly `Text`.
 - Verified: ExcelJS API smoke test in Node OK (valid PK zip with image + text sheets), inline `node --check` OK, HTTP 200. NOT verified: real-file browser run (needs CDN + render time for 50+ pages), large-file memory. Pushed per auto-push rule.
+
+### 17 September 2026 — editable text under page images
+
+User: images work, but text can't be edited (expected — JPEG pixels aren't editable). Fix in `converter.html`: under each page image, the `Pages (Images)` sheet now adds merged, wrapped, editable cells with that page's text lines (`[Text|line N]` / `[OCR|line N]`); artwork-only pages get an empty editable placeholder row instead. Editing cells never alters the picture above (noted in sheet + README).
+- Verified: ExcelJS mergeCells smoke OK, inline `node --check` OK, HTTP 200. NOT verified: real-file browser run. Pushed per auto-push rule.

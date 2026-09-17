@@ -923,6 +923,7 @@ async function pdfToExcel(){
   const buf=await files[0].arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
   const textRows=[]; // [page, line, source, text]
+  const pageTexts=Array.from({length:pdf.numPages},()=>[]); // editable text per page
   log('PDFtoExcel pages='+pdf.numPages);
   let totalChars=0, emptyPages=0, ocrPages=0;
   for(let i=1;i<=pdf.numPages;i++){
@@ -949,6 +950,7 @@ async function pdfToExcel(){
       totalChars+=txt.length; lineNo++;
       if(lineNo>300) break;
       textRows.push([i, lineNo, 'Text', txt]);
+      pageTexts[i-1].push({line:lineNo, source:'Text', text:txt});
     }
     if(lineNo===0){
       // No embedded text — this page is an image/scan. Try OCR instead of garbage.
@@ -956,7 +958,7 @@ async function pdfToExcel(){
         $('#progress').textContent=`Page ${i} has no text — loading OCR...`;
         await ensureTesseract();
         const ocrLines=await ocrPageToLines(page, i);
-        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; textRows.push([i, k+1, 'OCR', txt.slice(0,2000)]); });
+        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; textRows.push([i, k+1, 'OCR', txt.slice(0,2000)]); pageTexts[i-1].push({line:k+1, source:'OCR', text:txt.slice(0,2000)}); });
         if(ocrLines.length){ ocrPages++; log(`Page ${i}: OCR ${ocrLines.length} lines`); }
         else emptyPages++;
       }catch(cause){ emptyPages++; log(`Page ${i}: OCR failed — ${cause.message}`); }
@@ -986,6 +988,15 @@ async function pdfToExcel(){
   const ws=wb.addWorksheet('Pages (Images)');
   ws.columns=Array.from({length:COLS},()=>({width:COLW}));
   let r=1;
+  const LAST_COL='H';
+  function editableRow(text, bold){
+    ws.mergeCells('A'+r+':'+LAST_COL+r);
+    const cell=ws.getCell('A'+r);
+    cell.value=text; cell.alignment={wrapText:true, vertical:'top'};
+    if(bold) cell.font={bold:true};
+    ws.getRow(r).height=15;
+    r+=1;
+  }
   images.forEach((im,idx)=>{
     ws.getCell('A'+r).value='Page '+(idx+1);
     ws.getCell('A'+r).font={bold:true, size:14};
@@ -995,7 +1006,18 @@ async function pdfToExcel(){
     ws.addImage(imgId, {tl:{col:0, row:r-1}, ext:{width:IMG_W, height:h}, editAs:'oneCell'});
     const pt=Math.min(409, (h*0.75)/ROWS_PER_IMG);
     for(let k=0;k<ROWS_PER_IMG;k++) ws.getRow(r+k).height=pt;
-    r+=ROWS_PER_IMG+2;
+    r+=ROWS_PER_IMG+1;
+    // Editable text under the image: real cells you can type in.
+    // (Editing these never alters the picture above — pixels are pixels.)
+    const lines=pageTexts[idx]||[];
+    if(lines.length){
+      editableRow('Editable text — Page '+(idx+1)+' (edit here, the image above stays as-is)', true);
+      lines.slice(0,60).forEach(l=>editableRow('['+l.source+' | line '+l.line+'] '+l.text, false));
+      if(lines.length>60) editableRow('... +'+(lines.length-60)+' more lines on sheet PDF Extract', false);
+    }else{
+      editableRow('No editable text on this page (pure artwork). Type your own notes here if needed.', false);
+    }
+    r+=1;
   });
   // Sheet 2: searchable text (embedded or OCR) for copy-paste.
   const wt=wb.addWorksheet('PDF Extract');
@@ -1009,7 +1031,7 @@ async function pdfToExcel(){
     wn.columns=[{width:130}];
     wn.addRow(['Note: how this Excel was made']).font={bold:true};
     wn.addRow([`Pages: ${pdf.numPages}. Text pages: ${pdf.numPages-emptyPages-ocrPages}. OCR pages: ${ocrPages}. Empty pages: ${emptyPages}. Average ${Math.round(avg)} text chars per page.`]);
-    wn.addRow([`Sheet 'Pages (Images)' holds every page as an image — nothing redesigned.`]);
+    wn.addRow([`Sheet 'Pages (Images)' holds every page as an image plus editable text cells underneath — editing those cells never changes the picture.`]);
     wn.addRow([`Sheet 'PDF Extract' holds searchable text. Rows marked 'OCR' were read from page images (English + Indonesian). Proofread numbers carefully.`]);
     wn.addRow([`Pages that are pure artwork are left without text on purpose — guessing would print fake rows.`]);
   }
