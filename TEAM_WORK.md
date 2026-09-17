@@ -169,6 +169,10 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - Users clicked picture text trying to edit (editable cells were below, hidden). Now A–H picture + J–M editable text same rows; overflow full-width below. Smoke + syntax + HTTP OK. No browser E2E. Committed + pushed.
 
+### 17 September 2026 — formal Excel Table (pushed)
+
+- PDF Extract is now a real Table (PdfExtract, Medium9, filters). Verified table1.xml in output zip. Smoke + syntax + HTTP OK. Multi-column reconstruction still future. Committed + pushed.
+
 ### 17 September 2026 — seamless marquee
 
 - Problem: running text jumped (single copy animated to -50%). Fix: duplicated track content (2nd copy aria-hidden), track animates 0 → -50% for a seamless loop.
