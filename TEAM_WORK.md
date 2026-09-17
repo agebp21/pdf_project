@@ -173,6 +173,10 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - PDF Extract is now a real Table (PdfExtract, Medium9, filters). Verified table1.xml in output zip. Smoke + syntax + HTTP OK. Multi-column reconstruction still future. Committed + pushed.
 
+### 17 September 2026 — PPTX→PDF backend (pushed)
+
+- Audited Word (half) + PPT (placeholder). New server endpoint via local LibreOffice; frontend uploads, no more fake PDFs. 13 Python tests OK, syntax + HTTP OK. No real soffice here — user needs LibreOffice installed. Committed + pushed.
+
 ### 17 September 2026 — seamless marquee
 
 - Problem: running text jumped (single copy animated to -50%). Fix: duplicated track content (2nd copy aria-hidden), track animates 0 → -50% for a seamless loop.

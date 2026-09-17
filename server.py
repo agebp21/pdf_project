@@ -9,6 +9,7 @@ import re
 import secrets
 import shutil
 import subprocess
+import tempfile
 import threading
 import uuid
 import zipfile
@@ -105,6 +106,50 @@ def run_command(args, cwd, log):
     return result.returncode
 
 
+OFFICE_MIMES = {
+    'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
+    'application/vnd.ms-powerpoint': '.ppt',
+}
+OFFICE_INSTALL_HINT = ('LibreOffice (soffice) tidak ditemukan di komputer ini. '
+                       'Pasang dari https://libreoffice.org/download, lalu restart server.')
+
+
+def safe_office_name(raw, default='document.pptx'):
+    name = re.sub(r'[^A-Za-z0-9._-]', '_', unquote(raw or ''))[:100] or default
+    return name if name.lower().endswith(('.pptx', '.ppt')) else default
+
+
+def office_to_pdf(source, filename):
+    """Convert .pptx/.ppt at source path to PDF bytes via local LibreOffice.
+
+    Returns (pdf_bytes, download_name). Raises ValueError for bad input and
+    RuntimeError when LibreOffice is missing or conversion fails.
+    """
+    name = safe_office_name(filename)
+    ext = '.pptx' if name.lower().endswith('.pptx') else '.ppt'
+    with source.open('rb') as stream:
+        magic = stream.read(4)
+    if ext == '.pptx' and magic[:2] != b'PK':
+        raise ValueError('File bukan PPTX valid (arsip ZIP tidak terbaca).')
+    if ext == '.ppt' and magic != b'\xd0\xcf\x11\xe0':
+        raise ValueError('File bukan PPT valid.')
+    soffice = shutil.which('soffice') or shutil.which('soffice.bin')
+    if not soffice:
+        raise RuntimeError(OFFICE_INSTALL_HINT)
+    with tempfile.TemporaryDirectory(prefix='ppt-convert-') as temporary:
+        output = Path(temporary) / (Path(name).stem + '.pdf')
+        try:
+            completed = subprocess.run(
+                [soffice, '--headless', '--convert-to', 'pdf', '--outdir', temporary, str(source)],
+                capture_output=True, timeout=240,
+                creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        except subprocess.TimeoutExpired:
+            raise RuntimeError('Konversi kehabisan waktu (file terlalu besar/rumit?).')
+        if completed.returncode or not output.is_file():
+            raise RuntimeError('LibreOffice gagal mengonversi file ini.')
+        return output.read_bytes(), output.name
+
+
 def build_job(job_id, target):
     job, folder = JOBS[job_id], BUILD / job_id
     log = folder / 'build.log'
@@ -187,7 +232,8 @@ class Handler(SimpleHTTPRequestHandler):
         path = unquote(urlsplit(self.path).path)
         if path == '/api/capabilities':
             flutter = bool(shutil.which('flutter'))
-            self.send_json(200, dict(apk=flutter, exe=flutter and os.name == 'nt', token=TOKEN))
+            office = bool(shutil.which('soffice') or shutil.which('soffice.bin'))
+            self.send_json(200, dict(apk=flutter, exe=flutter and os.name == 'nt', office=office, token=TOKEN))
             return
         match = re.fullmatch(r'/api/jobs/([a-f0-9]{32})(?:/(download|log))?', path)
         if match:
@@ -219,12 +265,64 @@ class Handler(SimpleHTTPRequestHandler):
             return
         super().do_GET()
 
+    def convert_office(self):
+        """Stream an uploaded .pptx/.ppt to disk and convert via LibreOffice."""
+        mime = self.headers.get_content_type()
+        if mime not in OFFICE_MIMES:
+            self.send_json(400, {'error': 'Tipe file tidak didukung (butuh .pptx/.ppt).'})
+            return
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if size <= 0:
+                raise ValueError('File presentasi kosong.')
+        except ValueError:
+            self.send_json(400, {'error': 'Ukuran upload tidak valid.'})
+            return
+        name = safe_office_name(self.headers.get('X-Filename', ''))
+        if not name.lower().endswith(OFFICE_MIMES[mime]):
+            self.send_json(400, {'error': 'Ekstensi file tidak cocok dengan tipe konten.'})
+            return
+        tmpdir = tempfile.mkdtemp(prefix='ppt-upload-')
+        try:
+            source = Path(tmpdir) / name
+            self.connection.settimeout(300)
+            with source.open('wb') as output:
+                remaining = size
+                while remaining:
+                    chunk = self.rfile.read(min(1024 * 1024, remaining))
+                    if not chunk:
+                        raise ValueError('Upload tidak lengkap.')
+                    output.write(chunk)
+                    remaining -= len(chunk)
+            try:
+                pdf_bytes, download = office_to_pdf(source, name)
+            except RuntimeError as cause:
+                missing = 'tidak ditemukan' in str(cause)
+                self.send_json(503 if missing else 400, {'error': str(cause)})
+                return
+            except ValueError as cause:
+                self.send_json(400, {'error': str(cause)})
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/pdf')
+            self.send_header('Content-Disposition', f'attachment; filename="{download}"')
+            self.send_header('Content-Length', str(len(pdf_bytes)))
+            self.end_headers()
+            self.wfile.write(pdf_bytes)
+        except Exception as cause:
+            self.send_json(400, {'error': str(cause)})
+        finally:
+            shutil.rmtree(tmpdir, ignore_errors=True)
+
     def do_HEAD(self):
         self.send_error(405)
 
     def do_POST(self):
         if not self.trusted() or not secrets.compare_digest(self.headers.get('X-Build-Token', ''), TOKEN):
             self.send_json(403, {'error': 'Sesi build tidak valid. Refresh halaman.'})
+            return
+        if re.fullmatch(r'/api/convert/pptx-to-pdf', self.path or ''):
+            self.convert_office()
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
         if not match or self.headers.get_content_type() != 'application/zip':

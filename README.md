@@ -40,7 +40,7 @@ Implementasi mengikuti [panduan File System Access](https://developer.chrome.com
 - Flutter SDK di PATH, dengan dependensi dikunci melalui `native/reader/pubspec.lock`.
 - APK: Android SDK, JDK, dan lisensi Android yang sudah diterima.
 - Windows: Windows, Visual Studio dengan toolchain C++, serta SDK Windows.
-- Build pertama dapat memakai internet untuk mengambil dependensi. Buku yang sudah dikemas tidak membutuhkan internet.
+- PPTX/PPT to PDF: LibreOffice terpasang (`soffice` di PATH) + jalan via `python server.py`. Tanpa LibreOffice, tool ini menolak dengan pesan install — tidak ada lagi PDF placeholder.- Build pertama dapat memakai internet untuk mengambil dependensi. Buku yang sudah dikemas tidak membutuhkan internet.
 - Windows pembaca memerlukan Microsoft Edge WebView2 Runtime. Runtime ini tidak disertakan di ZIP.
 - APK saat ini memakai signing debug bawaan template Flutter untuk pengujian lokal. Belum siap sebagai rilis Play Store. EXE belum ditandatangani dengan sertifikat penerbit.
 - Judul buku menentukan application ID Android: buku dengan judul sama memperbarui aplikasi yang sama, judul berbeda mendapat ID berbeda.

@@ -130,7 +130,7 @@ const TOOLS = [
   {id:'compress-pdf', title:'Compress PDF', desc:'Kecilkan ukuran PDF tanpa ngerusak kualitas — pilih level kompresi.', cat:'Optimize PDF', icon:'⇲', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'File PDF — pilih level Small / Medium'},
   {id:'rotate-pdf', title:'Rotate PDF', desc:'Putar halaman PDF 90° / 180° / 270° — per halaman atau semua.', cat:'Organize PDF', icon:'↻', color:'#a855a7', bg:'#fae8ff', accept:'.pdf', hint:'File PDF — pilih sudut & halaman'},
   {id:'organize-pdf', title:'Organize PDF', desc:'Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.', cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — preview grid, drag untuk urutkan'},
-  {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Convert PPT/PPTX — butuh backend (placeholder).', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'File .pptx/.ppt'},
+  {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Real PPTX→PDF via local LibreOffice (needs the project server).', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'PPTX/PPT file — converted on your computer via the local server + LibreOffice'},
   {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'PDF to PPT — placeholder.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'File PDF'},
 ];
 let active = new URLSearchParams(location.search).get('tool') || 'jpg-to-pdf';
@@ -1075,13 +1075,37 @@ async function htmlToPdf(){
   for(let l of lines){ if(y>280){pdf.addPage(); y=15;} pdf.text(l,15,y); y+=5; }
   downloadBlob(pdf.output('blob'), file.name.replace(/\.html?$/i,'')+'.pdf');
 }
+async function serverCapabilities(){
+  const res=await fetch('/api/capabilities');
+  if(!res.ok) throw new Error('no-server');
+  return res.json();
+}
 async function pptToPdf(){
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF();
-  pdf.setFontSize(12); pdf.text(`File ${files[0].name}`,15,20);
-  pdf.setFontSize(10); pdf.text('PPT to PDF full butuh backend LibreOffice.\nIni placeholder — file asli tidak diproses.',15,30);
-  downloadBlob(pdf.output('blob'), files[0].name.replace(/\.pptx?$/i,'')+'.pdf');
-  showError('PPT to PDF butuh server. Hasil ini hanya placeholder.');
+  const file=files[0];
+  const lower=file.name.toLowerCase();
+  const ext=lower.endsWith('.pptx')?'.pptx':(lower.endsWith('.ppt')?'.ppt':null);
+  if(!ext) throw new Error('Only .pptx/.ppt files are supported.');
+  let caps=null;
+  try{ caps=await serverCapabilities(); }
+  catch(e){ caps=null; }
+  if(!caps) throw new Error('Real PPTX conversion needs the project server.\nRun: python server.py — then open http://127.0.0.1:8080/converter.html?tool=ppt-to-pdf');
+  if(!caps.office) throw new Error('LibreOffice was not found on this computer.\nInstall it from https://libreoffice.org/download, restart the server, then convert again. Your file was NOT processed.');
+  const mime=ext==='.pptx'?'application/vnd.openxmlformats-officedocument.presentationml.presentation':'application/vnd.ms-powerpoint';
+  $('#progress').textContent='Uploading to local LibreOffice...';
+  const res=await fetch('/api/convert/pptx-to-pdf', {method:'POST',
+    headers:{'Content-Type':mime, 'X-Build-Token':caps.token, 'X-Filename':encodeURIComponent(file.name)}, body:file});
+  if(!res.ok){
+    let msg='Conversion failed.';
+    try{ msg=(await res.json()).error||msg; }catch(e){}
+    throw new Error(msg);
+  }
+  const blob=await res.blob();
+  $('#progress').textContent='Done.';
+  const prev=document.createElement('div');
+  prev.className='text-[11px] leading-relaxed bg-white p-3 rounded border';
+  prev.append('Converted ', Object.assign(document.createElement('b'), {textContent:file.name}), ' to PDF with LibreOffice. Layout, images, and fonts come from the original slides.');
+  $('#resultPreview').prepend(prev);
+  downloadBlob(new Blob([blob],{type:'application/pdf'}), file.name.replace(/\.(pptx?)$/i,'')+'.pdf');
 }
 async function pdfToPpt(){
   const {jsPDF}=window.jspdf;

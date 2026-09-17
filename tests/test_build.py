@@ -4,6 +4,7 @@ from pathlib import Path
 import sys
 import tempfile
 import unittest
+from unittest import mock
 import zipfile
 import threading
 import urllib.request
@@ -93,7 +94,77 @@ class LocalApiTests(unittest.TestCase):
         with urllib.request.urlopen(self.base + '/flipbook.html') as response:
             self.assertIn(b'export-html', response.read())
         with urllib.request.urlopen(self.base + '/api/capabilities') as response:
-            self.assertTrue(json.load(response)['token'])
+            body = json.load(response)
+            self.assertTrue(body['token'])
+            self.assertIn('office', body)
+
+
+class ConvertApiTests(unittest.TestCase):
+    PPTX_MIME = 'application/vnd.openxmlformats-officedocument.presentationml.presentation'
+
+    @classmethod
+    def setUpClass(cls):
+        cls.httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.base = 'http://127.0.0.1:' + str(cls.httpd.server_port)
+        with urllib.request.urlopen(cls.base + '/api/capabilities') as response:
+            cls.token = json.load(response)['token']
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        cls.thread.join()
+
+    def post(self, body, headers):
+        request = urllib.request.Request(self.base + '/api/convert/pptx-to-pdf', data=body, headers=headers)
+        try:
+            with urllib.request.urlopen(request) as response:
+                return response.status, response.headers, response.read()
+        except urllib.error.HTTPError as error:
+            return error.code, error.headers, error.read()
+
+    def headers(self, **extra):
+        base = {'Content-Type': self.PPTX_MIME, 'X-Build-Token': self.token,
+                'X-Filename': 'deck.pptx'}
+        base.update(extra)
+        return base
+
+    def test_token_required(self):
+        status, _, _ = self.post(b'PKxy', {'Content-Type': self.PPTX_MIME})
+        self.assertEqual(status, 403)
+
+    def test_bad_content_type(self):
+        status, _, _ = self.post(b'PKxy', {'Content-Type': 'application/zip', 'X-Build-Token': self.token})
+        self.assertEqual(status, 400)
+
+    def test_bad_magic(self):
+        status, _, body = self.post(b'not-a-presentation', self.headers())
+        self.assertEqual(status, 400)
+
+    def test_missing_libreoffice(self):
+        with mock.patch.object(server.shutil, 'which', return_value=None):
+            status, _, body = self.post(b'PK\x03\x04fake-pptx', self.headers())
+        self.assertEqual(status, 503)
+        self.assertIn(b'LibreOffice', body)
+
+    def test_success_with_stubbed_soffice(self):
+        def fake_run(args, **kwargs):
+            outdir = Path(args[args.index('--outdir') + 1])
+            source = Path(args[-1])
+            (outdir / (source.stem + '.pdf')).write_bytes(b'%PDF-1.4 fake')
+            stub = mock.Mock()
+            stub.returncode = 0
+            return stub
+
+        with mock.patch.object(server.shutil, 'which', return_value='/usr/bin/soffice'), \
+                mock.patch.object(server.subprocess, 'run', side_effect=fake_run):
+            status, headers, body = self.post(b'PK\x03\x04fake-pptx', self.headers())
+        self.assertEqual(status, 200)
+        self.assertEqual(headers.get_content_type(), 'application/pdf')
+        self.assertIn('deck.pdf', headers.get('Content-Disposition', ''))
+        self.assertTrue(body.startswith(b'%PDF'))
 
 
 if __name__ == '__main__':

@@ -256,3 +256,10 @@ User screenshot showed them clicking text inside the picture trying to edit it (
 
 User wants real editable tables in Excel. Fix: `PDF Extract` sheet is now a formal Excel Table (`PdfExtract`, style TableStyleMedium9, banded rows, filter buttons on Page/Line/Source/Text) via `ws.addTable` — sortable, filterable, editable cells. Side-by-side editable cells on `Pages (Images)` stay as-is.
 - Verified: output unzipped and `xl/tables/table1.xml` contains `PdfExtract` (real table object, not just styled cells); inline `node --check` OK; HTTP 200. NOT verified: real-file browser run; true multi-column table reconstruction (X-split) still future work. Pushed per auto-push rule.
+
+### 17 September 2026 — audit Word/PowerPoint + real PPTX→PDF backend
+
+Honest audit of `converter.html`: Word to PDF works but strips to plain text (mammoth raw, 50k chars, no layout/images); PDF to Word emits editable HTML `.doc` (not real `.docx`, no layout/images); Excel to PDF dumps 60 rows as text lines; PPT to PDF and PDF to PPT were placeholders producing fake PDFs. User picked the backend path for PPTX→PDF.
+- Implemented: `POST /api/convert/pptx-to-pdf` in `server.py` (loopback + token, `.pptx`/`.ppt` + magic validation, streams upload to temp, `soffice --headless --convert-to pdf`, PDF download response, always cleans temp; `office` flag added to `/api/capabilities`). Frontend `pptToPdf` uploads to the server, shows clear install/run-server errors, and no longer emits fake PDFs (also fixed user-filename innerHTML → textContent). PDF→PPT still placeholder (follow-up).
+- Prereq: LibreOffice installed (`soffice` in PATH) + `python server.py`. README updated.
+- Verified: 13 Python tests OK (8 old + 5 new: token/type/magic/503/success-stub), `py_compile` OK, inline `node --check` OK, HTTP 200. NOT verified: real soffice end-to-end (no LibreOffice on this machine). Pushed per auto-push rule.
