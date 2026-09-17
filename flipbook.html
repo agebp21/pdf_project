@@ -1,0 +1,65 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+  <title>PDF to Flipbook — PDF Tools</title>
+  <link rel="stylesheet" href="assets/animation.css">
+  <link rel="stylesheet" href="assets/flipbook.css">
+  <link rel="stylesheet" href="assets/export/book-effects.css">
+  <link rel="stylesheet" href="assets/theme-cream.css">
+  <script defer src="assets/vendor/pdf.min.js"></script>
+  <script defer src="assets/vendor/page-flip.browser.js"></script>
+  <script defer src="assets/flipbook-transfer.js"></script>
+  <script defer src="assets/vendor/jszip.min.js"></script>
+  <script defer src="assets/flipbook-export.js"></script>
+  <script defer src="assets/export/layout.js"></script>
+  <script defer src="assets/flipbook.js"></script>
+</head>
+<body>
+  <header class="topbar"><a class="brand" href="index.html"><span>PDF</span> PDF Tools</a><a class="back-link badge" href="converter.html?tool=jpg-to-pdf">Open converter →</a></header>
+  <main>
+    <div class="heading"><div><p class="eyebrow">✦ PDF TO FLIPBOOK • INTERACTIVE</p><h1>Your doc, turned into a living book.</h1><p>Upload a PDF or continue straight from a convert result. Cover first, then the inside — just like a real book.</p></div><a class="offline" href="animation.html">See animation example ↗</a></div>
+    <div class="workspace">
+      <aside>
+        <div class="panel-heading"><span class="step">01</span><h2>Choose document</h2></div>
+        <label for="pdf-file">PDF file</label><input id="pdf-file" type="file" accept="application/pdf,.pdf">
+        <p class="muted">Pick a PDF to turn into a flipbook. Files are processed on your device.</p>
+        <p id="load-status" class="feedback" role="status">No PDF selected yet.</p>
+        <label for="project-file">Open a saved project (.flipbook)</label><input id="project-file" type="file" accept=".flipbook">
+        <!-- Editor animasi disembunyikan sementara atas permintaan pengguna. -->
+        <form id="overlay-form" hidden style="display:none">
+          <fieldset id="overlay-fields" disabled>
+            <div class="panel-heading"><span class="step">02</span><h2>Tambahkan animasi</h2></div>
+            <label for="target-page">Halaman tujuan</label><select id="target-page"></select>
+            <label for="stat-label">Judul statistik</label><input id="stat-label" maxlength="40" value="Peserta terlibat" required>
+            <label for="stat-value">Angka akhir</label><input id="stat-value" type="number" min="0" max="999999" value="1250" required>
+            <label for="position">Posisi</label><select id="position"><option value="bottom-right">Kanan bawah</option><option value="bottom-left">Kiri bawah</option><option value="top-right">Kanan atas</option><option value="top-left">Kiri atas</option></select>
+            <button class="primary apply" type="submit">Terapkan ke halaman</button>
+            <button id="remove-overlay" class="secondary" type="button">Hapus animasi halaman ini</button>
+          </fieldset>
+        </form>
+        <p class="muted">Save your project so the document can be reopened later.</p>
+        <fieldset id="export-fields" disabled>
+          <div class="panel-heading"><span class="step">02</span><h2>Save & export</h2></div>
+          <label for="export-title">Book title</label><input id="export-title" maxlength="200" value="Interactive book">
+          <button id="save-project" class="secondary" type="button">Save project as…</button>
+          <button id="export-html" class="primary apply" type="button">Save offline HTML as…</button>
+          <button id="export-apk" class="secondary" type="button" disabled>Build Android APK</button>
+          <button id="export-exe" class="secondary" type="button" disabled>Build Windows EXE (.zip)</button>
+        </fieldset>
+        <p class="muted">Pick a file name and folder via the Save dialog. If your browser is not supported, the result downloads normally per your browser settings.</p>
+        <p id="build-availability" class="muted">Checking local build service…</p>
+        <p class="muted">APKs are for testing for now. The Windows package holds the EXE plus support files; readers need WebView2.</p>
+        <p id="export-status" class="feedback" role="status"></p>
+        <a id="build-download" class="secondary" style="text-align:center" hidden download>Download build result</a>
+      </aside>
+      <section class="preview" aria-label="Book from PDF">
+        <div class="preview-top"><span id="document-name">FLIPBOOK PREVIEW</span><span id="page-status" aria-live="polite">—</span></div>
+        <div id="reader-stage" class="stage"><div id="empty-book"><span>▤</span><h2>Open your first PDF</h2><p>PDF pages will appear here as a flippable book.</p><a href="converter.html?tool=word-to-pdf">Have a Word file? Convert it first →</a></div></div>
+        <div class="controls"><div class="navigation"><button id="prev" disabled aria-label="Previous page">←</button><button id="home" disabled aria-label="Back to cover" title="Back to cover">Home</button><button id="next" disabled aria-label="Next page">→</button></div><div class="playback" hidden style="display:none"><button id="replay" disabled>↻ Putar animasi</button><button id="fullscreen">Layar penuh</button></div><a href="animation.html" class="back-link" hidden style="display:none">Demo infografis</a></div>
+        <p id="reader-error" role="alert" hidden></p>
+      </section>
+    </div>
+  </main>
+</body>
+</html>

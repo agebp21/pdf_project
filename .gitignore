@@ -6,3 +6,5 @@ __pycache__/
 !.env.example
 Thumbs.db
 .DS_Store
+.build/
+.server-*.log

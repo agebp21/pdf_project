@@ -4,8 +4,10 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Converter — PDF Tools</title>
+<script src="assets/flipbook-transfer.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>
   if(location.protocol==='file:'){ pdfjsLib.GlobalWorkerOptions.workerSrc=''; }
@@ -17,36 +19,38 @@
 <script src="https://cdn.sheetjs.com/xlsx-latest/package/dist/xlsx.full.min.js"></script>
 <script src="https://cdnjs.cloudflare.com/ajax/libs/mammoth/1.6.0/mammoth.browser.min.js"></script>
 <style>
-  *{font-family:'Inter',sans-serif}
-  body{background:#f3f5f9;overflow-x:hidden}
-  .blob{position:absolute;border-radius:40% 60% 60% 40% / 40% 40% 60% 60%;opacity:0.08;pointer-events:none}
-  .card{transition:all .2s ease}
-  .card:hover{box-shadow:0 12px 24px rgba(0,0,0,0.08)}
-  .drop{border:2px dashed #cbd5e1;transition:all .2s}
-  .drop.drag{border-color:#111827;background:#fff7ed}
-  .tool-pill.active{background:#111827;color:#fff;border-color:#111827}
+  *{font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+  .serif{font-family:'Fraunces',Georgia,serif}
+  body{background:#FAF4E8;color:#1C1917;overflow-x:hidden}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
+    background:radial-gradient(600px 400px at 8% 0%,#FFE9D6 0%,transparent 60%),
+               radial-gradient(700px 500px at 95% 15%,#E9E4FF 0%,transparent 55%)}
+  .card{background:#FFFDF6;border:1.5px solid #1C1917;border-radius:22px;transition:all .2s ease}
+  .card:hover{box-shadow:6px 6px 0 #1C1917;transform:translateY(-2px)}
+  .drop{border:2px dashed #1A3C34;transition:all .2s}
+  .drop.drag{border-color:#FF5C28;background:#FFF7ED;transform:scale(1.01)}
+  .tool-pill{border:1.5px solid #1C1917;background:#FFFDF6;border-radius:999px}
+  .tool-pill.active{background:#1A3C34;color:#FFF7EA;border-color:#1C1917;box-shadow:3px 3px 0 #1C1917}
+  .btn-tang{background:#FF5C28;color:#fff;border:1.5px solid #1C1917;box-shadow:4px 4px 0 #1C1917}
+  .btn-tang:hover{transform:translate(-1px,-1px);box-shadow:6px 6px 0 #1C1917}
   ::-webkit-scrollbar{height:6px}
-  ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:999px}
+  ::-webkit-scrollbar-thumb{background:#1C1917;border-radius:999px}
 </style>
 </head>
 <body class="relative">
-  <!-- blobs sama kaya index.html -->
-  <div class="blob bg-[#f8b4b4] w-[600px] h-[500px] -top-40 -left-40 rotate-12"></div>
-  <div class="blob bg-[#f8b4b4] w-[700px] h-[600px] top-[800px] -right-40"></div>
-  <div class="blob bg-[#fde8e8] w-[800px] h-[700px] bottom-0 left-[20%]"></div>
-
-  <!-- top bar tipis sama style filter -->
-  <div class="relative z-10 max-w-[1440px] mx-auto px-4 pt-6 flex items-center justify-between">
-    <a href="index.html" class="flex items-center gap-2 font-extrabold text-[15px] tracking-tight text-gray-900"><span class="w-8 h-8 rounded-lg bg-[#111827] text-white grid place-items-center text-xs">PDF</span> PDF Tools</a>
-    <a href="index.html" class="px-3.5 py-1.5 rounded-full bg-white border border-gray-200 text-xs font-medium hover:bg-gray-50">← All tools</a>
+  <!-- top bar -->
+  <div class="sticky top-3 z-50 max-w-[1440px] mx-auto px-4 pt-3 flex items-center justify-between gap-3">
+    <a href="index.html" class="flex items-center gap-2 font-extrabold text-[15px] tracking-tight rounded-2xl px-3 py-2 bg-[#FAF4E8]/85 backdrop-blur border-[1.5px] border-[#1C1917] shadow-[4px_4px_0_#1C1917]"><span class="w-8 h-8 rounded-lg bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-xs -rotate-3">PDF</span> <span class="serif">PDF Tools</span></a>
+    <a href="index.html" class="px-4 py-2 rounded-full bg-[#FFFDF6] border-[1.5px] border-[#1C1917] text-xs font-extrabold hover:-translate-y-0.5 transition shadow-[3px_3px_0_#1C1917]">← All tools</a>
   </div>
 
-  <!-- header converter - style sama kaya hero index.html -->
-  <header class="relative z-10 max-w-[1440px] mx-auto px-4 pt-6 pb-2 text-center">
-    <div class="inline-flex items-center gap-3 bg-white border border-gray-200 rounded-full px-4 py-2 shadow-sm">
-      <div id="toolIcon" class="w-8 h-8 rounded-lg grid place-items-center text-sm font-bold"></div>
-      <span id="toolTitle" class="font-extrabold text-sm tracking-tight"></span>
-      <span id="toolBadge" class="text-[10px] bg-gray-900 text-white px-2 py-0.5 rounded-full font-bold"></span>
+  <!-- header converter -->
+  <header class="relative z-10 max-w-[1440px] mx-auto px-4 pt-8 pb-2 text-center">
+    <p class="inline-flex text-[10px] font-extrabold tracking-[.18em] bg-white border border-[#1C1917] rounded-full px-3 py-1 shadow-[3px_3px_0_#1C1917]">✦ CONVERTER • PRIVACY-FIRST • 100% DI BROWSER</p>
+    <div class="mt-3 inline-flex items-center gap-3 bg-[#FFFDF6] border-[1.5px] border-[#1C1917] rounded-full pl-2 pr-5 py-2 shadow-[4px_4px_0_#1C1917]">
+      <div id="toolIcon" class="w-9 h-9 rounded-xl grid place-items-center text-sm font-bold border-[1.5px] border-[#1C1917]"></div>
+      <span id="toolTitle" class="font-extrabold text-sm tracking-tight serif text-[17px]"></span>
+      <span id="toolBadge" class="text-[10px] bg-[#1A3C34] text-white px-2 py-0.5 rounded-full font-bold"></span>
     </div>
     <p id="toolDesc" class="mt-3 text-[13px] text-gray-500 max-w-2xl mx-auto leading-relaxed"></p>
     <div id="options" class="mt-4 flex flex-wrap justify-center gap-2 text-xs text-left max-w-3xl mx-auto"></div>
@@ -58,51 +62,54 @@
     <div id="debug" class="hidden mt-2 max-w-3xl mx-auto p-2.5 rounded-xl bg-gray-900 text-white text-[11px] font-mono whitespace-pre-wrap text-left max-h-40 overflow-auto"></div>
   </div>
 
-  <div class="relative z-10 max-w-[1440px] mx-auto px-4 py-6 grid lg:grid-cols-[300px_1fr] gap-4">
-    <!-- sidebar - card putih sama kaya di index -->
-    <aside class="bg-white rounded-xl border border-gray-200 p-4 h-fit lg:sticky lg:top-6">
-      <h2 class="font-bold text-[13px]">Pilih Converter</h2>
-      <p class="text-[11px] text-gray-500 mt-1 leading-relaxed">Semua proses 100% di browser — file tidak di-upload ke server.</p>
+  <div class="relative z-10 max-w-[1440px] mx-auto px-4 py-6 grid lg:grid-cols-[310px_1fr] gap-4">
+    <!-- sidebar -->
+    <aside class="card p-5 h-fit lg:sticky lg:top-20">
+      <p class="text-[10px] font-extrabold tracking-[.18em] text-[#FF5C28]">✦ WORKSPACE</p>
+      <h2 class="serif font-black text-[19px] tracking-tight">Pick a converter</h2>
+      <p class="text-[11.5px] text-[#78716C] mt-1 leading-relaxed">Everything runs 100% in your browser — files are never uploaded.</p>
       <div id="toolList" class="mt-3 space-y-1.5"></div>
-      <div id="libStatus" class="hidden mt-3 p-2.5 rounded-xl bg-red-50 border border-red-200 text-[11px] text-red-700 leading-relaxed"></div>
-      <div class="mt-3 p-3 rounded-xl bg-[#fff7ed] border border-[#ffedd5] text-[11px] text-gray-600 leading-relaxed">
-        <b class="text-gray-900">Privacy first:</b> file kamu tidak pernah keluar dari device.
+      <div id="libStatus" class="hidden mt-3 p-2.5 rounded-2xl bg-red-50 border border-red-200 text-[11px] text-red-700 leading-relaxed"></div>
+      <div class="mt-3 p-3 rounded-2xl bg-[#1A3C34] text-[#FFF7EA] border-[1.5px] border-[#1C1917] text-[11px] leading-relaxed">
+        <b>🔒 Privacy first:</b> your files never leave your device.
       </div>
-      <button id="serveBtn" onclick="copyServe()" class="mt-2 w-full py-2 rounded-full bg-white border border-gray-200 text-xs font-semibold hover:bg-gray-50">📋 Copy: npx serve .</button>
+      <button id="serveBtn" onclick="copyServe()" class="mt-2 w-full py-2 rounded-full bg-[#FFFDF6] border-[1.5px] border-[#1C1917] text-xs font-extrabold hover:-translate-y-0.5 transition">📋 Copy: npx serve .</button>
     </aside>
 
     <main class="space-y-4">
-      <!-- drop zone - card putih rounded-xl -->
-      <div id="drop" class="drop bg-white rounded-xl border border-gray-200 p-8 text-center cursor-pointer card">
-        <div class="w-14 h-14 mx-auto rounded-xl bg-[#111827] text-white grid place-items-center text-xl mb-3">⇧</div>
-        <p class="font-bold text-[14px] text-gray-900">Drag & drop file di sini</p>
-        <p id="dropHint" class="text-xs text-gray-500 mt-1"></p>
-        <button id="pickBtn" class="mt-4 px-5 py-2.5 rounded-full bg-[#111827] text-white text-sm font-semibold hover:bg-black">Pilih File</button>
+      <!-- drop zone -->
+      <div id="drop" class="drop card p-8 text-center cursor-pointer">
+        <div class="w-14 h-14 mx-auto rounded-2xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-xl mb-3 border-[1.5px] border-[#1C1917] -rotate-3 shadow-[4px_4px_0_#1C1917]">⇧</div>
+        <p class="serif font-black text-[20px]">Drop files, grab a coffee ☕</p>
+        <p class="font-bold text-[13px] mt-0.5">Drag & drop your files here</p>
+        <p id="dropHint" class="text-xs text-[#78716C] mt-1"></p>
+        <button id="pickBtn" class="mt-4 px-6 py-2.5 rounded-full bg-[#1C1917] text-[#FFF7EA] text-sm font-extrabold border-[1.5px] border-[#1C1917] shadow-[4px_4px_0_rgba(28,25,23,.25)] hover:-translate-y-0.5 transition">Choose files</button>
         <input id="fileInput" type="file" class="hidden">
-        <p class="text-[11px] text-gray-400 mt-3">♾️ Tanpa batasan ukuran — file besar diproses langsung di browser (tergantung RAM)</p>
-        <button id="testBtn" class="mt-3 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter tanpa file (generate dummy)</button>
+        <p class="text-[11px] text-[#A8A29E] mt-3 font-semibold">♾️ No size limits — big files are processed right in your browser (depends on RAM)</p>
+        <button id="testBtn" class="mt-3 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter without a file (generate dummy)</button>
       </div>
 
-      <div id="fileList" class="hidden bg-white rounded-xl border border-gray-200 p-4 card">
+      <div id="fileList" class="hidden card p-5">
         <div class="flex items-center justify-between mb-3">
-          <h3 class="font-bold text-[13px]">File terpilih (<span id="fileCount">0</span>)</h3>
-          <button onclick="clearFiles()" class="text-xs font-semibold text-red-600 hover:underline">Hapus semua</button>
+          <h3 class="font-bold text-[13px] serif text-[16px]">Selected files (<span id="fileCount">0</span>)</h3>
+          <button onclick="clearFiles()" class="text-xs font-extrabold text-red-600 hover:underline">Remove all</button>
         </div>
         <div id="files" class="space-y-2"></div>
-        <button id="convertBtn" class="mt-4 w-full py-3.5 rounded-xl bg-[#ff6b35] hover:bg-[#e85f2e] text-white font-bold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed shadow-sm">
-          <span id="btnText">Convert Sekarang →</span>
+        <button id="convertBtn" class="btn-tang mt-4 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+          <span id="btnText">Convert now →</span>
           <span id="btnSpinner" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
         </button>
         <p id="progress" class="hidden text-xs text-center text-gray-500 mt-2"></p>
-        <p id="error" class="hidden text-xs text-center text-red-600 mt-2 bg-red-50 border border-red-200 rounded-lg p-2.5 text-left"></p>
+        <p id="error" class="hidden text-xs text-center text-red-600 mt-2 bg-red-50 border border-red-200 rounded-xl p-2.5 text-left"></p>
       </div>
 
-      <div id="result" class="hidden bg-white rounded-xl border border-gray-200 p-6 card">
-        <h3 class="font-bold text-[13px] mb-3">✅ Hasil Convert</h3>
-        <div id="resultPreview" class="rounded-xl border border-gray-200 bg-gray-50 p-4 text-xs text-gray-600 overflow-auto max-h-[420px]"></div>
+      <div id="result" class="hidden card p-6">
+        <h3 class="font-bold text-[13px] mb-3 serif text-[16px]">✅ Convert result — nice!</h3>
+        <div id="resultPreview" class="rounded-2xl border-[1.5px] border-[#1C1917]/15 bg-[#FAF4E8] p-4 text-xs text-gray-600 overflow-auto max-h-[420px]"></div>
         <div class="flex flex-wrap gap-2 mt-4">
-          <a id="downloadBtn" href="#" download class="px-5 py-2.5 rounded-full bg-[#111827] text-white text-sm font-bold hover:bg-black">⬇ Download Hasil</a>
-          <button onclick="resetAll()" class="px-5 py-2.5 rounded-full bg-white border border-gray-200 text-sm font-semibold hover:bg-gray-50">Convert lagi</button>
+          <a id="downloadBtn" href="#" download class="px-5 py-2.5 rounded-full bg-[#1C1917] text-[#FFF7EA] text-sm font-extrabold border-[1.5px] border-[#1C1917] hover:-translate-y-0.5 transition">⬇ Download result</a>
+          <button id="makeFlipbook" hidden class="px-5 py-2.5 rounded-full bg-[#1A3C34] text-white text-sm font-extrabold border-[1.5px] border-[#1C1917] shadow-[3px_3px_0_#1C1917]">Turn into Flipbook →</button>
+          <button onclick="resetAll()" class="px-5 py-2.5 rounded-full bg-white border-[1.5px] border-[#1C1917] text-sm font-extrabold hover:bg-gray-50">Convert again</button>
         </div>
       </div>
     </main>
@@ -116,7 +123,7 @@ const TOOLS = [
   {id:'word-to-pdf', title:'Word to PDF', desc:'Jadikan DOC/DOCX mudah dibaca dengan convert ke PDF.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'File .docx/.doc'},
   {id:'pdf-to-word', title:'PDF to Word', desc:'Convert PDF jadi DOCX yang mudah diedit. 100% di browser.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'File PDF — teks akan diekstrak ke .doc'},
   {id:'excel-to-pdf', title:'Excel to PDF', desc:'Jadikan spreadsheet EXCEL mudah dibaca dengan convert ke PDF.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'File .xlsx / .xls / .csv'},
-  {id:'pdf-to-excel', title:'PDF to Excel', desc:'Tarik data dari PDF ke spreadsheet Excel dalam detik.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'File PDF — tabel/teks akan jadi Excel'},
+  {id:'pdf-to-excel', title:'PDF to Excel', desc:'Pull text from PDFs into a spreadsheet. Text-less pages are read with OCR.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — text/tables become Excel, image pages go through OCR (needs internet)'},
   {id:'html-to-pdf', title:'HTML to PDF', desc:'Convert halaman HTML jadi PDF dengan 1 klik.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'File .html'},
   {id:'merge-pdf', title:'Merge PDF', desc:'Gabungkan PDF sesuai urutan yang kamu mau.', cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, hint:'Pilih 2+ file PDF untuk digabungkan'},
   {id:'split-pdf', title:'Split PDF', desc:'Extract halaman 1-3, split per N halaman, atau centang manual per halaman.', cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — pilih mode split di bawah'},
@@ -488,6 +495,22 @@ $('#convertBtn').addEventListener('click', async ()=>{
   }
 });
 function downloadBlob(blob, filename){
+  const flipbookButton = $('#makeFlipbook');
+  flipbookButton.hidden = !blob.type.includes('pdf');
+  flipbookButton.disabled = false;
+  flipbookButton.textContent = 'Jadikan Flipbook →';
+  flipbookButton.onclick = async () => {
+    flipbookButton.disabled = true;
+    flipbookButton.textContent = 'Menyiapkan buku…';
+    try {
+      const id = await FlipbookTransfer.save(blob, filename);
+      location.href = 'flipbook.html?source=' + encodeURIComponent(id);
+    } catch (error) {
+      showError('Gagal membuka flipbook: ' + error.message + '. Download PDF lalu unggah melalui menu PDF to Flipbook.');
+      flipbookButton.disabled = false;
+      flipbookButton.textContent = 'Jadikan Flipbook →';
+    }
+  };
   const url=URL.createObjectURL(blob);
   const a=$('#downloadBtn'); a.href=url; a.download=filename;
   $('#result').classList.remove('hidden');
@@ -833,21 +856,108 @@ async function excelToPdf(){
   const blob=pdf.output('blob');
   downloadBlob(blob, files[0].name.replace(/\.(xlsx|xls|csv)$/i,'')+'.pdf');
 }
+// Tesseract.js v5.1.1 (Apache-2.0, https://github.com/naptha/tesseract.js)
+// Loaded lazily from jsDelivr ONLY when a PDF page has no embedded text,
+// so normal converts stay fast. Needs internet (like the other converter CDNs).
+let _tesseractLoading=null;
+function ensureTesseract(){
+  if(window.Tesseract) return Promise.resolve();
+  if(!_tesseractLoading){
+    _tesseractLoading=new Promise((resolve,reject)=>{
+      const s=document.createElement('script');
+      s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
+      s.onload=resolve;
+      s.onerror=()=>reject(new Error('Could not load the OCR engine. Check your internet connection.'));
+      document.head.appendChild(s);
+    });
+  }
+  return _tesseractLoading;
+}
+async function ocrPageToLines(page, pageNum){
+  // Render the text-less page to an image, then read it with OCR (English + Indonesian).
+  const base=page.getViewport({scale:1});
+  const scale=Math.min(2, 1600/Math.max(base.width, base.height));
+  const viewport=page.getViewport({scale});
+  const canvas=document.createElement('canvas');
+  canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height);
+  await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+  const result=await window.Tesseract.recognize(canvas, 'eng+ind', {
+    logger:(m)=>{ if(m.status==='recognizing text'&&typeof m.progress==='number') $('#progress').textContent=`OCR page ${pageNum}... ${Math.round(m.progress*100)}%`; }
+  });
+  canvas.width=canvas.height=0;
+  // Quality gate: artwork/display type makes Tesseract hallucinate symbols.
+  // Drop symbol-only lines, then reject the whole page when confidence or
+  // readability is too low — better an honest empty page than fake rows.
+  const words=(result.data.words||[]).filter(w=>w.text&&w.text.trim());
+  const meanConf=words.length?words.reduce((s,w)=>s+w.confidence,0)/words.length:0;
+  const raw=(result.data.text||'').split('\n').map(l=>l.replace(/\s+/g,' ').trim()).filter(l=>l);
+  const kept=raw.filter(l=>(l.match(/[A-Za-z]/g)||[]).length>=3&&(l.match(/[A-Za-z0-9]/g)||[]).length/l.length>=0.4);
+  const wordish=kept.filter(l=>/[A-Za-z]{3,}/.test(l)).length;
+  const readable=kept.length>0&&meanConf>=50&&(wordish/kept.length)>=0.4;
+  log(`Page ${pageNum}: OCR conf=${Math.round(meanConf)} lines=${raw.length} kept=${kept.length} readable=${readable}`);
+  return readable?kept.slice(0,300):[];
+}
 async function pdfToExcel(){
-  if(!window.pdfjsLib || !window.XLSX) throw new Error('Lib belum load');
+  if(!window.pdfjsLib || !window.XLSX) throw new Error('Libraries not loaded yet');
   const buf=await files[0].arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
-  const rows=[["Page","Text"]];
+  const rows=[["Page","Line","Source","Text"]];
   log('PDFtoExcel pages='+pdf.numPages);
+  let totalChars=0, emptyPages=0, ocrPages=0;
   for(let i=1;i<=pdf.numPages;i++){
+    $('#progress').textContent=`Extracting page ${i}/${pdf.numPages}...`;
     const page=await pdf.getPage(i);
     const tc=await page.getTextContent();
-    const txt=tc.items.map(it=>it.str).join(' ').slice(0,5000);
-    rows.push([`Page ${i}`, txt]);
+    // Group items into visual lines by Y position (transform[5]).
+    const lines=new Map();
+    for(const it of tc.items){
+      if(!it.str || !it.str.trim()) continue;
+      const y=Math.round((it.transform ? it.transform[5] : 0) / 2) * 2;
+      if(!lines.has(y)) lines.set(y,[]);
+      lines.get(y).push(it);
+    }
+    const sorted=[...lines.entries()].sort((a,b)=>b[0]-a[0]);
+    let lineNo=0;
+    for(const [,items] of sorted){
+      items.sort((a,b)=>(a.transform?a.transform[4]:0)-(b.transform?b.transform[4]:0));
+      // Design PDFs often store spaced display type as single-char items
+      // ("P O R T F O L I O") — rejoin those so Excel doesn't keep the gaps.
+      const allSingle=items.length>1 && items.every(it=>it.str.length===1);
+      const txt=(allSingle?items.map(it=>it.str).join(''):items.map(it=>it.str).join(' ')).replace(/\s+/g,' ').trim().slice(0,2000);
+      if(!txt) continue;
+      totalChars+=txt.length; lineNo++;
+      if(lineNo>300) break;
+      rows.push([i, lineNo, 'Text', txt]);
+    }
+    if(lineNo===0){
+      // No embedded text — this page is an image/scan. Try OCR instead of garbage.
+      try{
+        $('#progress').textContent=`Page ${i} has no text — loading OCR...`;
+        await ensureTesseract();
+        const ocrLines=await ocrPageToLines(page, i);
+        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; rows.push([i, k+1, 'OCR', txt.slice(0,2000)]); });
+        if(ocrLines.length){ ocrPages++; log(`Page ${i}: OCR ${ocrLines.length} lines`); }
+        else emptyPages++;
+      }catch(cause){ emptyPages++; log(`Page ${i}: OCR failed — ${cause.message}`); }
+    }
+    else log(`Page ${i}: ${lineNo} lines`);
   }
+  if(rows.length<2) throw new Error('No text found — not even OCR could read this PDF. It may be blank or damaged.');
   const ws=XLSX.utils.aoa_to_sheet(rows);
-  ws['!cols']=[{wch:12},{wch:120}];
+  ws['!cols']=[{wch:10},{wch:8},{wch:10},{wch:120}];
   const wb=XLSX.utils.book_new(); XLSX.utils.book_append_sheet(wb,ws,"PDF Extract");
+  // Honest flag: say which pages came from OCR and which stayed empty.
+  const avg=totalChars/pdf.numPages;
+  if(avg<120 || emptyPages>0 || ocrPages>0){
+    const note=[
+      ["Note: how this Excel was made"],
+      [`Text pages: ${pdf.numPages-emptyPages-ocrPages}/${pdf.numPages}. OCR pages: ${ocrPages}. Empty pages: ${emptyPages}. Average ${Math.round(avg)} chars per page.`],
+      ["Rows marked 'OCR' were read from page images (English + Indonesian). Proofread numbers carefully."],
+      ["Pages that are pure artwork are left empty on purpose — guessing would print fake rows."],
+      ["Design portfolios and artwork can't become neat tables — OCR reads what it sees, line by line."],
+    ];
+    XLSX.utils.book_append_sheet(wb,XLSX.utils.aoa_to_sheet(note),"README");
+  }
   const out=XLSX.write(wb,{type:'array', bookType:'xlsx'});
   downloadBlob(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), files[0].name.replace(/\.pdf$/i,'')+'.xlsx');
 }

@@ -3,31 +3,35 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Notebook PDF — mirip NotebookLM</title>
+<title>Notebook PDF — like NotebookLM</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
 <script>pdfjsLib.GlobalWorkerOptions.workerSrc='https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.worker.min.js'</script>
 <style>
- *{font-family:'Inter',sans-serif}
- body{background:#f3f5f9;overflow-x:hidden}
- .blob{position:absolute;border-radius:40% 60% 60% 40% / 40% 40% 60% 60%;opacity:0.08;pointer-events:none}
- .card{transition:all .2s}
- .src-active{border-color:#111827!important;background:#f8fafc}
+  *{font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+  .serif{font-family:'Fraunces',Georgia,serif}
+  body{background:#FAF4E8;color:#1C1917;overflow-x:hidden}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
+    background:radial-gradient(600px 400px at 8% 0%,#FFE9D6 0%,transparent 60%),
+               radial-gradient(700px 500px at 95% 15%,#E9E4FF 0%,transparent 55%)}
+  .card{background:#FFFDF6;border:1.5px solid #1C1917;border-radius:22px;transition:all .2s}
+  .card:hover{box-shadow:5px 5px 0 #1C1917}
+  .src-active{border-color:#1A3C34!important;background:#EFF6EC!important;box-shadow:3px 3px 0 #1A3C34}
 </style>
 </head>
 <body class="relative">
-<div class="blob bg-[#f8b4b4] w-[600px] h-[500px] -top-40 -left-40"></div>
-<div class="blob bg-[#fde8e8] w-[700px] h-[500px] top-[400px] -right-40"></div>
 
-<div class="relative z-10 max-w-[1440px] mx-auto px-4 pt-6 flex items-center justify-between">
-  <a href="index.html" class="flex items-center gap-2 font-extrabold text-sm"><span class="w-8 h-8 rounded-lg bg-[#111827] text-white grid place-items-center text-xs">PDF</span> PDF Tools <span class="ml-2 px-2 py-0.5 rounded-full bg-[#7c3aed] text-white text-[10px]">Notebook ✨ New!</span></a>
-  <a href="index.html" class="px-3.5 py-1.5 rounded-full bg-white border text-xs font-medium">← All tools</a>
+<div class="sticky top-3 z-50 max-w-[1440px] mx-auto px-4 pt-3 flex items-center justify-between gap-3">
+  <a href="index.html" class="flex items-center gap-2 font-extrabold text-sm rounded-2xl px-3 py-2 bg-[#FAF4E8]/85 backdrop-blur border-[1.5px] border-[#1C1917] shadow-[4px_4px_0_#1C1917]"><span class="w-8 h-8 rounded-lg bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-xs -rotate-3">PDF</span> <span class="serif">PDF Tools</span> <span class="ml-1 px-2 py-0.5 rounded-full bg-[#4C1D95] text-white text-[10px]">Notebook ✨</span></a>
+  <a href="index.html" class="px-4 py-2 rounded-full bg-[#FFFDF6] border-[1.5px] border-[#1C1917] text-xs font-extrabold shadow-[3px_3px_0_#1C1917] hover:-translate-y-0.5 transition">← All tools</a>
 </div>
 
-<header class="relative z-10 max-w-[1440px] mx-auto px-4 pt-6 text-center">
-  <h1 class="text-[26px] font-extrabold">Notebook PDF <span class="text-[#7c3aed]">— Chat dengan PDF-mu</span></h1>
-  <p class="text-[13px] text-gray-500 max-w-2xl mx-auto mt-1">Upload PDF (portofolio, skripsi, paper) → auto rangkum, tanya jawab, bikin podcast & mindmap. 100% di browser, privacy first — kaya NotebookLM.</p>
+<header class="relative z-10 max-w-[1440px] mx-auto px-4 pt-8 text-center">
+  <p class="inline-flex text-[10px] font-extrabold tracking-[.18em] bg-white border border-[#1C1917] rounded-full px-3 py-1 shadow-[3px_3px_0_#1C1917]">✦ NOTEBOOK AI • SUMMARIZE • ASK • PODCAST</p>
+  <h1 class="serif text-[30px] md:text-[40px] font-black tracking-tight mt-3">Notebook PDF <span class="italic text-[#1A3C34]">— Chat with your PDF</span></h1>
+  <p class="text-[13px] text-gray-500 max-w-2xl mx-auto mt-1">Upload a PDF (portfolio, thesis, paper) → auto summary, Q&A, podcast & mindmap. 100% in-browser, privacy first — like NotebookLM.</p>
 </header>
 
 <div class="relative z-10 max-w-[1440px] mx-auto px-4 py-6 grid lg:grid-cols-[320px_1fr_380px] gap-4">
@@ -36,53 +40,53 @@
     <div class="bg-white rounded-xl border p-4">
       <h2 class="font-bold text-sm flex items-center justify-between">📚 Sources <span id="srcCount" class="text-xs bg-gray-100 px-2 py-0.5 rounded-full">0</span></h2>
       <div id="drop" class="mt-3 border-2 border-dashed border-gray-300 rounded-xl p-6 text-center cursor-pointer hover:bg-gray-50">
-        <p class="text-sm font-bold">+ Tambah PDF</p>
-        <p class="text-[11px] text-gray-500 mt-1">Drag & drop atau klik — tanpa batas ukuran</p>
+        <p class="text-sm font-bold">+ Add PDF</p>
+        <p class="text-[11px] text-gray-500 mt-1">Drag & drop or click — no size limits</p>
         <input id="fileInput" type="file" accept=".pdf" multiple class="hidden">
       </div>
       <div id="srcList" class="mt-3 space-y-2"></div>
-      <div id="srcEmpty" class="text-xs text-gray-400 mt-3">Belum ada PDF. Upload portofoliomu (54 hal) buat coba.</div>
+      <div id="srcEmpty" class="text-xs text-gray-400 mt-3">No PDFs yet. Upload one to try it out.</div>
     </div>
 
     <div class="bg-white rounded-xl border p-4">
       <h3 class="font-bold text-xs">⚡ Auto-generated</h3>
       <div class="flex gap-1.5 mt-2 mb-2">
-        <button onclick="setSumLen('short')" id="sumShort" class="flex-1 py-1.5 rounded-full border text-[11px]">Pendek</button>
-        <button onclick="setSumLen('medium')" id="sumMed" class="flex-1 py-1.5 rounded-full bg-gray-900 text-white text-[11px]">Sedang</button>
-        <button onclick="setSumLen('long')" id="sumLong" class="flex-1 py-1.5 rounded-full border text-[11px]">Panjang</button>
+        <button onclick="setSumLen('short')" id="sumShort" class="flex-1 py-1.5 rounded-full border text-[11px]">Short</button>
+        <button onclick="setSumLen('medium')" id="sumMed" class="flex-1 py-1.5 rounded-full bg-gray-900 text-white text-[11px]">Medium</button>
+        <button onclick="setSumLen('long')" id="sumLong" class="flex-1 py-1.5 rounded-full border text-[11px]">Long</button>
       </div>
       <div class="grid grid-cols-2 gap-2 text-xs">
-        <button onclick="genSummary()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>Ringkasan</b><br><span id="sumLabel" class="text-[11px] text-gray-500">per halaman</span></button>
-        <button onclick="genOutline()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>Outline</b><br><span class="text-[11px] text-gray-500">Daftar isi</span></button>
+        <button onclick="genSummary()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>Summary</b><br><span id="sumLabel" class="text-[11px] text-gray-500">per page</span></button>
+        <button onclick="genOutline()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>Outline</b><br><span class="text-[11px] text-gray-500">Contents</span></button>
         <button onclick="genFAQ()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>FAQ</b><br><span class="text-[11px] text-gray-500">5 Q&A</span></button>
-        <button onclick="genTimeline()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>Timeline</b><br><span class="text-[11px] text-gray-500">Kronologi</span></button>
+        <button onclick="genTimeline()" class="p-2.5 rounded-xl border bg-white hover:bg-gray-50 text-left"><b>Timeline</b><br><span class="text-[11px] text-gray-500">Chronology</span></button>
       </div>
     </div>
 
     <div class="bg-white rounded-xl border p-4">
-      <h3 class="font-bold text-xs">🤖 Mode AI <span class="text-[11px] font-normal text-gray-500">— extractive vs LLM</span></h3>
+      <h3 class="font-bold text-xs">🤖 AI mode <span class="text-[11px] font-normal text-gray-500">— extractive vs LLM</span></h3>
       <label class="flex items-center gap-2 mt-2 p-2 rounded-xl border cursor-pointer has-[:checked]:bg-[#ede9fe] has-[:checked]:border-[#7c3aed]">
         <input type="checkbox" id="aiToggle" onchange="toggleAI()" class="w-4 h-4">
-        <span class="text-xs"><b>Pakai AI Gemini</b> <span class="text-gray-500">— ringkasan abstrak, bukan baris</span></span>
+        <span class="text-xs"><b>Use Gemini AI</b> <span class="text-gray-500">— abstract summary, not quotes</span></span>
       </label>
       <div id="aiBox" class="hidden mt-2 space-y-2">
-        <input id="apiKey" type="password" placeholder="Paste Gemini API key (free di aistudio.google.com)" class="w-full px-3 py-2 rounded-xl border text-xs">
-        <p class="text-[11px] text-gray-500">Free key: <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline text-[#7c3aed]">aistudio.google.com</a> → Create key. Key disimpan di browser (localStorage), tidak dikirim ke server kami.</p>
+        <input id="apiKey" type="password" placeholder="Paste Gemini API key (free at aistudio.google.com)" class="w-full px-3 py-2 rounded-xl border text-xs">
+        <p class="text-[11px] text-gray-500">Free key: <a href="https://aistudio.google.com/app/apikey" target="_blank" class="underline text-[#7c3aed]">aistudio.google.com</a> → Create key. Key stays in your browser (localStorage), never sent to our servers.</p>
         <div class="flex gap-1.5">
-          <button onclick="testAI()" class="flex-1 py-1.5 rounded-full bg-[#7c3aed] text-white text-xs font-bold">Test koneksi</button>
-          <button onclick="clearAI()" class="px-3 py-1.5 rounded-full border text-xs">Hapus</button>
+          <button onclick="testAI()" class="flex-1 py-1.5 rounded-full bg-[#7c3aed] text-white text-xs font-bold">Test connection</button>
+          <button onclick="clearAI()" class="px-3 py-1.5 rounded-full border text-xs">Remove</button>
         </div>
         <p id="aiStatus" class="text-[11px]"></p>
       </div>
-      <p class="text-[11px] text-gray-400 mt-2">Tanpa AI = extractive (ambil baris). Dengan AI = abstrak per halaman (ngarang dikit tapi nyambung).</p>
+      <p class="text-[11px] text-gray-400 mt-2">Without AI = extractive (real quotes). With AI = abstract per-page summary.</p>
     </div>
 
     <div class="bg-[#ede9fe] rounded-xl border border-[#ddd6fe] p-4">
       <h3 class="font-bold text-xs text-[#5b21b6]">🎙️ Studio</h3>
-      <button onclick="genPodcast()" class="mt-2 w-full py-2.5 rounded-full bg-[#7c3aed] text-white text-xs font-bold hover:bg-[#6d28d9]">▶️ Buat Podcast (TTS)</button>
-      <button onclick="genMindmap()" class="mt-2 w-full py-2.5 rounded-full bg-white border text-xs font-bold">🧠 Mind Map</button>
+      <button onclick="genPodcast()" class="mt-2 w-full py-2.5 rounded-full bg-[#7c3aed] text-white text-xs font-bold hover:bg-[#6d28d9]">▶️ Make podcast (TTS)</button>
+      <button onclick="genMindmap()" class="mt-2 w-full py-2.5 rounded-full bg-white border text-xs font-bold">🧠 Mind map</button>
       <button onclick="genFlashcards()" class="mt-2 w-full py-2.5 rounded-full bg-white border text-xs font-bold">🗂️ Flashcards</button>
-      <p class="text-[11px] text-[#6d28d9] mt-2">Podcast pakai suara browser (Web Speech API) — tanpa API key.</p>
+      <p class="text-[11px] text-[#6d28d9] mt-2">Podcast uses your browser voice (Web Speech API) — no API key needed.</p>
     </div>
   </div>
 
@@ -97,17 +101,17 @@
     </div>
     <div id="notebook" class="flex-1 p-4 overflow-auto space-y-4 text-sm leading-relaxed">
       <div class="rounded-xl bg-gray-50 border p-4 text-center">
-        <p class="font-bold">Selamat datang di Notebook PDF</p>
-        <p class="text-xs text-gray-500 mt-1">Upload PDF di kiri → klik <b>Ringkasan</b> atau langsung chat di kanan.<br>Coba upload <b>Sarvamaya - Portfolio.pdf (54 hal)</b> yang tadi.</p>
+        <p class="font-bold">Welcome to Notebook PDF</p>
+        <p class="text-xs text-gray-500 mt-1">Upload a PDF on the left → click <b>Summary</b> or chat on the right.</p>
         <div class="mt-3 flex flex-wrap justify-center gap-2 text-xs">
           <span class="px-2.5 py-1 rounded-full bg-white border">1. Upload PDF</span>
-          <span class="px-2.5 py-1 rounded-full bg-white border">2. Auto Ringkas</span>
-          <span class="px-2.5 py-1 rounded-full bg-white border">3. Chat & Podcast</span>
+          <span class="px-2.5 py-1 rounded-full bg-white border">2. Auto summarize</span>
+          <span class="px-2.5 py-1 rounded-full bg-white border">3. Chat & podcast</span>
         </div>
       </div>
     </div>
     <div class="p-3 border-t flex gap-2">
-      <input id="noteInput" type="text" placeholder="Tulis catatan manual..." class="flex-1 px-3 py-2 rounded-full border text-sm">
+      <input id="noteInput" type="text" placeholder="Write a manual note..." class="flex-1 px-3 py-2 rounded-full border text-sm">
       <button onclick="addNote()" class="px-4 py-2 rounded-full bg-gray-900 text-white text-sm font-bold">+ Add</button>
     </div>
   </div>
@@ -115,23 +119,23 @@
   <!-- RIGHT: CHAT -->
   <div class="bg-white rounded-xl border flex flex-col min-h-[620px]">
     <div class="p-4 border-b">
-      <h2 class="font-bold text-sm">💬 Chat dengan PDF</h2>
-      <p class="text-[11px] text-gray-500">Tanya apa aja, AI jawab dari isi PDF-mu (RAG lokal, no API key).</p>
+      <h2 class="font-bold text-sm">💬 Chat with your PDF</h2>
+      <p class="text-[11px] text-gray-500">Ask anything, AI answers from your PDF content (local RAG, no API key).</p>
       <div class="mt-2 flex gap-1.5 flex-wrap">
-        <button onclick="ask('Ringkas PDF ini dalam 3 poin')" class="px-2.5 py-1 rounded-full bg-gray-900 text-white text-xs">Ringkas 3 poin</button>
-        <button onclick="ask('Apa skill utama di PDF ini?')" class="px-2.5 py-1 rounded-full bg-white border text-xs">Skill utama?</button>
-        <button onclick="ask('Buatkan 5 pertanyaan interview dari PDF ini')" class="px-2.5 py-1 rounded-full bg-white border text-xs">Interview Q</button>
+        <button onclick="ask('Summarize this PDF in 3 points')" class="px-2.5 py-1 rounded-full bg-gray-900 text-white text-xs">Sum up in 3 points</button>
+        <button onclick="ask('What are the main skills in this PDF?')" class="px-2.5 py-1 rounded-full bg-white border text-xs">Main skills?</button>
+        <button onclick="ask('Create 5 interview questions from this PDF')" class="px-2.5 py-1 rounded-full bg-white border text-xs">Interview Qs</button>
       </div>
     </div>
     <div id="chat" class="flex-1 p-4 overflow-auto space-y-3 text-sm">
-      <div class="p-3 rounded-xl bg-[#f3f5f9] border text-xs">👋 Hai! Upload PDF dulu, terus tanya apa aja. Contoh: <i>"Apa pengalaman kerja terbaru?"</i></div>
+      <div class="p-3 rounded-xl bg-[#f3f5f9] border text-xs">👋 Hi! Upload a PDF first, then ask anything. Example: <i>"What is the most recent work experience?"</i></div>
     </div>
     <div class="p-3 border-t">
       <div class="flex gap-2">
-        <input id="chatInput" type="text" placeholder="Tanya tentang PDF..." class="flex-1 px-3 py-2.5 rounded-full border text-sm" onkeydown="if(event.key==='Enter') sendChat()">
+        <input id="chatInput" type="text" placeholder="Ask about the PDF..." class="flex-1 px-3 py-2.5 rounded-full border text-sm" onkeydown="if(event.key==='Enter') sendChat()">
         <button onclick="sendChat()" class="w-10 h-10 rounded-full bg-[#7c3aed] text-white grid place-items-center font-bold">↑</button>
       </div>
-      <p class="text-[10px] text-gray-400 mt-1.5">RAG lokal: cari chunk paling relevan + extractive answer. Bisa sambung Gemini/OpenAI kalau mau (tanya lur).</p>
+      <p class="text-[10px] text-gray-400 mt-1.5">Local RAG: finds the most relevant chunks + extractive answers. Can plug in Gemini/OpenAI if you want.</p>
     </div>
   </div>
 </div>

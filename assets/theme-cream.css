@@ -1,0 +1,29 @@
+/* Sarvamaya cream elegant + GenZ overrides — layout dipertahankan, hanya tema. */
+@import url('https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+:root{--cream:#FAF4E8;--ink:#1C1917;--pine:#1A3C34;--tang:#FF5C28}
+body{background:var(--cream)!important;color:var(--ink)!important;font-family:'Plus Jakarta Sans',system-ui,sans-serif!important}
+body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.45;z-index:0;
+  background:radial-gradient(600px 400px at 8% 0%,#FFE9D6 0%,transparent 60%),radial-gradient(700px 500px at 95% 15%,#E9E4FF 0%,transparent 55%)}
+main,.workspace,.preview{position:relative;z-index:1}
+.topbar{background:rgba(250,244,232,.85)!important;backdrop-filter:blur(12px);border-bottom:1.5px solid var(--ink)!important;height:auto!important;padding:12px 4%!important;position:sticky;top:12px;z-index:50;margin:12px 12px 0;border:1.5px solid var(--ink);border-radius:18px;box-shadow:4px 4px 0 var(--ink)}
+.brand{font-family:'Fraunces',serif!important;font-weight:900!important;letter-spacing:-.02em}
+.brand span{background:var(--pine)!important;border:1.5px solid var(--ink);transform:rotate(-3deg)}
+.badge{background:#FFFDF6!important;border:1.5px solid var(--ink);border-radius:999px;padding:7px 14px!important;box-shadow:3px 3px 0 var(--ink);font-weight:800}
+.heading h1{font-family:'Fraunces',serif!important;font-weight:900;letter-spacing:-.03em}
+.eyebrow{color:var(--tang)!important;letter-spacing:.22em!important}
+.offline{background:#FFFDF6!important;border:1.5px solid var(--ink)!important;border-radius:999px!important;color:var(--pine)!important;font-weight:800;box-shadow:3px 3px 0 var(--ink)}
+.workspace aside,aside{background:#FFFDF6!important;border:1.5px solid var(--ink)!important;border-radius:22px!important;box-shadow:5px 5px 0 var(--ink)}
+.panel-heading h2{font-family:'Fraunces',serif;font-weight:900}
+.step{border:1.5px solid var(--ink)!important;background:var(--cream);font-weight:800;color:var(--pine)!important}
+input,select{background:#FFFDF6!important;border:1.5px solid var(--ink)!important;border-radius:12px!important}
+button.primary.apply,.primary{background:var(--tang)!important;color:#fff!important;border:1.5px solid var(--ink)!important;border-radius:999px!important;font-weight:800;box-shadow:3px 3px 0 var(--ink);transition:.15s}
+button.primary.apply:hover,.primary:hover{transform:translate(-1px,-1px);box-shadow:5px 5px 0 var(--ink)}
+.secondary{background:#FFFDF6!important;border:1.5px solid var(--ink)!important;border-radius:999px!important;font-weight:800!important;color:var(--ink)!important;transition:.15s}
+.secondary:hover{transform:translateY(-1px);box-shadow:3px 3px 0 var(--ink)}
+.preview{background:#FFFDF6!important;border:1.5px solid var(--ink)!important;border-radius:26px!important;box-shadow:6px 6px 0 var(--ink);overflow:hidden}
+.preview-top{background:var(--pine)!important;color:#FFF7EA!important;font-weight:800;letter-spacing:.12em}
+.controls button{background:#FFFDF6;border:1.5px solid var(--ink);border-radius:999px;font-weight:800;box-shadow:2px 2px 0 var(--ink)}
+.controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:3px 3px 0 var(--ink)}
+#empty-book h2{font-family:'Fraunces',serif!important;color:var(--pine)!important}
+.feedback{background:#EFF6EC;border:1.5px dashed var(--pine);border-radius:12px;padding:10px}
+@media(max-width:720px){.topbar{margin:8px;border-radius:14px}}

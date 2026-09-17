@@ -1,0 +1,15 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<meta http-equiv="Content-Security-Policy" content="default-src 'self' data: blob:; script-src 'self'; style-src 'self' 'unsafe-inline'; connect-src 'none'; object-src 'none'; base-uri 'none'">
+<title>Flipbook</title>
+<link rel="stylesheet" href="viewer.css">
+<link rel="stylesheet" href="book-effects.css">
+<script defer src="book-data.js"></script><script defer src="page-flip.browser.js"></script><script defer src="layout.js"></script><script defer src="viewer.js"></script>
+</head>
+<body>
+<header><span class="brand">SARVAMAYA / FLIPBOOK</span><h1 id="title">Buku interaktif</h1></header>
+<main><div id="stage"><div id="book"></div></div><p id="error" role="alert" hidden></p></main>
+<footer><button id="prev" aria-label="Halaman sebelumnya">←</button><button id="home" disabled aria-label="Kembali ke sampul" title="Kembali ke sampul">Home</button><span id="status" aria-live="polite"></span><button id="next">Buka sampul →</button><button id="replay">↻ Animasi</button><button id="fullscreen">Layar penuh</button></footer>
+</body></html>

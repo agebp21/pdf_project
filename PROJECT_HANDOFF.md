@@ -1,0 +1,230 @@
+# Handoff — PDF Project & Flipbook
+
+Terakhir diperbarui: 17 September 2026.
+
+Gaya bukaan terbaru: pencahayaan punggung dari template heyzine_dynamic diadaptasi di `assets/export/book-effects.css`; engine PageFlip tetap mengatur transformasi/lipatan dan bayangan bergerak. `FlipbookLayout.motion/decorate` dipakai preview dan ekspor: sampul beserta sisi belakangnya hard, halaman isi soft, durasi 950ms, shadow 0,38, mouse/drag/swipe serta sudut halaman aktif. Reduced motion meniadakan durasi panjang/sudut mengintip. Ukuran sampul tetap sama dengan halaman isi. Ini gaya pada engine proyek, bukan integrasi layanan Heyzine resmi.
+
+Kontrol preview terbaru: **Putar animasi**, **Layar penuh**, dan link **Demo infografis** di bar bawah disembunyikan sementara sesuai screenshot pengguna. Navigasi halaman tetap tampil. Elemen DOM/logika dipertahankan; perubahan ini hanya pada preview, bukan kontrol pembaca hasil ekspor.
+
+Keputusan ukuran terbaru: sampul harus sama besar dengan satu halaman isi, tidak dibesarkan saat buku tertutup. Layout bersama kini menentukan ukuran dari area baca dan rasio, bukan indeks halaman; tinggi preview tidak berubah saat membuka sampul. `showCover:true` tetap menampilkan sampul sendirian. Berlaku untuk preview dan ekspor baru HTML/APK/Windows.
+
+Koreksi screenshot terbaru: tinggi panel preview sekarang mengikuti rasio dan jumlah halaman yang terlihat (`compact:true` pada layout bersama), bukan tetap 75dvh setelah PDF dimuat. Buku landscape dua halaman memiliki tinggi `lebar panel / (2 × rasio halaman)`, sehingga tidak ada letterbox vertikal buatan panel. Fullscreen tetap memakai viewport penuh.
+
+Keputusan terbaru (17 September): panel **Tambahkan animasi** disembunyikan sementara dari `flipbook.html` atas permintaan pengguna. Alur sidebar kini Pilih dokumen → Simpan & ekspor (langkah 02). Kode animasi dan dukungan proyek lama dipertahankan; jangan menampilkan kembali panel tanpa arahan pengguna.
+
+Tampilan baca terbaru: preview dan ekspor HTML/APK/Windows memakai layout adaptif bersama `assets/export/layout.js`. Rasio asli PDF tidak lagi dibatasi 0,5–2. Sampul ditampilkan satu halaman, halaman isi menyesuaikan satu/dua halaman, batas ukuran visual lama dihapus. Ekspor memakai viewport penuh dan kontrol mengambang; preview punya tombol fullscreen. Margin asli PDF tidak dipotong. Ekspor lama perlu dibuat/build ulang. Android meminta immersive mode, dengan perilaku akhir mengikuti versi OS.
+
+## Tujuan produk
+
+Pengguna dapat mengonversi Word, PPT, gambar, dan format lain ke PDF atau sebaliknya. Setelah memperoleh PDF, pengguna ditawari **Download** atau **Jadikan Flipbook**. Di dalam flipbook, pengguna nantinya dapat menambah infografis animasi, audio/video, dan interaksi. Produk direncanakan memakai paket subscription bulanan/tahunan.
+
+Ini adalah arah produk. Jangan menganggap semua format atau fitur sudah diimplementasikan.
+
+## Keputusan diskusi
+
+| Topik | Kesepakatan/status |
+|---|---|
+| Repo utama | `https://github.com/agebp21/pdf_project` |
+| Sumber engine | `https://github.com/agebp21/sarvamaya-flipbook-studio` |
+| Integrasi | Flipbook adalah fitur PDF Project |
+| Halaman pertama | Sampul depan; pengguna membukanya sebelum masuk isi |
+| Batas upload/pratinjau | Batas 50 MB dan 100 halaman sudah dihapus atas permintaan pengguna |
+| Subscription | Paket bertingkat; pilihan bulanan dan tahunan |
+| Harga | Belum final; Rp59.000/Rp590.000 dan Rp149.000/Rp1.490.000 hanya contoh diskusi |
+| Offline dan native | HTML offline dan layanan build APK/EXE lokal diimplementasikan; subscription/distribusi publik belum final |
+| Animasi dalam PDF | Elemen tambahan di atas halaman; bukan otomatis memisahkan isi infografis PDF |
+
+## Struktur file
+
+| File | Peran |
+|---|---|
+| `index.html` | Katalog tools, termasuk PDF to Flipbook dan demo animasi |
+| `converter.html` | UI dan logika converter; tombol Jadikan Flipbook pada output PDF |
+| `notebook.html` | Notebook PDF dengan integrasi Gemini yang sudah ada sebelum pengembangan flipbook |
+| `flipbook.html` | Upload PDF, pembaca flipbook, kontrol animasi angka |
+| `assets/flipbook.js` | Render PDF, engine buku, navigasi sampul/isi, overlay statistik |
+| `assets/flipbook.css` | Tampilan pembaca dan overlay |
+| `assets/flipbook-transfer.js` | Transfer Blob PDF antarhalaman menggunakan IndexedDB |
+| `animation.html` | Demo infografis empat halaman dengan data yang dapat diedit |
+| `assets/animation.js` | Grafik, angka, alur proses, putar/jeda/ulang demo |
+| `assets/animation.css` | Gaya demo dan komponen layout yang juga dipakai pembaca |
+| `assets/vendor/` | Engine flipbook dan PDF.js lokal; sumber dan lisensi dicatat di sini |
+| `assets/flipbook-export.js` | Validasi proyek, simpan/impor `.flipbook`, kemas HTML offline |
+| `assets/export/` | Pembaca HTML offline bersama untuk ZIP, APK, dan EXE |
+| `server.py` | Server loopback, validasi paket, job build Flutter, download hasil/log |
+| `native/reader/` | Wrapper Flutter Android/Windows, pubspec dan lockfile |
+| `tests/` | Pengujian ekspor JavaScript dan paket build Python |
+
+## Implementasi saat ini
+
+### Alur converter ke flipbook
+
+1. `downloadBlob(blob, filename)` di converter menampilkan **Jadikan Flipbook** jika MIME output mengandung `pdf`.
+2. Tombol menyimpan `{blob, name}` ke IndexedDB `pdf-tools-flipbook`, object store `pending`, memakai ID unik.
+3. Browser berpindah ke `flipbook.html?source=<id>`.
+4. Pembaca mengambil PDF tersebut. Setelah berhasil dibuka, entry transfer dihapus dan query URL dibersihkan.
+5. Pengguna juga bisa upload PDF langsung dari `flipbook.html`.
+
+Transfer ini bukan penyimpanan proyek. Pengguna sekarang dapat menyimpan file `.flipbook` (ZIP berisi `source.pdf` dan `project.json`) serta membukanya kembali. Belum ada autosave; refresh tanpa menyimpan tetap kehilangan edit.
+
+### Pembaca PDF
+
+- PDF.js lokal versi 3.11.174; worker lokal. Pembaca memakai `isEvalSupported: false`.
+- Semua halaman dirender berurutan menjadi JPEG sebelum buku tampil.
+- Halaman tampil sebagai gambar, sehingga teks/link PDF asli belum menjadi elemen yang bisa diedit/diklik.
+- Engine `St.PageFlip` disalin dari repo pengguna pada commit `dcc2b6fc6ca27a812e566858ff28d61332c642ec`.
+- Pembaca memakai `showCover: true`, `startPage: 0`: halaman pertama tampil sendiri sebagai sampul.
+- Navigasi melalui tombol atau interaksi halaman; `useMouseEvents:true` kini mengaktifkan klik/drag/swipe bawaan engine. Perlu QA interaksi pada browser/perangkat nyata.
+- Spread isi tampil dua halaman di landscape dan satu halaman di portrait sesuai engine.
+- Tidak ada batas ukuran file/jumlah halaman buatan aplikasi. Kapasitas perangkat tetap memengaruhi keberhasilan rendering.
+
+### Animasi
+
+- Demo: grafik batang, angka menghitung naik, dan proses bertahap yang bisa diklik; data demo bisa diedit.
+- Pada PDF sendiri: satu overlay statistik per halaman, dengan judul, angka akhir, dan empat pilihan sudut posisi.
+- Overlay diputar saat halaman dibuka atau melalui tombol putar ulang.
+- Edit bisa disimpan manual dan diekspor bersama buku; belum autosave atau drag-and-drop.
+- Editor grafik dan alur proses belum terhubung ke halaman PDF pengguna; keduanya baru di demo.
+- Dukungan reduced motion dan penghentian animasi saat tab tersembunyi sudah ada, tetapi perlu QA browser lanjutan.
+
+## Keterbatasan dan perhatian teknis
+
+- Rendering semua halaman sekaligus bisa lama dan boros memori untuk PDF besar. Prioritas teknis berikutnya adalah render sesuai kebutuhan, cache terbatas, progress/cancel, serta pelepasan canvas/URL gambar.
+- Ada backend Python lokal untuk build, tetapi belum ada login, billing, paket subscription, katalog akun, atau penyimpanan cloud.
+- UI menyediakan simpan/buka proyek, HTML ZIP offline, build APK, dan build Windows ZIP. Build menggunakan Flutter lokal dan satu job aktif. Hasil disimpan di `.build/` yang diabaikan Git.
+- Penyimpanan hasil mendukung dialog **Simpan sebagai** untuk memilih nama/folder melalui `showSaveFilePicker`. Proyek/HTML memilih sebelum pengemasan; APK/Windows memilih saat klik hasil build. Browser tanpa API memakai download biasa. Pembatalan tidak memicu fallback download; lokasi `.build/` internal tetap.
+- APK memakai signing debug untuk pengujian, belum rilis Play Store. EXE belum ditandatangani; paket Windows menyertakan DLL/data dan membutuhkan WebView2 Runtime pada perangkat pembaca.
+- Engine native membaca paket HTML yang sama. Server membangun ulang script dari template tepercaya, hanya mengambil metadata tervalidasi dan gambar JPEG dari ZIP kiriman.
+- Server harus dijalankan melalui `python server.py` agar endpoint build tersedia. HTTP statis saja tetap cukup untuk ekspor HTML, tetapi tidak APK/EXE.
+- Job status hanya di memori server; restart server menghilangkan endpoint status job lama, sementara file hasil/log masih berada di `.build/<job-id>/`. Belum ada cleanup otomatis.
+- Template Windows memakai compatibility define untuk coroutine lama `webview_windows 0.4.0` pada MSVC 14.51. Migrasi dependency diperlukan jika toolchain mendatang menghapus dukungan `/await`.
+- Library/font converter dan halaman lama masih sebagian menggunakan CDN. Aset demo/pembaca sudah lokal, tetapi seluruh produk belum memiliki instalasi/cache offline.
+- PPT ke PDF dan PDF ke PPT di converter masih placeholder. Banyak kartu katalog juga bukan bukti tool sudah berfungsi.
+- Word/PDF dan spreadsheet perlu audit akurasi layout; jangan menjanjikan konversi bolak-balik sempurna.
+- PDF terenkripsi/rusak belum memiliki alur khusus untuk memasukkan password; saat gagal muncul pesan kesalahan.
+- PDF.js mengikuti versi lama converter. Audit dependency dan lisensi perlu dilakukan sebelum rilis komersial; jangan menganggap distribusi vendor sudah selesai hanya dari catatan sumber.
+
+## Pengujian yang sudah dilakukan
+
+- QA 17 September 2026: lihat `QA_REPORT.md` untuk hasil terperinci, lokasi HTML/APK/Windows terbaru, cara mengulang tes, serta batas verifikasi. Engine asli, rendering PDF, alur editor, transformasi PDF dasar, dan unduhan kedua native build lolos. UI browser/perangkat nyata tetap belum diverifikasi. Tampilan produk tidak diubah pada sesi QA.
+
+- Pemeriksaan sintaks JavaScript baru serta skrip inline halaman terkait.
+- `git diff --check`.
+- HTTP 200 untuk halaman dan aset lokal pada localhost port 8080.
+- PDF.js lokal berhasil membaca PDF sumber 88 halaman dan mengambil ukuran halaman pertama. Ini bukan uji render visual seluruh buku.
+- Pengujian dengan mock: kontrol animasi, data yang diedit, navigasi, reduced motion, dan penghentian ketika tab tersembunyi.
+- Pengujian dengan mock: handoff converter mempertahankan Blob/nama file dan menyembunyikan tombol flipbook untuk output non-PDF.
+- Pengujian logika: sampul, spread isi, halaman terakhir, portrait, dan PDF satu halaman.
+- Belum ada QA browser otomatis/visual yang tuntas. Alat browser sesi sebelumnya tidak tersedia. Pengguna telah membuka halaman sendiri dan memberikan screenshot.
+- Pengujian awal sebagian ad hoc. Suite permanen ekspor kini ada di `tests/export.test.cjs` dan `tests/test_build.py`: round-trip proyek, validasi, kelengkapan aset, escaping metadata, dan perlindungan ekstraksi ZIP.
+- `flutter analyze` lolos untuk wrapper native. Build APK percobaan berhasil dan isi paket diverifikasi membawa viewer, tiga JPEG, dan animasi statistik.
+- Build Windows release berhasil setelah compatibility define MSVC diterapkan. Hasil berupa ZIP portable yang berisi `sarvamaya_book.exe`, DLL, aset buku, dan animasi. Belum diuji dengan menjalankan aplikasi pada perangkat Android/Windows.
+- Uji HTTP layanan build: request tanpa token dan akses `.git`/`.build`/path traversal ditolak.
+- `tests/save-location.test.cjs` menguji lokasi/nama, penulisan handle, cleanup kegagalan, cancel tanpa download, streaming hasil build, dan fallback memakai mock. Dialog native browser belum diuji langsung.
+
+## Status Git saat handoff ini ditulis
+
+- Branch `main`, remote `origin` ke repo PDF Project.
+- Commit awal `90668de` sudah pernah di-push dan diverifikasi sama dengan GitHub.
+- Perubahan flipbook, animasi, converter, ekspor/proyek, layanan build, wrapper native, pengujian, serta dokumentasi masih lokal dan belum di-commit/push saat catatan ini diperbarui.
+- Periksa `git status`/`git log` lagi sebelum bekerja; status ini adalah snapshot, bukan status real-time.
+
+## Kandidat pekerjaan selanjutnya
+
+Daftar ini untuk perencanaan, bukan instruksi mengerjakan semuanya sekaligus:
+
+1. QA alur nyata: konversi → flipbook → buka sampul → animasi, termasuk PDF besar dan ponsel.
+2. Optimalkan rendering PDF besar tanpa memasang kembali batas yang sudah dicabut pengguna.
+3. Autosave/pemulihan edit lebih lanjut; simpan/buka proyek manual sudah ada.
+4. Editor elemen animasi grafik/proses pada PDF, posisi dan ukuran yang bisa diatur.
+5. QA hasil HTML/APK/Windows pada browser/perangkat nyata dan penyiapan signing rilis.
+6. Konversi Word/PPT yang lebih andal sebelum menjual subscription.
+7. Login, paket, billing, dan distribusi APK setelah kebutuhan serta layanan pendukung ditetapkan.
+
+### 17 September 2026 — navigasi tengah dan Home
+
+Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga disertakan pada template ekspor HTML/APK/Windows; paket native lama harus dibuild ulang untuk mendapat perubahan. Tombol dinonaktifkan di sampul, saat membuka PDF, dan selama pembalikan halaman. Tes engine asli/editor untuk Home dan ekspor HTML lolos; tampilan browser belum diperiksa langsung. File: flipbook.html, assets/flipbook.css/js, assets/export/index.html dan viewer.js, serta tes QA. Belum commit/push.
+
+## Perbandingan vs iLovePDF & usulan roadmap (17 September 2026)
+
+Usulan pengguna dari perbandingan visual iLovePDF vs Sarvamaya. Disimpan sebagai backlog, bukan klaim fitur sudah rilis.
+
+### Keunggulan Sarvamaya saat ini (perlu verifikasi kode)
+
+- PDF to Flipbook: ada (`flipbook.html`, transfer dari converter via IndexedDB).
+- Animasi Flipbook: ada sebagai demo (`animation.html`) + overlay statistik per halaman di pembaca; panel editor di `flipbook.html` disembunyikan sementara atas permintaan pengguna.
+- Notebook PDF: ada (`notebook.html`, chat/ringkas/podcast/mindmap ala NotebookLM, 100% klaim browser — perlu QA lanjutan).
+- Create a Workflow: BELUM ada builder asli. Kartu `Create a workflow` di `index.html` saat ini hanya link ke `converter.html?tool=merge-pdf`. Jangan diklaim sebagai pipeline otomatis sebelum diimplementasikan.
+
+### Usulan tambahan (backlog, belum diimplementasikan)
+
+A. AI dokumen lanjut:
+- Chat multi-PDF (5–10 dokumen, cross-doc analysis).
+- Audio/Podcast from PDF (narasi natural / dua pembicara).
+- PDF Mind Map Generator interaktif.
+
+B. Kreatif/media/visual:
+- PDF to Video / Presentation Reel (MP4 + transisi + musik).
+- Embed 3D/AR/audio/QR multimedia ke PDF.
+- High-Res Poster Tiling (split A0/A1 ke A4/A3 untuk print rumahan).
+
+C. Finansial/legal/lokal:
+- Integrasi e-Meterai + tanda tangan tersertifikasi.
+- Smart Bank Statement to Excel (mutasi bank lokal rapi).
+- Bilingual Translator side-by-side dengan layout terjaga.
+
+D. Keamanan & teknis:
+- Client-Side / Local Processing Mode (Wasm, zero-upload privacy).
+- Flatten PDF (kunci form/anotasi/layer).
+- Remove Blank Pages otomatis (hasil scan).
+
+### Quick-win roadmap usulan
+
+1. Ekosistem flipbook dulu (USP utama): Export HTML5 / Embed Link / QR Code Share.
+2. Workflow Builder beneran: simpan resep rutin (misal Batch Resize + Watermark + Protect).
+3. e-Meterai / Digital Signature Indonesia untuk segmen bisnis/instansi/UMKM.
+
+### 17 September 2026 — redesign cream elegant GenZ (beda dari iLovePDF)
+
+Permintaan pengguna: UI jangan mirip iLovePDF, bikin elegan + GenZ. Pilihan: vibe clean cream elegant, scope semua halaman, nama tetap PDF Tools.
+- `index.html`: hero serif Fraunces + Jakarta Sans, nav pill sticky, marquee strip, kartu rounded 22px border ink + shadow chunky, featured Flipbook/Notebook/Animasi, footer dark. Logika tools/filter/href dipertahankan.
+- `converter.html`: tema krem, sidebar/workspace/dropzone/CTA diselaraskan; ID dan logika convert tidak diubah.
+- `notebook.html`: nav + header diselaraskan ke tema krem; grid editor tidak diubah.
+- Baru `assets/theme-cream.css`: override tema untuk `flipbook.html` + `animation.html` tanpa mengubah layout engine; kedua halaman me-link file ini.
+- `flipbook.html`: copy heading dibuat playful; struktur/preview/kontrol tetap.
+- Verifikasi: `git diff --check` lolos, `node --check` flipbook/viewer lolos, HTTP 200 untuk /, converter, flipbook, notebook, animation, theme-cream.css. Belum QA visual browser/device. Belum commit/push.
+
+### 17 September 2026 — English copy
+
+User request: use English. Homepage hero/cards/footer plus converter/notebook/flipbook static shell translated to English. Cream GenZ theme unchanged. Deep converter option/hint strings inside `converter.html` script still partly Indonesian — follow-up if full English catalog is wanted. Verified diff-check + HTTP 200. No visual browser QA. Not committed/pushed.
+
+### 17 September 2026 — business direction (paid later)
+
+User confirmed: product goes paid (subscription) later. User DB + login are wanted but DEFERRED — fix the inside first.
+- Current truth: no user DB, no login, no billing. `server.py` only has a local build token for APK/EXE jobs. Subscription prices/quotas not final (old discussion examples Rp59.000/Rp590.000, Rp149.000/Rp1.490.000 were examples only).
+- Deferred plan (do NOT build yet without go-ahead): choose auth/DB stack, password hashing, sessions, tiers/quotas, billing provider, privacy story for local-first files. Keep `.env`/credentials out of git when that phase starts.
+- Immediate focus per user: polish interiors first (converter/flipbook/notebook internals) before auth/billing.
+
+### 17 September 2026 — interiors quick pass (English)
+
+Choice: all-interiors quick pass. Static shells of `flipbook.html` (sidebar, export panel, empty states), `notebook.html` (sources, auto-generate, AI mode, studio, welcome, chat), `animation.html` (hero) translated to English; `lang` set to `en`. Reader-facing JS strings in `assets/flipbook.js` (cover/page status, load states, errors) and `assets/export/viewer.js` (cover label, alt text, missing-image hint) translated. Export-file internals (`flipbook-export.js` package strings, converter tool-option/hint/error strings) left for a follow-up pass.
+- Verified: `node --check` flipbook/viewer/animation OK, `node tests/export.test.cjs` PASS, 8 Python build tests OK, HTTP 200 all pages. No browser/device visual QA. Not committed/pushed.
+
+### 17 September 2026 — pdf-to-excel quick fix (real user doc)
+
+User tested PDF to Excel on an image/design-heavy portfolio: one giant truncated text cell per page, spaced display type (`P O R T F O L I O`), repeated decor words. Root cause: `pdfToExcel` dumped all `getTextContent()` items into one cell per page — no line structure, no scan guard.
+- Fix in `converter.html`: group items into visual lines by Y position, sort left-to-right, rejoin single-char display type, output `Page/Line/Text` rows (cap 300 lines/page, 2000 chars/cell), throw a clear error when no text is extractable, and append a `README` sheet warning when text is thin (design/scan PDF, OCR roadmap).
+- Verified: inline-script `node --check` OK, heuristic mock test OK (`PORTFOLIO` rejoin + normal line), HTTP 200 converter. No real-file end-to-end (no OCR path yet). Not committed/pushed.
+
+### 17 September 2026 — OCR for pdf-to-excel (Tesseract.js)
+
+User asked for real OCR. Implemented in `converter.html` (`pdfToExcel` only):
+- New dependency: Tesseract.js **v5.1.1**, Apache-2.0, upstream `https://github.com/naptha/tesseract.js`, loaded lazily from `https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js` (CDN URL verified HTTP 200). Loads ONLY when a page has zero embedded text, so normal converts stay fast. Like other converter libs, it needs internet; offline story still applies to export packages only.
+- Flow: page without text → render to canvas (max ~1600px) → `recognize(canvas, 'eng+ind')` with % progress → lines go to Excel with `Source=OCR` (vs `Text`). Columns now `Page/Line/Source/Text`. OCR failures fall back to empty-page counting, never crash the convert. README sheet reports text/OCR/empty counts.
+- Verified: inline-script `node --check` OK, Tesseract CDN reachable, HTTP 200 converter. NOT verified: real-file OCR end-to-end in a browser (needs CDN + time per page), big-doc OCR speed, PDF-to-Word OCR (still old path). Not committed/pushed.
+
+### 17 September 2026 — OCR quality gate (artwork pages)
+
+User's real result: OCR hallucinated garbage rows (`4 = >. Nin A`, `| a. ©)`) on full-artwork display-type pages (39/42/45), while embedded-text pages (41/44) were fine. Cause: Tesseract reads document text, not decorative display type — it guesses symbols instead of staying silent.
+- Fix in `converter.html` (`ocrPageToLines`): drop lines with <3 letters or <40% alphanumeric, then reject the whole page unless mean word confidence ≥50 and ≥40% of kept lines look word-like. Rejected pages count as empty (honest blank, noted in README) instead of fake rows.
+- Verified: gate mock test OK (garbage page → 0 rows, normal paragraph → 3 rows), inline `node --check` OK, HTTP 200. NOT verified: real-file reconvert in browser (user to retest). Not committed/pushed.

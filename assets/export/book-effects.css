@@ -1,0 +1,10 @@
+/* Adapted spine lighting from the project's heyzine_dynamic.html template.
+   PageFlip owns page transforms and moving shadows; do not override them. */
+.book-paper{isolation:isolate;border:0;box-shadow:inset 0 -1px 0 #0002;cursor:grab}
+.book-paper:active{cursor:grabbing}
+.book-paper::after{content:"";position:absolute;inset:0;z-index:2;pointer-events:none}
+.book-paper.stf__item--left::after{background:linear-gradient(to right,transparent 78%,#ffffff09 85%,#ffffff15 89%,#00000008 94%,#00000032 99%,#00000052 100%);box-shadow:inset -1px 0 0 #0005}
+.book-paper.stf__item--right::after{background:linear-gradient(to left,transparent 78%,#ffffff09 85%,#ffffff15 89%,#00000008 94%,#00000032 99%,#00000052 100%);box-shadow:inset 1px 0 0 #0005}
+.book-board{box-shadow:inset 0 0 0 1px #0004,inset 0 -3px 0 #0003}
+.book-board.stf__item--right::after{background:linear-gradient(to right,#0005 0,#ffffff20 1%,#00000012 2%,transparent 5%);box-shadow:inset 2px 0 0 #ffffff20}
+.book-board.stf__item--left::after{background:linear-gradient(to left,#0005 0,#ffffff20 1%,#00000012 2%,transparent 5%);box-shadow:inset -2px 0 0 #ffffff20}

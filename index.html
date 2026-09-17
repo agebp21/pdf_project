@@ -3,134 +3,224 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>PDF Tools - Every tool you need to work with PDFs in one place</title>
+<title>PDF Tools — Every PDF task, done the chill way</title>
 <script src="https://cdn.tailwindcss.com"></script>
-<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,600;0,9..144,700;0,9..144,900;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <style>
-  *{font-family:'Inter',sans-serif}
-  body{background:#f3f5f9;overflow-x:hidden}
-  .blob{position:absolute;border-radius:40% 60% 60% 40% / 40% 40% 60% 60%;opacity:0.08;pointer-events:none}
-  .card{transition:all .2s ease}
-  .card:hover{transform:translateY(-3px);box-shadow:0 12px 24px rgba(0,0,0,0.08);border-color:#e5e7eb}
-  .card.active{border-color:#111827;box-shadow:0 4px 16px rgba(0,0,0,0.08)}
-  .filter-btn{transition:all .15s}
-  .filter-btn.active{background:#111827;color:white;border-color:#111827}
-  .icon-box{width:40px;height:40px;border-radius:8px;display:flex;align-items:center;justify-content:center;font-size:18px}
-  ::-webkit-scrollbar{height:6px}
-  ::-webkit-scrollbar-thumb{background:#d1d5db;border-radius:999px}
+  :root{
+    --cream:#FAF4E8; --cream2:#F3EAD9; --ink:#1C1917; --muted:#78716C;
+    --pine:#1A3C34; --tang:#FF5C28; --lilac:#E9E4FF; --lime:#E4F3C2; --blush:#FFE3D9;
+    --line:rgba(28,25,23,.12);
+  }
+  *{font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+  .serif{font-family:'Fraunces',Georgia,serif}
+  body{background:var(--cream);color:var(--ink);overflow-x:hidden}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
+    background:radial-gradient(600px 400px at 10% 0%,#FFE9D6 0%,transparent 60%),
+               radial-gradient(700px 500px at 95% 20%,#E9E4FF 0%,transparent 55%),
+               radial-gradient(800px 600px at 50% 110%,#DDEDC3 0%,transparent 60%);}
+  .grain{position:fixed;inset:0;pointer-events:none;opacity:.06;mix-blend-mode:multiply;
+    background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");}
+  .nav-pill{background:rgba(250,244,232,.82);backdrop-filter:blur(14px);border:1.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink)}
+  .btn-ink{background:var(--ink);color:#FFF7EA;border:1.5px solid var(--ink);box-shadow:4px 4px 0 rgba(28,25,23,.2);transition:.18s}
+  .btn-ink:hover{transform:translate(-1px,-1px);box-shadow:6px 6px 0 rgba(28,25,23,.25)}
+  .btn-tang{background:var(--tang);color:#fff;border:1.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink);transition:.18s}
+  .btn-tang:hover{transform:translate(-1px,-1px) rotate(-.5deg);box-shadow:6px 6px 0 var(--ink)}
+  .chip{border:1.5px solid var(--ink);background:#FFFDF6;transition:.15s}
+  .chip:hover{transform:translateY(-1px);box-shadow:3px 3px 0 var(--ink)}
+  .filter-btn{transition:all .15s;border:1.5px solid var(--ink);background:#FFFDF6}
+  .filter-btn.active{background:var(--pine);color:#FFF7EA;border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
+  .card{background:#FFFDF6;border:1.5px solid var(--ink);border-radius:22px;transition:all .2s ease;position:relative}
+  .card:hover{transform:translateY(-4px) rotate(-.3deg);box-shadow:7px 7px 0 var(--ink)}
+  .card.feat{border-radius:26px;overflow:hidden}
+  .sticker{position:absolute;top:12px;right:12px;font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 10px;border-radius:999px;border:1.5px solid var(--ink);transform:rotate(6deg)}
+  .icon-box{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;border:1.5px solid var(--ink);transform:rotate(-3deg)}
+  .marquee{border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);background:var(--pine);color:#FFF7EA;overflow:hidden;white-space:nowrap}
+  .marquee-track{display:inline-flex;align-items:center;white-space:nowrap;animation:slide 24s linear infinite;will-change:transform}
+  .marquee-track span{display:inline-block;padding:10px .25em 10px 0;font-size:12px;font-weight:700;letter-spacing:.14em}
+  @keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
+  .hero-blob{position:absolute;pointer-events:none;filter:saturate(1.1)}
+  ::-webkit-scrollbar{height:8px;width:10px}
+  ::-webkit-scrollbar-thumb{background:var(--ink);border-radius:999px}
+  @media (prefers-reduced-motion:reduce){.marquee-track{animation:none}.card:hover,.btn-tang:hover,.btn-ink:hover{transform:none}}
 </style>
 </head>
 <body class="relative">
-  <!-- soft blobs -->
-  <div class="blob bg-[#f8b4b4] w-[600px] h-[500px] -top-40 -left-40 rotate-12"></div>
-  <div class="blob bg-[#f8b4b4] w-[700px] h-[600px] top-[800px] -right-40"></div>
-  <div class="blob bg-[#fde8e8] w-[800px] h-[700px] bottom-0 left-[20%]"></div>
+<div class="grain"></div>
 
-  <header class="relative z-10 pt-10 pb-6 px-4 text-center max-w-5xl mx-auto">
-    <h1 class="text-[28px] md:text-[32px] font-extrabold text-gray-900 leading-tight">Every tool you need to work with PDFs in one place</h1>
-    <p class="mt-2 text-[14px] text-gray-500 max-w-2xl mx-auto leading-relaxed">Every tool you need to use PDFs, at your fingertips. All are 100% FREE and easy to use! Merge, split, compress, convert, rotate, unlock and watermark PDFs with just a few clicks.</p>
-    
-    <div class="mt-6 flex flex-wrap justify-center gap-2" id="filters">
-      <!-- injected by JS -->
+<!-- NAV -->
+<div class="sticky top-3 z-50 max-w-[1440px] mx-auto px-4">
+  <nav class="nav-pill rounded-2xl px-3 py-2 flex items-center justify-between gap-3">
+    <a href="index.html" class="flex items-center gap-2.5">
+      <span class="w-9 h-9 rounded-xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-[11px] font-extrabold border border-[#1C1917] -rotate-3">PDF</span>
+      <span class="leading-none"><span class="serif font-black text-[17px] tracking-tight block">PDF Tools</span><span class="text-[10px] font-bold tracking-[.18em] text-[#78716C]">SARVAMAYA • LOCAL VIBES</span></span>
+    </a>
+    <div class="hidden md:flex items-center gap-2 text-[12px] font-bold">
+      <a href="#grid" class="chip rounded-full px-3.5 py-1.5">✳ All tools</a>
+      <a href="flipbook.html" class="chip rounded-full px-3.5 py-1.5">▤ Flipbook</a>
+      <a href="notebook.html" class="chip rounded-full px-3.5 py-1.5">✦ Notebook AI</a>
     </div>
-  </header>
-
-  <main class="relative z-10 max-w-[1440px] mx-auto px-4 pb-16">
-    <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-6 gap-4">
-      <!-- cards injected -->
+    <div class="flex items-center gap-2">
+      <span class="hidden sm:inline text-[10px] font-extrabold tracking-widest bg-[#E4F3C2] border border-[#1C1917] rounded-full px-2.5 py-1 rotate-2">100% FREE</span>
+      <a href="converter.html?tool=merge-pdf" class="btn-tang rounded-full px-4 py-2 text-[12px] font-extrabold">Let's convert →</a>
     </div>
-    <p id="empty" class="hidden text-center text-gray-400 mt-12">Tidak ada tool di kategori ini.</p>
-  </main>
+  </nav>
+</div>
 
-  <script>
-    const categories = ["All","Workflows","Organize PDF","Optimize PDF","Convert PDF","Edit PDF","PDF Security","PDF Intelligence"];
+<!-- HERO -->
+<header class="relative max-w-[1100px] mx-auto px-4 pt-10 pb-4 text-center">
+  <div class="hero-blob left-[2%] top-6 text-3xl rotate-[-12deg]">✳</div>
+  <div class="hero-blob right-[4%] top-10 text-2xl rotate-[14deg]">◍</div>
+  <div class="hero-blob left-[10%] bottom-0 text-xl">〜</div>
+  <p class="inline-flex items-center gap-2 text-[11px] font-extrabold tracking-[.16em] bg-white border border-[#1C1917] rounded-full px-4 py-1.5 shadow-[3px_3px_0_#1C1917]">✦ NO SIGN-UP • FILES STAY ON YOUR DEVICE • NO HASSLE</p>
+  <h1 class="serif font-black tracking-tight leading-[1.02] mt-4 text-[38px] md:text-[60px]">Every PDF task,<br><em class="not-italic serif italic font-bold text-[#1A3C34]">done</em> <span class="inline-block bg-[#FF5C28] text-white px-3 rounded-2xl border-2 border-[#1C1917] -rotate-2 shadow-[4px_4px_0_#1C1917]">the chill way.</span></h1>
+  <p class="mt-4 text-[14px] md:text-[15px] text-[#57534E] max-w-2xl mx-auto leading-relaxed">Merge, split, compress, convert, then turn your PDF into an <b>interactive flipbook</b> + chat with your docs via AI. Not that red clone — this is the elegant cream GenZ edition.</p>
+  <div class="mt-5 flex flex-wrap justify-center gap-2.5">
+    <a href="flipbook.html" class="btn-ink rounded-full px-5 py-2.5 text-[13px] font-extrabold">▤ Open Flipbook</a>
+    <a href="notebook.html" class="rounded-full px-5 py-2.5 text-[13px] font-extrabold bg-[#E9E4FF] border-[1.5px] border-[#1C1917] shadow-[4px_4px_0_#1C1917] hover:-translate-y-0.5 transition">✦ Chat with your PDF</a>
+  </div>
+  <div class="mt-5 flex flex-wrap justify-center gap-2 text-[11px] font-bold text-[#57534E]">
+    <span class="bg-white/70 border border-[#1C1917]/15 rounded-full px-3 py-1">⚡ ~40 tools</span>
+    <span class="bg-white/70 border border-[#1C1917]/15 rounded-full px-3 py-1">🔒 privacy-first</span>
+    <span class="bg-white/70 border border-[#1C1917]/15 rounded-full px-3 py-1">📖 flipbook + animation</span>
+    <span class="bg-white/70 border border-[#1C1917]/15 rounded-full px-3 py-1">🤖 notebook AI</span>
+  </div>
+  <div class="mt-6 flex flex-wrap justify-center gap-2" id="filters"></div>
+</header>
 
-    const tools = [
-      {id:"merge-pdf", title:"Merge PDF", desc:"Combine PDFs in the order you want with the easiest PDF merger available.", cat:["Organize PDF"], color:"#f97316", icon:"↘↖", bg:"#fff1e6"},
-      {id:"split-pdf", title:"Split PDF", desc:"Separate one page or a whole set for easy conversion into independent PDF files.", cat:["Organize PDF"], color:"#f97316", icon:"↗↙", bg:"#fff1e6"},
-      {id:"compress-pdf", title:"Compress PDF", desc:"Reduce file size while optimizing for maximal PDF quality.", cat:["Optimize PDF"], color:"#84a98c", icon:"⇲", bg:"#e8f5e9"},
-      {id:"pdf-to-word", title:"PDF to Word", desc:"Easily convert your PDF files into easy to edit DOC and DOCX documents. The converted WORD document is almost 100% accurate.", cat:["Convert PDF"], color:"#2563eb", icon:"W", bg:"#dbeafe"},
-      {id:"pdf-to-ppt", title:"PDF to PowerPoint", desc:"Turn your PDF files into easy to edit PPT and PPTX slideshows.", cat:["Convert PDF"], color:"#f97316", icon:"P", bg:"#ffedd5"},
-      {id:"pdf-to-excel", title:"PDF to Excel", desc:"Pull data straight from PDFs into Excel spreadsheets in a few short seconds.", cat:["Convert PDF"], color:"#16a34a", icon:"X", bg:"#dcfce7"},
+<div class="marquee mt-4"><div class="marquee-track"><span>&nbsp;✳ MERGE ✳ SPLIT ✳ COMPRESS ✳ PDF → FLIPBOOK ✳ CHAT PDF ✳ WATERMARK ✳ PROTECT ✳ OCR ✳ TRANSLATE ✳ MERGE ✳ SPLIT ✳ COMPRESS ✳ PDF → FLIPBOOK ✳ CHAT PDF ✳ WATERMARK ✳ PROTECT ✳ OCR ✳ TRANSLATE&nbsp;</span><span aria-hidden="true">&nbsp;✳ MERGE ✳ SPLIT ✳ COMPRESS ✳ PDF → FLIPBOOK ✳ CHAT PDF ✳ WATERMARK ✳ PROTECT ✳ OCR ✳ TRANSLATE ✳ MERGE ✳ SPLIT ✳ COMPRESS ✳ PDF → FLIPBOOK ✳ CHAT PDF ✳ WATERMARK ✳ PROTECT ✳ OCR ✳ TRANSLATE&nbsp;</span></div></div>
 
-      {id:"word-to-pdf", title:"Word to PDF", desc:"Make DOC and DOCX files easy to read by converting them to PDF.", cat:["Convert PDF"], color:"#2563eb", icon:"W", bg:"#dbeafe"},
-      {id:"ppt-to-pdf", title:"PowerPoint to PDF", desc:"Make PPT and PPTX slideshows easy to view by converting them to PDF.", cat:["Convert PDF"], color:"#f97316", icon:"P", bg:"#ffedd5"},
-      {id:"excel-to-pdf", title:"Excel to PDF", desc:"Make EXCEL spreadsheets easy to read by converting them to PDF.", cat:["Convert PDF"], color:"#16a34a", icon:"X", bg:"#dcfce7"},
-      {id:"edit-pdf", title:"Edit PDF", desc:"Add text, images, shapes or freehand annotations to a PDF document. Edit the size, font, and color of the added content.", cat:["Edit PDF"], color:"#a855a7", icon:"✎", bg:"#fae8ff", featured:true},
-      {id:"pdf-to-jpg", title:"PDF to JPG", desc:"Convert each PDF page into a JPG or extract all images contained in a PDF.", cat:["Convert PDF"], color:"#eab308", icon:"🖼", bg:"#fef9c3"},
-      {id:"jpg-to-pdf", title:"JPG to PDF", desc:"Convert JPG images to PDF in seconds. Easily adjust orientation and margins.", cat:["Convert PDF"], color:"#eab308", icon:"JPG", bg:"#fef9c3"},
+<main class="relative z-10 max-w-[1440px] mx-auto px-4 py-8">
+  <div class="flex items-end justify-between mb-4">
+    <h2 class="serif text-[22px] md:text-[26px] font-black tracking-tight">Pick your weapon <span class="text-[#FF5C28]">↓</span></h2>
+    <p class="text-[12px] text-[#78716C] font-semibold hidden sm:block">Click a card → jump straight into the tool. Workflows live at the top.</p>
+  </div>
+  <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
+  <p id="empty" class="hidden text-center text-gray-400 mt-12">No tools in this category.</p>
 
-      {id:"sign-pdf", title:"Sign PDF", desc:"Sign yourself or request electronic signatures from others.", cat:["PDF Security","Edit PDF"], color:"#1e5a8a", icon:"✒", bg:"#dbeafe"},
-      {id:"watermark", title:"Watermark", desc:"Stamp an image or text over your PDF in seconds. Choose the typography, transparency and position.", cat:["Edit PDF"], color:"#a855a7", icon:"👤", bg:"#fae8ff"},
-      {id:"rotate-pdf", title:"Rotate PDF", desc:"Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!", cat:["Organize PDF"], color:"#a855a7", icon:"↻", bg:"#fae8ff"},
-      {id:"html-to-pdf", title:"HTML to PDF", desc:"Convert webpages in HTML to PDF. Copy and paste the URL of the page you want and convert it to PDF with a click.", cat:["Convert PDF"], color:"#eab308", icon:"HTML", bg:"#fef9c3"},
-      {id:"unlock-pdf", title:"Unlock PDF", desc:"Remove PDF password security, giving you the freedom to use your PDFs as you want.", cat:["PDF Security"], color:"#1e5a8a", icon:"🔓", bg:"#dbeafe"},
-      {id:"protect-pdf", title:"Protect PDF", desc:"Protect PDF files with a password. Encrypt PDF documents to prevent unauthorized access.", cat:["PDF Security"], color:"#1e5a8a", icon:"🛡", bg:"#dbeafe"},
+  <section class="mt-10 grid md:grid-cols-3 gap-4">
+    <div class="card p-5 bg-[#1A3C34] !text-[#FFF7EA]">
+      <p class="text-[11px] font-extrabold tracking-[.16em] text-[#E4F3C2]">WHY IT'S DIFFERENT?</p>
+      <h3 class="serif text-[20px] font-black mt-1">Not just convert.</h3>
+      <p class="text-[12.5px] mt-2 leading-relaxed text-[#FFF7EA]/80">Your PDF can instantly become a digital book + animated stats. Other converters stop at download.</p>
+    </div>
+    <div class="card p-5">
+      <p class="text-[11px] font-extrabold tracking-[.16em] text-[#FF5C28]">PRIVACY</p>
+      <h3 class="serif text-[20px] font-black mt-1">Files don't wander.</h3>
+      <p class="text-[12.5px] mt-2 leading-relaxed text-[#57534E]">Most processing runs in your browser. Great for theses, invoices, & secret docs.</p>
+    </div>
+    <div class="card p-5 bg-[#E9E4FF]">
+      <p class="text-[11px] font-extrabold tracking-[.16em]">GEN-Z APPROVED</p>
+      <h3 class="serif text-[20px] font-black mt-1">Not stiff, not dated.</h3>
+      <p class="text-[12.5px] mt-2 leading-relaxed text-[#57534E]">Serif type + stickers + jumbo rounded corners. Serious but fun on mobile.</p>
+    </div>
+  </section>
+</main>
 
-      {id:"organize-pdf", title:"Organize PDF", desc:"Sort pages of your PDF file however you like. Delete PDF pages or add PDF pages to your document at your convenience.", cat:["Organize PDF"], color:"#f97316", icon:"A↕B", bg:"#ffedd5"},
-      {id:"pdf-to-pdfa", title:"PDF to PDF/A", desc:"Transform your PDF to PDF/A, the ISO-standardized version of PDF for long-term archiving. Your PDF will preserve formatting when accessed in the future.", cat:["Convert PDF"], color:"#64748b", icon:"/A", bg:"#e2e8f0"},
-      {id:"repair-pdf", title:"Repair PDF", desc:"Repair a damaged PDF and recover data from corrupt PDF. Fix PDF files with our Repair tool.", cat:["Optimize PDF"], color:"#16a34a", icon:"🛠", bg:"#dcfce7"},
-      {id:"page-numbers", title:"Page numbers", desc:"Add page numbers into PDFs with ease. Choose your positions, dimensions, typography.", cat:["Edit PDF","Organize PDF"], color:"#a855a7", icon:"1 2", bg:"#fae8ff"},
-      {id:"scan-to-pdf", title:"Scan to PDF", desc:"Capture document scans from your mobile device and send them instantly to your browser.", cat:["Convert PDF"], color:"#f97316", icon:"⎙", bg:"#ffedd5"},
-      {id:"ocr-pdf", title:"OCR PDF", desc:"Easily convert scanned PDF into searchable and selectable documents.", cat:["PDF Intelligence","Convert PDF"], color:"#16a34a", icon:"OCR", bg:"#dcfce7"},
+<footer class="max-w-[1440px] mx-auto px-4 pb-10">
+  <div class="rounded-3xl border-[1.5px] border-[#1C1917] bg-[#1C1917] text-[#FFF7EA] p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-4 justify-between shadow-[6px_6px_0_rgba(28,25,23,.2)]">
+    <div>
+      <p class="serif text-[20px] font-black">Ready to go? No overthinking.</p>
+      <p class="text-[12px] text-white/70 mt-1">Pick a tool above, drop your file, done. No install, no login.</p>
+    </div>
+    <div class="flex gap-2">
+      <a href="flipbook.html" class="btn-tang rounded-full px-5 py-2.5 text-[13px] font-extrabold">▤ Turn into flipbook</a>
+      <a href="converter.html?tool=compress-pdf" class="rounded-full px-5 py-2.5 text-[13px] font-extrabold bg-[#FFF7EA] text-[#1C1917] border-[1.5px] border-white">Compress PDF</a>
+    </div>
+  </div>
+  <p class="text-center text-[11px] text-[#A8A29E] mt-4 font-semibold">PDF Tools • Sarvamaya vibes • Made locally, for never-ending tasks ✳</p>
+</footer>
 
-      {id:"compare-pdf", title:"Compare PDF", desc:"Show a side-by-side document comparison and easily spot changes between different file versions.", cat:["Organize PDF"], color:"#1e5a8a", icon:"◫", bg:"#dbeafe"},
-      {id:"redact-pdf", title:"Redact PDF", desc:"Redact text and graphics to permanently remove sensitive information from a PDF.", cat:["PDF Security","Edit PDF"], color:"#2563eb", icon:"█", bg:"#dbeafe"},
-      {id:"crop-pdf", title:"Crop PDF", desc:"Crop margins of PDF documents or select specific areas, then apply the changes to one page or the whole document.", cat:["Edit PDF","Organize PDF"], color:"#a855a7", icon:"◧", bg:"#fae8ff"},
-      {id:"pdf-forms", title:"PDF Forms", desc:"Detect forms fields automatically, create interactive fillable PDFs, or fill PDF forms yourself. Add text fields, checkboxes, multiple choice fields, and lists.", cat:["Edit PDF"], color:"#a855a7", icon:"Ab", bg:"#fae8ff", badge:"New!"},
-      {id:"ai-summarizer", title:"AI Summarizer", desc:"Quickly generate concise summaries from articles, paragraphs, and essays, providing clear and precise key points in seconds.", cat:["PDF Intelligence"], color:"#7c3aed", icon:"✦", bg:"#ede9fe", badge:"New!"},
-      {id:"translate-pdf", title:"Translate PDF", desc:"Easily translate PDF files powered by AI. Keep fonts, layout, and formatting perfectly intact.", cat:["PDF Intelligence"], color:"#7c3aed", icon:"A", bg:"#ede9fe", badge:"New!"},
+<script>
+  const categories = ["All","Workflows","Organize PDF","Optimize PDF","Convert PDF","Edit PDF","PDF Security","PDF Intelligence"];
 
-      {id:"notebook", title:"Notebook PDF", desc:"Chat dengan PDF-mu kaya NotebookLM. Upload PDF → auto ringkas, tanya jawab, bikin podcast & mindmap.", cat:["PDF Intelligence"], color:"#7c3aed", icon:"✦", bg:"#ede9fe", badge:"New!", href:"notebook.html"},
-      {id:"pdf-to-md", title:"PDF to Markdown", desc:"Easily turn PDFs into Markdown files. Perfect for notes, docs, and LLMs. Headings, tables, lists, and links preserved automatically.", cat:["Convert PDF","PDF Intelligence"], color:"#7c3aed", icon:"{ }", bg:"#ede9fe", badge:"New!"},
-      {id:"workflow", title:"Create a workflow", desc:"Create custom workflows with your favorite tools, automate tasks, and reuse them anytime.", cat:["Workflows"], color:"#f97316", icon:"↗", bg:"#ffedd5", workflow:true},
-    ];
+  const tools = [
+    {id:"pdf-to-flipbook", title:"PDF to Flipbook", desc:"Open your PDF as a digital book and add animated number stats to any page.", cat:["Workflows","Convert PDF"], color:"#1A3C34", icon:"▤", bg:"#E4F3C2", badge:"New!", href:"flipbook.html", feat:true},
+    {id:"notebook", title:"Notebook PDF", desc:"Chat with your PDF like NotebookLM. Upload → auto summary, Q&A, podcast & mindmap.", cat:["PDF Intelligence","Workflows"], color:"#4C1D95", icon:"✦", bg:"#E9E4FF", badge:"AI", href:"notebook.html", feat:true},
+    {id:"flipbook-animation", title:"Flipbook Animation", desc:"Try moving charts, animated stats, and interactive flows inside a digital book.", cat:["Workflows"], color:"#1A3C34", icon:"▶", bg:"#FFE3D9", badge:"Demo", href:"animation.html", feat:true},
+    {id:"workflow", title:"Create a workflow", desc:"Create custom workflows with your favorite tools, automate tasks, and reuse them anytime.", cat:["Workflows"], color:"#9A3412", icon:"↗", bg:"#FFE3D9", workflow:true},
+    {id:"merge-pdf", title:"Merge PDF", desc:"Combine PDFs in the order you want with the easiest PDF merger available.", cat:["Organize PDF"], color:"#9A3412", icon:"↘↖", bg:"#FFE3D9"},
+    {id:"split-pdf", title:"Split PDF", desc:"Separate one page or a whole set for easy conversion into independent PDF files.", cat:["Organize PDF"], color:"#9A3412", icon:"↗↙", bg:"#FFE3D9"},
+    {id:"compress-pdf", title:"Compress PDF", desc:"Reduce file size while optimizing for maximal PDF quality.", cat:["Optimize PDF"], color:"#1A3C34", icon:"⇲", bg:"#E4F3C2"},
+    {id:"pdf-to-word", title:"PDF to Word", desc:"Easily convert your PDF files into easy to edit DOC and DOCX documents.", cat:["Convert PDF"], color:"#1D4ED8", icon:"W", bg:"#DBEAFE"},
+    {id:"pdf-to-ppt", title:"PDF to PowerPoint", desc:"Turn your PDF files into easy to edit PPT and PPTX slideshows.", cat:["Convert PDF"], color:"#9A3412", icon:"P", bg:"#FFEDD5"},
+    {id:"pdf-to-excel", title:"PDF to Excel", desc:"Pull data straight from PDFs into Excel spreadsheets in seconds.", cat:["Convert PDF"], color:"#15803D", icon:"X", bg:"#DCFCE7"},
+    {id:"word-to-pdf", title:"Word to PDF", desc:"Make DOC and DOCX files easy to read by converting them to PDF.", cat:["Convert PDF"], color:"#1D4ED8", icon:"W", bg:"#DBEAFE"},
+    {id:"ppt-to-pdf", title:"PowerPoint to PDF", desc:"Make PPT and PPTX slideshows easy to view by converting them to PDF.", cat:["Convert PDF"], color:"#9A3412", icon:"P", bg:"#FFEDD5"},
+    {id:"excel-to-pdf", title:"Excel to PDF", desc:"Make EXCEL spreadsheets easy to read by converting them to PDF.", cat:["Convert PDF"], color:"#15803D", icon:"X", bg:"#DCFCE7"},
+    {id:"edit-pdf", title:"Edit PDF", desc:"Add text, images, shapes or freehand annotations to a PDF document.", cat:["Edit PDF"], color:"#7E22CE", icon:"✎", bg:"#FAE8FF", featured:true},
+    {id:"pdf-to-jpg", title:"PDF to JPG", desc:"Convert each PDF page into a JPG or extract all images contained in a PDF.", cat:["Convert PDF"], color:"#92400E", icon:"🖼", bg:"#FEF9C3"},
+    {id:"jpg-to-pdf", title:"JPG to PDF", desc:"Convert JPG images to PDF in seconds. Easily adjust orientation and margins.", cat:["Convert PDF"], color:"#92400E", icon:"JPG", bg:"#FEF9C3"},
+    {id:"sign-pdf", title:"Sign PDF", desc:"Sign yourself or request electronic signatures from others.", cat:["PDF Security","Edit PDF"], color:"#1E5A8A", icon:"✒", bg:"#DBEAFE"},
+    {id:"watermark", title:"Watermark", desc:"Stamp an image or text over your PDF in seconds.", cat:["Edit PDF"], color:"#7E22CE", icon:"◍", bg:"#FAE8FF"},
+    {id:"rotate-pdf", title:"Rotate PDF", desc:"Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!", cat:["Organize PDF"], color:"#7E22CE", icon:"↻", bg:"#FAE8FF"},
+    {id:"html-to-pdf", title:"HTML to PDF", desc:"Convert webpages in HTML to PDF. Paste the URL and convert with a click.", cat:["Convert PDF"], color:"#92400E", icon:"HTML", bg:"#FEF9C3"},
+    {id:"unlock-pdf", title:"Unlock PDF", desc:"Remove PDF password security, giving you the freedom to use your PDFs as you want.", cat:["PDF Security"], color:"#1E5A8A", icon:"🔓", bg:"#DBEAFE"},
+    {id:"protect-pdf", title:"Protect PDF", desc:"Protect PDF files with a password. Encrypt PDF documents.", cat:["PDF Security"], color:"#1E5A8A", icon:"🛡", bg:"#DBEAFE"},
+    {id:"organize-pdf", title:"Organize PDF", desc:"Sort pages however you like. Delete or add pages at your convenience.", cat:["Organize PDF"], color:"#9A3412", icon:"A↕B", bg:"#FFEDD5"},
+    {id:"pdf-to-pdfa", title:"PDF to PDF/A", desc:"Transform your PDF to PDF/A, the ISO-standardized version for archiving.", cat:["Convert PDF"], color:"#57534E", icon:"/A", bg:"#E7E5E4"},
+    {id:"repair-pdf", title:"Repair PDF", desc:"Repair a damaged PDF and recover data from corrupt PDF.", cat:["Optimize PDF"], color:"#15803D", icon:"🛠", bg:"#DCFCE7"},
+    {id:"page-numbers", title:"Page numbers", desc:"Add page numbers into PDFs with ease.", cat:["Edit PDF","Organize PDF"], color:"#7E22CE", icon:"1 2", bg:"#FAE8FF"},
+    {id:"scan-to-pdf", title:"Scan to PDF", desc:"Capture document scans from your mobile device instantly.", cat:["Convert PDF"], color:"#9A3412", icon:"⎙", bg:"#FFEDD5"},
+    {id:"ocr-pdf", title:"OCR PDF", desc:"Easily convert scanned PDF into searchable and selectable documents.", cat:["PDF Intelligence","Convert PDF"], color:"#15803D", icon:"OCR", bg:"#DCFCE7"},
+    {id:"compare-pdf", title:"Compare PDF", desc:"Side-by-side comparison and easily spot changes.", cat:["Organize PDF"], color:"#1E5A8A", icon:"◫", bg:"#DBEAFE"},
+    {id:"redact-pdf", title:"Redact PDF", desc:"Permanently remove sensitive information from a PDF.", cat:["PDF Security","Edit PDF"], color:"#1D4ED8", icon:"█", bg:"#DBEAFE"},
+    {id:"crop-pdf", title:"Crop PDF", desc:"Crop margins or select specific areas, apply to one page or all.", cat:["Edit PDF","Organize PDF"], color:"#7E22CE", icon:"◧", bg:"#FAE8FF"},
+    {id:"pdf-forms", title:"PDF Forms", desc:"Create interactive fillable PDFs, or fill forms yourself.", cat:["Edit PDF"], color:"#7E22CE", icon:"Ab", bg:"#FAE8FF", badge:"New!"},
+    {id:"ai-summarizer", title:"AI Summarizer", desc:"Generate concise summaries with key points in seconds.", cat:["PDF Intelligence"], color:"#4C1D95", icon:"✦", bg:"#E9E4FF", badge:"AI"},
+    {id:"translate-pdf", title:"Translate PDF", desc:"Translate PDF with AI. Keep fonts, layout, and formatting intact.", cat:["PDF Intelligence"], color:"#4C1D95", icon:"A", bg:"#E9E4FF", badge:"AI"},
+    {id:"pdf-to-md", title:"PDF to Markdown", desc:"Turn PDFs into Markdown. Perfect for notes, docs, and LLMs.", cat:["Convert PDF","PDF Intelligence"], color:"#4C1D95", icon:"{ }", bg:"#E9E4FF", badge:"New!"},
+  ];
 
-    let active = "All";
-    const grid = document.getElementById('grid');
-    const filterWrap = document.getElementById('filters');
+  let active = "All";
+  const grid = document.getElementById('grid');
+  const filterWrap = document.getElementById('filters');
 
-    function renderFilters(){
-      filterWrap.innerHTML = categories.map(c => `
-        <button onclick="setFilter('${c}')" class="filter-btn px-3.5 py-1.5 rounded-full text-xs font-medium border ${active===c?'active':'bg-white text-gray-700 border-gray-200 hover:bg-gray-50'}">${c}</button>
-      `).join('');
+  function renderFilters(){
+    filterWrap.innerHTML = categories.map(c => `
+      <button onclick="setFilter('${c}')" class="filter-btn rounded-full px-3.5 py-1.5 text-xs font-extrabold ${active===c?'active':''}">${c}</button>
+    `).join('');
+  }
+
+  function cardHTML(t){
+    const href = t.href || (t.workflow ? `converter.html?tool=merge-pdf` : `converter.html?tool=${t.id || ''}`);
+    if(t.workflow){
+      return `<a href="${href}" class="card feat p-5 flex flex-col min-h-[190px] overflow-hidden !bg-[#1C1917] !text-[#FFF7EA] !border-[#1C1917]">
+        <div class="absolute inset-0 opacity-20 pointer-events-none" style="background:radial-gradient(circle at 80% 20%, #FF5C28 1.5px, transparent 1.5px);background-size:22px 22px"></div>
+        <span class="sticker bg-[#FF5C28] text-white">SOON →</span>
+        <div class="icon-box !bg-[#FF5C28] !text-white">↗</div>
+        <h3 class="mt-3 text-[15px] font-extrabold relative z-10 serif">${t.title}</h3>
+        <p class="text-[12px] leading-snug text-white/70 mt-1.5 relative z-10">${t.desc}</p>
+        <span class="mt-auto text-[12px] font-extrabold relative z-10">Create workflow →</span>
+      </a>`;
     }
+    const span = t.feat ? 'sm:col-span-2 lg:col-span-2' : '';
+    const bgBadge = t.badge === 'AI' ? 'background:#4C1D95;color:#fff' : (t.badge === 'Demo' ? 'background:#1A3C34;color:#fff' : 'background:#FF5C28;color:#fff');
+    return `<a href="${href}" class="card ${span} p-5 flex flex-col min-h-[190px] group">
+      ${t.badge?`<span class="sticker" style="${bgBadge}">${t.badge}</span>`:''}
+      <div class="icon-box" style="background:${t.bg};color:${t.color}"><span class="text-[15px] leading-none">${t.icon}</span></div>
+      <h3 class="mt-3 text-[14.5px] font-extrabold leading-tight serif">${t.title}</h3>
+      <p class="mt-1 text-[12px] leading-snug text-[#78716C]">${t.desc}</p>
+      <span class="mt-auto pt-3 text-[12px] font-extrabold inline-flex items-center gap-1">Open tool <span class="group-hover:translate-x-1 transition">→</span></span>
+    </a>`;
+  }
 
-    function renderGrid(){
-      const filtered = active==="All" ? tools : tools.filter(t=>t.cat.includes(active));
-      document.getElementById('empty').classList.toggle('hidden', filtered.length!==0);
-      
-      grid.innerHTML = filtered.map(t => {
-        const href = t.href || (t.workflow ? `converter.html?tool=merge-pdf` : `converter.html?tool=${t.id || ''}`);
-        if(t.workflow){
-          return `<a href="${href}" class="card relative rounded-xl bg-[#ffe4e0] border border-[#ffd0c8] p-5 flex flex-col h-[160px] overflow-hidden group">
-            <div class="absolute inset-0 opacity-30 pointer-events-none" style="background:radial-gradient(circle at 80% 20%, #ff9a8a 1px, transparent 1px);background-size:22px 22px"></div>
-            <div class="absolute bottom-3 right-3 w-12 h-12 border border-dashed border-[#ffb4a8] rounded-xl opacity-60"></div>
-            <h3 class="text-[13px] font-bold text-gray-900 relative z-10">${t.title}</h3>
-            <p class="text-[10.5px] leading-snug text-gray-600 mt-1.5 relative z-10 line-clamp-3">${t.desc}</p>
-            <span class="mt-auto text-[11px] font-semibold text-gray-900 flex items-center gap-1 relative z-10">Create workflow <span class="group-hover:translate-x-0.5 transition">↗</span></span>
-          </a>`;
-        }
-        return `<a href="${href}" class="card relative bg-white rounded-xl border ${t.featured?'border-gray-900':'border-gray-200'} p-5 flex flex-col h-[160px] group">
-          ${t.badge?`<span class="absolute top-2.5 right-2.5 text-[9px] font-bold bg-[#e0f2fe] text-[#0284c7] px-1.5 py-0.5 rounded">New!</span>`:''}
-          <div class="icon-box" style="background:${t.bg};color:${t.color};border:1px solid ${t.color}18">
-            <span class="text-[13px] font-bold leading-none">${t.icon}</span>
-          </div>
-          <h3 class="mt-3 text-[13px] font-bold text-gray-900 leading-tight">${t.title}</h3>
-          <p class="mt-1 text-[10.5px] leading-snug text-gray-500 line-clamp-3">${t.desc}</p>
-        </a>`;
-      }).join('');
-    }
+  function renderGrid(){
+    const filtered = active==="All" ? tools : tools.filter(t=>t.cat.includes(active));
+    document.getElementById('empty').classList.toggle('hidden', filtered.length!==0);
+    grid.innerHTML = filtered.map(cardHTML).join('');
+  }
 
-    window.setFilter = (c)=>{
-      active=c;
-      renderFilters();
-      renderGrid();
-      window.scrollTo({top:0, behavior:'smooth'});
-    }
-
+  window.setFilter = (c)=>{
+    active=c;
     renderFilters();
     renderGrid();
-  </script>
+  }
+
+  renderFilters();
+  renderGrid();
+</script>
 </body>
 </html>
