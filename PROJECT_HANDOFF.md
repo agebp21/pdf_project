@@ -306,3 +306,10 @@ Honest audit of `converter.html`: Word to PDF works but strips to plain text (ma
 
 User installed LibreOffice but server still reported `office:false`: the Windows installer does not add `soffice` to PATH. Added `find_soffice()` checking `PATH` plus `ProgramFiles`/`ProgramFiles(x86)` `LibreOffice/program/soffice.exe`; used by capabilities + converter. Tests updated to patch `find_soffice`.
 - Verified: `find_soffice()` locates the real install here, 13 tests OK. User must restart `server.py` (server code changed). Pushed per auto-push rule.
+
+### 17 September 2026 ? idle reminder and automatic Home
+
+- Added shared FlipbookIdle in assets/export/layout.js and scoped overlay CSS in book-effects.css; wired preview flipbook.js and exported viewer.js. Existing layout stays unchanged while active.
+- After 170 seconds without pointer/keyboard/wheel activity: 10-second warning. At 180 seconds: return to cover. Activity or Continue reading resets timer. Cover, loading/exporting (preview), and page-turn transitions suppress/reset timer. Visibility changes check elapsed wall time.
+- Existing export packaging already includes layout.js and book-effects.css, so new HTML/APK/Windows exports inherit the feature. Existing native artifacts were not rebuilt.
+- Passed tests/idle.test.cjs (simulated clock/DOM), actual engine runtime suite (single/last page, portrait/landscape), export suite, 13 Python tests, JS syntax, diff check, HTTP 200. No direct visual browser/device verification. No commit/push in this task.

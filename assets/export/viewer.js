@@ -65,6 +65,10 @@
     };
     if(!document.documentElement.requestFullscreen)$('#fullscreen').hidden=true;
     document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
+    FlipbookIdle.bind({
+      active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0,
+      home: () => { book.turnToPage(0); update(); animate(); }
+    });
     $('#home').onclick=()=>{if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
     $('#prev').onclick=()=>book.flipPrev();$('#next').onclick=()=>book.flipNext();$('#replay').onclick=()=>animate(false);
     document.addEventListener('keydown',event=>{if(event.key==='ArrowRight'&&!$('#next').disabled)book.flipNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)book.flipPrev()});

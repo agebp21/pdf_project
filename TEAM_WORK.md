@@ -222,3 +222,10 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 ### 17 September 2026 — push d7ca27d (auto-push rule ON)
 
 - User rule: every OK update pushes straight away. Pushed commit `d7ca27d` to `origin/main` (85 files: redesign, English UI, excel+OCR, marquee, docs). Tree clean after push.
+
+### 17 September 2026 ? idle reminder and automatic Home
+
+- Added shared FlipbookIdle in assets/export/layout.js and scoped overlay CSS in book-effects.css; wired preview flipbook.js and exported viewer.js. Existing layout stays unchanged while active.
+- After 170 seconds without pointer/keyboard/wheel activity: 10-second warning. At 180 seconds: return to cover. Activity or Continue reading resets timer. Cover, loading/exporting (preview), and page-turn transitions suppress/reset timer. Visibility changes check elapsed wall time.
+- Existing export packaging already includes layout.js and book-effects.css, so new HTML/APK/Windows exports inherit the feature. Existing native artifacts were not rebuilt.
+- Passed tests/idle.test.cjs (simulated clock/DOM), actual engine runtime suite (single/last page, portrait/landscape), export suite, 13 Python tests, JS syntax, diff check, HTTP 200. No direct visual browser/device verification. No commit/push in this task.

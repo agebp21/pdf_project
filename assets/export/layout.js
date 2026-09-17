@@ -45,3 +45,41 @@ globalThis.FlipbookLayout = {
     schedule();return ()=>{observer.disconnect();cancelAnimationFrame(frame);document.removeEventListener('fullscreenchange',schedule)};
   }
 };
+
+// Shared inactivity reminder for preview and all exported readers.
+globalThis.FlipbookIdle = {
+  bind({active, home, host = document.body}) {
+    const english = document.documentElement.lang.startsWith('en');
+    const overlay = document.createElement('div');
+    overlay.className = 'book-idle'; overlay.hidden = true;
+    const panel = document.createElement('div'); panel.className = 'book-idle-panel';
+    const message = document.createElement('p'); message.setAttribute('role', 'status');
+    const resume = document.createElement('button'); resume.type = 'button';
+    resume.textContent = english ? 'Continue reading' : 'Lanjut membaca';
+    panel.append(message, resume); overlay.append(panel); host.append(overlay);
+    let lastActivity = Date.now();
+    const reset = () => { lastActivity = Date.now(); overlay.hidden = true; };
+    const events = ['pointerdown', 'pointermove', 'keydown', 'wheel'];
+    events.forEach(name => document.addEventListener(name, reset, {passive:true}));
+    resume.addEventListener('click', reset);
+    const check = () => {
+      if (!active()) { reset(); return; }
+      const remaining = 180000 - (Date.now() - lastActivity);
+      if (remaining <= 0) { reset(); home(); return; }
+      if (remaining <= 10000) {
+        const seconds = Math.ceil(remaining / 1000);
+        message.textContent = english
+          ? `No activity. Returning to the cover in ${seconds} seconds.`
+          : `Tidak ada aktivitas. Kembali ke sampul dalam ${seconds} detik.`;
+        overlay.hidden = false;
+      }
+    };
+    const timer = setInterval(check, 250);
+    document.addEventListener('visibilitychange', check);
+    return () => {
+      clearInterval(timer); overlay.remove();
+      events.forEach(name => document.removeEventListener(name, reset));
+      document.removeEventListener('visibilitychange', check);
+    };
+  }
+};

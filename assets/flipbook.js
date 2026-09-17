@@ -159,6 +159,11 @@
     if (!book || opening || book.getState() !== 'read') return;
     book.turnToPage(0); updatePage(); animate(true);
   });
+  FlipbookIdle.bind({
+    host: $('.preview'),
+    active: () => !!book && !opening && !exporting && book.getState() === 'read' && book.getCurrentPageIndex() > 0,
+    home: () => { book.turnToPage(0); updatePage(); animate(true); }
+  });
   $('#replay').addEventListener('click', () => animate());
   $('#overlay-form').addEventListener('submit', event => {
     event.preventDefault(); if (!book || opening || !$('#overlay-form').reportValidity()) return;
