@@ -261,6 +261,12 @@ User: PDF must become Word, Excel, PPT — all real. Implemented in `converter.h
 - Safe DOM previews for `.docx`/`.pptx`; generic preview branch de-XSSed (filenames via textContent).
 - Verified: Node smoke OK for both libs (valid PK outputs), inline `node --check` OK, HTTP 200, 13 Python tests OK. NOT verified: real-file browser runs (CDN + render time). Pushed per auto-push rule.
 
+### 17 September 2026 — full catalog audit (18 cards don't exist)
+
+Scripted check (`audit-ids.py`): index catalog has 35 cards, converter implements 14 tools. **18 cards have no converter entry and no direct page — clicking them silently opens JPG to PDF** (`active='jpg-to-pdf'` fallback, no notice): workflow, edit-pdf, sign-pdf, watermark, unlock-pdf, protect-pdf, pdf-to-pdfa, repair-pdf, page-numbers, scan-to-pdf, ocr-pdf, compare-pdf, redact-pdf, crop-pdf, pdf-forms, ai-summarizer, translate-pdf, pdf-to-md. Entire PDF Security shelf is dead.
+- The 14 real ones: jpg/pdf-to-jpg/merge/split/rotate/organize strong; pdf-to-word/pdf-to-excel/pdf-to-ppt rebuilt strong; word-to-pdf plain-text only (mammoth raw, 50k cap; `.doc` input will fail); excel-to-pdf 60-row text dump; html-to-pdf innerText only; compress levels barely differ (known QA note); ppt-to-pdf needs server+LibreOffice.
+- Recommended next: honest "coming soon" guard for missing ids, then build one shelf at a time. No code changed in this audit. Pushed per auto-push rule.
+
 ### 17 September 2026 — formal Excel Table (user: "ditambahi table")
 
 User wants real editable tables in Excel. Fix: `PDF Extract` sheet is now a formal Excel Table (`PdfExtract`, style TableStyleMedium9, banded rows, filter buttons on Page/Line/Source/Text) via `ws.addTable` — sortable, filterable, editable cells. Side-by-side editable cells on `Pages (Images)` stay as-is.
