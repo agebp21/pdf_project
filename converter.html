@@ -122,7 +122,7 @@ const TOOLS = [
   {id:'pdf-to-jpg', title:'PDF to JPG', desc:'Convert tiap halaman PDF jadi JPG atau ambil semua gambar.', cat:'Convert PDF', icon:'🖼', color:'#a16207', bg:'#fef9c3', accept:'.pdf', hint:'File PDF — tiap halaman jadi 1 JPG (ZIP jika multi-halaman)'},
   {id:'word-to-pdf', title:'Word to PDF', desc:'Turn DOC/DOCX files into easy-to-read PDFs (plain text for now).', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'DOCX/DOC file (text extracted, formatting not kept yet)'},
   {id:'pdf-to-word', title:'PDF to Word', desc:'Real .docx with page images plus editable text (OCR fallback).', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'PDF file — images kept, text editable (needs internet)'},
-  {id:'excel-to-pdf', title:'Excel to PDF', desc:'Turn EXCEL spreadsheets into easy-to-read PDFs (first 60 rows).', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file'},
+  {id:'excel-to-pdf', title:'Excel to PDF', desc:'Turn EXCEL spreadsheets into easy-to-read PDFs (all rows).', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file'},
   {id:'pdf-to-excel', title:'PDF to Excel', desc:'Every PDF page kept as an image in Excel, plus searchable text and OCR.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pages embedded as images, text/OCR on extra sheets (needs internet)'},
   {id:'html-to-pdf', title:'HTML to PDF', desc:'Convert halaman HTML jadi PDF dengan 1 klik.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'File .html'},
   {id:'merge-pdf', title:'Merge PDF', desc:'Gabungkan PDF sesuai urutan yang kamu mau.', cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, hint:'Pilih 2+ file PDF untuk digabungkan'},
@@ -138,8 +138,7 @@ let active = new URLSearchParams(location.search).get('tool') || 'jpg-to-pdf';
 // silently opening the wrong tool, remember the request and banner it.
 let comingSoonName=null;
 if(!TOOLS.find(t=>t.id===active)){
-  comingSoonName=active.split('-').map(w=>w==='pdf'?'PDF':(w==='ocr'?'OCR':(w==='ai'?'AI':(w==='md'?'Markdown':w[0].toUpperCase()+w.slice(1))))).join(' ');
-  log('Unknown tool requested: '+active+' — showing Image to PDF with a coming-soon notice');
+  comingSoonName=active.split('-').map(w=>w==='pdf'?'PDF':(w==='ocr'?'OCR':(w==='ai'?'AI':(w==='md'?'Markdown':w.charAt(0).toUpperCase()+w.slice(1))))).join(' ');
   active='jpg-to-pdf';
 }
 let files = [];
@@ -888,7 +887,7 @@ async function wordToPdf(){
   $('#progress').textContent='Reading DOCX...'; log('WordToPDF '+file.name);
   const buf=await file.arrayBuffer();
   const res=await mammoth.extractRawText({arrayBuffer:buf});
-  const text=res.value.slice(0, 50000);
+  const text=res.value;
   log('Extracted '+text.length+' chars');
   if(!text.trim()) throw new Error('DOCX is empty or unreadable');
   const {jsPDF}=window.jspdf;
@@ -901,7 +900,9 @@ async function wordToPdf(){
   }
   const blob=pdf.output('blob');
   downloadBlob(blob, file.name.replace(/\.(docx?)$/i,'')+'.pdf');
-  $('#resultPreview').innerHTML=`<pre class="whitespace-pre-wrap text-[11px] leading-relaxed bg-white p-3 rounded border max-h-60 overflow-auto">${text.slice(0,3000)}</pre>` + $('#resultPreview').innerHTML;
+  const excerpt=document.createElement('pre');
+  excerpt.className='whitespace-pre-wrap text-[11px] leading-relaxed bg-white p-3 rounded border max-h-60 overflow-auto';
+  excerpt.textContent=text.slice(0,3000); $('#resultPreview').prepend(excerpt);
 }
 async function pdfToWord(){
   if(!window.pdfjsLib) throw new Error('pdf.js not loaded');
@@ -920,7 +921,7 @@ async function pdfToWord(){
       children.push(new Paragraph({children:[new ImageRun({data:b64ToU8(pg.image.b64), transformation:{width:Math.round(w), height:Math.round(pg.image.h*(w/pg.image.w))}, type:'jpg'})]}));
     }
     if(pg.lines.length){
-      pg.lines.slice(0,300).forEach(l=>{
+      pg.lines.forEach(l=>{
         const ocr=l.source==='OCR';
         children.push(new Paragraph({children:[new TextRun({text:(ocr?'[OCR] ':'')+l.text, color:ocr?'808080':undefined, italics:ocr||undefined})]}));
       });
@@ -946,13 +947,15 @@ async function excelToPdf(){
     pdf.setFontSize(12); pdf.setFont(undefined,'bold'); pdf.text(`Sheet: ${name}`,15,y); y+=7;
     pdf.setFont(undefined,'normal'); pdf.setFontSize(8);
     const sheet=wb.Sheets[name];
-    const rows=XLSX.utils.sheet_to_json(sheet,{header:1, blankrows:false}).slice(0,60);
+    const rows=XLSX.utils.sheet_to_json(sheet,{header:1, blankrows:false});
     log(`Sheet ${name}: ${rows.length} rows`);
     for(let r of rows){
-      const line=(r||[]).join(' | ').slice(0,150);
+      const line=(r||[]).join(' | ');
       if(!line.trim()) continue;
-      if(y>280){ pdf.addPage(); y=15; }
-      pdf.text(line,15,y); y+=5;
+      for(const part of pdf.splitTextToSize(line,180)){
+        if(y>280){ pdf.addPage(); y=15; }
+        pdf.text(part,15,y); y+=5;
+      }
     }
     y+=6;
   }
@@ -1000,7 +1003,7 @@ async function ocrPageToLines(page, pageNum){
   const wordish=kept.filter(l=>/[A-Za-z]{3,}/.test(l)).length;
   const readable=kept.length>0&&meanConf>=50&&(wordish/kept.length)>=0.4;
   log(`Page ${pageNum}: OCR conf=${Math.round(meanConf)} lines=${raw.length} kept=${kept.length} readable=${readable}`);
-  return readable?kept.slice(0,300):[];
+  return readable?kept:[];
 }
 // ExcelJS 4.4.0 (MIT, https://github.com/exceljs/exceljs)
 // Lazy-loaded for PDF to Excel because SheetJS community edition cannot embed
@@ -1058,9 +1061,9 @@ function b64ToU8(b64){
   return out;
 }
 // Split a visual line into table-ish columns at wide X gaps (gutters are far
-// wider than normal word spaces). Returns cell strings, capped at 6.
+// wider than normal word spaces). Returns all detected cell strings.
 function cellsOf(items){
-  const COL_GAP=50, MAX_COLS=6;
+  const COL_GAP=50;
   // Legacy path: spaced display type arrives as single-char items — never
   // split those into columns, rejoin them as one cell instead.
   if(items.length>1 && items.every(x=>x.str.length===1)){
@@ -1073,7 +1076,7 @@ function cellsOf(items){
     if(cur.length){
       const prev=cur[cur.length-1];
       const gap=(it.transform?it.transform[4]:0)-((prev.transform?prev.transform[4]:0)+(prev.width||0));
-      if(gap>COL_GAP && cols.length<MAX_COLS) cols.push([]);
+      if(gap>COL_GAP) cols.push([]);
     }
     cols[cols.length-1].push(it);
   }
@@ -1123,13 +1126,12 @@ async function pdfContentPages(pdf, progress){
     let lineNo=0;
     for(const [,items] of sorted){
       items.sort((a,b)=>(a.transform?a.transform[4]:0)-(b.transform?b.transform[4]:0));
-      const cellTexts=cellsOf(items).map(c=>c.slice(0,500));
+      const cellTexts=cellsOf(items);
       // Single-column lines keep the legacy spaced-type rejoin via cellsOf;
       // the joined text is what Word/PPT/notes show.
-      const txt=dedupeLine(cellTexts.join(' ').slice(0,2000));
+      const txt=dedupeLine(cellTexts.join(' '));
       if(!txt) continue;
       totalChars+=txt.length; lineNo++;
-      if(lineNo>300) break;
       lines.push({line:lineNo, source:'Text', text:txt, cells:cellTexts});
     }
     if(!lines.length){
@@ -1138,7 +1140,7 @@ async function pdfContentPages(pdf, progress){
         progress(`Page ${i} has no text — loading OCR...`);
         await ensureTesseract();
         const ocrLines=await ocrPageToLines(page, i);
-        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; lines.push({line:k+1, source:'OCR', text:txt.slice(0,2000), cells:[txt.slice(0,500)]}); });
+        ocrLines.forEach((txt,k)=>{ totalChars+=txt.length; lines.push({line:k+1, source:'OCR', text:txt, cells:[txt]}); });
         if(lines.length){ ocrPages++; log(`Page ${i}: OCR ${lines.length} lines`); }
         else emptyPages++;
       }catch(cause){ emptyPages++; log(`Page ${i}: OCR failed — ${cause.message}`); }
@@ -1210,11 +1212,11 @@ async function pdfToExcel(){
     for(let k=0;k<ROWS_PER_IMG;k++) ws.getRow(top+k).height=pt;
     // Editable text beside the picture: real cells you can type in.
     // (Editing these never alters the picture — pixels are pixels.)
-    const lines=(pageTexts[idx]||[]).slice(0,300);
+    const lines=(pageTexts[idx]||[]);
     lines.slice(0,ROWS_PER_IMG).forEach((l,k)=>textCell(top+k, '['+l.source+' | line '+l.line+'] '+l.text, false));
     let rend=top+ROWS_PER_IMG;
     r=rend;
-    const rest=lines.slice(ROWS_PER_IMG,60);
+    const rest=lines.slice(ROWS_PER_IMG);
     if(rest.length){
       wideRow('More editable text — Page '+(idx+1)+' (continued)', true);
       rest.forEach(l=>wideRow('['+l.source+' | line '+l.line+'] '+l.text, false));
@@ -1227,7 +1229,7 @@ async function pdfToExcel(){
   // Lines with detected table columns become Col 1..N; prose stays one Text column.
   const wt=wb.addWorksheet('PDF Extract');
   let maxCols=1;
-  pageTexts.forEach(ls=>ls.forEach(l=>{ maxCols=Math.max(maxCols, Math.min(6, (l.cells||[l.text]).length)); }));
+  pageTexts.forEach(ls=>ls.forEach(l=>{ maxCols=Math.max(maxCols, (l.cells||[l.text]).length); }));
   const multi=maxCols>1;
   wt.columns=multi?[{width:10},{width:8},{width:10},...Array.from({length:maxCols},()=>({width:40}))]:[{width:10},{width:8},{width:10},{width:120}];
   const tableRows=[];
@@ -1274,7 +1276,7 @@ async function htmlToPdf(){
   const {jsPDF}=window.jspdf;
   const pdf=new jsPDF({unit:'mm', format:'a4'});
   const tmp=document.createElement('div'); tmp.innerHTML=text;
-  const plain=tmp.innerText.slice(0,30000);
+  const plain=tmp.innerText;
   if(!plain.trim()) throw new Error('HTML kosong');
   const lines=pdf.splitTextToSize(plain,170);
   let y=15; pdf.setFontSize(10);
@@ -1334,7 +1336,7 @@ async function pdfToPpt(){
       const w=pg.image.w/150*s, h=pg.image.h/150*s;
       slide.addImage({data:'image/jpeg;base64,'+pg.image.b64, x:(SW-w)/2, y:(SH-h)/2, w, h});
     }
-    const notes=[...pg.lines.slice(0,120).map(l=>(l.source==='OCR'?'[OCR] ':'')+l.text)];
+    const notes=[...pg.lines.map(l=>(l.source==='OCR'?'[OCR] ':'')+l.text)];
     slide.addNotes(notes.length?notes.join('\n'):'(No editable text on this page — pure artwork.)');
     log(`Slide ${idx+1} done`);
   });
