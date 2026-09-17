@@ -9,18 +9,22 @@ async function main(){
   w.eval(script+'\nwindow.qaFiles=v=>{files=v};');
   assert.ok(w.document.querySelector('#toolList').children.length);
   if(tool==='jpg-to-pdf'){
-   let written=[];w.jspdf={jsPDF:class{
-    setFontSize(){} setFont(){} addPage(){} text(t){written.push(t)}
-    splitTextToSize(t){return t.match(/.{1,100}/gs)||[]}
-    output(){return new Blob(['test'],{type:'application/pdf'})}
-   }};
-   w.downloadBlob=()=>{};
-   const file={name:'test.docx',arrayBuffer:async()=>new ArrayBuffer(0)};w.qaFiles([file]);
-   const long='A'.repeat(51000)+'END_DOCX';w.mammoth={extractRawText:async()=>({value:long})};
-   await w.wordToPdf();assert.ok(written.join('').endsWith('END_DOCX'));
-   written=[];const rows=Array.from({length:75},(_,i)=>['ROW'+i+' '+('X'.repeat(180))+'END'+i]);
-   w.XLSX={read:()=>({SheetNames:['Sheet'],Sheets:{Sheet:{}}}),utils:{sheet_to_json:()=>rows}};
-   await w.excelToPdf();assert.ok(written.join('').includes(rows[74][0]));
+   w.Blob=Blob;
+   let posted, result;
+   w.downloadBlob=(blob,name)=>{result={blob,name}};
+   w.fetch=async(url,options)=>{
+    if(url==='/api/capabilities')return {ok:true,json:async()=>({office:true,token:'test'})};
+    posted={url,options};return {ok:true,blob:async()=>new Blob(['%PDF-1.4 test'])};
+   };
+   for(const [name,fn,route] of [['test.docx','wordToPdf','word'],['test.xls','excelToPdf','excel'],['test.pptx','pptToPdf','pptx']]){
+    const file=new Blob(['X'.repeat(51000)+'END']);file.name=name;w.qaFiles([file]);
+    await w[fn]();assert.equal(posted.url,'/api/convert/'+route+'-to-pdf');
+    assert.equal(posted.options.body,file);assert.equal(posted.options.headers['X-Build-Token'],'test');
+    assert.equal(result.name,'test.pdf');assert.equal(result.blob.type,'application/pdf');
+   }
+   w.fetch=async()=>({ok:true,json:async()=>({office:false})});
+   await assert.rejects(()=>w.wordToPdf(),/Supported files/);
+   w.qaFiles([{name:'test.docx'}]);await assert.rejects(()=>w.wordToPdf(),/LibreOffice/);
    // More than six table columns must survive extraction.
    const items=Array.from({length:9},(_,i)=>({str:'COL'+i,width:20,transform:[1,0,0,1,i*100,0]}));
    assert.equal(w.cellsOf(items).length,9);
@@ -33,6 +37,6 @@ async function main(){
   }
   w.close();
  }
- console.log('PASS unknown-tool startup, malformed slug, DOCX >50k, Excel >60 rows and >150 chars, >6 columns');
+ console.log('PASS unknown-tool startup, malformed slug, Office routes and full upload, missing LibreOffice, >6 columns, >300 extraction lines');
 }
 main().catch(e=>{console.error(e);process.exit(1)});

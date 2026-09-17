@@ -40,7 +40,9 @@ Implementasi mengikuti [panduan File System Access](https://developer.chrome.com
 - Flutter SDK di PATH, dengan dependensi dikunci melalui `native/reader/pubspec.lock`.
 - APK: Android SDK, JDK, dan lisensi Android yang sudah diterima.
 - Windows: Windows, Visual Studio dengan toolchain C++, serta SDK Windows.
-- PPTX/PPT to PDF: LibreOffice terpasang (`soffice` di PATH) + jalan via `python server.py`. Tanpa LibreOffice, tool ini menolak dengan pesan install — tidak ada lagi PDF placeholder.- Build pertama dapat memakai internet untuk mengambil dependensi. Buku yang sudah dikemas tidak membutuhkan internet.
+- Word (DOCX/DOC), Excel (XLSX/XLS/CSV), dan PowerPoint (PPTX/PPT) ke PDF memakai LibreOffice lokal. Jalankan `python server.py`; tanpa LibreOffice, konversi menampilkan pesan yang jelas dan tidak menghasilkan PDF pengganti.
+- Layout, tabel, gambar, dan pengaturan cetak diproses oleh LibreOffice. Font yang tidak tersedia atau fitur khusus Microsoft Office dapat tampil berbeda. Excel mengikuti print area, orientasi, dan page breaks dokumen; CSV memakai pengaturan cetak bawaan karena tidak menyimpan layout.
+- Build pertama dapat memakai internet untuk mengambil dependensi. Buku yang sudah dikemas tidak membutuhkan internet.
 - Windows pembaca memerlukan Microsoft Edge WebView2 Runtime. Runtime ini tidak disertakan di ZIP.
 - APK saat ini memakai signing debug bawaan template Flutter untuk pengujian lokal. Belum siap sebagai rilis Play Store. EXE belum ditandatangani dengan sertifikat penerbit.
 - Judul buku menentukan application ID Android: buku dengan judul sama memperbarui aplikasi yang sama, judul berbeda mendapat ID berbeda.
@@ -65,7 +67,19 @@ Untuk memeriksa wrapper native: jalankan `flutter pub get` lalu `flutter analyze
 - Tidak ada batas ukuran/halaman buatan aplikasi, tetapi seluruh PDF masih dirender sebelum buku tampil; dokumen besar memakai waktu dan memori lebih banyak.
 - Isi PDF menjadi gambar; animasi statistik adalah elemen tambahan di atas gambar tersebut.
 - Grafik/proses interaktif masih tersedia sebagai demo, belum editor lengkap untuk PDF pengguna.
-- PPT masih placeholder dan tidak melakukan konversi dokumen asli. Jangan menganggap semua kartu katalog sudah diimplementasikan.
+- PDF ke Word/PPT sudah menghasilkan DOCX/PPTX; halaman berupa gambar dengan teks editabel tambahan (PPT di speaker notes). Kartu katalog yang belum dibuat tetap coming soon.
 - Converter lama masih sebagian memakai CDN. Offline yang dimaksud pada fitur ekspor adalah paket buku hasilnya.
 
 Detail status dan koordinasi: [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md), [TEAM_WORK.md](TEAM_WORK.md).
+
+### QA konversi Office asli
+
+Suite API: `python -m unittest discover -s tests -p test_*.py`.
+Untuk tes integrasi LibreOffice asli, pasang dependensi QA saja:
+
+```powershell
+python -m pip install --target .build/qa-python python-docx openpyxl pymupdf pillow
+python tests/qa-office.py
+```
+
+Fixture dan hasil ada di `.build/qa-office/` (diabaikan Git). Tes memeriksa gambar dan page break Word, 75 baris Excel, dua sheet, hasil rumus, orientasi cetak, CSV, dan membuat PNG untuk pemeriksaan visual.

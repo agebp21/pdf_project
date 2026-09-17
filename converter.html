@@ -120,9 +120,9 @@ function copyServe(){ navigator.clipboard.writeText('npx serve .'); const b=docu
 const TOOLS = [
   {id:'jpg-to-pdf', title:'Image to PDF', desc:'Any image to PDF in seconds: JPG, PNG, WebP, GIF, BMP, SVG, AVIF, TIFF, HEIC. Set orientation & margins.', cat:'Convert PDF', icon:'IMG', color:'#b45309', bg:'#fef9c3', accept:'.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.avif,.ico,.tif,.tiff,.heic,.heif', multiple:true, hint:'All image types — TIFF decoded locally, HEIC converted in-browser, animated/multi-page uses first frame'},
   {id:'pdf-to-jpg', title:'PDF to JPG', desc:'Convert tiap halaman PDF jadi JPG atau ambil semua gambar.', cat:'Convert PDF', icon:'🖼', color:'#a16207', bg:'#fef9c3', accept:'.pdf', hint:'File PDF — tiap halaman jadi 1 JPG (ZIP jika multi-halaman)'},
-  {id:'word-to-pdf', title:'Word to PDF', desc:'Turn DOC/DOCX files into easy-to-read PDFs (plain text for now).', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'DOCX/DOC file (text extracted, formatting not kept yet)'},
+  {id:'word-to-pdf', title:'Word to PDF', desc:'Convert DOC/DOCX to PDF with document layout via local LibreOffice.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'DOCX/DOC file - requires the project server and LibreOffice'},
   {id:'pdf-to-word', title:'PDF to Word', desc:'Real .docx with page images plus editable text (OCR fallback).', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'PDF file — images kept, text editable (needs internet)'},
-  {id:'excel-to-pdf', title:'Excel to PDF', desc:'Turn EXCEL spreadsheets into easy-to-read PDFs (all rows).', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file'},
+  {id:'excel-to-pdf', title:'Excel to PDF', desc:'Convert spreadsheets using their layout and print settings via local LibreOffice.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file - requires the project server and LibreOffice'},
   {id:'pdf-to-excel', title:'PDF to Excel', desc:'Every PDF page kept as an image in Excel, plus searchable text and OCR.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pages embedded as images, text/OCR on extra sheets (needs internet)'},
   {id:'html-to-pdf', title:'HTML to PDF', desc:'Convert halaman HTML jadi PDF dengan 1 klik.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'File .html'},
   {id:'merge-pdf', title:'Merge PDF', desc:'Gabungkan PDF sesuai urutan yang kamu mau.', cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, hint:'Pilih 2+ file PDF untuk digabungkan'},
@@ -882,27 +882,7 @@ async function organizePdf(){
   $('#resultPreview').innerHTML=`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} hal tersimpan<br><span class="text-xs text-gray-500">Urutan: ${organizeOrder.map(i=>i+1).join(' → ')}</span></p>`+$('#resultPreview').innerHTML;
 }
 async function wordToPdf(){
-  if(!window.mammoth) throw new Error('mammoth not loaded');
-  const file=files[0];
-  $('#progress').textContent='Reading DOCX...'; log('WordToPDF '+file.name);
-  const buf=await file.arrayBuffer();
-  const res=await mammoth.extractRawText({arrayBuffer:buf});
-  const text=res.value;
-  log('Extracted '+text.length+' chars');
-  if(!text.trim()) throw new Error('DOCX is empty or unreadable');
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF({unit:'mm', format:'a4'});
-  const lines=pdf.splitTextToSize(text, 170);
-  let y=20; pdf.setFontSize(11);
-  for(let line of lines){
-    if(y>280){ pdf.addPage(); y=20; }
-    pdf.text(line, 15, y); y+=6;
-  }
-  const blob=pdf.output('blob');
-  downloadBlob(blob, file.name.replace(/\.(docx?)$/i,'')+'.pdf');
-  const excerpt=document.createElement('pre');
-  excerpt.className='whitespace-pre-wrap text-[11px] leading-relaxed bg-white p-3 rounded border max-h-60 overflow-auto';
-  excerpt.textContent=text.slice(0,3000); $('#resultPreview').prepend(excerpt);
+  return convertOfficeToPdf('word-to-pdf', ['docx','doc']);
 }
 async function pdfToWord(){
   if(!window.pdfjsLib) throw new Error('pdf.js not loaded');
@@ -934,33 +914,7 @@ async function pdfToWord(){
   downloadBlob(blob, files[0].name.replace(/\.pdf$/i,'')+'.docx');
 }
 async function excelToPdf(){
-  if(!window.XLSX) throw new Error('SheetJS not loaded');
-  const buf=await files[0].arrayBuffer();
-  const wb=XLSX.read(buf,{type:'array'});
-  log('Excel sheets='+wb.SheetNames.join(','));
-  const {jsPDF}=window.jspdf;
-  const pdf=new jsPDF({unit:'mm', format:'a4'});
-  let y=15;
-  pdf.setFontSize(14); pdf.text(`Workbook: ${files[0].name}`,15,y); y+=8;
-  for(let name of wb.SheetNames){
-    if(y>270){ pdf.addPage(); y=15; }
-    pdf.setFontSize(12); pdf.setFont(undefined,'bold'); pdf.text(`Sheet: ${name}`,15,y); y+=7;
-    pdf.setFont(undefined,'normal'); pdf.setFontSize(8);
-    const sheet=wb.Sheets[name];
-    const rows=XLSX.utils.sheet_to_json(sheet,{header:1, blankrows:false});
-    log(`Sheet ${name}: ${rows.length} rows`);
-    for(let r of rows){
-      const line=(r||[]).join(' | ');
-      if(!line.trim()) continue;
-      for(const part of pdf.splitTextToSize(line,180)){
-        if(y>280){ pdf.addPage(); y=15; }
-        pdf.text(part,15,y); y+=5;
-      }
-    }
-    y+=6;
-  }
-  const blob=pdf.output('blob');
-  downloadBlob(blob, files[0].name.replace(/\.(xlsx|xls|csv)$/i,'')+'.pdf');
+  return convertOfficeToPdf('excel-to-pdf', ['xlsx','xls','csv']);
 }
 // Tesseract.js v5.1.1 (Apache-2.0, https://github.com/naptha/tesseract.js)
 // Loaded lazily from jsDelivr ONLY when a PDF page has no embedded text,
@@ -1288,32 +1242,39 @@ async function serverCapabilities(){
   if(!res.ok) throw new Error('no-server');
   return res.json();
 }
-async function pptToPdf(){
+async function convertOfficeToPdf(tool, extensions){
   const file=files[0];
-  const lower=file.name.toLowerCase();
-  const ext=lower.endsWith('.pptx')?'.pptx':(lower.endsWith('.ppt')?'.ppt':null);
-  if(!ext) throw new Error('Only .pptx/.ppt files are supported.');
-  let caps=null;
-  try{ caps=await serverCapabilities(); }
-  catch(e){ caps=null; }
-  if(!caps) throw new Error('Real PPTX conversion needs the project server.\nRun: python server.py — then open http://127.0.0.1:8080/converter.html?tool=ppt-to-pdf');
-  if(!caps.office) throw new Error('LibreOffice was not found on this computer.\nInstall it from https://libreoffice.org/download, restart the server, then convert again. Your file was NOT processed.');
-  const mime=ext==='.pptx'?'application/vnd.openxmlformats-officedocument.presentationml.presentation':'application/vnd.ms-powerpoint';
-  $('#progress').textContent='Uploading to local LibreOffice...';
-  const res=await fetch('/api/convert/pptx-to-pdf', {method:'POST',
-    headers:{'Content-Type':mime, 'X-Build-Token':caps.token, 'X-Filename':encodeURIComponent(file.name)}, body:file});
-  if(!res.ok){
-    let msg='Conversion failed.';
-    try{ msg=(await res.json()).error||msg; }catch(e){}
-    throw new Error(msg);
+  const ext=file.name.split('.').pop().toLowerCase();
+  if(!extensions.includes(ext)) throw new Error('Supported files: '+extensions.map(x=>'.'+x).join(', '));
+  let caps;
+  try { caps=await serverCapabilities(); } catch(e) {}
+  if(!caps) throw new Error('This conversion needs the project server. Run: python server.py, then reopen this page on localhost.');
+  if(!caps.office) throw new Error('LibreOffice was not found. Install LibreOffice and restart the project server.');
+  const types={
+    docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',doc:'application/msword',
+    xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',xls:'application/vnd.ms-excel',csv:'text/csv',
+    pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',ppt:'application/vnd.ms-powerpoint'
+  };
+  const endpoint=tool==='ppt-to-pdf'?'pptx-to-pdf':tool;
+  $('#progress').textContent='Converting with local LibreOffice...';
+  const response=await fetch('/api/convert/'+endpoint,{method:'POST',headers:{
+    'Content-Type':types[ext],'X-Build-Token':caps.token,'X-Filename':encodeURIComponent(file.name)
+  },body:file});
+  if(!response.ok){
+    let message='Conversion failed. Restart the project server if it is running an older version.';
+    try { message=(await response.json()).error||message; } catch(e) {}
+    throw new Error(message);
   }
-  const blob=await res.blob();
-  $('#progress').textContent='Done.';
-  const prev=document.createElement('div');
-  prev.className='text-[11px] leading-relaxed bg-white p-3 rounded border';
-  prev.append('Converted ', Object.assign(document.createElement('b'), {textContent:file.name}), ' to PDF with LibreOffice. Layout, images, and fonts come from the original slides.');
-  $('#resultPreview').prepend(prev);
-  downloadBlob(new Blob([blob],{type:'application/pdf'}), file.name.replace(/\.(pptx?)$/i,'')+'.pdf');
+  const blob=await response.blob();
+  if(await blob.slice(0,5).text()!=='%PDF-') throw new Error('The server did not return a valid PDF.');
+  downloadBlob(new Blob([blob],{type:'application/pdf'}),file.name.replace(/\.[^.]+$/,'')+'.pdf');
+  const note=document.createElement('p');
+  note.className='text-[11px] leading-relaxed bg-white p-3 rounded border';
+  note.textContent='Converted with LibreOffice using the document layout and print settings. Font substitutions or Office compatibility may affect the result.';
+  $('#resultPreview').prepend(note);
+}
+async function pptToPdf(){
+  return convertOfficeToPdf('ppt-to-pdf', ['pptx','ppt']);
 }
 async function pdfToPpt(){
   if(!window.pdfjsLib) throw new Error('pdf.js not loaded');

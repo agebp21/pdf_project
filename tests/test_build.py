@@ -117,13 +117,14 @@ class ConvertApiTests(unittest.TestCase):
         cls.httpd.server_close()
         cls.thread.join()
 
-    def post(self, body, headers):
-        request = urllib.request.Request(self.base + '/api/convert/pptx-to-pdf', data=body, headers=headers)
+    def post(self, body, headers, route='/api/convert/pptx-to-pdf'):
+        request = urllib.request.Request(self.base + route, data=body, headers=headers)
         try:
             with urllib.request.urlopen(request) as response:
                 return response.status, response.headers, response.read()
         except urllib.error.HTTPError as error:
-            return error.code, error.headers, error.read()
+            with error:
+                return error.code, error.headers, error.read()
 
     def headers(self, **extra):
         base = {'Content-Type': self.PPTX_MIME, 'X-Build-Token': self.token,
@@ -165,6 +166,30 @@ class ConvertApiTests(unittest.TestCase):
         self.assertEqual(headers.get_content_type(), 'application/pdf')
         self.assertIn('deck.pdf', headers.get('Content-Disposition', ''))
         self.assertTrue(body.startswith(b'%PDF'))
+
+    def test_word_excel_routes(self):
+        for ext in ['.docx', '.doc', '.xlsx', '.xls', '.csv']:
+            with self.subTest(ext=ext):
+                mime = next(k for k, v in server.OFFICE_MIMES.items() if v == ext)
+                route = '/api/convert/' + ('word' if ext in {'.doc', '.docx'} else 'excel') + '-to-pdf'
+                payload = b'uploaded-whole-file'
+                def convert(source, filename):
+                    self.assertEqual(source.read_bytes(), payload)
+                    self.assertEqual(filename, 'sample' + ext)
+                    return b'%PDF-1.4 result', 'sample.pdf'
+                with mock.patch.object(server, 'office_to_pdf', side_effect=convert):
+                    status, headers, body = self.post(payload, self.headers(**{'Content-Type':mime, 'X-Filename':'sample'+ext}), route)
+                self.assertEqual(status, 200)
+                self.assertEqual(body, b'%PDF-1.4 result')
+
+    def test_cross_tool_and_mismatched_extensions_rejected(self):
+        status, _, _ = self.post(b'PKbad', self.headers(), '/api/convert/word-to-pdf')
+        self.assertEqual(status, 400)
+        status, _, _ = self.post(b'PKbad', self.headers(**{'X-Filename':'script.exe'}))
+        self.assertEqual(status, 400)
+
+    def test_long_office_names_preserve_extension(self):
+        self.assertTrue(server.safe_office_name('x' * 150 + '.docx').endswith('.docx'))
 
 
 if __name__ == '__main__':

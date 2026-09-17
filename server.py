@@ -1,5 +1,6 @@
 """Loopback-only PDF Tools server and serialized native build service."""
 import argparse
+import csv
 import hashlib
 import json
 import math
@@ -109,6 +110,16 @@ def run_command(args, cwd, log):
 OFFICE_MIMES = {
     'application/vnd.openxmlformats-officedocument.presentationml.presentation': '.pptx',
     'application/vnd.ms-powerpoint': '.ppt',
+    'application/vnd.openxmlformats-officedocument.wordprocessingml.document': '.docx',
+    'application/msword': '.doc',
+    'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet': '.xlsx',
+    'application/vnd.ms-excel': '.xls',
+    'text/csv': '.csv',
+}
+OFFICE_ROUTES = {
+    '/api/convert/pptx-to-pdf': {'.pptx', '.ppt'},
+    '/api/convert/word-to-pdf': {'.docx', '.doc'},
+    '/api/convert/excel-to-pdf': {'.xlsx', '.xls', '.csv'},
 }
 OFFICE_INSTALL_HINT = ('LibreOffice (soffice) tidak ditemukan di komputer ini. '
                        'Pasang dari https://libreoffice.org/download, lalu restart server.')
@@ -133,39 +144,60 @@ def find_soffice():
 
 
 def safe_office_name(raw, default='document.pptx'):
-    name = re.sub(r'[^A-Za-z0-9._-]', '_', unquote(raw or ''))[:100] or default
-    return name if name.lower().endswith(('.pptx', '.ppt')) else default
+    name = re.sub(r'[^A-Za-z0-9._-]', '_', unquote(raw or ''))
+    extension = Path(name).suffix.lower()
+    if extension not in OFFICE_MIMES.values():
+        return default
+    return (Path(name).stem[:90].strip('.') or 'document') + extension
 
 
 def office_to_pdf(source, filename):
-    """Convert .pptx/.ppt at source path to PDF bytes via local LibreOffice.
+    """Convert an Office document at source path via local LibreOffice.
 
     Returns (pdf_bytes, download_name). Raises ValueError for bad input and
     RuntimeError when LibreOffice is missing or conversion fails.
     """
     name = safe_office_name(filename)
-    ext = '.pptx' if name.lower().endswith('.pptx') else '.ppt'
+    ext = Path(name).suffix.lower()
     with source.open('rb') as stream:
         magic = stream.read(4)
-    if ext == '.pptx' and magic[:2] != b'PK':
-        raise ValueError('File bukan PPTX valid (arsip ZIP tidak terbaca).')
-    if ext == '.ppt' and magic != b'\xd0\xcf\x11\xe0':
-        raise ValueError('File bukan PPT valid.')
+    if ext in {'.pptx', '.docx', '.xlsx'} and magic[:2] != b'PK':
+        raise ValueError('File Office tidak valid (arsip ZIP tidak terbaca).')
+    if ext in {'.ppt', '.doc', '.xls'} and magic != b'\xd0\xcf\x11\xe0':
+        raise ValueError('File Office lama tidak valid.')
     soffice = find_soffice()
     if not soffice:
         raise RuntimeError(OFFICE_INSTALL_HINT)
-    with tempfile.TemporaryDirectory(prefix='ppt-convert-') as temporary:
+    with tempfile.TemporaryDirectory(prefix='office-convert-') as temporary:
         output = Path(temporary) / (Path(name).stem + '.pdf')
+        # Each conversion has its own profile, independent of open desktop sessions.
+        profile = (Path(temporary) / 'profile').as_uri()
+        command = [soffice, '-env:UserInstallation=' + profile, '--headless']
+        if ext == '.csv':
+            # Sniff a sample only; LibreOffice imports the entire file.
+            with source.open('r', encoding='utf-8-sig', errors='replace') as stream:
+                sample = stream.read(65536)
+            try:
+                delimiter = csv.Sniffer().sniff(sample, delimiters=',;\t|').delimiter
+            except csv.Error:
+                delimiter = ','
+            # https://help.libreoffice.org/latest/en-GB/text/shared/guide/csv_params.html
+            # UTF-8; do not evaluate CSV fields as formulas.
+            command += [f'--infilter=Text - txt - csv (StarCalc):{ord(delimiter)},34,76,1,,0,false,true,false,false,false,0,false']
+        command += ['--convert-to', 'pdf', '--outdir', temporary, str(source)]
         try:
             completed = subprocess.run(
-                [soffice, '--headless', '--convert-to', 'pdf', '--outdir', temporary, str(source)],
+                command,
                 capture_output=True, timeout=240,
                 creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
         except subprocess.TimeoutExpired:
             raise RuntimeError('Konversi kehabisan waktu (file terlalu besar/rumit?).')
         if completed.returncode or not output.is_file():
             raise RuntimeError('LibreOffice gagal mengonversi file ini.')
-        return output.read_bytes(), output.name
+        result = output.read_bytes()
+        if not result.startswith(b'%PDF-'):
+            raise RuntimeError('LibreOffice tidak menghasilkan PDF yang valid.')
+        return result, output.name
 
 
 def build_job(job_id, target):
@@ -284,10 +316,10 @@ class Handler(SimpleHTTPRequestHandler):
         super().do_GET()
 
     def convert_office(self):
-        """Stream an uploaded .pptx/.ppt to disk and convert via LibreOffice."""
+        """Stream an Office upload to disk and convert via LibreOffice."""
         mime = self.headers.get_content_type()
-        if mime not in OFFICE_MIMES:
-            self.send_json(400, {'error': 'Tipe file tidak didukung (butuh .pptx/.ppt).'})
+        if mime not in OFFICE_MIMES or OFFICE_MIMES[mime] not in OFFICE_ROUTES[self.path]:
+            self.send_json(400, {'error': 'Tipe file tidak sesuai dengan alat konversi.'})
             return
         try:
             size = int(self.headers.get('Content-Length', '0'))
@@ -296,11 +328,15 @@ class Handler(SimpleHTTPRequestHandler):
         except ValueError:
             self.send_json(400, {'error': 'Ukuran upload tidak valid.'})
             return
+        raw_name = unquote(self.headers.get('X-Filename', ''))
+        if Path(raw_name).suffix.lower() != OFFICE_MIMES[mime]:
+            self.send_json(400, {'error': 'Ekstensi file tidak cocok dengan tipe konten.'})
+            return
         name = safe_office_name(self.headers.get('X-Filename', ''))
         if not name.lower().endswith(OFFICE_MIMES[mime]):
             self.send_json(400, {'error': 'Ekstensi file tidak cocok dengan tipe konten.'})
             return
-        tmpdir = tempfile.mkdtemp(prefix='ppt-upload-')
+        tmpdir = tempfile.mkdtemp(prefix='office-upload-')
         try:
             source = Path(tmpdir) / name
             self.connection.settimeout(300)
@@ -339,7 +375,7 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.trusted() or not secrets.compare_digest(self.headers.get('X-Build-Token', ''), TOKEN):
             self.send_json(403, {'error': 'Sesi build tidak valid. Refresh halaman.'})
             return
-        if re.fullmatch(r'/api/convert/pptx-to-pdf', self.path or ''):
+        if self.path in OFFICE_ROUTES:
             self.convert_office()
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
