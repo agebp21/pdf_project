@@ -31,10 +31,7 @@ global.fetch = async path => {
   const pdf = new Blob(['%PDF-fixture'],{type:'application/pdf'});
   const saved = await api.saveProject(model,pdf);
   const restored = await api.readProject(saved);
-  // validate() now always returns a 'pages' field; compare the fields present in the original model
-  assert.equal(restored.data.title, model.title); assert.equal(restored.data.pageCount, model.pageCount);
-  assert.equal(restored.data.ratio, model.ratio); assert.deepEqual(restored.data.overlays, model.overlays);
-  assert.equal(await restored.pdf.text(),await pdf.text());
+  assert.deepEqual(restored.data,model);assert.equal(await restored.pdf.text(),await pdf.text());
   const bundle = await api.packageBook(model,['test:1','test:2','test:3']);
   const zip = await JSZip.loadAsync(await bundle.arrayBuffer());
   for(const file of ['index.html','viewer.js','viewer.css','book-data.js','book.json','page-flip.browser.js','pages/1.jpg','pages/3.jpg','PAGEFLIP-LICENSE.txt'])assert.ok(zip.file(file),file);
