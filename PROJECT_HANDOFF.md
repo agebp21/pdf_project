@@ -261,6 +261,11 @@ User: PDF must become Word, Excel, PPT — all real. Implemented in `converter.h
 - Safe DOM previews for `.docx`/`.pptx`; generic preview branch de-XSSed (filenames via textContent).
 - Verified: Node smoke OK for both libs (valid PK outputs), inline `node --check` OK, HTTP 200, 13 Python tests OK. NOT verified: real-file browser runs (CDN + render time). Pushed per auto-push rule.
 
+### 17 September 2026 — dedupe decorative repeats (core)
+
+User's PPT notes showed `TV PROGRAM x3`, `GRAPHIC PACKAGE x3`, `TELKOMSEL AWARDS 2021 x3`: design PDFs draw display type multiple times (shadows/outlines), and raw extraction repeats it. Added `dedupeLine()` in the shared core (consecutive-word + whole-line exact-repeat collapse) — fixes Word, Excel, and PPT notes at once.
+- Verified: 7-case mock OK (repeats collapse, prose untouched), inline `node --check` OK, HTTP 200. NOT verified: real-file browser reconvert (user to retest). Pushed per auto-push rule.
+
 ### 17 September 2026 — full catalog audit (18 cards don't exist)
 
 Scripted check (`audit-ids.py`): index catalog has 35 cards, converter implements 14 tools. **18 cards have no converter entry and no direct page — clicking them silently opens JPG to PDF** (`active='jpg-to-pdf'` fallback, no notice): workflow, edit-pdf, sign-pdf, watermark, unlock-pdf, protect-pdf, pdf-to-pdfa, repair-pdf, page-numbers, scan-to-pdf, ocr-pdf, compare-pdf, redact-pdf, crop-pdf, pdf-forms, ai-summarizer, translate-pdf, pdf-to-md. Entire PDF Security shelf is dead.

@@ -173,6 +173,10 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - Shared pdfContentPages core; Word via docx 9.7.1 (MIT); PPT via PptxGenJS 4.0.1 (MIT); both lazy CDN. Placeholders gone. Node smoke OK both, syntax + HTTP + 13 Python OK. No browser E2E. Committed + pushed.
 
+### 17 September 2026 — dedupe repeats (pushed)
+
+- Decorative display type drawn 3x → notes showed triplicates. dedupeLine in shared core fixes Word/Excel/PPT at once. 7-case mock OK, syntax + HTTP OK. User to reconvert. Committed + pushed.
+
 ### 17 September 2026 — catalog audit (pushed, no code)
 
 - 35 cards vs 14 tools: 18 cards silently fall back to JPG-to-PDF (incl. all 4 security cards). 14 real ones graded strong/half/weak in handoff. Next: coming-soon guard, then build per shelf. Committed + pushed.

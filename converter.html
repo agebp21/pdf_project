@@ -1044,6 +1044,25 @@ function b64ToU8(b64){
   for(let k=0;k<bin.length;k++) out[k]=bin.charCodeAt(k);
   return out;
 }
+// Design PDFs draw display type 2-3x (shadows, outlines, gradients), so raw
+// extraction repeats it: "TV PROGRAM TV PROGRAM TV PROGRAM". Collapse those.
+function dedupeLine(txt){
+  const words=txt.split(' ');
+  const single=[];
+  for(const w of words){ if(!single.length || w!==single[single.length-1]) single.push(w); }
+  txt=single.join(' ');
+  const toks=txt.split(' ');
+  for(let unit=1; unit<=Math.floor(toks.length/2); unit++){
+    if(toks.length%unit!==0) continue;
+    const base=toks.slice(0,unit).join(' ');
+    let ok=true;
+    for(let k=unit;k<toks.length;k+=unit){
+      if(toks.slice(k,k+unit).join(' ')!==base){ ok=false; break; }
+    }
+    if(ok) return base;
+  }
+  return txt;
+}
 // Shared core: text lines (embedded + OCR fallback) and page images for one PDF.
 // pages[i] = {image:{w,h,b64}|null, lines:[{line,source,text}]}.
 async function pdfContentPages(pdf, progress){
@@ -1069,7 +1088,8 @@ async function pdfContentPages(pdf, progress){
       // Design PDFs often store spaced display type as single-char items
       // ("P O R T F O L I O") — rejoin those so output doesn't keep the gaps.
       const allSingle=items.length>1 && items.every(it=>it.str.length===1);
-      const txt=(allSingle?items.map(it=>it.str).join(''):items.map(it=>it.str).join(' ')).replace(/\s+/g,' ').trim().slice(0,2000);
+      const raw=(allSingle?items.map(it=>it.str).join(''):items.map(it=>it.str).join(' ')).replace(/\s+/g,' ').trim().slice(0,2000);
+      const txt=dedupeLine(raw);
       if(!txt) continue;
       totalChars+=txt.length; lineNo++;
       if(lineNo>300) break;
