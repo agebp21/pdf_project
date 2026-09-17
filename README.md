@@ -70,6 +70,8 @@ Untuk memeriksa wrapper native: jalankan `flutter pub get` lalu `flutter analyze
 - PDF ke Word/PPT sudah menghasilkan DOCX/PPTX; halaman berupa gambar dengan teks editabel tambahan (PPT di speaker notes). Kartu katalog yang belum dibuat tetap coming soon.
 - Converter lama masih sebagian memakai CDN. Offline yang dimaksud pada fitur ekspor adalah paket buku hasilnya.
 
+Checklist status fitur dan bukti tes: [FEATURE_CHECKLIST.md](FEATURE_CHECKLIST.md).
+
 Detail status dan koordinasi: [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md), [TEAM_WORK.md](TEAM_WORK.md).
 
 ### QA konversi Office asli
@@ -83,3 +85,9 @@ python tests/qa-office.py
 ```
 
 Fixture dan hasil ada di `.build/qa-office/` (diabaikan Git). Tes memeriksa gambar dan page break Word, 75 baris Excel, dua sheet, hasil rumus, orientasi cetak, CSV, dan membuat PNG untuk pemeriksaan visual.
+
+### Watermark, Page Numbers, Crop
+
+Open the matching card in the converter. All three accept a PDF and a page range (`all` or `1-3,5`); results can be downloaded or sent to Flipbook. Watermark supports text or PNG/JPEG, position/size/opacity. Numbering supports a starting number and position. Crop accepts four margins in mm, relative to the displayed page, including rotated pages. Cropping hides content outside CropBox; it is not permanent redaction. No page/file quota is imposed; memory and format constraints remain.
+
+Tests: `node tests/pdf-edit.test.cjs` and `node tests/pdf-edit-ui.test.cjs` (the QA-only dependencies in `.build/qa-runtime` are required, as described in QA_REPORT.md).

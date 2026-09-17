@@ -24,7 +24,7 @@ async function main(){
  const input=w.document.querySelector('#pdf-file');
  const source=fixture(8,960,540);source.name='QA landscape.pdf';
  Object.defineProperty(input,'files',{configurable:true,value:[source]});input.dispatchEvent(new w.Event('change'));
- await until(test,()=>w.document.querySelector('#load-status').textContent.includes('8 halaman siap'),'load PDF');
+ await until(test,()=>/8 (halaman siap|pages ready)/.test(w.document.querySelector('#load-status').textContent),'load PDF');
  test.pump(100);
  assert.equal(w.document.querySelector('#reader-error').hidden,true,w.document.querySelector('#reader-error').textContent);
  assert.equal(w.document.querySelector('#overlay-form').hidden,true);assert.equal(w.document.querySelector('.playback').hidden,true);

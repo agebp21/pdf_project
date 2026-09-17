@@ -5,6 +5,7 @@ async function main(){
  for(const tool of ['watermark','edit-pdf','---','jpg-to-pdf']){
   const dom=new JSDOM(html,{url:'http://localhost:8080/converter.html?tool='+tool,runScripts:'outside-only'}),w=dom.window;
   w.console.log=()=>{};w.scrollTo=()=>{};
+  w.eval(fs.readFileSync('assets/pdf-edit.js','utf8'));
   const script=[...w.document.scripts].find(s=>s.textContent.includes('const TOOLS')).textContent;
   w.eval(script+'\nwindow.qaFiles=v=>{files=v};');
   assert.ok(w.document.querySelector('#toolList').children.length);

@@ -1,5 +1,7 @@
 # Pemeriksaan ekspor — 17 September 2026
 
+> Laporan ini adalah snapshot QA awal. Beberapa batasan di bawah sudah diperbaiki oleh update berikutnya. Untuk status fitur terkini, gunakan [FEATURE_CHECKLIST.md](FEATURE_CHECKLIST.md), termasuk Word/Excel via LibreOffice dan PDF ke DOCX/PPTX yang kini sudah diimplementasikan.
+
 Hasil: pipeline flipbook dan kedua build native lolos pemeriksaan kode/paket di bawah. Tampilan produk, HTML, CSS, dan engine tidak diubah dalam pekerjaan QA ini. Ini belum merupakan persetujuan rilis produk: UI browser dan aplikasi pada perangkat belum diuji langsung karena koneksi alat browser/desktop tidak tersedia.
 
 ## Lolos

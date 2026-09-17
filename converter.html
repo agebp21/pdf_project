@@ -5,6 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>Converter — PDF Tools</title>
 <script src="assets/flipbook-transfer.js"></script>
+<script src="assets/pdf-edit.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -118,6 +119,9 @@
 <script>
 function copyServe(){ navigator.clipboard.writeText('npx serve .'); const b=document.getElementById('serveBtn'); b.textContent='✅ Copied!'; setTimeout(()=>b.textContent='📋 Copy: npx serve .',1500); }
 const TOOLS = [
+  {id:'watermark', title:'Watermark', desc:'Add a text or image watermark to selected pages.', cat:'Edit PDF', icon:'WM', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - text or PNG/JPEG watermark'},
+  {id:'page-numbers', title:'Page numbers', desc:'Number all pages or a selected range.', cat:'Edit PDF', icon:'1 2', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - choose position and starting number'},
+  {id:'crop-pdf', title:'Crop PDF', desc:'Trim visible page margins while preserving PDF content.', cat:'Edit PDF', icon:'Crop', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - margins in millimeters'},
   {id:'jpg-to-pdf', title:'Image to PDF', desc:'Any image to PDF in seconds: JPG, PNG, WebP, GIF, BMP, SVG, AVIF, TIFF, HEIC. Set orientation & margins.', cat:'Convert PDF', icon:'IMG', color:'#b45309', bg:'#fef9c3', accept:'.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.avif,.ico,.tif,.tiff,.heic,.heif', multiple:true, hint:'All image types — TIFF decoded locally, HEIC converted in-browser, animated/multi-page uses first frame'},
   {id:'pdf-to-jpg', title:'PDF to JPG', desc:'Convert tiap halaman PDF jadi JPG atau ambil semua gambar.', cat:'Convert PDF', icon:'🖼', color:'#a16207', bg:'#fef9c3', accept:'.pdf', hint:'File PDF — tiap halaman jadi 1 JPG (ZIP jika multi-halaman)'},
   {id:'word-to-pdf', title:'Word to PDF', desc:'Convert DOC/DOCX to PDF with document layout via local LibreOffice.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'DOCX/DOC file - requires the project server and LibreOffice'},
@@ -254,6 +258,7 @@ function renderHeader(){
       <p class="text-[11px] text-gray-500 text-center mt-2">Drag cards to reorder • Click checkboxes to select</p>
     </div>`;
   }
+  if(['watermark','page-numbers','crop-pdf'].includes(t.id))html=PDFEdit.controls(t.id);
   $('#options').innerHTML=html;
   if(comingSoonName){
     const banner=document.createElement('div');
@@ -281,7 +286,7 @@ let organizeOrder = []; // array of page indices in current order
 let organizeSelected = new Set();
 let organizeRotations = {}; // idx -> degrees
 function setTool(id){
-  active=id;
+  active=id; comingSoonName=null;
   history.replaceState(null,'',`?tool=${id}`);
   files=[]; organizeOrder=[]; organizeSelected.clear(); organizeRotations={};
   updateFileUI(); $('#result').classList.add('hidden'); $('#error').classList.add('hidden'); $('#progress').classList.add('hidden');
@@ -389,7 +394,7 @@ window.orgDrag=(e)=>{ dragPos=parseInt(e.currentTarget.dataset.pos); e.dataTrans
 window.orgOver=(e)=>{ e.preventDefault(); }
 window.orgDrop=(e)=>{ e.preventDefault(); const to=parseInt(e.currentTarget.dataset.pos); if(dragPos===null||dragPos===to) return; const [m]=organizeOrder.splice(dragPos,1); organizeOrder.splice(to,0,m); dragPos=null; renderOrganizeGrid(); }
 
-function updateFileUI(){
+function updateFileUI({preserveError=false}={}){
   if(files.length===0){ $('#fileList').classList.add('hidden'); splitPageCount=0; updateSplitBtn(); return; }
   $('#fileList').classList.remove('hidden');
   $('#fileCount').textContent=files.length;
@@ -411,7 +416,7 @@ function updateFileUI(){
   else if(t.id==='organize-pdf'){ buildOrganizePreview(); $('#btnText').textContent=`Simpan Organize (${organizeOrder.length||'?'} hal) →`; }
   else $('#btnText').textContent = `Convert now →`;
   $('#convertBtn').disabled = files.length===0;
-  $('#error').classList.add('hidden');
+  if(!preserveError)$('#error').classList.add('hidden');
 }
 window.removeFile=(i)=>{files.splice(i,1); updateFileUI();}
 window.clearFiles=()=>{files=[]; updateFileUI(); $('#fileInput').value=''; log('Cleared');}
@@ -463,7 +468,7 @@ $('#testBtn').addEventListener('click', async (e)=>{
     const pdf2=new jsPDF(); pdf2.text('DUMMY PDF 2 - halaman 1',20,20); pdf2.text('Ini file kedua untuk test merge',20,30);
     const b2=pdf2.output('blob'); const f2=new File([b2],'dummy2.pdf',{type:'application/pdf'});
     files=[f1,f2]; updateFileUI(); log('Dummy merge: 2 PDFs created '+f1.size+'+'+f2.size);
-  }else if(active==='compress-pdf' || active==='rotate-pdf' || active==='organize-pdf' || active.includes('pdf') || active==='split-pdf' || active==='pdf-to-word' || active==='pdf-to-excel' || active==='pdf-to-jpg'){
+  }else if(active==='watermark' || active==='page-numbers' || active==='compress-pdf' || active==='rotate-pdf' || active==='organize-pdf' || active.includes('pdf') || active==='split-pdf' || active==='pdf-to-word' || active==='pdf-to-excel' || active==='pdf-to-jpg'){
     const {jsPDF}=window.jspdf; const pdf=new jsPDF(); pdf.text('Hello PDF Test - halaman 1',20,20); pdf.addPage(); pdf.text('Halaman 2',20,20); pdf.addPage(); pdf.text('Halaman 3',20,20);
     const blob=pdf.output('blob'); const f=new File([blob],'test.pdf',{type:'application/pdf'});
     files=[f]; updateFileUI(); log('Dummy PDF created '+blob.size+' pages=3');
@@ -496,6 +501,7 @@ $('#convertBtn').addEventListener('click', async ()=>{
     else if(t.id==='html-to-pdf') await htmlToPdf();
     else if(t.id==='ppt-to-pdf') await pptToPdf();
     else if(t.id==='pdf-to-ppt') await pdfToPpt();
+    else if(['watermark','page-numbers','crop-pdf'].includes(t.id)) await editPdf(t.id);
     else throw new Error('Tool belum diimplementasikan');
     log('Convert success');
   }catch(e){
@@ -503,9 +509,15 @@ $('#convertBtn').addEventListener('click', async ()=>{
     showError('Convert failed: '+(e.message||e)+'\nOpen via http://localhost:8080 (not file://) or check the F12 console');
     log(e.stack||e);
   }finally{
-    $('#btnSpinner').classList.add('hidden'); $('#convertBtn').disabled=false; updateFileUI();
+    $('#btnSpinner').classList.add('hidden'); $('#convertBtn').disabled=false; updateFileUI({preserveError:true});
   }
 });
+async function editPdf(tool){
+  const file=files[0];
+  const options=await PDFEdit.readOptions(tool);
+  const output=await PDFEdit.apply(await file.arrayBuffer(),options,message=>{ $('#progress').textContent=message; });
+  downloadBlob(new Blob([output],{type:'application/pdf'}),file.name.replace(/\.pdf$/i,'')+'-'+tool+'.pdf');
+}
 let _lastObjectUrl=null;
 window.addEventListener('pagehide', ()=>{ if(_lastObjectUrl) URL.revokeObjectURL(_lastObjectUrl); });
 function downloadBlob(blob, filename){

@@ -24,7 +24,7 @@
 - Pertahankan frontend HTML/CSS/JavaScript statis, server lokal Python standard library untuk build, dan wrapper Flutter di `native/reader`.
 - Jangan mengubah library vendor secara manual. Catat versi, sumber, dan lisensi bila mengganti dependency.
 - `.venv`, file `.env`, kredensial, dan dokumen pribadi untuk pengujian tidak boleh ikut commit.
-- Jangan menyebut placeholder sebagai konversi yang sudah berfungsi. PPT masih placeholder; audit setiap tool sebelum membuat klaim.
+- Jangan menyebut placeholder sebagai konversi yang sudah berfungsi. Audit kode aktual dan `FEATURE_CHECKLIST.md` sebelum membuat klaim; catatan historis tentang placeholder PPT sudah digantikan implementasi baru.
 - Judul/nama file/teks pengguna harus dimasukkan dengan `textContent` atau mekanisme aman; jangan interpolasi ke `innerHTML` tanpa sanitasi.
 - Jangan mereset, membersihkan, atau menimpa perubahan agen lain. Saat konflik, koordinasikan kepemilikan file terlebih dahulu.
 - Jangan menganggap daftar tugas sebagai izin deploy atau push baru. Ikuti instruksi pengguna dan kewenangan sesi yang sedang berjalan.
