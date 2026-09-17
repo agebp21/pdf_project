@@ -494,6 +494,8 @@ $('#convertBtn').addEventListener('click', async ()=>{
     $('#btnSpinner').classList.add('hidden'); $('#convertBtn').disabled=false; updateFileUI();
   }
 });
+let _lastObjectUrl=null;
+window.addEventListener('pagehide', ()=>{ if(_lastObjectUrl) URL.revokeObjectURL(_lastObjectUrl); });
 function downloadBlob(blob, filename){
   const flipbookButton = $('#makeFlipbook');
   flipbookButton.hidden = !blob.type.includes('pdf');
@@ -511,7 +513,11 @@ function downloadBlob(blob, filename){
       flipbookButton.textContent = 'Turn into Flipbook →';
     }
   };
+  // Keep the previous blob alive until it is replaced: revoking too early
+  // aborts big/slow downloads mid-flight ("check internet connection").
+  if(_lastObjectUrl) URL.revokeObjectURL(_lastObjectUrl);
   const url=URL.createObjectURL(blob);
+  _lastObjectUrl=url;
   const a=$('#downloadBtn'); a.href=url; a.download=filename;
   $('#result').classList.remove('hidden');
   $('#progress').textContent='✅ Done — grab your download below.';
@@ -528,7 +534,12 @@ function downloadBlob(blob, filename){
     $('#resultPreview').innerHTML=`<p>File siap: <b>${filename}</b> (${(blob.size/1024).toFixed(1)} KB)</p>`;
   }
   window.scrollTo({top: document.body.scrollHeight, behavior:'smooth'});
-  setTimeout(()=>URL.revokeObjectURL(url), 60000);
+  if(blob.size>150*1024*1024){
+    const warn=document.createElement('p');
+    warn.className='mt-2 text-center text-[11px] text-amber-700';
+    warn.textContent='Heads-up: this file is over 150MB — huge browser downloads can fail on low memory/disk. Free some space and retry if needed.';
+    $('#result').append(warn);
+  }
 }
 async function loadImage(file){
   return new Promise((res,rej)=>{
