@@ -156,3 +156,7 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - Problem: running text jumped (single copy animated to -50%). Fix: duplicated track content (2nd copy aria-hidden), track animates 0 → -50% for a seamless loop.
 - Checks: diff-check + HTTP 200 only. No visual browser QA. Not committed/pushed.
+
+### 17 September 2026 — push d7ca27d (auto-push rule ON)
+
+- User rule: every OK update pushes straight away. Pushed commit `d7ca27d` to `origin/main` (85 files: redesign, English UI, excel+OCR, marquee, docs). Tree clean after push.
