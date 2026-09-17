@@ -152,6 +152,10 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 - Problem: garbage OCR rows on full-artwork pages. Fix: line filter (<3 letters or <40% alnum dropped) + page gate (conf ≥50, ≥40% word-like) else honest empty.
 - Checks: gate mock OK (0 vs 3 rows), syntax OK, HTTP 200. User to reconvert real file. Not committed/pushed.
 
+### 17 September 2026 — OCR gate v2 (poster, pushed)
+
+- Real page = full-artwork poster, no table. Line filter now counts digits (keeps `2021`); page gate unchanged. Mock v2 OK (4/0/2), syntax OK, HTTP 200. Committed + pushed.
+
 ### 17 September 2026 — seamless marquee
 
 - Problem: running text jumped (single copy animated to -50%). Fix: duplicated track content (2nd copy aria-hidden), track animates 0 → -50% for a seamless loop.

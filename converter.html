@@ -891,7 +891,9 @@ async function ocrPageToLines(page, pageNum){
   const words=(result.data.words||[]).filter(w=>w.text&&w.text.trim());
   const meanConf=words.length?words.reduce((s,w)=>s+w.confidence,0)/words.length:0;
   const raw=(result.data.text||'').split('\n').map(l=>l.replace(/\s+/g,' ').trim()).filter(l=>l);
-  const kept=raw.filter(l=>(l.match(/[A-Za-z]/g)||[]).length>=3&&(l.match(/[A-Za-z0-9]/g)||[]).length/l.length>=0.4);
+  // Keep lines with at least 3 readable chars (letters OR digits, so years
+  // like "2021" survive) and mostly-alphanumeric content. Symbol soup dies here.
+  const kept=raw.filter(l=>{ const a=(l.match(/[A-Za-z0-9]/g)||[]).length; return a>=3&&a/l.length>=0.4; });
   const wordish=kept.filter(l=>/[A-Za-z]{3,}/.test(l)).length;
   const readable=kept.length>0&&meanConf>=50&&(wordish/kept.length)>=0.4;
   log(`Page ${pageNum}: OCR conf=${Math.round(meanConf)} lines=${raw.length} kept=${kept.length} readable=${readable}`);

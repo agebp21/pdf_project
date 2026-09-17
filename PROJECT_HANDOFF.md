@@ -228,3 +228,9 @@ User asked for real OCR. Implemented in `converter.html` (`pdfToExcel` only):
 User's real result: OCR hallucinated garbage rows (`4 = >. Nin A`, `| a. ©)`) on full-artwork display-type pages (39/42/45), while embedded-text pages (41/44) were fine. Cause: Tesseract reads document text, not decorative display type — it guesses symbols instead of staying silent.
 - Fix in `converter.html` (`ocrPageToLines`): drop lines with <3 letters or <40% alphanumeric, then reject the whole page unless mean word confidence ≥50 and ≥40% of kept lines look word-like. Rejected pages count as empty (honest blank, noted in README) instead of fake rows.
 - Verified: gate mock test OK (garbage page → 0 rows, normal paragraph → 3 rows), inline `node --check` OK, HTTP 200. NOT verified: real-file reconvert in browser (user to retest). Not committed/pushed.
+
+### 17 September 2026 — OCR gate v2 (poster case)
+
+User showed the real page: a full-artwork Telkomsel Awards poster (no table at all). Honest expectation set: no tool turns poster artwork into a meaningful spreadsheet; best case is a few display words (`Telkomsel/AWARDS/2021/26th ANNIVERSARY`) tagged OCR.
+- Fix: line filter counts digits too (≥3 alnum chars, ≥40% alnum ratio) so years like `2021` survive; page-level confidence/wordish gate unchanged.
+- Verified: gate mock v2 OK (poster → 4 lines incl `2021`, garbage → 0, normal → 2), inline `node --check` OK, HTTP 200. NOT verified: real browser reconvert. Pushed per auto-push rule.
