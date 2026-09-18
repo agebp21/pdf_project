@@ -199,7 +199,7 @@
     const status = message => { $('#export-status').textContent=message; };
     try {
       const data = model(), name = FlipbookExport.filename(data.title);
-      const outputName = target==='project' ? name+'.flipbook' : name+'-HTML.zip';
+      const outputName = target==='project' ? name+'.sm-flipbook' : name+'-HTML.zip';
       const saveHandle = target==='project'||target==='html' ? await FlipbookExport.chooseSave(outputName) : null;
       status('Menyiapkan ekspor…');
       if (target === 'project') {
@@ -209,6 +209,10 @@
         const bundle = await FlipbookExport.packageBook(data,imageUrls,status);
         if (target === 'html') { const saved=await FlipbookExport.saveBlob(bundle,outputName,saveHandle); status((saved?'HTML tersimpan di lokasi pilihanmu. ':'HTML dikirim ke download browser. ')+'Ekstrak seluruh ZIP lalu buka index.html.'); }
         else {
+          const capabilities=await fetch('/api/capabilities',{cache:'no-store'});
+          if(!capabilities.ok)throw Error('Layanan build lokal tidak tersedia. Jalankan python server.py.');
+          buildConfig=await capabilities.json();
+          if(!buildConfig[target])throw Error('Build '+target.toUpperCase()+' belum tersedia di komputer ini.');
           status('Mengirim buku ke layanan build lokal…');
           const response=await fetch('/api/build/'+target,{method:'POST',headers:{'Content-Type':'application/zip','X-Build-Token':buildConfig.token},body:bundle});
           const result=await response.json(); if(!response.ok)throw Error(result.error||'Build gagal dimulai.');
@@ -237,7 +241,7 @@
           }
         }
       }
-    } catch(cause) { if(cause.name==='AbortError')status('Penyimpanan dibatalkan.');else { status('Ekspor belum berhasil.'); error(cause.message); } }
+    } catch(cause) { if(cause.name==='AbortError')status('Penyimpanan dibatalkan.');else { status('Ekspor gagal: '+cause.message); error(cause.message); } }
     finally { exporting=false;exportState();$('#pdf-file').disabled=false;$('#overlay-fields').disabled=!book; }
   }
   $('#save-project').onclick=()=>exportBook('project');$('#export-html').onclick=()=>exportBook('html');
