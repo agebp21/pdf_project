@@ -358,3 +358,11 @@ a{color:inherit}
 .ae-el.selected .ae-rotate { display:flex; }
 .ae-pdf-zone .ae-zone-badge { display:none; }
 .ae-pdf-zone.selected .ae-zone-badge { display:block; }
+
+/* ── Play-order list (owner request, appended last so it wins) ── */
+#ae-order-list { display:flex; flex-direction:column; gap:4px; margin:6px 0; }
+.ae-order-row { display:flex; gap:8px; align-items:center; text-align:left; background:#fff; border:1px solid #d4cec4; border-radius:6px; padding:5px 8px; font-size:11px; cursor:pointer; }
+.ae-order-row:hover { border-color:#4a7c59; }
+.ae-order-row.active { border-color:#4a7c59; background:#eef4ee; font-weight:700; }
+.ae-order-delay { flex-shrink:0; font-variant-numeric:tabular-nums; color:#4a7c59; font-weight:700; }
+.ae-order-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }

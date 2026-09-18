@@ -1,102 +1,111 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
   <title>Flipbook Animation — PDF Tools</title>
-  <link rel="stylesheet" href="assets/theme-cream.css">
   <link rel="stylesheet" href="assets/animation-editor.css">
   <script defer src="assets/vendor/pdf.min.js"></script>
   <script defer src="assets/vendor/jszip.min.js"></script>
+  <script defer src="assets/vendor/pdf-lib.min.js"></script>
+  <script defer src="assets/flipbook-export.js"></script>
+  <link rel="stylesheet" href="assets/animation-playback.css">
+  <script defer src="assets/animation-playback.js"></script>
+  <script defer src="assets/animation-ocr.js"></script>
   <script defer src="assets/animation-editor.js"></script>
 </head>
-<body>
+<body style="margin:0;padding:0;background:#faf4e8;display:flex;flex-direction:column;height:100dvh;overflow:hidden">
 
-<header class="topbar">
-  <a class="brand" href="index.html"><span>PDF</span> PDF Tools</a>
-  <a class="back-link badge" href="index.html">← Back to tools</a>
+<header class="topbar" style="flex-shrink:0">
+  <a class="brand" href="index.html"><span>PDF</span> Tools</a>
+  <a class="back-link badge" href="index.html" style="margin-left:auto">← Back to tools</a>
 </header>
 
-<main class="ae-app">
+<div class="ae-app" style="flex:1;min-height:0">
 
-  <!-- ── Sidebar ────────────────────────────────────── -->
+  <!-- ── Sidebar ─────────────────────────────────────── -->
   <aside class="ae-sidebar">
 
-    <!-- Step 01: Import PDF -->
+    <!-- Step 01: Import dokumen -->
     <div class="ae-sidebar-section">
-      <div class="ae-step-head"><span class="ae-step-num">01</span><h2>Import PDF</h2></div>
-      <p class="ae-muted">Open any PDF — each page becomes an editable canvas.</p>
-      <label class="ae-file-label" for="ae-pdf-file">PDF file</label>
-      <input id="ae-pdf-file" class="ae-file" type="file" accept="application/pdf,.pdf">
-      <p id="ae-status" class="ae-feedback">Upload a PDF to get started.</p>
-      <p id="ae-error"  class="ae-error"  role="alert"></p>
+      <div class="ae-step-head"><span class="ae-step-num">01</span><h2>Import dokumen</h2></div>
+      <p class="ae-muted">PDF, Word, Excel, PPT, atau gambar — semua bisa.</p>
+      <label class="ae-file-label" for="ae-doc-file">Pilih file</label>
+      <input id="ae-doc-file" class="ae-file" type="file"
+             accept=".pdf,.doc,.docx,.xls,.xlsx,.csv,.ppt,.pptx,.jpg,.jpeg,.png,.gif,.webp,application/pdf,application/msword,application/vnd.openxmlformats-officedocument.wordprocessingml.document,application/vnd.ms-excel,application/vnd.openxmlformats-officedocument.spreadsheetml.sheet,application/vnd.ms-powerpoint,application/vnd.openxmlformats-officedocument.presentationml.presentation,image/jpeg,image/png,image/gif,image/webp,image/bmp">
+      <div id="ae-converting" class="ae-converting">⏳ Mengkonversi ke PDF…</div>
+      <p id="ae-status"  class="ae-feedback">Upload dokumen untuk memulai.</p>
+      <p id="ae-error"   class="ae-error"  role="alert"></p>
     </div>
 
-    <!-- Step 02: Add elements -->
+    <!-- Step 02: Select & add elements -->
     <div class="ae-sidebar-section">
-      <div class="ae-step-head"><span class="ae-step-num">02</span><h2>Select &amp; add elements</h2></div>
-      <p class="ae-muted">Load PDF content to make each text area selectable — hover to see zones, click to select.</p>
-      <button id="ae-load-page" class="ae-export-btn" type="button" disabled style="margin-bottom:6px;background:#35543e">⬇ Load this page's content</button>
-      <button id="ae-load-all"  class="ae-helper-btn" type="button" disabled>⬇ Load all pages at once</button>
-      <p class="ae-muted" style="margin-top:8px">Or add new elements on top:</p>
+      <div class="ae-step-head"><span class="ae-step-num">02</span><h2>Pilih &amp; tambah elemen</h2></div>
+      <p class="ae-muted">Pisahkan teks, gambar dan grup grafis yang didukung menjadi elemen animasi. Logo yang menyatu dalam background belum dapat dipisahkan otomatis.</p>
+      <button id="ae-load-page" class="ae-export-btn" type="button" disabled
+              style="background:#35543e;margin-bottom:5px">⬇ Load konten halaman ini</button>
+      <button id="ae-load-all" class="ae-helper-btn" type="button" disabled>⬇ Load semua halaman</button>
+      <button id="ae-ocr-page" class="ae-helper-btn" type="button" disabled>OCR ulang halaman (termasuk gambar)</button>
+      <button id="ae-extract-region" class="ae-helper-btn" type="button" disabled>Pisahkan area gambar / logo</button>
+      <p class="ae-muted">Halaman gambar memakai OCR otomatis. Untuk grafis yang menyatu, pilih area sendiri. Teks OCR dan perbaikan background adalah perkiraan; periksa hasilnya. Pulihkan konten asli jika perlu.</p>
+      <p class="ae-muted" style="margin-top:7px">Atau tambah elemen baru di atas:</p>
       <div class="ae-toolbar">
-        <button id="ae-add-text"    class="ae-add-btn" type="button" disabled>✦ Text</button>
-        <button id="ae-add-hotspot" class="ae-add-btn" type="button" disabled>✦ Link button</button>
+        <button id="ae-add-text"    class="ae-add-btn" type="button" disabled>✦ Teks</button>
+        <button id="ae-add-hotspot" class="ae-add-btn" type="button" disabled>✦ Tombol link</button>
       </div>
+      <button id="ae-clear-zones" class="ae-helper-btn" type="button" disabled style="margin-top:5px;color:#c0442a">↶ Pulihkan konten asli halaman</button>
     </div>
 
-    <!-- Step 03: Inspector (shown when element selected) -->
+    <!-- Step 03: Inspector -->
     <div class="ae-sidebar-section">
-      <div class="ae-step-head"><span class="ae-step-num">03</span><h2>Element settings</h2></div>
+      <div class="ae-step-head"><span class="ae-step-num">03</span><h2>Pengaturan elemen</h2></div>
       <div id="ae-inspector" class="ae-inspector hidden">
 
-        <!-- Info teks PDF zone (hanya tampil untuk pdfZone) -->
-        <p id="ae-zone-content-info" class="ae-muted" style="font-size:11px;font-style:italic;word-break:break-word;display:none"></p>
+        <!-- Info teks zona PDF -->
+        <p id="ae-zone-content-info" class="ae-muted"
+           style="font-size:10px;font-style:italic;word-break:break-word;background:#f0f4f0;padding:5px 7px;border-radius:5px;display:none"></p>
 
         <div id="ae-insp-content-sec">
-          <h3>Content</h3>
-          <label for="ae-i-content">Text</label>
-          <textarea id="ae-i-content" rows="2" placeholder="Element text…"></textarea>
+          <h3>Konten</h3>
+          <label for="ae-i-content">Teks</label>
+          <textarea id="ae-i-content" rows="2" placeholder="Teks elemen…"></textarea>
         </div>
 
-
-        <h3>Style</h3>
-        <div class="ae-row">
         <div id="ae-insp-style-sec">
-          <h3>Style</h3>
+          <h3>Gaya</h3>
           <div class="ae-row">
-            <label for="ae-i-fs">Font size</label>
+            <label for="ae-i-fs">Ukuran font</label>
             <input id="ae-i-fs" type="number" min="6" max="200" value="18">
-            <label for="ae-i-color">Color</label>
+            <label for="ae-i-color">Warna</label>
             <input id="ae-i-color" type="color" value="#1a1a1a">
           </div>
           <div class="ae-row">
             <label for="ae-i-bgcolor">Background</label>
             <input id="ae-i-bgcolor" type="color" value="#ffffff">
-            <label for="ae-i-opacity">Opacity %</label>
+            <label for="ae-i-opacity">Opasitas %</label>
             <input id="ae-i-opacity" type="number" min="0" max="100" value="100">
           </div>
           <div class="ae-toggle-row">
             <button id="ae-i-bold"   class="ae-toggle-btn" type="button"><b>B</b></button>
             <button id="ae-i-italic" class="ae-toggle-btn" type="button"><i>I</i></button>
           </div>
-          <label>Align</label>
+          <label>Rata teks</label>
           <div class="ae-align-row">
-            <button id="ae-i-align-left"   class="ae-align-btn on"  type="button" title="Left">⬤◯◯</button>
-            <button id="ae-i-align-center" class="ae-align-btn"     type="button" title="Center">◯⬤◯</button>
-            <button id="ae-i-align-right"  class="ae-align-btn"     type="button" title="Right">◯◯⬤</button>
+            <button id="ae-i-align-left"   class="ae-align-btn on"  type="button" title="Kiri">⬤◯◯</button>
+            <button id="ae-i-align-center" class="ae-align-btn"     type="button" title="Tengah">◯⬤◯</button>
+            <button id="ae-i-align-right"  class="ae-align-btn"     type="button" title="Kanan">◯◯⬤</button>
           </div>
         </div>
 
-        <h3>Animation</h3>
-        <label for="ae-i-anim-type">Type</label>
+        <h3>Animasi</h3>
+        <label for="ae-i-anim-type">Tipe</label>
         <select id="ae-i-anim-type">
-          <option value="none">None</option>
+          <option value="none">Tidak ada</option>
           <option value="fadeIn" selected>Fade in</option>
-          <option value="slideUp">Slide up</option>
-          <option value="slideDown">Slide down</option>
-          <option value="slideLeft">Slide from right</option>
-          <option value="slideRight">Slide from left</option>
+          <option value="slideUp">Slide atas</option>
+          <option value="slideDown">Slide bawah</option>
+          <option value="slideLeft">Slide dari kanan</option>
+          <option value="slideRight">Slide dari kiri</option>
           <option value="zoomIn">Zoom in</option>
           <option value="bounce">Bounce</option>
           <option value="pulse">Pulse (loop)</option>
@@ -104,39 +113,53 @@
         <div class="ae-row">
           <label for="ae-i-anim-delay">Delay (ms)</label>
           <input id="ae-i-anim-delay" type="number" min="0" max="5000" step="100" value="0">
-          <label for="ae-i-anim-dur">Duration (ms)</label>
+          <label for="ae-i-anim-dur">Durasi (ms)</label>
           <input id="ae-i-anim-dur"   type="number" min="100" max="5000" step="100" value="600">
         </div>
-
-        <h3>Link on click</h3>
-        <label for="ae-i-link-type">Action</label>
-        <select id="ae-i-link-type">
-          <option value="none">None</option>
-          <option value="url">Open URL</option>
-          <option value="page">Go to page</option>
+        <label for="ae-i-anim-out">Efek keluar</label>
+        <select id="ae-i-anim-out">
+          <option value="none">Tidak ada</option>
+          <option value="fadeOut">Fade out</option>
+          <option value="slideUpOut">Slide ke atas</option>
+          <option value="slideDownOut">Slide ke bawah</option>
+          <option value="zoomOut">Zoom out</option>
         </select>
-        <div id="ae-i-link-url-row" class="ae-hidden-row">
+        <button id="ae-i-anim-out-preview" class="ae-helper-btn" type="button" style="margin-top:4px">▶ Preview keluar</button>
+
+        <h3>Urutan main</h3>
+        <p class="ae-muted">Dari delay terkecil. Klik baris untuk memilih elemen.</p>
+        <div id="ae-order-list"></div>
+        <button id="ae-order-stagger" class="ae-helper-btn" type="button" style="margin-top:4px">✨ Stagger otomatis (atas → bawah)</button>
+
+        <h3>Link saat diklik</h3>
+        <p id="ae-link-feedback" class="ae-muted" role="status">Isi tujuan link. Klik tombol dalam Preview untuk membuka; mode Edit digunakan untuk memilih dan mengatur.</p>
+        <select id="ae-i-link-type">
+          <option value="none">Tidak ada</option>
+          <option value="url">Buka URL</option>
+          <option value="page">Ke halaman</option>
+        </select>
+        <div id="ae-i-link-url-row" class="ae-hidden-row" style="margin-top:4px">
           <label for="ae-i-link-url">URL</label>
           <input id="ae-i-link-url" type="url" placeholder="https://…">
         </div>
-        <div id="ae-i-link-page-row" class="ae-hidden-row">
-          <label for="ae-i-link-page">Page number</label>
+        <div id="ae-i-link-page-row" class="ae-hidden-row" style="margin-top:4px">
+          <label for="ae-i-link-page">Nomor halaman</label>
           <input id="ae-i-link-page" type="number" min="1" value="1">
         </div>
 
-        <button id="ae-delete-btn" class="ae-delete-btn" type="button">Delete element</button>
-        <button id="ae-clear-btn"  class="ae-delete-btn" type="button" style="margin-top:4px">Clear this page</button>
+        <button id="ae-delete-btn" class="ae-delete-btn" type="button" disabled>Hapus elemen</button>
       </div>
-      <p class="ae-muted" id="ae-inspector-hint">Select an element on the canvas to edit its settings.</p>
+      <p id="ae-inspector-hint" class="ae-muted">Pilih elemen di canvas untuk mengatur animasinya.</p>
     </div>
 
     <!-- Step 04: Export -->
     <div class="ae-sidebar-section">
       <div class="ae-step-head"><span class="ae-step-num">04</span><h2>Export</h2></div>
-      <p class="ae-muted">Save as an interactive flipbook — works offline, no server needed.</p>
-      <label class="ae-file-label" for="ae-title">Book title</label>
-      <input id="ae-title" type="text" maxlength="200" placeholder="My Interactive Book" style="width:100%;box-sizing:border-box;border:1px solid #d4cec4;border-radius:6px;padding:6px 8px;font-size:12px;margin-bottom:8px">
-      <button id="ae-export" class="ae-export-btn" type="button" disabled>Export as interactive flipbook →</button>
+      <p class="ae-muted">Simpan sebagai flipbook interaktif — bisa dibuka offline.</p>
+      <label class="ae-file-label" for="ae-title">Judul buku</label>
+      <input id="ae-title" type="text" maxlength="200" placeholder="My Interactive Book"
+             style="width:100%;box-sizing:border-box;border:1px solid #d4cec4;border-radius:6px;padding:6px 8px;font-size:12px;margin-bottom:6px;background:white">
+      <button id="ae-export" class="ae-export-btn" type="button" disabled>Export sebagai flipbook interaktif →</button>
     </div>
 
   </aside>
@@ -148,23 +171,22 @@
     <div class="ae-mode-bar">
       <button id="ae-mode-edit"    class="ae-mode-btn active" type="button">✏️ Edit</button>
       <button id="ae-mode-preview" class="ae-mode-btn"        type="button">▶ Preview</button>
-      <span class="ae-mode-hint" id="ae-mode-hint">Switch to Preview to see animations play</span>
+      <span class="ae-mode-hint">Preview → animasi dimainkan</span>
       <span class="ae-page-label" id="ae-page-label"></span>
+      <button id="ae-prev" class="ae-mode-btn" type="button" disabled style="margin-left:auto">←</button>
+      <button id="ae-next" class="ae-mode-btn" type="button" disabled>→</button>
     </div>
 
-    <!-- Canvas scroll area (empty state until PDF loaded) -->
+    <p id="ae-action-status" class="ae-action-status" role="status" aria-live="polite">Upload dokumen untuk memulai.</p>
+    <!-- Canvas scroll (empty state sampai file diupload) -->
     <div class="ae-canvas-scroll">
-      <div class="ae-empty">
-        <div class="ae-empty-icon">📄</div>
-        <h2>Animate your PDF</h2>
-        <p>Upload a PDF — every page becomes an interactive canvas. Add text, buttons, links, and animations. Export as a standalone flipbook.</p>
+      <div class="ae-empty" id="ae-empty-state">
+        <div class="ae-empty-icon">🎬</div>
+        <h2>Animasikan dokumenmu</h2>
+        <p>Upload PDF, Word, Excel, PPT, atau gambar.<br>
+        Setiap halaman jadi canvas interaktif.<br>
+        Tambah animasi, link, lalu export.</p>
       </div>
-    </div>
-
-    <!-- Page navigation (preview mode) -->
-    <div class="ae-mode-bar" id="ae-nav-bar" style="justify-content:center;gap:16px">
-      <button id="ae-prev" class="ae-mode-btn" type="button">← Prev</button>
-      <button id="ae-next" class="ae-mode-btn" type="button">Next →</button>
     </div>
 
     <!-- Page strip -->
@@ -172,7 +194,7 @@
 
   </div>
 
-</main>
+</div><!-- /.ae-app -->
 
 </body>
 </html>
