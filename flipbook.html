@@ -25,7 +25,6 @@
         <label for="pdf-file">PDF file</label><input id="pdf-file" type="file" accept="application/pdf,.pdf">
         <p class="muted">Pick a PDF to turn into a flipbook. Files are processed on your device.</p>
         <p id="load-status" class="feedback" role="status">No PDF selected yet.</p>
-        <label for="project-file">Open a saved project (.flipbook, .sm-flipbook)</label><input id="project-file" type="file" accept=".flipbook,.sm-flipbook">
         <!-- Editor animasi disembunyikan sementara atas permintaan pengguna. -->
         <form id="overlay-form" hidden style="display:none">
           <fieldset id="overlay-fields" disabled>
@@ -47,6 +46,8 @@
           <button id="export-apk" class="secondary" type="button" disabled>Build Android APK</button>
           <button id="export-exe" class="secondary" type="button" disabled>Build Windows EXE (.zip)</button>
         </fieldset>
+        <button id="open-project" class="secondary" type="button" onclick="document.getElementById('project-file').click()">Open project… (.flipbook, .sm-flipbook)</button>
+        <input id="project-file" type="file" accept=".flipbook,.sm-flipbook" hidden>
         <p class="muted">Pick a file name and folder via the Save dialog. If your browser is not supported, the result downloads normally per your browser settings.</p>
         <p id="build-availability" class="muted">Checking local build service…</p>
         <p class="muted">APKs are for testing for now. The Windows package holds the EXE plus support files; readers need WebView2.</p>
