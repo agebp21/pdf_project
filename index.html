@@ -16,47 +16,48 @@
     --cream:#FAF4E8; --cream2:#F3EAD9; --ink:#1C1917; --muted:#78716C;
     --pine:#1A3C34; --tang:#FF5C28; --lilac:#E9E4FF; --lime:#E4F3C2; --blush:#FFE3D9;
     --line:rgba(28,25,23,.12);
+    --paper:#FFFFFF; --hair:#E8E2D4;
   }
   *{font-family:'Plus Jakarta Sans',system-ui,sans-serif}
   .serif{font-family:'Fraunces',Georgia,serif}
-  body{background:var(--cream);color:var(--ink);overflow-x:hidden}
-  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;
-    background:radial-gradient(600px 400px at 10% 0%,#FFE9D6 0%,transparent 60%),
-               radial-gradient(700px 500px at 95% 20%,#E9E4FF 0%,transparent 55%),
-               radial-gradient(800px 600px at 50% 110%,#DDEDC3 0%,transparent 60%);}
+  body{background:#FBFAF7;color:var(--ink);overflow-x:hidden}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.35;
+    background:radial-gradient(700px 420px at 50% 0%,#EDF3E4 0%,transparent 60%),
+               radial-gradient(700px 500px at 95% 20%,#F3EFE6 0%,transparent 55%),
+               radial-gradient(800px 600px at 50% 110%,#F1ECE0 0%,transparent 60%);}
   .grain{position:fixed;inset:0;pointer-events:none;opacity:.06;mix-blend-mode:multiply;
     background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='120' height='120'%3E%3Cfilter id='n'%3E%3CfeTurbulence baseFrequency='.9'/%3E%3C/filter%3E%3Crect width='120' height='120' filter='url(%23n)' opacity='.6'/%3E%3C/svg%3E");}
-  .nav-pill{background:rgba(250,244,232,.82);backdrop-filter:blur(14px);border:1.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink)}
-  .btn-ink{background:var(--ink);color:#FFF7EA;border:1.5px solid var(--ink);box-shadow:4px 4px 0 rgba(28,25,23,.2);transition:.18s}
-  .btn-ink:hover{transform:translate(-1px,-1px);box-shadow:6px 6px 0 rgba(28,25,23,.25)}
-  .btn-tang{background:var(--tang);color:#fff;border:1.5px solid var(--ink);box-shadow:4px 4px 0 var(--ink);transition:.18s}
-  .btn-tang:hover{transform:translate(-1px,-1px) rotate(-.5deg);box-shadow:6px 6px 0 var(--ink)}
-  .chip{border:1.5px solid var(--ink);background:#FFFDF6;transition:.15s}
-  .chip:hover{transform:translateY(-1px);box-shadow:3px 3px 0 var(--ink)}
-  .filter-btn{transition:all .15s;border:1.5px solid var(--ink);background:#FFFDF6}
-  .filter-btn.active{background:var(--pine);color:#FFF7EA;border-color:var(--ink);box-shadow:3px 3px 0 var(--ink)}
-  .card{background:#FFFDF6;border:1.5px solid var(--ink);border-radius:22px;transition:all .2s ease;position:relative}
-  .card:hover{transform:translateY(-4px) rotate(-.3deg);box-shadow:7px 7px 0 var(--ink)}
+  .nav-pill{background:rgba(255,255,255,.86);backdrop-filter:blur(14px);border:1px solid var(--hair);box-shadow:0 10px 28px rgba(28,25,23,.08)}
+  .btn-ink{background:var(--ink);color:#FFFDF6;border:1px solid var(--ink);box-shadow:0 10px 22px rgba(28,25,23,.18);transition:.18s}
+  .btn-ink:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(28,25,23,.22)}
+  .btn-tang{background:var(--tang);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35);transition:.18s}
+  .btn-tang:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(255,92,40,.42)}
+  .chip{border:1px solid var(--hair);background:#fff;box-shadow:0 3px 10px rgba(28,25,23,.05);transition:.15s}
+  .chip:hover{transform:translateY(-1px);box-shadow:0 8px 18px rgba(28,25,23,.09)}
+  .filter-btn{transition:all .15s;border:1px solid var(--hair);background:#fff}
+  .filter-btn.active{background:var(--pine);color:#FFF7EA;border-color:var(--pine);box-shadow:0 8px 18px rgba(26,60,52,.25)}
+  .card{background:var(--paper);border:1px solid #E9E2D4;border-radius:20px;box-shadow:0 10px 28px rgba(28,25,23,.06);transition:all .2s ease;position:relative}
+  .card:hover{transform:translateY(-4px);box-shadow:0 20px 44px rgba(28,25,23,.11);border-color:#DCD3BE}
   .card.feat{border-radius:26px;overflow:hidden}
-  .sticker{position:absolute;top:12px;right:12px;font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 10px;border-radius:999px;border:1.5px solid var(--ink);transform:rotate(6deg)}
-  .icon-box{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;border:1.5px solid var(--ink);flex-shrink:0}
-  /* Clay-style dark showcase: serif headline, icon field, pills+search bar */
-  .showcase{background:radial-gradient(90% 100% at 50% 0%,#262019 0%,#141210 55%,#0B0A08 100%);color:#F5EFE3;text-align:center;padding:60px 20px 0;overflow:hidden}
-  .showcase h1{font-family:'Fraunces',Georgia,serif;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:0;font-size:clamp(36px,5.5vw,62px)}
-  .showcase h1 em{font-style:italic;font-weight:700;color:#8FD0B3}
+  .sticker{position:absolute;top:12px;right:12px;font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 10px;border-radius:999px;box-shadow:0 4px 10px rgba(28,25,23,.12)}
+  .icon-box{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;box-shadow:inset 0 1px 0 rgba(255,255,255,.4),0 6px 14px rgba(28,25,23,.12);flex-shrink:0}
+  /* Clay white-clean showcase: soft light stage, serif headline, icon field */
+  .showcase{background:radial-gradient(85% 90% at 50% 0%,#FFFFFF 0%,#F7F4EC 60%,#F1ECE0 100%);color:var(--ink);text-align:center;padding:64px 20px 0;overflow:hidden}
+  .showcase h1{font-family:'Fraunces',Georgia,serif;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:0;font-size:clamp(36px,5.5vw,62px);color:#1C1917}
+  .showcase h1 em{font-style:italic;font-weight:700;color:#1A3C34}
   .showcase h1 .hl{background:#FF5C28;color:#fff;padding:0 14px;border-radius:16px;display:inline-block;transform:rotate(-2deg)}
-  .showcase .sub{color:#B8B2A4;max-width:640px;margin:16px auto 0;font-size:15px;line-height:1.6}
+  .showcase .sub{color:#6B665C;max-width:640px;margin:16px auto 0;font-size:15px;line-height:1.6}
   .horde-rows{margin-top:38px;display:flex;flex-direction:column;gap:8px;align-items:center}
   .horde-row{display:flex;justify-content:center;gap:14px}
-  .horde-tile{border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;border:1.5px solid rgba(255,255,255,.25);box-shadow:0 10px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.35);-webkit-box-reflect:below 6px linear-gradient(transparent 60%,rgba(255,255,255,.22));transition:margin-top .15s}
+  .horde-tile{border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:800;border:1px solid rgba(255,255,255,.7);box-shadow:0 16px 34px rgba(28,25,23,.16),inset 0 1px 0 rgba(255,255,255,.5);-webkit-box-reflect:below 6px linear-gradient(transparent 62%,rgba(28,25,23,.14));transition:margin-top .15s}
   .horde-tile:hover{margin-top:-8px}
-  .showcase-bar{max-width:1100px;margin:36px auto 0;border-top:1px solid rgba(255,255,255,.1);padding:16px 20px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+  .showcase-bar{max-width:1100px;margin:36px auto 0;border-top:1px solid #E7E1D2;padding:16px 20px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
   .showcase #filters{display:flex;flex-wrap:wrap;gap:4px}
-  .showcase .filter-btn{background:transparent;border:1px solid transparent;color:#8A8478;border-radius:999px;padding:7px 13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
-  .showcase .filter-btn.active{background:#F5EFE3;color:#1C1917;border-color:#F5EFE3;box-shadow:none}
-  .showcase-search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 14px;width:100%;max-width:300px}
-  .showcase-search input{background:transparent;outline:none;border:0;color:#F5EFE3;font-size:13px;font-weight:600;width:100%}
-  .showcase-search input::placeholder{color:#8A8478}
+  .showcase .filter-btn{background:transparent;border:1px solid transparent;color:#8A8478;border-radius:999px;padding:7px 13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase;box-shadow:none}
+  .showcase .filter-btn.active{background:#DFF0D8;color:#1C1917;border-color:#DFF0D8;box-shadow:none}
+  .showcase-search{display:flex;align-items:center;gap:8px;background:#fff;border:1px solid #E4DED0;border-radius:12px;box-shadow:0 4px 14px rgba(28,25,23,.06);padding:9px 14px;width:100%;max-width:300px}
+  .showcase-search input{background:transparent;outline:none;border:0;color:#1C1917;font-size:13px;font-weight:600;width:100%}
+  .showcase-search input::placeholder{color:#A8A29E}
   ::-webkit-scrollbar{height:8px;width:10px}
   ::-webkit-scrollbar-thumb{background:var(--ink);border-radius:999px}
   @media (prefers-reduced-motion:reduce){.card:hover,.btn-tang:hover,.btn-ink:hover{transform:none}}
@@ -78,9 +79,9 @@
       <a href="notebook.html" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.note">✦ Notebook AI</a>
     </div>
     <div class="flex items-center gap-2">
-      <button type="button" data-lang-toggle title="Ganti bahasa / Switch language" class="rounded-full px-3 py-2 text-[12px] font-extrabold bg-[#E9E4FF] border-[1.5px] border-[#1C1917] shadow-[3px_3px_0_#1C1917] hover:-translate-y-0.5 transition">ID</button>
-      <button type="button" data-theme-toggle title="Dark / light mode" class="rounded-full px-3 py-2 text-[12px] font-extrabold bg-[#FFFDF6] border-[1.5px] border-[#1C1917] shadow-[3px_3px_0_#1C1917] hover:-translate-y-0.5 transition">🌙</button>
-      <span class="hidden sm:inline text-[10px] font-extrabold tracking-widest bg-[#E4F3C2] border border-[#1C1917] rounded-full px-2.5 py-1 rotate-2" data-i18n="nav.free">100% FREE</span>
+      <button type="button" data-lang-toggle title="Ganti bahasa / Switch language" class="rounded-full px-3 py-2 text-[12px] font-extrabold bg-[#E9E4FF] border border-[#E8E2D4] shadow-[0_4px_12px_rgba(28,25,23,0.08)] hover:-translate-y-0.5 transition">ID</button>
+      <button type="button" data-theme-toggle title="Dark / light mode" class="rounded-full px-3 py-2 text-[12px] font-extrabold bg-[#FFFDF6] border border-[#E8E2D4] shadow-[0_4px_12px_rgba(28,25,23,0.08)] hover:-translate-y-0.5 transition">🌙</button>
+      <span class="hidden sm:inline text-[10px] font-extrabold tracking-widest bg-[#E4F3C2] border border-[#E8E2D4] rounded-full px-2.5 py-1 rotate-2" data-i18n="nav.free">100% FREE</span>
       <a href="converter.html?tool=merge-pdf" class="btn-tang rounded-full px-4 py-2 text-[12px] font-extrabold" data-i18n="nav.cta">Let's convert →</a>
     </div>
   </nav>
