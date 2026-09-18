@@ -3,47 +3,165 @@
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>Animasi Flipbook — PDF Tools</title>
-  <link rel="stylesheet" href="assets/animation.css">
+  <title>Flipbook Animation — PDF Tools</title>
   <link rel="stylesheet" href="assets/theme-cream.css">
-  <script defer src="assets/vendor/page-flip.browser.js"></script>
-  <script defer src="assets/animation.js"></script>
+  <link rel="stylesheet" href="assets/animation-editor.css">
+  <script defer src="assets/vendor/pdf.min.js"></script>
+  <script defer src="assets/vendor/jszip.min.js"></script>
+  <script defer src="assets/animation-editor.js"></script>
 </head>
 <body>
-  <header class="topbar"><a class="brand" href="index.html"><span>PDF</span> PDF Tools</a><a class="badge" href="flipbook.html">OPEN YOUR OWN PDF →</a></header>
-  <main>
-    <div class="heading"><div><p class="eyebrow">SARVAMAYA STUDIO</p><h1>Tell the story. Animate the page.</h1><p>Edit the sample data, turn the page, and watch the infographics move.</p></div><span class="offline"><i></i> Demo works offline</span></div>
-    <div class="workspace">
-      <aside>
-        <div class="panel-heading"><span class="step">01</span><h2>Isi infografis</h2></div>
-        <p class="muted">Contoh buku 4 halaman. Edit grafik dan statistik untuk mencoba animasinya.</p>
-        <form id="editor">
-          <label for="book-title">Judul grafik</label><input id="book-title" maxlength="55" value="Energi bersih, masa depan cerah" required>
-          <div class="field-head"><span>Kategori</span><span>Nilai (%)</span></div>
-          <div class="data-row"><input aria-label="Kategori pertama" id="label-0" maxlength="18" value="Surya" required><input aria-label="Nilai pertama" id="value-0" type="number" min="0" max="100" value="78" required></div>
-          <div class="data-row"><input aria-label="Kategori kedua" id="label-1" maxlength="18" value="Angin" required><input aria-label="Nilai kedua" id="value-1" type="number" min="0" max="100" value="62" required></div>
-          <div class="data-row"><input aria-label="Kategori ketiga" id="label-2" maxlength="18" value="Air" required><input aria-label="Nilai ketiga" id="value-2" type="number" min="0" max="100" value="91" required></div>
-          <label for="stat">Jumlah peserta</label><input id="stat" type="number" min="0" max="999999" value="1250" required>
-          <label for="speed">Kecepatan animasi</label><select id="speed"><option value="0.5">Lambat · 0,5×</option><option value="1" selected>Normal · 1×</option><option value="1.5">Cepat · 1,5×</option></select>
-          <button class="primary apply" type="submit">Terapkan & putar</button>
-        </form>
-        <p id="feedback" class="feedback" role="status">Data contoh untuk pratinjau, bukan data riset.</p>
-        <div class="note"><strong>Mulai dari animasinya</strong><p>Demo ini belum mengimpor PDF. Nantinya elemen ini dapat ditempatkan di atas halaman dokumenmu.</p></div>
-      </aside>
-      <section class="preview" aria-label="Pratinjau buku interaktif">
-        <div class="preview-top"><span><span class="live-dot"></span> PRATINJAU BUKU</span><span id="page-status" aria-live="polite">Halaman 1–2 / 4</span></div>
-        <div class="stage"><div id="book">
-          <article class="page cover" data-page="0"><div class="page-inner"><p class="kicker">BUKU INTERAKTIF / VOL. 01</p><div class="cover-art" aria-hidden="true"><div class="orbit"></div><div class="sun">✳</div><span class="leaf leaf-one"></span><span class="leaf leaf-two"></span></div><p class="kicker">IDE KECIL. DAMPAK BESAR.</p><h2>Masa depan<br>yang bergerak.</h2><p class="intro">Jelajahi data, ikuti proses, dan temukan cerita di balik setiap angka.</p><div class="page-foot"><span>CONTOH ANIMASI</span><span>01</span></div></div></article>
-          <article class="page" data-page="1"><div class="page-inner"><p class="kicker">01 / GRAFIK BATANG</p><h2 id="chart-title">Energi bersih, masa depan cerah</h2><p class="description">Potensi pemanfaatan energi • data ilustrasi</p><div class="chart" aria-label="Grafik persentase energi"><div class="grid-lines"></div><div class="column"><span class="bar-value">78%</span><div class="bar-track"><div class="bar" style="--bar-color:#187c66"></div></div><button class="chart-label" data-detail="0" type="button">Surya</button></div><div class="column"><span class="bar-value">62%</span><div class="bar-track"><div class="bar" style="--bar-color:#e5ad54"></div></div><button class="chart-label" data-detail="1" type="button">Angin</button></div><div class="column"><span class="bar-value">91%</span><div class="bar-track"><div class="bar" style="--bar-color:#8faeb8"></div></div><button class="chart-label" data-detail="2" type="button">Air</button></div></div><div id="chart-detail" class="detail" aria-live="polite">Klik nama kategori untuk melihat nilainya.</div><div class="page-foot"><span>DATA YANG BERCERITA</span><span>02</span></div></div></article>
-          <article class="page" data-page="2"><div class="page-inner"><p class="kicker">02 / ALUR BERTAHAP</p><h2>Dari ide<br>menjadi aksi.</h2><p class="description">Klik setiap langkah untuk melihat penjelasannya.</p><div class="process"><button class="process-step" data-step="0"><span>01</span><div><strong>Amati</strong><small>Kenali kebutuhan di sekitar.</small></div><b>↗</b></button><div class="connector"></div><button class="process-step" data-step="1"><span>02</span><div><strong>Rancang</strong><small>Susun solusi yang terukur.</small></div><b>↗</b></button><div class="connector"></div><button class="process-step" data-step="2"><span>03</span><div><strong>Wujudkan</strong><small>Mulai, ukur, lalu perbaiki.</small></div><b>↗</b></button></div><p id="process-detail" class="detail" aria-live="polite">Satu perubahan dimulai dari satu langkah.</p><div class="page-foot"><span>PROSES YANG TERHUBUNG</span><span>03</span></div></div></article>
-          <article class="page stat-page" data-page="3"><div class="page-inner"><p class="kicker">03 / ANGKA & DAMPAK</p><h2>Bersama,<br>lebih berarti.</h2><div class="stat-visual"><svg viewBox="0 0 200 200" aria-hidden="true"><circle cx="100" cy="100" r="86" class="ring-bg"/><circle cx="100" cy="100" r="86" class="ring-fill"/></svg><div class="stat-number"><strong id="counter">1.250</strong><span>peserta terlibat</span></div></div><p class="stat-caption">Setiap orang punya peran.<br>Setiap langkah memberi perubahan.</p><div class="page-foot"><span>ILUSTRASI JUMLAH PESERTA</span><span>04</span></div></div></article>
-        </div></div>
-        <div class="controls"><div class="navigation"><button id="prev" aria-label="Halaman sebelumnya">←</button><button id="next" aria-label="Halaman berikutnya">→</button></div><div class="playback"><button id="toggle">Jeda</button><button id="replay">↻ Putar ulang</button></div><span id="motion-status" role="status">Animasi berjalan</span></div>
-        <div class="timeline"><div id="progress"></div></div>
-        <p class="preview-note">Animasi dimulai saat halaman dibuka. Gunakan tombol panah untuk membalik buku.</p>
-        <p id="error" role="alert" hidden></p>
-      </section>
+
+<header class="topbar">
+  <a class="brand" href="index.html"><span>PDF</span> PDF Tools</a>
+  <a class="back-link badge" href="index.html">← Back to tools</a>
+</header>
+
+<main class="ae-app">
+
+  <!-- ── Sidebar ────────────────────────────────────── -->
+  <aside class="ae-sidebar">
+
+    <!-- Step 01: Import PDF -->
+    <div class="ae-sidebar-section">
+      <div class="ae-step-head"><span class="ae-step-num">01</span><h2>Import PDF</h2></div>
+      <p class="ae-muted">Open any PDF — each page becomes an editable canvas.</p>
+      <label class="ae-file-label" for="ae-pdf-file">PDF file</label>
+      <input id="ae-pdf-file" class="ae-file" type="file" accept="application/pdf,.pdf">
+      <p id="ae-status" class="ae-feedback">Upload a PDF to get started.</p>
+      <p id="ae-error"  class="ae-error"  role="alert"></p>
     </div>
-  </main>
+
+    <!-- Step 02: Add elements -->
+    <div class="ae-sidebar-section">
+      <div class="ae-step-head"><span class="ae-step-num">02</span><h2>Add elements</h2></div>
+      <p class="ae-muted">Click to add to the current page, then drag to position.</p>
+      <div class="ae-toolbar">
+        <button id="ae-add-text"    class="ae-add-btn" type="button" disabled>✦ Text</button>
+        <button id="ae-add-hotspot" class="ae-add-btn" type="button" disabled>✦ Link button</button>
+      </div>
+      <button id="ae-extract"     class="ae-helper-btn" type="button" disabled>⬇ Extract text from this page</button>
+      <button id="ae-extract-all" class="ae-helper-btn" type="button" disabled>⬇ Extract text from all pages</button>
+    </div>
+
+    <!-- Step 03: Inspector (shown when element selected) -->
+    <div class="ae-sidebar-section">
+      <div class="ae-step-head"><span class="ae-step-num">03</span><h2>Element settings</h2></div>
+      <div id="ae-inspector" class="ae-inspector hidden">
+
+        <h3>Content</h3>
+        <label for="ae-i-content">Text</label>
+        <textarea id="ae-i-content" rows="2" placeholder="Element text…"></textarea>
+
+        <h3>Style</h3>
+        <div class="ae-row">
+          <label for="ae-i-fs">Font size</label>
+          <input id="ae-i-fs" type="number" min="6" max="200" value="18">
+          <label for="ae-i-color">Color</label>
+          <input id="ae-i-color" type="color" value="#1a1a1a">
+        </div>
+        <div class="ae-row">
+          <label for="ae-i-bgcolor">Background</label>
+          <input id="ae-i-bgcolor" type="color" value="#ffffff">
+          <label for="ae-i-opacity">Opacity %</label>
+          <input id="ae-i-opacity" type="number" min="0" max="100" value="100">
+        </div>
+        <div class="ae-toggle-row">
+          <button id="ae-i-bold"   class="ae-toggle-btn" type="button"><b>B</b></button>
+          <button id="ae-i-italic" class="ae-toggle-btn" type="button"><i>I</i></button>
+        </div>
+        <label>Align</label>
+        <div class="ae-align-row">
+          <button id="ae-i-align-left"   class="ae-align-btn on"  type="button" title="Left">⬤◯◯</button>
+          <button id="ae-i-align-center" class="ae-align-btn"     type="button" title="Center">◯⬤◯</button>
+          <button id="ae-i-align-right"  class="ae-align-btn"     type="button" title="Right">◯◯⬤</button>
+        </div>
+
+        <h3>Animation</h3>
+        <label for="ae-i-anim-type">Type</label>
+        <select id="ae-i-anim-type">
+          <option value="none">None</option>
+          <option value="fadeIn" selected>Fade in</option>
+          <option value="slideUp">Slide up</option>
+          <option value="slideDown">Slide down</option>
+          <option value="slideLeft">Slide from right</option>
+          <option value="slideRight">Slide from left</option>
+          <option value="zoomIn">Zoom in</option>
+          <option value="bounce">Bounce</option>
+          <option value="pulse">Pulse (loop)</option>
+        </select>
+        <div class="ae-row">
+          <label for="ae-i-anim-delay">Delay (ms)</label>
+          <input id="ae-i-anim-delay" type="number" min="0" max="5000" step="100" value="0">
+          <label for="ae-i-anim-dur">Duration (ms)</label>
+          <input id="ae-i-anim-dur"   type="number" min="100" max="5000" step="100" value="600">
+        </div>
+
+        <h3>Link on click</h3>
+        <label for="ae-i-link-type">Action</label>
+        <select id="ae-i-link-type">
+          <option value="none">None</option>
+          <option value="url">Open URL</option>
+          <option value="page">Go to page</option>
+        </select>
+        <div id="ae-i-link-url-row" class="ae-hidden-row">
+          <label for="ae-i-link-url">URL</label>
+          <input id="ae-i-link-url" type="url" placeholder="https://…">
+        </div>
+        <div id="ae-i-link-page-row" class="ae-hidden-row">
+          <label for="ae-i-link-page">Page number</label>
+          <input id="ae-i-link-page" type="number" min="1" value="1">
+        </div>
+
+        <button id="ae-delete-btn" class="ae-delete-btn" type="button">Delete element</button>
+        <button id="ae-clear-btn"  class="ae-delete-btn" type="button" style="margin-top:4px">Clear this page</button>
+      </div>
+      <p class="ae-muted" id="ae-inspector-hint">Select an element on the canvas to edit its settings.</p>
+    </div>
+
+    <!-- Step 04: Export -->
+    <div class="ae-sidebar-section">
+      <div class="ae-step-head"><span class="ae-step-num">04</span><h2>Export</h2></div>
+      <p class="ae-muted">Save as an interactive flipbook — works offline, no server needed.</p>
+      <label class="ae-file-label" for="ae-title">Book title</label>
+      <input id="ae-title" type="text" maxlength="200" placeholder="My Interactive Book" style="width:100%;box-sizing:border-box;border:1px solid #d4cec4;border-radius:6px;padding:6px 8px;font-size:12px;margin-bottom:8px">
+      <button id="ae-export" class="ae-export-btn" type="button" disabled>Export as interactive flipbook →</button>
+    </div>
+
+  </aside>
+
+  <!-- ── Canvas area ────────────────────────────────── -->
+  <div class="ae-canvas-area">
+
+    <!-- Mode bar -->
+    <div class="ae-mode-bar">
+      <button id="ae-mode-edit"    class="ae-mode-btn active" type="button">✏️ Edit</button>
+      <button id="ae-mode-preview" class="ae-mode-btn"        type="button">▶ Preview</button>
+      <span class="ae-mode-hint" id="ae-mode-hint">Switch to Preview to see animations play</span>
+      <span class="ae-page-label" id="ae-page-label"></span>
+    </div>
+
+    <!-- Canvas scroll area (empty state until PDF loaded) -->
+    <div class="ae-canvas-scroll">
+      <div class="ae-empty">
+        <div class="ae-empty-icon">📄</div>
+        <h2>Animate your PDF</h2>
+        <p>Upload a PDF — every page becomes an interactive canvas. Add text, buttons, links, and animations. Export as a standalone flipbook.</p>
+      </div>
+    </div>
+
+    <!-- Page navigation (preview mode) -->
+    <div class="ae-mode-bar" id="ae-nav-bar" style="justify-content:center;gap:16px">
+      <button id="ae-prev" class="ae-mode-btn" type="button">← Prev</button>
+      <button id="ae-next" class="ae-mode-btn" type="button">Next →</button>
+    </div>
+
+    <!-- Page strip -->
+    <div id="ae-strip" class="ae-strip"></div>
+
+  </div>
+
+</main>
+
 </body>
 </html>
