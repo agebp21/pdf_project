@@ -39,7 +39,7 @@
   .card:hover{transform:translateY(-4px) rotate(-.3deg);box-shadow:7px 7px 0 var(--ink)}
   .card.feat{border-radius:26px;overflow:hidden}
   .sticker{position:absolute;top:12px;right:12px;font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 10px;border-radius:999px;border:1.5px solid var(--ink);transform:rotate(6deg)}
-  .icon-box{width:44px;height:44px;border-radius:14px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;border:1.5px solid var(--ink);transform:rotate(-3deg)}
+  .icon-box{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;border:1.5px solid var(--ink);flex-shrink:0}
   .marquee{border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);background:var(--pine);color:#FFF7EA;overflow:hidden;white-space:nowrap}
   .marquee-track{display:inline-flex;align-items:center;white-space:nowrap;animation:slide 24s linear infinite;will-change:transform}
   .marquee-track span{display:inline-block;padding:10px .25em 10px 0;font-size:12px;font-weight:700;letter-spacing:.14em}
@@ -191,25 +191,26 @@
   function cardHTML(t){
     const href = t.href || (t.workflow ? `converter.html?tool=merge-pdf` : `converter.html?tool=${t.id || ''}`);
     const D = (window.I18N ? I18N.tool(t.id, t.desc) : t.desc);
-    const openLabel = window.I18N ? I18N.t('card.open') : 'Open tool';
     if(t.workflow){
-      return `<a href="${href}" class="card feat p-5 flex flex-col min-h-[190px] overflow-hidden !bg-[#1C1917] !text-[#FFF7EA] !border-[#1C1917]">
+      return `<a href="${href}" class="card feat p-5 flex flex-col min-h-[170px] overflow-hidden !bg-[#1C1917] !text-[#FFF7EA] !border-[#1C1917]">
         <div class="absolute inset-0 opacity-20 pointer-events-none" style="background:radial-gradient(circle at 80% 20%, #FF5C28 1.5px, transparent 1.5px);background-size:22px 22px"></div>
         <span class="sticker bg-[#FF5C28] text-white">${window.I18N ? I18N.t('card.soon') : 'SOON →'}</span>
-        <div class="icon-box !bg-[#FF5C28] !text-white">↗</div>
-        <h3 class="mt-3 text-[15px] font-extrabold relative z-10 serif">${t.title}</h3>
-        <p class="text-[12px] leading-snug text-white/70 mt-1.5 relative z-10">${D}</p>
-        <span class="mt-auto text-[12px] font-extrabold relative z-10">${window.I18N ? I18N.t('card.workflow') : 'Create workflow'} →</span>
+        <div class="flex items-center gap-3 relative z-10">
+          <div class="icon-box !bg-[#FF5C28] !text-white !border-black/40">↗</div>
+          <h3 class="text-[15px] font-extrabold serif">${t.title}</h3>
+        </div>
+        <p class="text-[12.5px] leading-relaxed text-white/70 mt-3 relative z-10">${D}</p>
       </a>`;
     }
     const span = t.feat ? 'sm:col-span-2 lg:col-span-2' : '';
     const bgBadge = t.badge === 'AI' ? 'background:#4C1D95;color:#fff' : (t.badge === 'Demo' ? 'background:#1A3C34;color:#fff' : 'background:#FF5C28;color:#fff');
-    return `<a href="${href}" class="card ${span} p-5 flex flex-col min-h-[190px] group">
+    return `<a href="${href}" class="card ${span} p-5 flex flex-col min-h-[170px] group">
       ${t.badge?`<span class="sticker" style="${bgBadge}">${t.badge}</span>`:''}
-      <div class="icon-box" style="background:${t.bg};color:${t.color}"><span class="text-[15px] leading-none">${t.icon}</span></div>
-      <h3 class="mt-3 text-[14.5px] font-extrabold leading-tight serif">${t.title}</h3>
-      <p class="mt-1 text-[12px] leading-snug text-[#78716C]">${D}</p>
-      <span class="mt-auto pt-3 text-[12px] font-extrabold inline-flex items-center gap-1">${openLabel} <span class="group-hover:translate-x-1 transition">→</span></span>
+      <div class="flex items-center gap-3">
+        <div class="icon-box" style="background:${t.bg};color:${t.color}"><span class="text-[16px] leading-none">${t.icon}</span></div>
+        <h3 class="text-[15px] font-extrabold leading-tight serif">${t.title}</h3>
+      </div>
+      <p class="mt-3 text-[12.5px] leading-relaxed text-[#78716C]">${D}</p>
     </a>`;
   }
 
