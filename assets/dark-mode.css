@@ -1,0 +1,32 @@
+/* Midnight Gold dark mode — phase 1: homepage (index.html).
+ * Activated by `dark` class on <html> (see assets/theme.js).
+ * Strategy: restyle custom classes + the Tailwind utilities used on index.
+ * Light mode (default) is untouched.
+ */
+html.dark body{background:#141210;color:#F5EFE3}
+html.dark body::before{background:radial-gradient(600px 400px at 10% 0%,rgba(255,92,40,.14) 0%,transparent 60%),radial-gradient(700px 500px at 95% 20%,rgba(124,93,250,.16) 0%,transparent 55%),radial-gradient(800px 600px at 50% 110%,rgba(60,90,70,.25) 0%,transparent 60%)}
+html.dark .grain{opacity:.09}
+html.dark .nav-pill{background:rgba(28,25,23,.82);border-color:rgba(245,239,227,.22);box-shadow:4px 4px 0 rgba(0,0,0,.5)}
+html.dark .btn-ink{background:#F5EFE3;color:#1C1917;border-color:#F5EFE3}
+html.dark .chip{background:#221E18;color:#F5EFE3;border-color:rgba(245,239,227,.25)}
+html.dark .chip:hover{box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+html.dark .filter-btn{background:#221E18;color:#F5EFE3;border-color:rgba(245,239,227,.25)}
+html.dark .filter-btn.active{background:#2A5248;color:#FFF7EA;border-color:rgba(245,239,227,.35);box-shadow:3px 3px 0 rgba(0,0,0,.5)}
+html.dark .card{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border-color:rgba(245,239,227,.16)}
+html.dark .card:hover{box-shadow:7px 7px 0 rgba(0,0,0,.5)}
+html.dark .sticker{border-color:rgba(0,0,0,.5)}
+html.dark .marquee{background:#122B25}
+/* Tailwind utilities used on index */
+html.dark .bg-white{background-color:#221E18}
+html.dark .bg-\[\#FFFDF6\]{background-color:#221E18}
+html.dark .bg-\[\#E9E4FF\]{background-color:#3B3263}
+html.dark .bg-\[\#FFF7EA\]{background-color:#2A251D}
+html.dark .bg-\[\#E4F3C2\]{background-color:#3A4A22}
+html.dark .text-\[\#57534E\]{color:#C9C2B4}
+html.dark .text-\[\#78716C\]{color:#A8A29E}
+html.dark .text-\[\#1A3C34\]{color:#8FD0B3}
+html.dark .text-gray-400{color:#8A8478}
+html.dark .border-\[\#1C1917\]{border-color:rgba(245,239,227,.25)}
+html.dark .bg-white\/70{background-color:rgba(255,255,255,.06)}
+html.dark .border-\[\#1C1917\]\/15{border-color:rgba(245,239,227,.18)}
+html.dark ::-webkit-scrollbar-thumb{background:#3A352C}
