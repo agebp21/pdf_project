@@ -38,7 +38,7 @@
   }
   async function readProject(file) {
     const zip=await JSZip.loadAsync(await file.arrayBuffer());
-    if(!zip.file('project.json')||!zip.file('source.pdf'))throw Error('Pilih file proyek .flipbook, bukan ZIP hasil HTML.');
+    if(!zip.file('project.json')||!zip.file('source.pdf'))throw Error('Pilih file proyek .sm-flipbook, bukan ZIP hasil HTML.');
     const data=validate(JSON.parse(await zip.file('project.json').async('string')));
     return {data,pdf:new Blob([await zip.file('source.pdf').async('arraybuffer')],{type:'application/pdf'})};
   }
@@ -48,7 +48,13 @@
   async function chooseSave(name) {
     if (typeof globalThis.showSaveFilePicker !== 'function') return null;
     const extension = '.' + name.split('.').pop();
-    return globalThis.showSaveFilePicker({id:'flipbook-export',suggestedName:name,types:[{description:'File flipbook',accept:{'application/octet-stream':[extension]}}]});
+    try { return await globalThis.showSaveFilePicker({id:'flipbook-export',suggestedName:name,types:[{description:'File flipbook',accept:{'application/octet-stream':[extension]}}]}); }
+    catch(cause) {
+      // Embedded/restricted browsers may expose the API but forbid using it.
+      // Keep explicit user cancellation distinct from unavailable capability.
+      if(cause.name==='SecurityError'||cause.name==='NotSupportedError')return null;
+      throw cause;
+    }
   }
   async function saveBlob(blob,name,handle) {
     if (!handle) { download(blob,name); return false; }
