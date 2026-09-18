@@ -11,6 +11,16 @@ html.dark .btn-ink{background:#F5EFE3;color:#1C1917;border-color:#F5EFE3}
 html.dark .chip{background:#221E18;color:#F5EFE3;border-color:rgba(245,239,227,.25)}
 html.dark .chip:hover{box-shadow:3px 3px 0 rgba(0,0,0,.5)}
 html.dark .filter-btn{background:#221E18;color:#F5EFE3;border-color:rgba(245,239,227,.25)}
+html.dark .showcase{background:radial-gradient(90% 100% at 50% 0%,#262019 0%,#141210 55%,#0B0A08 100%)}
+html.dark .showcase h1{color:#F5EFE3}
+html.dark .showcase h1 em{color:#8FD0B3}
+html.dark .showcase .sub{color:#B8B2A4}
+html.dark .showcase-bar{border-top-color:rgba(255,255,255,.1)}
+html.dark .showcase .filter-btn{background:transparent;border-color:transparent;color:#8A8478;box-shadow:none}
+html.dark .showcase .filter-btn.active{background:#F5EFE3;color:#1C1917;border-color:#F5EFE3}
+html.dark .showcase-search{background:rgba(255,255,255,.06);border-color:rgba(255,255,255,.14);box-shadow:none}
+html.dark .showcase-search input{color:#F5EFE3}
+html.dark .showcase-search input::placeholder{color:#8A8478}
 html.dark .filter-btn.active{background:#2A5248;color:#FFF7EA;border-color:rgba(245,239,227,.35);box-shadow:3px 3px 0 rgba(0,0,0,.5)}
 html.dark .card{background:linear-gradient(180deg,rgba(255,255,255,.07),rgba(255,255,255,.03));border-color:rgba(245,239,227,.16)}
 html.dark .card:hover{box-shadow:7px 7px 0 rgba(0,0,0,.5)}
