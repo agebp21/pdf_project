@@ -45,15 +45,15 @@
   .marquee-track span{display:inline-block;padding:10px .25em 10px 0;font-size:12px;font-weight:700;letter-spacing:.14em}
   @keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
   .hero-blob{position:absolute;pointer-events:none;filter:saturate(1.1)}
-  /* Icon horde showcase (Clay-style): fanned glossy tiles with reflections */
-  .horde{background:radial-gradient(120% 130% at 50% 0%,#262019 0%,#141210 55%,#0C0B09 100%);border:1.5px solid var(--ink);border-radius:28px;box-shadow:6px 6px 0 rgba(28,25,23,.2)}
-  .horde-track{display:flex;flex-wrap:wrap;justify-content:center;align-items:flex-end;gap:14px;padding:34px 22px 40px}
-  .horde-tile{width:58px;height:58px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;border:1.5px solid rgba(255,255,255,.25);box-shadow:0 10px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.35);-webkit-box-reflect:below 6px linear-gradient(transparent 55%,rgba(255,255,255,.28));animation:horde-float 5s ease-in-out infinite;animation-delay:var(--d,0s);transition:transform .15s}
-  .horde-tile:hover{transform:translateY(-6px) scale(1.08)!important}
-  @keyframes horde-float{0%,100%{margin-top:0}50%{margin-top:-8px}}
+  /* Icon horde showcase (Clay-style): one tidy fanned row, big center,
+     shrinking+fading edges, soft reflections. No wrap, no jitter. */
+  .horde{background:radial-gradient(120% 130% at 50% 0%,#262019 0%,#141210 55%,#0C0B09 100%);border:1.5px solid var(--ink);border-radius:28px;box-shadow:6px 6px 0 rgba(28,25,23,.2);overflow:hidden}
+  .horde-track{display:flex;flex-wrap:nowrap;justify-content:center;align-items:center;gap:12px;padding:36px 30px 44px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
+  .horde-tile{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;border:1.5px solid rgba(255,255,255,.25);box-shadow:0 10px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.35);-webkit-box-reflect:below 6px linear-gradient(transparent 60%,rgba(255,255,255,.22));transition:margin-top .15s}
+  .horde-tile:hover{margin-top:-8px}
   ::-webkit-scrollbar{height:8px;width:10px}
   ::-webkit-scrollbar-thumb{background:var(--ink);border-radius:999px}
-  @media (prefers-reduced-motion:reduce){.marquee-track{animation:none}.horde-tile{animation:none}.card:hover,.btn-tang:hover,.btn-ink:hover{transform:none}}
+  @media (prefers-reduced-motion:reduce){.marquee-track{animation:none}.card:hover,.btn-tang:hover,.btn-ink:hover{transform:none}}
 </style>
 </head>
 <body class="relative">
@@ -200,7 +200,6 @@
   const filterWrap = document.getElementById('filters');
   const hordeEl = document.getElementById('horde');
   const HORDE_IDS = ["pdf-to-flipbook","notebook","flipbook-animation","merge-pdf","split-pdf","compress-pdf","pdf-to-word","pdf-to-excel","word-to-pdf","jpg-to-pdf","sign-pdf","watermark","protect-pdf","ocr-pdf","translate-pdf","pdf-to-md","edit-pdf","rotate-pdf"];
-  const HORDE_SIZES = [68,56,62,52,66,58,64,54,60,50,62,56,64,52,60,54,62,56];
 
   function toolHref(t){
     return t.href || (t.workflow ? `converter.html?tool=merge-pdf` : `converter.html?tool=${t.id || ''}`);
@@ -208,9 +207,14 @@
 
   function renderHorde(){
     const picks = HORDE_IDS.map(id => tools.find(t => t.id === id)).filter(Boolean);
+    const c = (picks.length - 1) / 2;
     hordeEl.innerHTML = picks.map((t, i) => {
-      const s = HORDE_SIZES[i % HORDE_SIZES.length];
-      return `<a href="${toolHref(t)}" title="${t.title}" aria-label="${t.title}" class="horde-tile" style="width:${s}px;height:${s}px;background:${t.bg};color:${t.color};--d:${(i * 0.33).toFixed(2)}s"><span>${t.icon}</span></a>`;
+      const d = picks.length > 1 ? Math.abs(i - c) / c : 0; // 0 center → 1 edge
+      const scale = (1 - 0.32 * d).toFixed(3);
+      const rise = (-14 * d).toFixed(1);
+      const tilt = (i < c ? -1 : 1) * (7 * d).toFixed(1);
+      const op = (1 - 0.45 * d).toFixed(2);
+      return `<a href="${toolHref(t)}" title="${t.title}" aria-label="${t.title}" class="horde-tile" style="background:${t.bg};color:${t.color};transform:scale(${scale}) translateY(${rise}px) rotate(${tilt}deg);opacity:${op};z-index:${Math.round(20 - d * 20)}"><span>${t.icon}</span></a>`;
     }).join('');
   }
 
