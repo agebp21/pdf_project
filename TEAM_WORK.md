@@ -177,6 +177,12 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - User: take out Unlock PDF (no password-cracking tool). Removed the catalog card from index.html; converter never had it. HTTP 200. Committed + pushed.
 
+### 17 September 2026 — paket kilat: tabrakan terus koordinasi (diverifikasi, pushed)
+
+- Sesi ini mulai bangun Watermark/Page numbers/Crop bareng user, tapi agen liyo (Codex) ternyata wes nggarap paket sing podo + push disek (1728020: `assets/pdf-edit.js`, hooks converter, `tests/pdf-edit.test.cjs`, FEATURE_CHECKLIST.md).
+- Sesi iki: batal bangun ganda, revert 3 entri TOOLS duplikat (duplicates → 0, dadi 17 tools), verifikasi karyane: pdf-edit PASS, export PASS, converter-limits PASS, 16 Python OK. Struktur sesi iki (coming-soon guard, pdfContentPages, OCR, multicol) utuh; caps 300/2000/6 kolom wes dicabut Codex + ono tes-e; guard-ku ditingkatne (charAt).
+- File `converter.html` + `server.py` + `index.html` saiki multi-penulis antar sesi — saben sesi wajib cek `git log`/diff + FEATURE_CHECKLIST.md sadurunge nyentuh. `assets/animation-editor.css` (untracked) kagungane sesi liyo — ojo disentuh.
+
 ### 17 September 2026 — dedupe repeats (pushed)
 
 - Decorative display type drawn 3x → notes showed triplicates. dedupeLine in shared core fixes Word/Excel/PPT at once. 7-case mock OK, syntax + HTTP OK. User to reconvert. Committed + pushed.
