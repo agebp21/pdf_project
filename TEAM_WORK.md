@@ -281,3 +281,14 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 - Tes: export.test.cjs PASS (v2 round-trip, validasi overlay), qa-runtime.cjs PASS (7 viewport combo + real PDF), qa-editor.cjs PASS (load PDF, edit mode, project save/restore, HTML export, invalid file recovery), 16 Python tests OK. HTTP 200 flipbook.html, editor.js, editor.css. `node --check` semua file OK.
 - Belum diuji: QA visual browser/device (drag, resize, animasi nyata), ekstraksi teks dari PDF asli kompleks, pengujian di APK/Windows build lama.
 
+### 18 September 2026 — Flipbook Animation Editor: halaman tersendiri (pushed 01a4c5d)
+
+- Pemilik: sesi ini. File baru: `assets/animation-editor.js`, `assets/animation-editor.css`. File dimodifikasi: `animation.html`.
+- `animation.html` diganti total dari demo statis 4 halaman jadi editor Canva-like sungguhan.
+- Kartu "Flipbook Animation" di `index.html` sudah mengarah ke `animation.html` — tidak perlu diubah.
+- Fitur: upload PDF → render per halaman → ekstrak teks otomatis (PDF.js) → drag/resize/rotate elemen → inspector (font, warna, bg, opacity, bold, italic, align) → animasi CSS (fadeIn/slideUp/slideDown/slideLeft/slideRight/zoomIn/bounce/pulse + delay + durasi) → link (URL / goto halaman) → Preview mode (animasi diputar) → Export HTML ZIP (PageFlip standalone flipbook).
+- `flipbook.html` tidak disentuh sama sekali.
+- Tes: node --check OK, HTTP 200 animation.html + animation-editor.js + animation-editor.css, export.test.cjs PASS, qa-editor.cjs PASS, qa-runtime.cjs PASS, 16 Python tests OK.
+- Belum diuji: QA visual browser (drag, animasi, link klik, export buka di browser).
+
+
