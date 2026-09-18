@@ -40,20 +40,26 @@
   .card.feat{border-radius:26px;overflow:hidden}
   .sticker{position:absolute;top:12px;right:12px;font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 10px;border-radius:999px;border:1.5px solid var(--ink);transform:rotate(6deg)}
   .icon-box{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;border:1.5px solid var(--ink);flex-shrink:0}
-  .marquee{border-top:1.5px solid var(--ink);border-bottom:1.5px solid var(--ink);background:var(--pine);color:#FFF7EA;overflow:hidden;white-space:nowrap}
-  .marquee-track{display:inline-flex;align-items:center;white-space:nowrap;animation:slide 24s linear infinite;will-change:transform}
-  .marquee-track span{display:inline-block;padding:10px .25em 10px 0;font-size:12px;font-weight:700;letter-spacing:.14em}
-  @keyframes slide{from{transform:translateX(0)}to{transform:translateX(-50%)}}
-  .hero-blob{position:absolute;pointer-events:none;filter:saturate(1.1)}
-  /* Icon horde showcase (Clay-style): one tidy fanned row, big center,
-     shrinking+fading edges, soft reflections. No wrap, no jitter. */
-  .horde{background:radial-gradient(120% 130% at 50% 0%,#262019 0%,#141210 55%,#0C0B09 100%);border:1.5px solid var(--ink);border-radius:28px;box-shadow:6px 6px 0 rgba(28,25,23,.2);overflow:hidden}
-  .horde-track{display:flex;flex-wrap:nowrap;justify-content:center;align-items:center;gap:12px;padding:36px 30px 44px;-webkit-mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent);mask-image:linear-gradient(90deg,transparent,#000 10%,#000 90%,transparent)}
-  .horde-tile{width:60px;height:60px;border-radius:16px;display:flex;align-items:center;justify-content:center;font-size:22px;font-weight:800;border:1.5px solid rgba(255,255,255,.25);box-shadow:0 10px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.35);-webkit-box-reflect:below 6px linear-gradient(transparent 60%,rgba(255,255,255,.22));transition:margin-top .15s}
+  /* Clay-style dark showcase: serif headline, icon field, pills+search bar */
+  .showcase{background:radial-gradient(90% 100% at 50% 0%,#262019 0%,#141210 55%,#0B0A08 100%);color:#F5EFE3;text-align:center;padding:60px 20px 0;overflow:hidden}
+  .showcase h1{font-family:'Fraunces',Georgia,serif;font-weight:900;letter-spacing:-.02em;line-height:1.05;margin:0;font-size:clamp(36px,5.5vw,62px)}
+  .showcase h1 em{font-style:italic;font-weight:700;color:#8FD0B3}
+  .showcase h1 .hl{background:#FF5C28;color:#fff;padding:0 14px;border-radius:16px;display:inline-block;transform:rotate(-2deg)}
+  .showcase .sub{color:#B8B2A4;max-width:640px;margin:16px auto 0;font-size:15px;line-height:1.6}
+  .horde-rows{margin-top:38px;display:flex;flex-direction:column;gap:8px;align-items:center}
+  .horde-row{display:flex;justify-content:center;gap:14px}
+  .horde-tile{border-radius:18px;display:flex;align-items:center;justify-content:center;font-weight:800;border:1.5px solid rgba(255,255,255,.25);box-shadow:0 10px 24px rgba(0,0,0,.45),inset 0 1px 0 rgba(255,255,255,.35);-webkit-box-reflect:below 6px linear-gradient(transparent 60%,rgba(255,255,255,.22));transition:margin-top .15s}
   .horde-tile:hover{margin-top:-8px}
+  .showcase-bar{max-width:1100px;margin:36px auto 0;border-top:1px solid rgba(255,255,255,.1);padding:16px 20px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
+  .showcase #filters{display:flex;flex-wrap:wrap;gap:4px}
+  .showcase .filter-btn{background:transparent;border:1px solid transparent;color:#8A8478;border-radius:999px;padding:7px 13px;font-size:11px;font-weight:800;letter-spacing:.08em;text-transform:uppercase}
+  .showcase .filter-btn.active{background:#F5EFE3;color:#1C1917;border-color:#F5EFE3;box-shadow:none}
+  .showcase-search{display:flex;align-items:center;gap:8px;background:rgba(255,255,255,.06);border:1px solid rgba(255,255,255,.14);border-radius:10px;padding:9px 14px;width:100%;max-width:300px}
+  .showcase-search input{background:transparent;outline:none;border:0;color:#F5EFE3;font-size:13px;font-weight:600;width:100%}
+  .showcase-search input::placeholder{color:#8A8478}
   ::-webkit-scrollbar{height:8px;width:10px}
   ::-webkit-scrollbar-thumb{background:var(--ink);border-radius:999px}
-  @media (prefers-reduced-motion:reduce){.marquee-track{animation:none}.card:hover,.btn-tang:hover,.btn-ink:hover{transform:none}}
+  @media (prefers-reduced-motion:reduce){.card:hover,.btn-tang:hover,.btn-ink:hover{transform:none}}
 </style>
 </head>
 <body class="relative">
@@ -80,40 +86,21 @@
   </nav>
 </div>
 
-<!-- HERO -->
-<header class="relative max-w-[1100px] mx-auto px-4 pt-10 pb-4 text-center">
-  <div class="hero-blob left-[2%] top-6 text-3xl rotate-[-12deg]">✳</div>
-  <div class="hero-blob right-[4%] top-10 text-2xl rotate-[14deg]">◍</div>
-  <div class="hero-blob left-[10%] bottom-0 text-xl">〜</div>
-  <p class="inline-flex items-center gap-2 text-[11px] font-extrabold tracking-[.16em] bg-white border border-[#1C1917] rounded-full px-4 py-1.5 shadow-[3px_3px_0_#1C1917]" data-i18n="hero.badge">✦ NO SIGN-UP • FILES STAY ON YOUR DEVICE • NO HASSLE</p>
-  <h1 class="serif font-black tracking-tight leading-[1.02] mt-4 text-[38px] md:text-[60px]"><span data-i18n="hero.t1">Every PDF task,</span><br><em class="not-italic serif italic font-bold text-[#1A3C34]" data-i18n="hero.t2">done</em> <span class="inline-block bg-[#FF5C28] text-white px-3 rounded-2xl border-2 border-[#1C1917] -rotate-2 shadow-[4px_4px_0_#1C1917]" data-i18n="hero.t3">the chill way.</span></h1>
-  <p class="mt-4 text-[14px] md:text-[15px] text-[#57534E] max-w-2xl mx-auto leading-relaxed"><span data-i18n="hero.subA">Merge, split, compress, convert, then turn your PDF into an </span><b data-i18n="hero.subB">interactive flipbook</b><span data-i18n="hero.subC"> + chat with your docs via AI. Not that red clone — this is the elegant cream GenZ edition.</span></p>
-  <div class="mt-5 flex flex-wrap justify-center gap-2.5">
-    <a href="flipbook.html" class="btn-ink rounded-full px-5 py-2.5 text-[13px] font-extrabold" data-i18n="hero.cta1">▤ Open Flipbook</a>
-    <a href="notebook.html" class="rounded-full px-5 py-2.5 text-[13px] font-extrabold bg-[#E9E4FF] border-[1.5px] border-[#1C1917] shadow-[4px_4px_0_#1C1917] hover:-translate-y-0.5 transition" data-i18n="hero.cta2">✦ Chat with your PDF</a>
-  </div>
-  <div class="mt-5 flex flex-wrap justify-center gap-2 text-[11px] font-bold text-[#57534E]">
-    <span class="bg-white/70 border border-[#1C1917]/15 rounded-full px-3 py-1" data-i18n="stat.1">⚡ ~40 tools</span>
-    <span class="bg-white/70 border border-[#1C1917]/15 rounded-full px-3 py-1" data-i18n="stat.2">🔒 privacy-first</span>
-    <span class="bg-white/70 border border-[#1C1917]/15 rounded-full px-3 py-1" data-i18n="stat.3">📖 flipbook + animation</span>
-    <span class="bg-white/70 border border-[#1C1917]/15 rounded-full px-3 py-1" data-i18n="stat.4">🤖 notebook AI</span>
-  </div>
-  <div class="mt-6 flex flex-wrap justify-center items-center gap-2" id="filters"></div>
-  <div class="mt-3 flex justify-center">
-    <label class="flex items-center gap-2 bg-[#FFFDF6] border-[1.5px] border-[#1C1917] rounded-full px-4 py-2 shadow-[3px_3px_0_#1C1917] w-full max-w-md">
+<!-- SHOWCASE (Clay-style dark hero) -->
+<section class="showcase">
+  <h1><span data-i18n="hero.t1">Every PDF task,</span><br><em data-i18n="hero.t2">done</em> <span class="hl" data-i18n="hero.t3">the chill way.</span></h1>
+  <p class="sub"><span data-i18n="hero.subA">Merge, split, compress, convert, then turn your PDF into an </span><b data-i18n="hero.subB">interactive flipbook</b><span data-i18n="hero.subC"> + chat with your docs via AI. Not that red clone — this is the elegant cream GenZ edition.</span></p>
+  <div class="horde-rows" id="horde" aria-label="Tool icon showcase"></div>
+  <div class="showcase-bar">
+    <div id="filters"></div>
+    <label class="showcase-search">
       <span aria-hidden="true">🔍</span>
-      <input id="search" type="search" data-i18n-ph="search.ph" placeholder="Search tools…" class="bg-transparent outline-none text-[13px] font-semibold w-full placeholder:text-[#A8A29E]">
+      <input id="search" type="search" data-i18n-ph="search.ph" placeholder="Search tools…">
     </label>
   </div>
-</header>
-
-<section class="max-w-[1100px] mx-auto px-4" aria-label="Tool icon showcase">
-  <div class="horde"><div class="horde-track" id="horde"></div></div>
 </section>
 
-<div class="marquee mt-4"><div class="marquee-track"><span>&nbsp;✳ MERGE ✳ SPLIT ✳ COMPRESS ✳ PDF → FLIPBOOK ✳ CHAT PDF ✳ WATERMARK ✳ PROTECT ✳ OCR ✳ TRANSLATE ✳ MERGE ✳ SPLIT ✳ COMPRESS ✳ PDF → FLIPBOOK ✳ CHAT PDF ✳ WATERMARK ✳ PROTECT ✳ OCR ✳ TRANSLATE&nbsp;</span><span aria-hidden="true">&nbsp;✳ MERGE ✳ SPLIT ✳ COMPRESS ✳ PDF → FLIPBOOK ✳ CHAT PDF ✳ WATERMARK ✳ PROTECT ✳ OCR ✳ TRANSLATE ✳ MERGE ✳ SPLIT ✳ COMPRESS ✳ PDF → FLIPBOOK ✳ CHAT PDF ✳ WATERMARK ✳ PROTECT ✳ OCR ✳ TRANSLATE&nbsp;</span></div></div>
-
-<main class="relative z-10 max-w-[1440px] mx-auto px-4 py-8">
+<main class="relative z-10 max-w-[1440px] mx-auto px-4 py-8" id="tools">
   <div class="flex items-end justify-between mb-4">
     <h2 class="serif text-[22px] md:text-[26px] font-black tracking-tight"><span data-i18n="grid.title">Pick your weapon</span> <span class="text-[#FF5C28]">↓</span></h2>
     <p class="text-[12px] text-[#78716C] font-semibold hidden sm:block" data-i18n="grid.sub">Click a card → jump straight into the tool. Workflows live at the top.</p>
@@ -199,22 +186,22 @@
   const grid = document.getElementById('grid');
   const filterWrap = document.getElementById('filters');
   const hordeEl = document.getElementById('horde');
-  const HORDE_IDS = ["pdf-to-flipbook","notebook","flipbook-animation","merge-pdf","split-pdf","compress-pdf","pdf-to-word","pdf-to-excel","word-to-pdf","jpg-to-pdf","sign-pdf","watermark","protect-pdf","ocr-pdf","translate-pdf","pdf-to-md","edit-pdf","rotate-pdf"];
+  const HORDE_ROWS = [
+    {ids:["pdf-to-flipbook","notebook","merge-pdf","split-pdf","pdf-to-word","pdf-to-excel","ocr-pdf"], s:74},
+    {ids:["flipbook-animation","compress-pdf","word-to-pdf","jpg-to-pdf","sign-pdf","watermark","translate-pdf","pdf-to-md","edit-pdf","rotate-pdf"], s:58},
+    {ids:["protect-pdf","pdf-to-jpg","html-to-pdf","organize-pdf","pdf-to-ppt","ppt-to-pdf","excel-to-pdf","compare-pdf","redact-pdf","crop-pdf","page-numbers","scan-to-pdf"], s:44, dim:true}
+  ];
 
   function toolHref(t){
     return t.href || (t.workflow ? `converter.html?tool=merge-pdf` : `converter.html?tool=${t.id || ''}`);
   }
 
   function renderHorde(){
-    const picks = HORDE_IDS.map(id => tools.find(t => t.id === id)).filter(Boolean);
-    const c = (picks.length - 1) / 2;
-    hordeEl.innerHTML = picks.map((t, i) => {
-      const d = picks.length > 1 ? Math.abs(i - c) / c : 0; // 0 center → 1 edge
-      const scale = (1 - 0.32 * d).toFixed(3);
-      const rise = (-14 * d).toFixed(1);
-      const tilt = (i < c ? -1 : 1) * (7 * d).toFixed(1);
-      const op = (1 - 0.45 * d).toFixed(2);
-      return `<a href="${toolHref(t)}" title="${t.title}" aria-label="${t.title}" class="horde-tile" style="background:${t.bg};color:${t.color};transform:scale(${scale}) translateY(${rise}px) rotate(${tilt}deg);opacity:${op};z-index:${Math.round(20 - d * 20)}"><span>${t.icon}</span></a>`;
+    hordeEl.innerHTML = HORDE_ROWS.map(row => {
+      const tiles = row.ids.map(id => tools.find(t => t.id === id)).filter(Boolean);
+      return `<div class="horde-row">` + tiles.map(t =>
+        `<a href="${toolHref(t)}" title="${t.title}" aria-label="${t.title}" class="horde-tile" style="width:${row.s}px;height:${row.s}px;font-size:${Math.round(row.s * 0.38)}px;background:${t.bg};color:${t.color};${row.dim ? 'opacity:.72;' : ''}"><span>${t.icon}</span></a>`
+      ).join('') + `</div>`;
     }).join('');
   }
 
@@ -261,6 +248,7 @@
     active=c;
     renderFilters();
     renderGrid();
+    document.getElementById('tools')?.scrollIntoView({behavior:'smooth', block:'start'});
   }
 
   document.getElementById('search').addEventListener('input', (e)=>{ query=e.target.value; renderGrid(); });
