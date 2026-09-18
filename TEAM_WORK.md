@@ -181,7 +181,7 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - Sesi ini mulai bangun Watermark/Page numbers/Crop bareng user, tapi agen liyo (Codex) ternyata wes nggarap paket sing podo + push disek (1728020: `assets/pdf-edit.js`, hooks converter, `tests/pdf-edit.test.cjs`, FEATURE_CHECKLIST.md).
 - Sesi iki: batal bangun ganda, revert 3 entri TOOLS duplikat (duplicates → 0, dadi 17 tools), verifikasi karyane: pdf-edit PASS, export PASS, converter-limits PASS, 16 Python OK. Struktur sesi iki (coming-soon guard, pdfContentPages, OCR, multicol) utuh; caps 300/2000/6 kolom wes dicabut Codex + ono tes-e; guard-ku ditingkatne (charAt).
-- File `converter.html` + `server.py` + `index.html` saiki multi-penulis antar sesi — saben sesi wajib cek `git log`/diff + FEATURE_CHECKLIST.md sadurunge nyentuh. `assets/animation-editor.css` (untracked) kagungane sesi liyo — ojo disentuh.
+- File `converter.html` + `server.py` + `index.html` saiki multi-penulis antar sesi — saben sesi wajib cek `git log`/diff + FEATURE_CHECKLIST.md sadurunge nyentuh. `assets/animation-editor.css` kagungane sesi liyo (kebawa commit 10d647e karena `add -A`; isine ora diowahi) — sing neruske monggo.
 
 ### 17 September 2026 — dedupe repeats (pushed)
 
