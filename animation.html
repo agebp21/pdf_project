@@ -34,14 +34,15 @@
 
     <!-- Step 02: Add elements -->
     <div class="ae-sidebar-section">
-      <div class="ae-step-head"><span class="ae-step-num">02</span><h2>Add elements</h2></div>
-      <p class="ae-muted">Click to add to the current page, then drag to position.</p>
+      <div class="ae-step-head"><span class="ae-step-num">02</span><h2>Select &amp; add elements</h2></div>
+      <p class="ae-muted">Load PDF content to make each text area selectable — hover to see zones, click to select.</p>
+      <button id="ae-load-page" class="ae-export-btn" type="button" disabled style="margin-bottom:6px;background:#35543e">⬇ Load this page's content</button>
+      <button id="ae-load-all"  class="ae-helper-btn" type="button" disabled>⬇ Load all pages at once</button>
+      <p class="ae-muted" style="margin-top:8px">Or add new elements on top:</p>
       <div class="ae-toolbar">
         <button id="ae-add-text"    class="ae-add-btn" type="button" disabled>✦ Text</button>
         <button id="ae-add-hotspot" class="ae-add-btn" type="button" disabled>✦ Link button</button>
       </div>
-      <button id="ae-extract"     class="ae-helper-btn" type="button" disabled>⬇ Extract text from this page</button>
-      <button id="ae-extract-all" class="ae-helper-btn" type="button" disabled>⬇ Extract text from all pages</button>
     </div>
 
     <!-- Step 03: Inspector (shown when element selected) -->
@@ -49,32 +50,42 @@
       <div class="ae-step-head"><span class="ae-step-num">03</span><h2>Element settings</h2></div>
       <div id="ae-inspector" class="ae-inspector hidden">
 
-        <h3>Content</h3>
-        <label for="ae-i-content">Text</label>
-        <textarea id="ae-i-content" rows="2" placeholder="Element text…"></textarea>
+        <!-- Info teks PDF zone (hanya tampil untuk pdfZone) -->
+        <p id="ae-zone-content-info" class="ae-muted" style="font-size:11px;font-style:italic;word-break:break-word;display:none"></p>
+
+        <div id="ae-insp-content-sec">
+          <h3>Content</h3>
+          <label for="ae-i-content">Text</label>
+          <textarea id="ae-i-content" rows="2" placeholder="Element text…"></textarea>
+        </div>
+
 
         <h3>Style</h3>
         <div class="ae-row">
-          <label for="ae-i-fs">Font size</label>
-          <input id="ae-i-fs" type="number" min="6" max="200" value="18">
-          <label for="ae-i-color">Color</label>
-          <input id="ae-i-color" type="color" value="#1a1a1a">
-        </div>
-        <div class="ae-row">
-          <label for="ae-i-bgcolor">Background</label>
-          <input id="ae-i-bgcolor" type="color" value="#ffffff">
-          <label for="ae-i-opacity">Opacity %</label>
-          <input id="ae-i-opacity" type="number" min="0" max="100" value="100">
-        </div>
-        <div class="ae-toggle-row">
-          <button id="ae-i-bold"   class="ae-toggle-btn" type="button"><b>B</b></button>
-          <button id="ae-i-italic" class="ae-toggle-btn" type="button"><i>I</i></button>
-        </div>
-        <label>Align</label>
-        <div class="ae-align-row">
-          <button id="ae-i-align-left"   class="ae-align-btn on"  type="button" title="Left">⬤◯◯</button>
-          <button id="ae-i-align-center" class="ae-align-btn"     type="button" title="Center">◯⬤◯</button>
-          <button id="ae-i-align-right"  class="ae-align-btn"     type="button" title="Right">◯◯⬤</button>
+        <div id="ae-insp-style-sec">
+          <h3>Style</h3>
+          <div class="ae-row">
+            <label for="ae-i-fs">Font size</label>
+            <input id="ae-i-fs" type="number" min="6" max="200" value="18">
+            <label for="ae-i-color">Color</label>
+            <input id="ae-i-color" type="color" value="#1a1a1a">
+          </div>
+          <div class="ae-row">
+            <label for="ae-i-bgcolor">Background</label>
+            <input id="ae-i-bgcolor" type="color" value="#ffffff">
+            <label for="ae-i-opacity">Opacity %</label>
+            <input id="ae-i-opacity" type="number" min="0" max="100" value="100">
+          </div>
+          <div class="ae-toggle-row">
+            <button id="ae-i-bold"   class="ae-toggle-btn" type="button"><b>B</b></button>
+            <button id="ae-i-italic" class="ae-toggle-btn" type="button"><i>I</i></button>
+          </div>
+          <label>Align</label>
+          <div class="ae-align-row">
+            <button id="ae-i-align-left"   class="ae-align-btn on"  type="button" title="Left">⬤◯◯</button>
+            <button id="ae-i-align-center" class="ae-align-btn"     type="button" title="Center">◯⬤◯</button>
+            <button id="ae-i-align-right"  class="ae-align-btn"     type="button" title="Right">◯◯⬤</button>
+          </div>
         </div>
 
         <h3>Animation</h3>

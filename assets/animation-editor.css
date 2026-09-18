@@ -300,7 +300,41 @@ input[type="file"].ae-file::file-selector-button {
   overflow: hidden;
 }
 
+/* ── PDF text zones (click-to-select, not draggable) ──────── */
+.ae-pdf-zone {
+  position: absolute;
+  box-sizing: border-box;
+  background: transparent;
+  border: 1.5px dashed transparent;
+  border-radius: 2px;
+  cursor: pointer;
+  transition: background .1s, border-color .1s;
+  z-index: 4;
+}
+.ae-pdf-zone:hover {
+  background: rgba(74,124,89,0.08);
+  border-color: rgba(74,124,89,0.45);
+}
+.ae-pdf-zone.selected {
+  background: rgba(74,124,89,0.14);
+  border: 2px solid #4a7c59;
+  z-index: 12;
+}
+.ae-zone-badge {
+  position: absolute;
+  top: -10px; left: 0;
+  background: #4a7c59;
+  color: white;
+  font-size: 8px;
+  padding: 1px 5px;
+  border-radius: 3px;
+  white-space: nowrap;
+  pointer-events: none;
+  line-height: 1.5;
+}
+
 /* ── Editor elements ─────────────────────────────────────── */
+
 .ae-el {
   position: absolute;
   box-sizing: border-box;
