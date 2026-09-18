@@ -111,7 +111,7 @@
   <p id="empty" class="hidden text-center text-gray-400 mt-12" data-i18n="grid.empty">No tools in this category.</p>
 
   <section class="mt-10 grid md:grid-cols-3 gap-4">
-    <div class="card p-5 bg-[#1A3C34] !text-[#FFF7EA]">
+    <div class="card p-5" style="background:#1A3C34;color:#FFF7EA">
       <p class="text-[11px] font-extrabold tracking-[.16em] text-[#E4F3C2]" data-i18n="feat.1k">WHY IT'S DIFFERENT?</p>
       <h3 class="serif text-[20px] font-black mt-1" data-i18n="feat.1t">Not just convert.</h3>
       <p class="text-[12.5px] mt-2 leading-relaxed text-[#FFF7EA]/80" data-i18n="feat.1d">Your PDF can instantly become a digital book + animated stats. Other converters stop at download.</p>
@@ -217,12 +217,12 @@
     const href = toolHref(t);
     const D = (window.I18N ? I18N.tool(t.id, t.desc) : t.desc);
     if(t.workflow){
-      return `<a href="${href}" class="card feat p-5 flex flex-col min-h-[170px] overflow-hidden !bg-[#1C1917] !text-[#FFF7EA] !border-[#1C1917]">
+      return `<a href="${href}" class="card feat p-5 flex flex-col min-h-[170px] overflow-hidden" style="background:#1C1917;color:#FFF7EA;border-color:#1C1917">
         <div class="absolute inset-0 opacity-20 pointer-events-none" style="background:radial-gradient(circle at 80% 20%, #FF5C28 1.5px, transparent 1.5px);background-size:22px 22px"></div>
         <span class="sticker bg-[#FF5C28] text-white">${window.I18N ? I18N.t('card.soon') : 'SOON →'}</span>
         <div class="flex items-center gap-3 relative z-10">
-          <div class="icon-box !bg-[#FF5C28] !text-white !border-black/40">↗</div>
-          <h3 class="text-[15px] font-extrabold serif relative z-10 text-[#FFF7EA]">${t.title}</h3>
+          <div class="icon-box" style="background:#FF5C28;color:#fff;border-color:rgba(0,0,0,.4)">↗</div>
+          <h3 class="text-[15px] font-extrabold serif relative z-10" style="color:#FFF7EA">${t.title}</h3>
         </div>
         <p class="text-[12.5px] leading-relaxed text-white/70 mt-3 relative z-10">${D}</p>
       </a>`;
