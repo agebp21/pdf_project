@@ -136,6 +136,7 @@ const TOOLS = [
   {id:'organize-pdf', title:'Organize PDF', desc:'Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.', cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — preview grid, drag untuk urutkan'},
   {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Real PPTX→PDF via local LibreOffice (needs the project server).', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'PPTX/PPT file — converted on your computer via the local server + LibreOffice'},
   {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'Real .pptx: every page as a slide image with editable speaker notes.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'PDF file — slides keep the design, notes hold the text (needs internet)'},
+  {id:'pdf-to-md', title:'PDF to Markdown', desc:'Headings, lists, and tables detected — perfect food for AI, notes, and blogs.', cat:'Convert PDF', icon:'{ }', color:'#4C1D95', bg:'#E9E4FF', accept:'.pdf', hint:'PDF file — structure detected from fonts and columns'},
 ];
 let active = new URLSearchParams(location.search).get('tool') || 'jpg-to-pdf';
 // Honest fallback: 18 catalog cards link to tools not built yet. Instead of
@@ -501,6 +502,7 @@ $('#convertBtn').addEventListener('click', async ()=>{
     else if(t.id==='html-to-pdf') await htmlToPdf();
     else if(t.id==='ppt-to-pdf') await pptToPdf();
     else if(t.id==='pdf-to-ppt') await pdfToPpt();
+    else if(t.id==='pdf-to-md') await pdfToMd();
     else if(['watermark','page-numbers','crop-pdf'].includes(t.id)) await editPdf(t.id);
     else throw new Error('Tool belum diimplementasikan');
     log('Convert success');
@@ -1093,12 +1095,21 @@ async function pdfContentPages(pdf, progress){
     for(const [,items] of sorted){
       items.sort((a,b)=>(a.transform?a.transform[4]:0)-(b.transform?b.transform[4]:0));
       const cellTexts=cellsOf(items);
+      // Markdown needs typography: biggest font on the line + bold majority.
+      let lineSize=0, boldChars=0, lineChars=0;
+      for(const it of items){
+        const t=it.transform||[0,0,0,0,0,0];
+        lineSize=Math.max(lineSize, Math.abs(t[0])||0, Math.abs(t[3])||0);
+        lineChars+=it.str.length;
+        if(/bold|black|heavy/i.test(it.fontName||'')) boldChars+=it.str.length;
+      }
+      const bold=lineChars>0 && boldChars/lineChars>0.6;
       // Single-column lines keep the legacy spaced-type rejoin via cellsOf;
       // the joined text is what Word/PPT/notes show.
       const txt=dedupeLine(cellTexts.join(' '));
       if(!txt) continue;
       totalChars+=txt.length; lineNo++;
-      lines.push({line:lineNo, source:'Text', text:txt, cells:cellTexts});
+      lines.push({line:lineNo, source:'Text', text:txt, cells:cellTexts, size:lineSize, bold});
     }
     if(!lines.length){
       // No embedded text — this page is an image/scan. Try OCR instead of garbage.
@@ -1124,6 +1135,48 @@ async function pdfContentPages(pdf, progress){
     pages.push({image, lines});
   }
   return {pages, totalChars, emptyPages, ocrPages};
+}
+// Markdown builder: headings from relative font size, lists normalized,
+// consecutive same-shape multi-column lines become real Markdown tables
+// (first such line = header). Pure data in, string out — easy to unit test.
+function pagesToMarkdown(pages, title){
+  const sizes=[];
+  pages.forEach(pg=>pg.lines.forEach(l=>{ if(l.size>0) sizes.push(l.size); }));
+  sizes.sort((a,b)=>a-b);
+  const body=sizes.length?sizes[Math.floor(sizes.length/2)]:12;
+  const out=['# '+title, ''];
+  let table=null; // {cols, header[], rows[]}
+  const flushTable=()=>{
+    if(table && table.rows.length){
+      out.push('| '+table.header.join(' | ')+' |');
+      out.push('| '+table.header.map(()=>'---').join(' | ')+' |');
+      table.rows.forEach(r=>out.push('| '+r.join(' | ')+' |'));
+      out.push('');
+    }
+    table=null;
+  };
+  const cellText=(c)=>String(c==null?'':c);
+  pages.forEach((pg,idx)=>{
+    out.push('## Page '+(idx+1), '');
+    pg.lines.forEach(l=>{
+      const cells=(l.cells&&l.cells.length>1)?l.cells.map(cellText):null;
+      if(cells){
+        if(!table || table.cols!==cells.length){ flushTable(); table={cols:cells.length, header:cells.map(c=>c||' '), rows:[]}; }
+        else table.rows.push(cells.map(c=>c||' '));
+        return;
+      }
+      flushTable();
+      const t=l.text;
+      if(l.size>=body*1.5) out.push('# '+t, '');
+      else if(l.size>=body*1.2) out.push('## '+t, '');
+      else if(l.size>=body*1.08 && l.bold) out.push('### '+t, '');
+      else if(/^(\d+)[.\)]\s+/.test(t)) out.push(t.replace(/^(\d+)[.\)]\s+/, '$1. '), '');
+      else if(/^[•\-\*▪◦▸›»]\s*/.test(t)) out.push('- '+t.replace(/^[•\-\*▪◦▸›»]\s*/, ''), '');
+      else out.push((l.bold?'**'+t+'**':t), '');
+    });
+    flushTable();
+  });
+  return out.join('\n');
 }
 async function pdfToExcel(){
   if(!window.pdfjsLib) throw new Error('Libraries not loaded yet');
@@ -1234,6 +1287,22 @@ async function pdfToExcel(){
   }
   const out=await wb.xlsx.writeBuffer();
   downloadBlob(new Blob([out],{type:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'}), files[0].name.replace(/\.pdf$/i,'')+'.xlsx');
+}
+async function pdfToMd(){
+  if(!window.pdfjsLib) throw new Error('pdf.js not loaded');
+  const buf=await files[0].arrayBuffer();
+  const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
+  log('PDFtoMD pages='+pdf.numPages);
+  const content=await pdfContentPages(pdf, (m)=>{ $('#progress').textContent=m; });
+  if(!content.pages.length) throw new Error('Nothing could be read from this PDF. It may be blank or damaged.');
+  const md=pagesToMarkdown(content.pages, files[0].name.replace(/\.pdf$/i,''));
+  downloadBlob(new Blob([md],{type:'text/markdown'}), files[0].name.replace(/\.pdf$/i,'')+'.md');
+  const prev=document.createElement('pre');
+  prev.className='whitespace-pre-wrap bg-white p-3 rounded border max-h-60 overflow-auto text-left';
+  prev.textContent=md.slice(0,4000);
+  $('#resultPreview').prepend(prev);
+  $('#progress').textContent='Done.';
+  log('Markdown chars='+md.length);
 }
 async function htmlToPdf(){
   const file=files[0];

@@ -269,8 +269,16 @@ User's PPT notes showed `TV PROGRAM x3`, `GRAPHIC PACKAGE x3`, `TELKOMSEL AWARDS
 
 User said "gas kabeh". Two items shipped in `converter.html`:
 - Coming-soon guard: unknown `?tool=` ids (the 18 dead cards) no longer silently open the wrong tool — a banner names the requested tool and says it isn't built yet (roadmap, not swapped). Sidebar still offers the 14 working tools.
-- Multi-column tables: shared core splits visual lines at wide X gutters (`cellsOf`, gap>50, max 6, spaced-type legacy path protected). Excel `PDF Extract` table gains dynamic `Col 1..N` when columns exist, prose keeps one `Text` column. Word/PPT/notes/side-cells still use the joined line.
+- Multi-column tables: shared core splits visual lines at wide X gutters (`cellsOf`, gap>50, no column cap, spaced-type legacy path protected). Excel `PDF Extract` table gains dynamic `Col 1..N` when columns exist, prose keeps one `Text` column. Word/PPT/notes/side-cells still use the joined line.
 - Verified: splitter mock OK (table→2 cells, prose→1, spaced→PORTFOLIO), inline `node --check` OK, HTTP 200. NOT verified: real bank-statement/table PDF end-to-end. Pushed per auto-push rule.
+
+### 17 September 2026 — PDF to Markdown (penting → gas)
+
+User confirmed Markdown matters (AI food, notes, blogs). Implemented in `converter.html`:
+- Core lines now carry `size` (max font) + `bold` (majority chars) — additive only, teammate's no-truncation semantics kept (verified `converter-limits` still passes).
+- Pure `pagesToMarkdown()`: median body size → `#`/`##`/`###` thresholds, bold lines `**`, bullets/numbered normalized, consecutive same-shape multi-col lines → real Markdown tables (first line = header). Titles `#`, per-page `## Page N`. New `pdfToMd` tool + dispatch + TOOLS entry (index card goes live automatically).
+- FEATURE_CHECKLIST.md synced (18 tools, Markdown row, backlog 13) — file owner Codex, touched minimally; see TEAM_WORK.
+- Verified: builder mock OK (9/9 constructs incl. table), inline `node --check` OK, HTTP 200, converter-limits + pdf-edit + 16 Python OK. NOT verified: real-file browser run. Pushed per auto-push rule.
 
 ### 17 September 2026 — rencana 18 kartu mati (per rak, barnet dikonfirmasi user)
 

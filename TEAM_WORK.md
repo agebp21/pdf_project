@@ -191,6 +191,10 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 
 - Dead-card guard banner (no more silent wrong tool); multi-col split in core + dynamic Col 1..N in Excel. Splitter mock OK (2/1/PORTFOLIO), syntax + HTTP OK. No real-table E2E. Committed + pushed.
 
+### 17 September 2026 — PDF to Markdown (pushed)
+
+- Core +size/bold (additive; teammate no-truncation kept, limits suite passes). Pure pagesToMarkdown (headings/lists/tables), pdfToMd tool + dispatch + TOOLS entry. Builder mock 9/9, syntax + HTTP + limits/pdf-edit/16-Python OK. FEATURE_CHECKLIST.md touched minimally (counts + row). No browser E2E. Committed + pushed.
+
 ### 17 September 2026 — catalog audit (pushed, no code)
 
 - 35 cards vs 14 tools: 18 cards silently fall back to JPG-to-PDF (incl. all 4 security cards). 14 real ones graded strong/half/weak in handoff. Next: coming-soon guard, then build per shelf. Committed + pushed.

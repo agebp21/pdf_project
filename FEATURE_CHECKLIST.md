@@ -2,7 +2,7 @@
 
 Diperbarui: 17 September 2026. Status berdasarkan kode dan bukti tes, bukan hanya keberadaan kartu menu.
 
-**Arti centang:** fungsi yang disebut sudah lolos pengujian dalam lingkup di kolom bukti. Bukan jaminan semua dokumen, browser, atau perangkat sudah teruji. Katalog berisi 34 kartu: 17 tool converter, 3 halaman langsung (flipbook/notebook/demo), dan 14 fitur katalog belum dibuat.
+**Arti centang:** fungsi yang disebut sudah lolos pengujian dalam lingkup di kolom bukti. Bukan jaminan semua dokumen, browser, atau perangkat sudah teruji. Katalog berisi 34 kartu: 18 tool converter, 3 halaman langsung (flipbook/notebook/demo), dan 13 fitur katalog belum dibuat.
 
 ## Sudah teruji
 
@@ -24,6 +24,7 @@ Diperbarui: 17 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 | [x] | Ekspor HTML ZIP | Editor menghasilkan ZIP dengan halaman, viewer, engine, CSS, metadata, dan aset lokal. Kelengkapan paket diuji. |
 | [x] | Handoff converter ke flipbook | Hasil PDF menawarkan tombol flipbook; penyimpanan/pengambilan Blob diuji dengan IndexedDB simulasi. |
 | [x] | Lokasi simpan kustom | Pemilihan tujuan, cancel, error tulis, streaming, fallback diuji dengan API simulasi. Dialog OS asli belum diuji. |
+| [x] | PDF to Markdown | Judul/daftar/tabel terdeteksi dari font dan kolom; mock builder OK; browser E2E belum. |
 | [x] | Validasi / error | Range salah, crop kosong, watermark terlalu besar, input PDF rusak, tool tak tersedia; pesan error tetap terlihat. |
 | [x] | Penghapusan pemotongan konten | Batas buatan teks/baris/kolom sudah dihapus. Tes ekstraksi >300 baris, teks panjang, dan >6 kolom lolos. Memori, format output, print area, dan timeout proses Office tetap berlaku. |
 
@@ -59,7 +60,6 @@ Diperbarui: 17 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 - [ ] PDF Forms.
 - [ ] AI Summarizer sebagai tool terpisah.
 - [ ] Translate PDF.
-- [ ] PDF to Markdown.
 - [ ] Workflow (kartu masih mengarah ke Merge).
 - [ ] Akun/login, database pengguna, paket subscription, pembayaran, dan kontrol akses.
 - [ ] Autosave proyek dan editor animasi lengkap.
