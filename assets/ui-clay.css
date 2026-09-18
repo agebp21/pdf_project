@@ -1,0 +1,42 @@
+/* Shared white-clean Clay look for PDF Tools inner pages.
+ * Phase 1: converter + flipbook + notebook adopt these classes.
+ * animation.html follows after teammate coordination (their active files).
+ * Self-sufficient components — safe to add alongside existing stylesheets.
+ */
+.clay-serif{font-family:'Fraunces',Georgia,serif}
+body.clay{background:#FBFAF7;color:#1C1917}
+.clay-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.86);backdrop-filter:blur(14px);border:1px solid #E8E2D4;border-radius:18px;padding:8px 12px;box-shadow:0 10px 28px rgba(28,25,23,.08),inset 0 1px 0 #fff}
+.clay-brand{display:flex;align-items:center;gap:10px;font-weight:800;text-decoration:none;color:#1C1917}
+.clay-brand-mark{width:36px;height:36px;border-radius:11px;background:linear-gradient(180deg,#2A5248,#1A3C34);color:#FFF7EA;display:grid;place-items:center;font-size:11px;font-weight:800;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 14px rgba(26,60,52,.3)}
+.clay-brand-name{font-family:'Fraunces',Georgia,serif;font-weight:900;font-size:17px;letter-spacing:-.02em}
+.clay-panel{background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,0) 38%),linear-gradient(180deg,#FFFFFF,#F8F4EA);border:1px solid #E9E2D4;border-radius:20px;box-shadow:0 14px 34px rgba(28,25,23,.10),inset 0 1px 0 #fff,inset 0 -3px 10px rgba(28,25,23,.05)}
+.clay-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:10px 20px;font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;transition:transform .15s,box-shadow .15s;border:1px solid transparent}
+.clay-btn:hover{transform:translateY(-2px)}
+.clay-btn:disabled{opacity:.45;cursor:default;transform:none}
+.clay-btn-primary{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border-color:#E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
+.clay-btn-primary:hover{box-shadow:0 16px 30px rgba(255,92,40,.42),inset 0 1px 0 rgba(255,255,255,.45)}
+.clay-btn-dark{background:linear-gradient(180deg,#3A352C,#1C1917);color:#FFFDF6;border-color:#1C1917;box-shadow:0 10px 22px rgba(28,25,23,.18),inset 0 1px 0 rgba(255,255,255,.25)}
+.clay-btn-ghost{background:#fff;color:#1C1917;border-color:#E4DED0;box-shadow:0 4px 12px rgba(28,25,23,.06),inset 0 1px 0 #fff}
+.clay-input{width:100%;border:1px solid #E4DED0;border-radius:12px;padding:10px 12px;background:#fff;color:#1C1917;font:inherit;box-shadow:inset 0 2px 6px rgba(28,25,23,.05)}
+.clay-pill{display:inline-flex;align-items:center;border:1px solid #E8E2D4;background:#fff;border-radius:999px;padding:7px 14px;font-size:11px;font-weight:800;box-shadow:0 3px 10px rgba(28,25,23,.05)}
+.clay-h{font-family:'Fraunces',Georgia,serif;font-weight:900;letter-spacing:-.02em;color:#1C1917}
+.clay-muted{color:#78716C}
+.clay-badge{display:inline-block;font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 10px;border-radius:999px;background:#FF5C28;color:#fff;box-shadow:0 4px 10px rgba(255,92,40,.35)}
+
+/* Flipbook page only (body.clay) — keeps animation.html untouched. */
+body.clay{background:#FBFAF7;color:#1C1917}
+body.clay .topbar{background:rgba(255,255,255,.88);backdrop-filter:blur(12px);border-bottom:1px solid #E8E2D4}
+body.clay .brand{color:#1C1917}
+body.clay aside{background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,0) 38%),linear-gradient(180deg,#FFFFFF,#F8F4EA);border:1px solid #E9E2D4;border-radius:20px;box-shadow:0 14px 34px rgba(28,25,23,.10),inset 0 1px 0 #fff}
+body.clay .preview{background:#fff;border:1px solid #E9E2D4;border-radius:22px;box-shadow:0 14px 34px rgba(28,25,23,.10),inset 0 1px 0 #fff}
+body.clay .preview-top{background:#1A3C34;color:#FFF7EA}
+body.clay .heading h1{font-family:'Fraunces',Georgia,serif;color:#1C1917}
+body.clay .eyebrow{color:#FF5C28}
+body.clay .muted{color:#78716C}
+body.clay .step{border-color:#E4DED0;color:#1A3C34;background:#fff}
+body.clay input,body.clay select{border:1px solid #E4DED0;border-radius:12px;box-shadow:inset 0 2px 6px rgba(28,25,23,.05)}
+body.clay button.primary.apply{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;border-radius:999px;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45)}
+body.clay button.secondary,body.clay a.secondary{background:#fff;color:#1C1917;border:1px solid #E4DED0;border-radius:999px;box-shadow:0 4px 12px rgba(28,25,23,.06),inset 0 1px 0 #fff}
+body.clay .controls button{background:#fff;border:1px solid #E4DED0;border-radius:999px;box-shadow:0 4px 12px rgba(28,25,23,.06)}
+body.clay .back-link{color:#1A3C34}
+body.clay .feedback{background:#EFF6EC;border-color:#1A3C34}
