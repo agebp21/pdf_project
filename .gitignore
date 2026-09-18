@@ -8,3 +8,5 @@ Thumbs.db
 .DS_Store
 .build/
 .server-*.log
+# Stray OCR data at repo root (used copy lives in assets/vendor/ocr/)
+eng.traineddata
