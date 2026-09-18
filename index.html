@@ -49,7 +49,8 @@
   .showcase .sub{color:#6B665C;max-width:640px;margin:16px auto 0;font-size:15px;line-height:1.6}
   .horde-rows{margin-top:38px;display:flex;flex-direction:column;gap:8px;align-items:center}
   .horde-row{display:flex;justify-content:center;gap:14px}
-  .horde-tile{border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:800;border:1px solid rgba(255,255,255,.7);box-shadow:0 16px 34px rgba(28,25,23,.16),inset 0 1px 0 rgba(255,255,255,.5);-webkit-box-reflect:below 6px linear-gradient(transparent 62%,rgba(28,25,23,.14));transition:margin-top .15s}
+  .horde-tile{position:relative;overflow:hidden;border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:800;border:1px solid rgba(255,255,255,.7);box-shadow:0 16px 34px rgba(28,25,23,.16),inset 0 1px 0 rgba(255,255,255,.5);-webkit-box-reflect:below 6px linear-gradient(transparent 62%,rgba(28,25,23,.14));transition:margin-top .15s}
+  .horde-tile::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.5),rgba(255,255,255,0) 46%);pointer-events:none}
   .horde-tile:hover{margin-top:-8px}
   .showcase-bar{max-width:1100px;margin:36px auto 0;border-top:1px solid #E7E1D2;padding:16px 20px 22px;display:flex;flex-wrap:wrap;gap:12px;align-items:center;justify-content:space-between}
   .showcase #filters{display:flex;flex-wrap:wrap;gap:4px}
@@ -188,9 +189,9 @@
   const filterWrap = document.getElementById('filters');
   const hordeEl = document.getElementById('horde');
   const HORDE_ROWS = [
-    {ids:["pdf-to-flipbook","notebook","merge-pdf","split-pdf","pdf-to-word","pdf-to-excel","ocr-pdf"], s:74},
-    {ids:["flipbook-animation","compress-pdf","word-to-pdf","jpg-to-pdf","sign-pdf","watermark","translate-pdf","pdf-to-md","edit-pdf","rotate-pdf"], s:58},
-    {ids:["protect-pdf","pdf-to-jpg","html-to-pdf","organize-pdf","pdf-to-ppt","ppt-to-pdf","excel-to-pdf","compare-pdf","redact-pdf","crop-pdf","page-numbers","scan-to-pdf"], s:44, dim:true}
+    {ids:["pdf-to-flipbook","notebook","merge-pdf","split-pdf","pdf-to-word","pdf-to-excel","ocr-pdf"]},
+    {ids:["flipbook-animation","compress-pdf","word-to-pdf","jpg-to-pdf","sign-pdf","watermark","translate-pdf","pdf-to-md","edit-pdf","rotate-pdf"]},
+    {ids:["protect-pdf","pdf-to-jpg","html-to-pdf","organize-pdf","pdf-to-ppt","ppt-to-pdf","excel-to-pdf","compare-pdf","redact-pdf","crop-pdf","page-numbers","scan-to-pdf"]}
   ];
 
   function toolHref(t){
@@ -201,7 +202,7 @@
     hordeEl.innerHTML = HORDE_ROWS.map(row => {
       const tiles = row.ids.map(id => tools.find(t => t.id === id)).filter(Boolean);
       return `<div class="horde-row">` + tiles.map(t =>
-        `<a href="${toolHref(t)}" title="${t.title}" aria-label="${t.title}" class="horde-tile" style="width:${row.s}px;height:${row.s}px;font-size:${Math.round(row.s * 0.38)}px;background:${t.bg};color:${t.color};${row.dim ? 'opacity:.72;' : ''}"><span>${t.icon}</span></a>`
+        `<a href="${toolHref(t)}" title="${t.title}" aria-label="${t.title}" class="horde-tile" style="width:56px;height:56px;font-size:21px;background:${t.bg};color:${t.color};"><span>${t.icon}</span></a>`
       ).join('') + `</div>`;
     }).join('');
   }
