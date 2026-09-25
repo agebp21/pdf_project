@@ -482,3 +482,7 @@ User ingin pembeli luar negeri. Tripay hanya IDR (dicek di dokumentasi). User pi
 ### 25 September 2026 - Invoice PDF di riwayat pembayaran
 
 `invoice.py` (writer PDF stdlib: Helvetica/WinAnsi, Flate) + `Accounts.paid_order` + route `GET /api/billing/orders/<id>/invoice.pdf` (401 tanpa login, 404 bila belum lunas/bukan milik user). INVOICE untuk Tripay/Midtrans, RECEIPT untuk Lemon Squeezy (merchant of record), tanda TEST untuk simulasi. Penjual dari `MYFLIPBOOK_INVOICE_SELLER`. UI: kolom Invoice + tombol ⬇ PDF. Tes: `test_invoice_pdf_for_own_paid_orders`; Chromium: beli simulasi -> klik PDF -> file valid, dirender dan dicek.
+
+### 25 September 2026 - Banner hero dari background.png
+
+User menaruh `background.png` (1671x941, teks tertanam) untuk mengganti header homepage. Hero lama (judul + ikon) diganti `<picture>`: `assets/img/hero-1671|900.webp/jpg` (88 KB webp dari PNG 1,3 MB) dan potongan kiri khusus HP `hero-mobile.*` (<=640px) agar teks terbaca. H1 tersembunyi untuk SEO/screen reader, `#horde` tetap ada (hidden) karena dipakai JS. Catatan untuk desain: gambar bertuliskan "PDDF TO FLIPBOOK" (typo) dan "100% Free"/"FREE" padahal ekspor/APK/EXE berbayar; teks gambar tidak ikut i18n. `background.png` asli tidak di-commit.

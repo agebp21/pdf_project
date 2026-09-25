@@ -51,6 +51,9 @@
   .horde-tile{position:relative;overflow:hidden;border-radius:20px;display:flex;align-items:center;justify-content:center;font-weight:800;border:1px solid rgba(255,255,255,.7);box-shadow:0 18px 38px rgba(28,25,23,.20),inset 0 2px 3px rgba(255,255,255,.7),inset 0 -7px 14px rgba(28,25,23,.14);-webkit-box-reflect:below 6px linear-gradient(transparent 62%,rgba(28,25,23,.14));transition:margin-top .15s}
   .horde-tile::before{content:'';position:absolute;inset:0;border-radius:inherit;background:linear-gradient(180deg,rgba(255,255,255,.62),rgba(255,255,255,.08) 42%,rgba(255,255,255,0) 60%);pointer-events:none}
   .horde-tile:hover{margin-top:-8px}
+  .showcase.hero-image{padding:12px 0 0;background:#FFFFFF}
+  .hero-banner{display:block;width:100%;max-width:1440px;height:auto;margin:0 auto}
+  .sr-only{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip:rect(0,0,0,0);white-space:nowrap;border:0}
   .showcase-bar{max-width:1100px;margin:36px auto 0;border-top:1px solid #E7E1D2;padding:16px 20px 22px}
   .showcase #filters{display:flex;flex-wrap:nowrap;gap:6px;overflow-x:auto;scrollbar-width:none;padding:4px 2px;flex:1 1 auto;min-width:0;cursor:grab;-webkit-mask-image:linear-gradient(90deg,#000 88%,transparent);mask-image:linear-gradient(90deg,#000 88%,transparent)}
   .showcase .filter-btn{flex-shrink:0;white-space:nowrap}
@@ -98,10 +101,19 @@
 </div>
 
 <!-- SHOWCASE (Clay-style dark hero) -->
-<section class="showcase">
-  <h1><span data-i18n="hero.t1">Every PDF task,</span><br><em data-i18n="hero.t2">done</em> <span class="hl" data-i18n="hero.t3">the chill way.</span></h1>
-  <p class="sub"><span data-i18n="hero.subA">Merge, split, compress, convert, then turn your PDF into an </span><b data-i18n="hero.subB">interactive flipbook</b><span data-i18n="hero.subC"> you can share anywhere. Not that red clone — this is the elegant cream GenZ edition.</span></p>
-  <div class="horde-rows" id="horde" aria-label="Tool icon showcase"></div>
+<section class="showcase hero-image">
+  <!-- The banner carries the headline visually; keep a real heading for search engines and screen readers. -->
+  <h1 class="sr-only">MyFlipbook — turn your documents into interactive flipbooks</h1>
+  <picture>
+    <!-- Phones: the left part of the banner (logo + headline) at a readable size. -->
+    <source media="(max-width: 640px)" type="image/webp" srcset="assets/img/hero-mobile.webp">
+    <source media="(max-width: 640px)" srcset="assets/img/hero-mobile.jpg">
+    <source type="image/webp" srcset="assets/img/hero-900.webp 900w, assets/img/hero-1671.webp 1671w" sizes="(max-width: 1440px) 100vw, 1440px">
+    <img class="hero-banner" src="assets/img/hero-1671.jpg" srcset="assets/img/hero-900.jpg 900w, assets/img/hero-1671.jpg 1671w" sizes="(max-width: 1440px) 100vw, 1440px"
+      width="1671" height="941" fetchpriority="high"
+      alt="MyFlipbook: turn your documents into interactive flipbooks. Convert PDF, images, PPT and more; merge, split and convert your files in one place.">
+  </picture>
+  <div class="horde-rows" id="horde" hidden></div>
   <div class="showcase-bar">
     <div id="filters"></div>
   </div>
