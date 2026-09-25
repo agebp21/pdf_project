@@ -1,4 +1,4 @@
-/* Shared ID/EN dictionary for PDF Tools (phase 1: homepage full, other pages follow).
+/* Shared ID/EN dictionary for MyFlipbook (phase 1: homepage full, other pages follow).
  *
  * Usage in any page:
  *   <p data-i18n="hero.badge">fallback text</p>
@@ -13,7 +13,7 @@
   var KEY = 'pdf-tools-lang';
   var dict = {
     en: {
-      'meta.title': 'PDF Tools — Every PDF task, done the chill way',
+      'meta.title': 'MyFlipbook — Every PDF task, done the chill way',
       'nav.tag': 'SARVAMAYA • LOCAL VIBES',
       'nav.all': '✳ All tools',
       'nav.flip': '▤ Flipbook',
@@ -47,16 +47,17 @@
       'feat.3t': 'Not stiff, not dated.',
       'feat.3d': 'Serif type + stickers + jumbo rounded corners. Serious but fun on mobile.',
       'foot.t': 'Ready to go? No overthinking.',
-      'foot.s': 'Pick a tool above, drop your file, done. No install, no login.',
+      'foot.s': 'Pick a tool above, drop your file, done. No install. Log in for Pro features.',
       'foot.c1': '▤ Turn into flipbook',
       'foot.c2': 'Compress PDF',
-      'foot.note': 'PDF Tools • Sarvamaya vibes • Made locally, for never-ending tasks ✳',
+      'foot.note': 'MyFlipbook • Sarvamaya vibes • Made locally, for never-ending tasks ✳',
       'card.open': 'Open tool',
       'card.workflow': 'Create workflow',
-      'card.soon': 'SOON →'
+      'card.soon': 'SOON →',
+      'card.coming': 'Coming soon'
     },
     id: {
-      'meta.title': 'PDF Tools — Semua urusan PDF, beres sambil rebahan',
+      'meta.title': 'MyFlipbook — Semua urusan PDF, beres sambil rebahan',
       'nav.tag': 'SARVAMAYA • VIBES LOKAL',
       'nav.all': '✳ Semua tools',
       'nav.flip': '▤ Flipbook',
@@ -90,13 +91,14 @@
       'feat.3t': 'Nggak kaku, nggak jadul.',
       'feat.3d': 'Tipografi serif + stiker + rounded jumbo. Serius tapi tetap fun dibuka di HP.',
       'foot.t': 'Udah siap gas? Jangan overthinking.',
-      'foot.s': 'Pilih tool di atas, drop file, beres. Nggak perlu install, nggak perlu login.',
+      'foot.s': 'Pilih tool di atas, drop file, beres. Nggak perlu install. Login buat fitur Pro.',
       'foot.c1': '▤ Jadiin flipbook',
       'foot.c2': 'Kompres PDF',
-      'foot.note': 'PDF Tools • Sarvamaya vibes • Dibuat lokal, untuk tugas yang nggak kelar-kelar ✳',
+      'foot.note': 'MyFlipbook • Sarvamaya vibes • Dibuat lokal, untuk tugas yang nggak kelar-kelar ✳',
       'card.open': 'Buka tool',
       'card.workflow': 'Create workflow',
       'card.soon': 'SOON →',
+      'card.coming': 'Segera hadir',
       'tool.pdf-to-flipbook': 'Buka PDF sebagai buku digital dan tambahkan statistik angka animasi di halaman mana pun.',
       'tool.notebook': 'Ngobrol dengan PDF-mu seperti NotebookLM. Upload → ringkasan otomatis, tanya jawab, podcast & mindmap.',
       'tool.flipbook-animation': 'Coba grafik bergerak, statistik animasi, dan alur interaktif di dalam buku digital.',
@@ -104,9 +106,9 @@
       'tool.merge-pdf': 'Gabungkan PDF sesuai urutan yang kamu mau dengan tool termudah.',
       'tool.split-pdf': 'Pisahkan satu halaman atau banyak halaman jadi file mandiri.',
       'tool.compress-pdf': 'Perkecil ukuran file dengan kualitas PDF tetap maksimal.',
-      'tool.pdf-to-word': 'Ubah PDF jadi dokumen DOC/DOCX yang gampang diedit.',
-      'tool.pdf-to-ppt': 'Ubah PDF jadi slideshow PPT/PPTX yang gampang diedit.',
-      'tool.pdf-to-excel': 'Tarik data dari PDF ke spreadsheet Excel dalam sekejap.',
+      'tool.pdf-to-word': 'Word yang tampilannya sama dengan PDF, teksnya bisa diedit langsung di halaman.',
+      'tool.pdf-to-ppt': 'Slide tetap berdesain PDF, tiap baris teks jadi text box yang bisa diedit.',
+      'tool.pdf-to-excel': 'Tarik tabel ke Excel: sel asli, angka asli, halaman tetap ada sebagai gambar.',
       'tool.word-to-pdf': 'Bikin file DOC/DOCX gampang dibaca dengan mengubah ke PDF.',
       'tool.ppt-to-pdf': 'Bikin slideshow PPT/PPTX gampang dilihat dengan mengubah ke PDF.',
       'tool.excel-to-pdf': 'Bikin spreadsheet EXCEL gampang dibaca dengan mengubah ke PDF.',

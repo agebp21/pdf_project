@@ -19,7 +19,7 @@ def main():
     out = ROOT / '.build/qa-office'
     out.mkdir(parents=True, exist_ok=True)
     picture = Image.new('RGB', (400, 100), '#214d40')
-    ImageDraw.Draw(picture).text((20, 40), 'PDF Tools - layout test', fill='white')
+    ImageDraw.Draw(picture).text((20, 40), 'MyFlipbook - layout test', fill='white')
     picture.save(out / 'banner.png')
     doc = Document()
     doc.sections[0].header.paragraphs[0].text = 'SARVAMAYA - document header'

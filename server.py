@@ -1,4 +1,4 @@
-"""PDF Tools server and serialized native build service.
+"""MyFlipbook server and serialized native build service.
 
 Loopback-only by default. Pass --host 0.0.0.0 to serve trusted LAN PCs;
 Host/Origin/token checks still apply against this machine's own addresses.
@@ -465,7 +465,7 @@ if __name__ == '__main__':
     args = parser.parse_args()
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     shown = lan_ip() if args.host == '0.0.0.0' else (None if args.host.startswith('127.') else args.host)
-    print(f'PDF Tools: http://{shown or args.host}:{args.port}/', flush=True)
+    print(f'MyFlipbook: http://{shown or args.host}:{args.port}/', flush=True)
     if args.host == '0.0.0.0':
         print('Mode LAN: hanya untuk jaringan tepercaya (WiFi rumah/kantor).', flush=True)
     httpd.serve_forever()

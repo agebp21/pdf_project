@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title data-i18n="meta.title">PDF Tools — Every PDF task, done the chill way</title>
+<title data-i18n="meta.title">MyFlipbook — Every PDF task, done the chill way</title>
 <script src="assets/i18n.js"></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -61,6 +61,10 @@
   .showcase-search input::placeholder{color:#A8A29E}
   ::-webkit-scrollbar{height:8px;width:10px}
   ::-webkit-scrollbar-thumb{background:var(--ink);border-radius:999px}
+  .card.soon{cursor:not-allowed;opacity:.62;filter:saturate(.55)}
+  .card.soon:hover{transform:none;box-shadow:0 14px 34px rgba(28,25,23,.10),inset 0 1px 0 #fff,inset 0 -3px 10px rgba(28,25,23,.05)}
+  .horde-tile.soon{opacity:.45;filter:grayscale(.6);cursor:not-allowed}
+  .horde-tile.soon:hover{margin-top:0}
   @media (prefers-reduced-motion:reduce){.card:hover,.btn-tang:hover,.btn-ink:hover{transform:none}}
 </style>
 </head>
@@ -71,8 +75,8 @@
 <div class="sticky top-3 z-50 max-w-[1440px] mx-auto px-4">
   <nav class="nav-pill rounded-2xl px-3 py-2 flex items-center justify-between gap-3">
     <a href="index.html" class="flex items-center gap-2.5">
-      <span class="w-9 h-9 rounded-xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-[11px] font-extrabold border border-[#1C1917] -rotate-3">PDF</span>
-      <span class="leading-none"><span class="serif font-black text-[17px] tracking-tight block">PDF Tools</span><span class="text-[10px] font-bold tracking-[.18em] text-[#78716C]" data-i18n="nav.tag">SARVAMAYA • LOCAL VIBES</span></span>
+      <span class="w-9 h-9 rounded-xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-[11px] font-extrabold border border-[#1C1917] -rotate-3">MF</span>
+      <span class="leading-none"><span class="serif font-black text-[17px] tracking-tight block">MyFlipbook</span><span class="text-[10px] font-bold tracking-[.18em] text-[#78716C]" data-i18n="nav.tag">SARVAMAYA • LOCAL VIBES</span></span>
     </a>
     <div class="hidden md:flex items-center gap-2 text-[12px] font-bold">
       <a href="#grid" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.all">✳ All tools</a>
@@ -128,14 +132,14 @@
   <div class="rounded-3xl border-[1.5px] border-[#1C1917] bg-[#1C1917] text-[#FFF7EA] p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-4 justify-between shadow-[6px_6px_0_rgba(28,25,23,.2)]">
     <div>
       <p class="serif text-[20px] font-black" data-i18n="foot.t">Ready to go? No overthinking.</p>
-      <p class="text-[12px] text-white/70 mt-1" data-i18n="foot.s">Pick a tool above, drop your file, done. No install, no login.</p>
+      <p class="text-[12px] text-white/70 mt-1" data-i18n="foot.s">Pick a tool above, drop your file, done. No install. Log in for Pro features.</p>
     </div>
     <div class="flex gap-2">
       <a href="flipbook.html" class="btn-tang rounded-full px-5 py-2.5 text-[13px] font-extrabold" data-i18n="foot.c1">▤ Turn into flipbook</a>
       <a href="converter.html?tool=compress-pdf" class="rounded-full px-5 py-2.5 text-[13px] font-extrabold bg-[#FFF7EA] text-[#1C1917] border-[1.5px] border-white" data-i18n="foot.c2">Compress PDF</a>
     </div>
   </div>
-  <p class="text-center text-[11px] text-[#A8A29E] mt-4 font-semibold" data-i18n="foot.note">PDF Tools • Sarvamaya vibes • Made locally, for never-ending tasks ✳</p>
+  <p class="text-center text-[11px] text-[#A8A29E] mt-4 font-semibold" data-i18n="foot.note">MyFlipbook • Sarvamaya vibes • Made locally, for never-ending tasks ✳</p>
 </footer>
 
 <script>
@@ -149,9 +153,9 @@
     {id:"merge-pdf", title:"Merge PDF", desc:"Combine PDFs in the order you want with the easiest PDF merger available.", cat:["Organize PDF"], color:"#9A3412", icon:"↘↖", bg:"#FFE3D9"},
     {id:"split-pdf", title:"Split PDF", desc:"Separate one page or a whole set for easy conversion into independent PDF files.", cat:["Organize PDF"], color:"#9A3412", icon:"↗↙", bg:"#FFE3D9"},
     {id:"compress-pdf", title:"Compress PDF", desc:"Reduce file size while optimizing for maximal PDF quality.", cat:["Optimize PDF"], color:"#1A3C34", icon:"⇲", bg:"#E4F3C2"},
-    {id:"pdf-to-word", title:"PDF to Word", desc:"Easily convert your PDF files into easy to edit DOC and DOCX documents.", cat:["Convert PDF"], color:"#1D4ED8", icon:"W", bg:"#DBEAFE"},
-    {id:"pdf-to-ppt", title:"PDF to PowerPoint", desc:"Turn your PDF files into easy to edit PPT and PPTX slideshows.", cat:["Convert PDF"], color:"#9A3412", icon:"P", bg:"#FFEDD5"},
-    {id:"pdf-to-excel", title:"PDF to Excel", desc:"Pull data straight from PDFs into Excel spreadsheets in seconds.", cat:["Convert PDF"], color:"#15803D", icon:"X", bg:"#DCFCE7"},
+    {id:"pdf-to-word", title:"PDF to Word", desc:"Word that looks like your PDF, with text you can edit right on the page.", cat:["Convert PDF"], color:"#1D4ED8", icon:"W", bg:"#DBEAFE"},
+    {id:"pdf-to-ppt", title:"PDF to PowerPoint", desc:"Slides that keep the PDF design, every text line an editable text box.", cat:["Convert PDF"], color:"#9A3412", icon:"P", bg:"#FFEDD5"},
+    {id:"pdf-to-excel", title:"PDF to Excel", desc:"Pull tables into Excel: real cells, real numbers, pages kept as images.", cat:["Convert PDF"], color:"#15803D", icon:"X", bg:"#DCFCE7"},
     {id:"word-to-pdf", title:"Word to PDF", desc:"Make DOC and DOCX files easy to read by converting them to PDF.", cat:["Convert PDF"], color:"#1D4ED8", icon:"W", bg:"#DBEAFE"},
     {id:"ppt-to-pdf", title:"PowerPoint to PDF", desc:"Make PPT and PPTX slideshows easy to view by converting them to PDF.", cat:["Convert PDF"], color:"#9A3412", icon:"P", bg:"#FFEDD5"},
     {id:"excel-to-pdf", title:"Excel to PDF", desc:"Make EXCEL spreadsheets easy to read by converting them to PDF.", cat:["Convert PDF"], color:"#15803D", icon:"X", bg:"#DCFCE7"},
@@ -178,6 +182,11 @@
     {id:"pdf-to-md", title:"PDF to Markdown", desc:"Turn PDFs into Markdown. Perfect for notes, docs, and LLMs.", cat:["Convert PDF","PDF Intelligence"], color:"#4C1D95", icon:"{ }", bg:"#E9E4FF", badge:"New!"},
   ];
 
+  // Catalog tools not built yet: shown as "Coming soon", not clickable.
+  const SOON = new Set(["workflow","edit-pdf","sign-pdf","protect-pdf","pdf-to-pdfa","repair-pdf","scan-to-pdf","compare-pdf","redact-pdf","pdf-forms","ai-summarizer","translate-pdf"]);
+  tools.forEach(t => { if (SOON.has(t.id)) t.soon = true; });
+  const soonLabel = () => (window.I18N ? I18N.t('card.coming') : 'Coming soon');
+
   let active = "All";
   let query = "";
   const grid = document.getElementById('grid');
@@ -196,8 +205,9 @@
   function renderHorde(){
     hordeEl.innerHTML = HORDE_ROWS.map(row => {
       const tiles = row.ids.map(id => tools.find(t => t.id === id)).filter(Boolean);
-      return `<div class="horde-row">` + tiles.map(t =>
-        `<a href="${toolHref(t)}" title="${t.title}" aria-label="${t.title}" class="horde-tile" style="width:56px;height:56px;font-size:21px;background:${t.bg};color:${t.color};"><span>${t.icon}</span></a>`
+      return `<div class="horde-row">` + tiles.map(t => t.soon
+        ? `<span title="${t.title} — ${soonLabel()}" aria-label="${t.title} — ${soonLabel()}" class="horde-tile soon" style="width:56px;height:56px;font-size:21px;background:${t.bg};color:${t.color};"><span>${t.icon}</span></span>`
+        : `<a href="${toolHref(t)}" title="${t.title}" aria-label="${t.title}" class="horde-tile" style="width:56px;height:56px;font-size:21px;background:${t.bg};color:${t.color};"><span>${t.icon}</span></a>`
       ).join('') + `</div>`;
     }).join('');
   }
@@ -212,15 +222,25 @@
     const href = toolHref(t);
     const D = (window.I18N ? I18N.tool(t.id, t.desc) : t.desc);
     if(t.workflow){
-      return `<a href="${href}" class="card feat p-5 flex flex-col min-h-[170px] overflow-hidden" style="background:#1C1917;color:#FFF7EA;border-color:#1C1917">
+      return `<div aria-disabled="true" class="card feat soon p-5 flex flex-col min-h-[170px] overflow-hidden" style="background:#1C1917;color:#FFF7EA;border-color:#1C1917">
         <div class="absolute inset-0 opacity-20 pointer-events-none" style="background:radial-gradient(circle at 80% 20%, #FF5C28 1.5px, transparent 1.5px);background-size:22px 22px"></div>
-        <span class="sticker bg-[#FF5C28] text-white">${window.I18N ? I18N.t('card.soon') : 'SOON →'}</span>
+        <span class="sticker bg-[#FF5C28] text-white">${soonLabel()}</span>
         <div class="flex items-center gap-3 relative z-10">
           <div class="icon-box" style="background:#FF5C28;color:#fff;border-color:rgba(0,0,0,.4)">↗</div>
           <h3 class="text-[15px] font-extrabold serif relative z-10" style="color:#FFF7EA">${t.title}</h3>
         </div>
         <p class="text-[12.5px] leading-relaxed text-white/70 mt-3 relative z-10">${D}</p>
-      </a>`;
+      </div>`;
+    }
+    if(t.soon){
+      return `<div aria-disabled="true" class="card soon p-5 flex flex-col min-h-[170px]">
+      <span class="sticker" style="background:#E7E5E4;color:#57534E">${soonLabel()}</span>
+      <div class="flex items-center gap-3">
+        <div class="icon-box" style="background:${t.bg};color:${t.color}"><span class="text-[16px] leading-none">${t.icon}</span></div>
+        <h3 class="text-[15px] font-extrabold leading-tight serif">${t.title}</h3>
+      </div>
+      <p class="mt-3 text-[12.5px] leading-relaxed text-[#78716C]">${D}</p>
+    </div>`;
     }
     const span = t.feat ? 'sm:col-span-2 lg:col-span-2' : '';
     const bgBadge = t.badge === 'AI' ? 'background:#4C1D95;color:#fff' : (t.badge === 'Demo' ? 'background:#1A3C34;color:#fff' : 'background:#FF5C28;color:#fff');

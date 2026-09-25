@@ -1,4 +1,4 @@
-# PDF Tools / Sarvamaya Flipbook
+# MyFlipbook (Sarvamaya)
 
 Aplikasi lokal untuk mengolah PDF, membuat flipbook dari sampul depan, dan menambahkan animasi statistik per halaman. Mulai kontribusi AI dari [AGENTS.md](AGENTS.md).
 
@@ -16,7 +16,7 @@ Buka `http://127.0.0.1:8080/`. Default-nya server hanya menerima koneksi dari PC
 1. Jalankan server mode LAN: `python server.py --host 0.0.0.0` (catat IP yang ditampilkan, mis. `http://192.168.18.16:8080/`).
 2. Di PC ini, izinkan port di firewall (PowerShell sebagai Administrator, sekali saja):
    ```powershell
-   New-NetFirewallRule -DisplayName "PDF Tools (8080)" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow -Profile Private
+   New-NetFirewallRule -DisplayName "MyFlipbook (8080)" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow -Profile Private
    ```
 3. Di PC lain (satu WiFi/jaringan), buka `http://<IP-PC-ini>:8080/`.
 
