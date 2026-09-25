@@ -61,6 +61,14 @@
   .showcase .filter-btn.active{background:#DFF0D8;color:#1C1917;border-color:#DFF0D8;box-shadow:none}
   .showcase-search{display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,#FFFFFF,#F7F3E9);border:1px solid #E4DED0;border-radius:12px;box-shadow:0 4px 14px rgba(28,25,23,.06),inset 0 2px 6px rgba(28,25,23,.05);padding:9px 14px;width:100%;max-width:240px;justify-self:end;position:relative;z-index:2}
   @media (max-width:760px){.showcase-bar{padding:14px 16px 18px}}
+  /* Category bar: full-width PDF red band under the banner. */
+  .showcase.hero-image{position:relative;z-index:1} /* above the fixed decorative wash, so the red stays solid */
+  .showcase-bar{max-width:none;margin:0;border-top:0;background:#E5252A;padding:14px 20px}
+  .showcase #filters{max-width:1100px;margin:0 auto;justify-content:safe center}
+  .showcase .filter-btn{color:rgba(255,255,255,.88)}
+  .showcase .filter-btn:hover{background:rgba(255,255,255,.16);color:#fff}
+  .showcase .filter-btn.active{background:#fff;color:#C8161B;border-color:#fff;box-shadow:0 4px 12px rgba(0,0,0,.18)}
+  .showcase .filter-btn:focus-visible{outline:2px solid #fff;outline-offset:2px}
   /* Phones: one wrapped row of icons instead of three rows cut off at the edges. */
   @media (max-width:640px){.horde-row{flex-wrap:wrap;gap:10px;padding:0 12px}.horde-row:nth-child(n+2){display:none}.horde-tile{width:48px!important;height:48px!important;font-size:18px!important;-webkit-box-reflect:unset}}
   .showcase-search input{background:transparent;outline:none;border:0;color:#1C1917;font-size:13px;font-weight:600;width:100%}

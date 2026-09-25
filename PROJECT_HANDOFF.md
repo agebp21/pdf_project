@@ -490,3 +490,7 @@ User menaruh `background.png` (1671x941, teks tertanam) untuk mengganti header h
 ### 25 September 2026 - Typo banner diperbaiki
 
 "PDDF" -> "PDF" di tagline banner: D kedua dihapus dengan menggeser teks mulai F 20px ke kiri pada pita y 204-224 (font/warna/spasi asli, latar hampir putih rata; perubahan hanya di bbox (257,204)-(660,224)). Disimpan `background-fixed.png` (asli tidak ditimpa, keduanya tidak di-commit); semua `assets/img/hero-*` dibuat ulang dari versi ini.
+
+### 25 September 2026 - Bar kategori merah PDF
+
+Bar filter kategori homepage jadi pita merah PDF full-width (#E5252A) tepat di bawah banner: teks putih, aktif = pil putih teks merah, hover putih transparan, focus ring putih. `.showcase.hero-image` diberi z-index 1 supaya lapisan dekoratif fixed (body::before) tidak memudarkan merahnya. Dicek 1440 & 390: tanpa overflow.
