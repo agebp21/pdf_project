@@ -8,6 +8,16 @@ const api=global.FlipbookExport;
   global.showSaveFilePicker=async value=>{options=value;return handle};
   assert.equal(await api.chooseSave('custom.flipbook'),handle);
   assert.equal(options.suggestedName,'custom.flipbook');
+  // Chrome throws TypeError for accept-extensions with '-' (".sm-flipbook").
+  const chromeLike=async value=>{for(const type of value.types||[])for(const list of Object.values(type.accept))for(const ext of list)if(!/^\.[A-Za-z0-9+]+$/.test(ext))throw new TypeError(`Extension '${ext}' contains invalid characters.`);options=value;return handle};
+  global.showSaveFilePicker=chromeLike;
+  assert.equal(await api.chooseSave('Portfolio.smflipbook'),handle,'project save opens the dialog');
+  assert.deepEqual(options.types[0].accept['application/octet-stream'],['.smflipbook']);
+  assert.equal(await api.chooseSave('Old.sm-flipbook'),handle,'a dashed extension still opens the dialog');
+  assert.equal(options.suggestedName,'Old.sm-flipbook');assert.equal(options.types,undefined);
+  assert.equal(await api.chooseSave('Portfolio-HTML.zip'),handle);assert.deepEqual(options.types[0].accept['application/octet-stream'],['.zip']);
+  let calls=0;global.showSaveFilePicker=async value=>{calls++;if(value.types)throw new TypeError('rejected filter');options=value;return handle};
+  assert.equal(await api.chooseSave('book.zip'),handle,'retries without the filter on TypeError');assert.equal(calls,2);
   global.showSaveFilePicker=async()=>{throw new DOMException('embedded browser','SecurityError')};
   assert.equal(await api.chooseSave('book.zip'),null,'restricted picker falls back to normal download');
   global.showSaveFilePicker=async()=>{throw new DOMException('unsupported','NotSupportedError')};

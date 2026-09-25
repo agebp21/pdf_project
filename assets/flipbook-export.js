@@ -38,7 +38,7 @@
   }
   async function readProject(file) {
     const zip=await JSZip.loadAsync(await file.arrayBuffer());
-    if(!zip.file('project.json')||!zip.file('source.pdf'))throw Error('Pilih file proyek .sm-flipbook, bukan ZIP hasil HTML.');
+    if(!zip.file('project.json')||!zip.file('source.pdf'))throw Error('Pilih file proyek .smflipbook, bukan ZIP hasil HTML.');
     const data=validate(JSON.parse(await zip.file('project.json').async('string')));
     return {data,pdf:new Blob([await zip.file('source.pdf').async('arraybuffer')],{type:'application/pdf'})};
   }
@@ -48,7 +48,15 @@
   async function chooseSave(name) {
     if (typeof globalThis.showSaveFilePicker !== 'function') return null;
     const extension = '.' + name.split('.').pop();
-    try { return await globalThis.showSaveFilePicker({id:'flipbook-export',suggestedName:name,types:[{description:'File flipbook',accept:{'application/octet-stream':[extension]}}]}); }
+    // Chrome rejects accept-extensions with characters like '-' (".sm-flipbook"
+    // throws TypeError), so only send a type filter it will accept; the
+    // suggested name still carries the full extension.
+    const options = {id:'flipbook-export',suggestedName:name};
+    if (/^\.[A-Za-z0-9+]{1,16}$/.test(extension)) options.types=[{description:'File flipbook',accept:{'application/octet-stream':[extension]}}];
+    try {
+      try { return await globalThis.showSaveFilePicker(options); }
+      catch(cause) { if(cause.name!=='TypeError'||!options.types)throw cause; delete options.types; return await globalThis.showSaveFilePicker(options); }
+    }
     catch(cause) {
       // Embedded/restricted browsers may expose the API but forbid using it.
       // Keep explicit user cancellation distinct from unavailable capability.

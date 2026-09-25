@@ -57,12 +57,12 @@ python server.py --host 127.0.0.1 --port 8080 --public-host myflipbook.id --publ
 
 | Tombol | Hasil dan cara menggunakan |
 |---|---|
-| Simpan proyek | File `.flipbook` berisi PDF sumber dan konfigurasi animasi; buka melalui pilihan proyek tersimpan untuk melanjutkan edit |
+| Simpan proyek | File `.smflipbook` berisi PDF sumber dan konfigurasi animasi; buka melalui pilihan proyek tersimpan untuk melanjutkan edit |
 | Download HTML offline | ZIP berisi `index.html`, gambar, engine, konfigurasi, CSS/JS, dan lisensi; ekstrak semuanya lalu buka `index.html` tanpa server/internet |
 | Build APK Android | Server lokal membangun APK Flutter yang menyertakan halaman dan animasi; unduh setelah build selesai |
 | Build EXE Windows | ZIP aplikasi portable; ekstrak semua file lalu jalankan `sarvamaya_book.exe`, bersama DLL dan folder `data` |
 
-Proyek disimpan secara manual, belum autosave. File `.flipbook` adalah bahan edit; ZIP HTML adalah buku untuk dibaca. Jangan menukar kedua format saat impor.
+Proyek disimpan secara manual, belum autosave. File `.smflipbook` adalah bahan edit; ZIP HTML adalah buku untuk dibaca. Jangan menukar kedua format saat impor.
 
 ### Pilih lokasi simpan
 

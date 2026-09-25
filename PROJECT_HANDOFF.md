@@ -446,3 +446,7 @@ User pilih Tripay (verifikasi lebih cepat dari Midtrans). `accounts.TripayProvid
 ### 25 September 2026 - Paywall ekspor flipbook, Pro Rp99.000
 
 User: ekspor flipbook jangan gratis, harus Pro/Business; Pro Rp99.000 (tahunan diset Rp990.000, pola 10x bulanan — konfirmasi ke user). Entitlement baru `export` (Pro, Business). `server.py`: `CONFIG['paywall']` (on saat dijalankan, `--no-paywall` untuk internal, off saat diimport tes), template ekspor dilindungi 401/402 + no-store, build APK/EXE dicek per paket juga di mode lokal, Office tetap gratis lokal. UI flipbook: label PRO/BUSINESS + pesan paywall sebelum dialog simpan (pakai capabilities yang dimuat saat halaman dibuka agar dialog tetap dalam gesture klik). Editor animasi: cek yang sama. Tes: 36 Python, editor/qa-editor/save-location/export Node lolos; Chromium: Free ditolak (template 402), setelah bayar simulasi Pro → ZIP lengkap. Simpan proyek `.sm-flipbook` tetap gratis.
+
+### 25 September 2026 - Ekstensi proyek .smflipbook
+
+Chrome menolak `showSaveFilePicker` dengan accept `.sm-flipbook` (TypeError: invalid characters) sehingga "Save project as" gagal. Ekstensi baru `.smflipbook` (permintaan user); file `.sm-flipbook` lama tetap bisa dibuka. `chooseSave` hanya mengirim filter ekstensi yang valid dan mengulang tanpa filter bila TypeError. `qa-editor.cjs` kini membaca aset dari disk + capabilities lokal (tidak tergantung/terkena paywall server 8080). Diverifikasi di Chromium: `.smflipbook` lolos validasi.

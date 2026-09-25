@@ -226,7 +226,7 @@
     const status = message => { $('#export-status').textContent=message; };
     try {
       const data = model(), name = FlipbookExport.filename(data.title);
-      const outputName = target==='project' ? name+'.sm-flipbook' : name+'-HTML.zip';
+      const outputName = target==='project' ? name+'.smflipbook' : name+'-HTML.zip';
       const saveHandle = target==='project'||target==='html' ? await FlipbookExport.chooseSave(outputName) : null;
       status('Menyiapkan ekspor…');
       if (target === 'project') {

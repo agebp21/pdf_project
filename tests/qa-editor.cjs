@@ -7,7 +7,17 @@ const root=path.resolve(__dirname,'..');
 pdfjs.GlobalWorkerOptions.workerSrc=path.join(root,'assets/vendor/pdf.worker.min.js');
 async function until(test,predicate,label){for(let i=0;i<500;i++){test.pump(40);await new Promise(r=>setTimeout(r,5));if(predicate())return}throw Error('Timed out: '+label+' / '+test.w.document.querySelector('#reader-error').textContent)}
 function install(test){
- const w=test.w;w.Blob=Blob;w.fetch=url=>fetch(new URL(url,w.location.href));
+ // Serve app files from disk and answer capabilities locally, so the test
+ // doesn't depend on (or get paywalled by) whatever server runs on 8080.
+ const w=test.w;w.Blob=Blob;w.fetch=async url=>{
+  const target=new URL(url,w.location.href);
+  if(target.origin===new URL(w.location.href).origin){
+   if(target.pathname==='/api/capabilities')return new Response(JSON.stringify({apk:true,exe:true,office:false,token:'qa',paywall:false}));
+   const file=path.join(root,decodeURIComponent(target.pathname));
+   if(!target.pathname.startsWith('/api/')&&file.startsWith(root)&&fs.existsSync(file))return new Response(fs.readFileSync(file));
+  }
+  return fetch(target);
+ };
  w.URL.createObjectURL=URL.createObjectURL;w.URL.revokeObjectURL=URL.revokeObjectURL;
  w.indexedDB=indexedDB;w.structuredClone=structuredClone;
  w.pdfjsLib={GlobalWorkerOptions:{},getDocument:options=>pdfjs.getDocument(options)};
