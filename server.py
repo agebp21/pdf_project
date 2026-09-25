@@ -130,6 +130,43 @@ def unpack_book(archive, destination):
     return data
 
 
+def app_name(title):
+    """Book title as a safe app name: printable, no leading @/? (Android
+    resource syntax), max 50 chars, never empty."""
+    name = re.sub(r'\s+', ' ', ''.join(ch for ch in title if ch.isprintable())).strip().lstrip('@?').strip()
+    return name[:50].strip() or 'MyFlipbook'
+
+
+def xml_attr(text):
+    return (text.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
+            .replace('"', '&quot;').replace("'", "\\'"))  # aapt needs \' for apostrophes
+
+
+def wide_literal(text):
+    """C++ L"..." body: ASCII kept, everything else as universal character names."""
+    out = []
+    for ch in text:
+        if ch in '\\"':
+            out.append('\\' + ch)
+        elif 32 <= ord(ch) < 127:
+            out.append(ch)
+        else:
+            out.append(f'\\U{ord(ch):08X}')
+    return ''.join(out)
+
+
+def brand_native(workspace, title):
+    """Show the book title as the Android launcher label and Windows window title."""
+    name = app_name(title)
+    manifest = workspace / 'android/app/src/main/AndroidManifest.xml'
+    manifest.write_text(re.sub(r'android:label="[^"]*"', lambda _: f'android:label="{xml_attr(name)}"',
+                               manifest.read_text(encoding='utf-8'), count=1), encoding='utf-8')
+    runner = workspace / 'windows/runner/main.cpp'
+    runner.write_text(runner.read_text(encoding='utf-8').replace('window.Create(L"sarvamaya_book"',
+                                                                 f'window.Create(L"{wide_literal(name)}"'), encoding='utf-8')
+    return name
+
+
 def plugin_junctions(workspace):
     """Windows directory junctions avoid requiring a global Developer Mode change."""
     manifest = workspace / '.flutter-plugins-dependencies'
@@ -269,6 +306,7 @@ def build_job(job_id, target):
         app_id = 'id.sarvamaya.book.b' + hashlib.sha256(data['title'].encode()).hexdigest()[:16]
         gradle = workspace / 'android/app/build.gradle.kts'
         gradle.write_text(re.sub(r'applicationId = "[^"]+"', f'applicationId = "{app_id}"', gradle.read_text(encoding='utf-8')), encoding='utf-8')
+        brand_native(workspace, data['title'])
         flutter = shutil.which('flutter')
         if not flutter:
             raise RuntimeError('Flutter belum terpasang.')

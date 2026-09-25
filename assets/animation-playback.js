@@ -1,6 +1,6 @@
 'use strict';
 // Used by the animation editor preview and its exported reader.
-globalThis.AnimationPlayback = (() => {
+(typeof self!=='undefined'?self:global).AnimationPlayback = (() => {
   const clamp=(n,a,b)=>Math.max(a,Math.min(b,Number(n)||0));
   const effects={
     fadeIn:[{opacity:0},{opacity:1}],
@@ -41,7 +41,7 @@ globalThis.AnimationPlayback = (() => {
     host.style.containerType='size';
     for(const el of elements||[]){
       const link=safeLink(el.link,count);
-      const outer=document.createElement(link?.type==='url'?'a':'div');outer.className='ap-element';
+      const outer=document.createElement(link&&link.type==='url'?'a':'div');outer.className='ap-element';
       const frame=imageBox||{x:0,y:0,w:100,h:100};
       Object.assign(outer.style,{left:(frame.x+clamp(el.x,0,100)*frame.w/100)+'%',top:(frame.y+clamp(el.y,0,100)*frame.h/100)+'%',width:clamp(el.w,.1,100)*frame.w/100+'%',height:clamp(el.h,.1,100)*frame.h/100+'%',transform:`rotate(${Number(el.rotation)||0}deg)`});
       const body=document.createElement('div');body.className='ap-content';outer.append(body);
@@ -62,12 +62,12 @@ globalThis.AnimationPlayback = (() => {
         outer.classList.add('ap-link');outer.tabIndex=0;outer.setAttribute('role','link');outer.setAttribute('aria-label',el.content||'Open link');
         if(link.type==='url'){outer.href=link.target;outer.target='_blank';outer.rel='noopener noreferrer';}
         for(const event of ['pointerdown','mousedown','touchstart'])outer.addEventListener(event,e=>e.stopPropagation());
-        outer.addEventListener('click',e=>{e.stopPropagation();if(link.type==='page')goPage?.(link.target-1);});
+        outer.addEventListener('click',e=>{e.stopPropagation();if(link.type==='page'&&goPage)goPage(link.target-1);});
         outer.addEventListener('keydown',e=>{if(e.key===' '||(e.key==='Enter'&&link.type==='page')){e.preventDefault();e.stopPropagation();outer.click();}});
       }
       host.append(outer);entries.push({outer,body,visual,zone,el,animation:null,emphasis:null});
     }
-    const stop=()=>entries.forEach(e=>{e.animation?.cancel();e.emphasis?.cancel();e.animation=null;e.emphasis=null;e.body.style.opacity='1'});
+    const stop=()=>entries.forEach(e=>{if(e.animation)e.animation.cancel();if(e.emphasis)e.emphasis.cancel();e.animation=null;e.emphasis=null;e.body.style.opacity='1'});
     return {play(){stop();if(matchMedia('(prefers-reduced-motion: reduce)').matches)return;
       entries.forEach(e=>{const a=e.el.animation||{},frames=effects[a.type];if(!frames||!e.body.animate)return;
         e.animation=e.body.animate(frames,{duration:clamp(a.duration||600,100,30000),delay:clamp(a.delay,0,30000),iterations:a.type==='pulse'?Infinity:1,fill:'both',easing:'ease'});

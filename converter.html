@@ -64,7 +64,7 @@
 
   <!-- debug toggle - biar ga nutupin opsi -->
   <div class="relative z-10 max-w-[1440px] mx-auto px-4">
-    <button onclick="document.getElementById('debug').classList.toggle('hidden')" class="text-[11px] text-gray-500 underline">🔧 Toggle log debug</button>
+    <button onclick="document.getElementById('debug').classList.toggle('hidden')" class="text-[11px] text-gray-500 underline py-2">🔧 Toggle log debug</button>
     <div id="debug" class="hidden mt-2 max-w-3xl mx-auto p-2.5 rounded-xl bg-gray-900 text-white text-[11px] font-mono whitespace-pre-wrap text-left max-h-40 overflow-auto"></div>
   </div>
 
@@ -92,7 +92,7 @@
         <button id="pickBtn" class="clay-btn clay-btn-dark mt-4">Choose files</button>
         <input id="fileInput" type="file" class="hidden">
         <p class="text-[11px] text-[#A8A29E] mt-3 font-semibold">♾️ No size limits — big files are processed right in your browser (depends on RAM)</p>
-        <button id="testBtn" class="mt-3 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter without a file (generate dummy)</button>
+        <button id="testBtn" class="mt-2 py-2 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter without a file (generate dummy)</button>
       </div>
 
       <div id="fileList" class="hidden card p-5">
@@ -204,8 +204,8 @@ function renderHeader(){
     html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Kualitas:
       <select id="opt-quality" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="1.5">Standard</option><option value="2" selected>High (2x)</option><option value="3">Ultra (3x)</option></select></label>`;
   }else if(t.id==='pdf-to-word'){
-    html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Word layout:
-      <select id="opt-word-mode" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="layout" selected>Keep original look (editable text on page)</option><option value="flow">Flowing text + tables (easiest to edit, no pictures)</option></select></label>`;
+    html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm max-w-full min-w-0">Word layout:
+      <select id="opt-word-mode" class="bg-white border-0 text-xs font-medium focus:ring-0 min-w-0 max-w-full py-1.5"><option value="layout" selected>Keep original look (editable text on page)</option><option value="flow">Flowing text + tables (easiest to edit, no pictures)</option></select></label>`;
   }else if(t.id==='ocr-pdf'){
     html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">OCR language:
       <select id="opt-ocr-lang" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="eng">English</option><option value="ind">Indonesian</option><option value="eng+ind" selected>Both</option></select></label>

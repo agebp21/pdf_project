@@ -43,8 +43,8 @@ Diperbarui: 25 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 | OCR ekstraksi | Tesseract Inggris/Indonesia dan filter kualitas tersedia. | Akurasi scan/poster, waktu proses, file besar. Bukan OCR PDF searchable. |
 | Notebook PDF | Halaman dan fungsi ringkasan/chat ada, sebagian memakai Gemini. | QA menyeluruh, akurasi jawaban, koneksi API, penyimpanan kunci, serta kesiapan produksi. |
 | Editor animasi (`animation.html`) | Ekstraksi native teks/gambar/grup; OCR lokal otomatis untuk halaman raster; area gambar/logo manual; elemen editable dan HTML ZIP offline. OCR PSJ halaman 5 teruji, 54 baris. | OCR Inggris/Indonesia/Melayu dan perbaikan background bersifat perkiraan. Pemisahan semua grafis secara otomatis belum tersedia. APK/EXE editor belum terhubung; browser/device QA belum lengkap. |
-| Build APK / Windows EXE | Build dan unduhan paket berhasil pada sesi sebelumnya; isi aset diverifikasi. | Paket lama mendahului beberapa update terbaru; rebuild dan uji runtime perangkat diperlukan. APK signing debug; EXE belum ditandatangani dan memerlukan WebView2. |
-| Offline HTML | Semua aset pembaca sudah dikemas lokal. | Buka paket melalui browser nyata tanpa jaringan belum diverifikasi langsung. |
+| Build APK / Windows EXE | 25 Sep: dibangun ulang lewat layanan build HTTP asli dan DIJALANKAN: EXE di Windows 11 (WebView2) dan APK di emulator Android (System WebView 66) — buku tampil, tombol, keyboard, swipe cepat, nama app = judul buku. `viewer-compat.test.cjs` menjaga reader tetap ES2018 + fallback CSS. | Belum di HP fisik; APK masih signing debug, EXE belum ditandatangani. |
+| Offline HTML | Paket diekstrak dan dibuka via file:// di Chromium dengan jaringan mati: halaman, navigasi, tanpa request gagal. | Browser lain (Safari/Firefox) belum. |
 
 ## Belum dibuat
 

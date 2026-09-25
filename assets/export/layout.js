@@ -1,5 +1,5 @@
 'use strict';
-globalThis.FlipbookLayout = {
+(typeof self!=='undefined'?self:global).FlipbookLayout = {
   motion(reduced) {
     return {useMouseEvents:true,drawShadow:true,maxShadowOpacity:.38,flippingTime:reduced?1:950,showPageCorners:!reduced,disableFlipByClick:false,mobileScrollSupport:true,swipeDistance:30};
   },
@@ -47,7 +47,7 @@ globalThis.FlipbookLayout = {
 };
 
 // Shared inactivity reminder for preview and all exported readers.
-globalThis.FlipbookIdle = {
+(typeof self!=='undefined'?self:global).FlipbookIdle = {
   bind({active, home, host = document.body}) {
     const english = document.documentElement.lang.startsWith('en');
     const overlay = document.createElement('div');

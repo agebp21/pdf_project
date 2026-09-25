@@ -55,6 +55,23 @@ class BuildTests(unittest.TestCase):
         with tempfile.TemporaryDirectory() as temporary, self.assertRaises(ValueError):
             server.unpack_book(self.archive(self.manifest(), b'<html>'), Path(temporary))
 
+    def test_native_app_named_after_book(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            (workspace / 'android/app/src/main').mkdir(parents=True)
+            (workspace / 'windows/runner').mkdir(parents=True)
+            (workspace / 'android/app/src/main/AndroidManifest.xml').write_text(
+                '<manifest><application android:label="sarvamaya_book" android:icon="x"/></manifest>', encoding='utf-8')
+            (workspace / 'windows/runner/main.cpp').write_text('if (!window.Create(L"sarvamaya_book", origin, size))', encoding='utf-8')
+            title = '@Laporan "2026" — Désa & Co\'s'
+            name = server.brand_native(workspace, title)
+            self.assertEqual(name, title[1:], 'leading @ (Android resource syntax) is dropped')
+            manifest = (workspace / 'android/app/src/main/AndroidManifest.xml').read_text(encoding='utf-8')
+            self.assertIn(r'android:label="Laporan &quot;2026&quot; ' + '— Désa' + r' &amp; Co\'s"', manifest)
+            runner = (workspace / 'windows/runner/main.cpp').read_text(encoding='utf-8')
+            self.assertIn(r'''L"Laporan \"2026\" \U00002014 D\U000000E9sa & Co's"''', runner)
+        self.assertEqual(server.app_name('   '), 'MyFlipbook')
+
     def test_no_arbitrary_page_limit(self):
         data = self.manifest()
         data['pageCount'] = 1001

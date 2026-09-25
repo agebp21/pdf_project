@@ -58,6 +58,8 @@
   .showcase .filter-btn.active{background:#DFF0D8;color:#1C1917;border-color:#DFF0D8;box-shadow:none}
   .showcase-search{display:flex;align-items:center;gap:8px;background:linear-gradient(180deg,#FFFFFF,#F7F3E9);border:1px solid #E4DED0;border-radius:12px;box-shadow:0 4px 14px rgba(28,25,23,.06),inset 0 2px 6px rgba(28,25,23,.05);padding:9px 14px;width:100%;max-width:240px;justify-self:end;position:relative;z-index:2}
   @media (max-width:760px){.showcase-bar{padding:14px 16px 18px}}
+  /* Phones: one wrapped row of icons instead of three rows cut off at the edges. */
+  @media (max-width:640px){.horde-row{flex-wrap:wrap;gap:10px;padding:0 12px}.horde-row:nth-child(n+2){display:none}.horde-tile{width:48px!important;height:48px!important;font-size:18px!important;-webkit-box-reflect:unset}}
   .showcase-search input{background:transparent;outline:none;border:0;color:#1C1917;font-size:13px;font-weight:600;width:100%}
   .showcase-search input::placeholder{color:#A8A29E}
   ::-webkit-scrollbar{height:8px;width:10px}
@@ -79,7 +81,7 @@
       <span class="w-9 h-9 rounded-xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-[11px] font-extrabold border border-[#1C1917] -rotate-3">MF</span>
       <span class="leading-none"><span class="serif font-black text-[17px] tracking-tight block">MyFlipbook</span><span class="text-[10px] font-bold tracking-[.18em] text-[#78716C]" data-i18n="nav.tag">SARVAMAYA • LOCAL VIBES</span></span>
     </a>
-    <div class="hidden md:flex items-center gap-2 text-[12px] font-bold">
+    <div class="hidden lg:flex items-center gap-2 text-[12px] font-bold">
       <a href="#grid" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.all">✳ All tools</a>
       <a href="flipbook.html" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.flip">▤ Flipbook</a>
       <span class="chip rounded-full px-3.5 py-1.5 opacity-60 cursor-not-allowed" title="Coming soon" data-i18n="nav.note">✦ Notebook AI · Soon</span>
@@ -87,9 +89,10 @@
     </div>
     <div class="flex items-center gap-2">
       <button type="button" data-lang-toggle title="Ganti bahasa / Switch language" class="rounded-full px-3 py-2 text-[12px] font-extrabold bg-[#E9E4FF] border border-[#E8E2D4] shadow-[0_4px_12px_rgba(28,25,23,0.08)] hover:-translate-y-0.5 transition">ID</button>
-      <span class="hidden sm:inline text-[10px] font-extrabold tracking-widest bg-[#E4F3C2] border border-[#E8E2D4] rounded-full px-2.5 py-1 rotate-2" data-i18n="nav.free">FREE TOOLS</span>
+      <span class="hidden xl:inline text-[10px] font-extrabold tracking-widest bg-[#E4F3C2] border border-[#E8E2D4] rounded-full px-2.5 py-1 rotate-2" data-i18n="nav.free">FREE TOOLS</span>
       <span data-auth-slot></span>
-      <a href="converter.html?tool=merge-pdf" class="btn-tang rounded-full px-4 py-2 text-[12px] font-extrabold" data-i18n="nav.cta">Let's convert →</a>
+      <a href="account.html" class="lg:hidden chip rounded-full w-9 h-9 grid place-items-center text-[14px] font-extrabold" title="Pricing" aria-label="Pricing">★</a>
+      <a href="converter.html?tool=merge-pdf" class="hidden sm:inline-flex btn-tang rounded-full px-4 py-2 text-[12px] font-extrabold whitespace-nowrap" data-i18n="nav.cta">Let's convert →</a>
     </div>
   </nav>
 </div>

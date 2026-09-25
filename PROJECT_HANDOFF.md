@@ -454,3 +454,11 @@ Chrome menolak `showSaveFilePicker` dengan accept `.sm-flipbook` (TypeError: inv
 ### 25 September 2026 - Notebook PDF & Flipbook Animation jadi coming soon
 
 User: "narasi pdf" (= Notebook PDF: ringkasan/podcast) dan animasi diberi coming soon. Katalog + tile abu-abu, chip nav "Notebook AI · Soon", link animasi di flipbook.html dihapus, hero tidak lagi menjanjikan chat AI. `notebook.html`/`animation.html` diganti `coming-soon.html` oleh server saat paywall aktif (kode asli tetap ada; `--no-paywall` untuk internal). Tes: 37 Python (baru: halaman coming soon + bypass internal), animation-editor/qa-runtime/qa-editor/office-export lolos; dicek di Chromium.
+
+### 25 September 2026 - QA menyeluruh + perbaikan native/responsive
+
+- Semua tool converter (19) diuji lewat UI Chromium + isi output dicek (PyMuPDF/openpyxl). PDF→Word/PPT/Excel dibuka di MS Word/PowerPoint/Excel asli via COM: tampilan cocok, 15 frame / 12 text box / tabel Excel, SUM angka jalan.
+- APK di emulator (WebView 66) awalnya layar kosong: `globalThis` + `?.` + `100dvh`/`inset`/flex-gap tidak didukung. Reader (viewer.js, layout.js, animation-playback.js, CSS) dibuat ES2018 + fallback CSS; tes baru `tests/viewer-compat.test.cjs` (acorn, ES2018 + API terlarang + CSS). Setelah itu APK: buku tampil, tombol & swipe cepat jalan. EXE diuji jalan di Windows.
+- Nama app native = judul buku (label Android, judul jendela Windows; escape XML/aapt + universal character name C++), header reader "MYFLIPBOOK", tombol reader Inggris, Replay disembunyikan bila buku tanpa animasi.
+- Responsive: audit 360/390/768/1024/1440 (overflow, elemen keluar layar, tap target <28px). Perbaikan: nav homepage (chip tengah ≥1024, ikon ★ Pricing di HP, CTA ≥640), ikon hero satu baris wrap di HP, select Word layout, tap target debug/test/login switch.
+- Tes: 38 Python + 13 suite Node lolos. Akun uji @test.id dihapus dari DB lokal.
