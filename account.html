@@ -64,7 +64,7 @@
     </div>
   </nav>
 
-  <h1 class="clay-h" data-i18n="acct.title">Your account</h1>
+  <h1 class="clay-h" id="pageTitle" data-i18n="acct.title">Your account</h1>
   <div class="clay-panel profile" id="profile" hidden>
     <div class="who"><b id="who"></b><span class="clay-muted" id="email"></span></div>
     <div class="plan-now">
@@ -75,7 +75,7 @@
   </div>
   <div id="notice"></div>
 
-  <section>
+  <section id="plansSection">
     <div class="head">
       <h2 class="clay-h" data-i18n="acct.plans">Plans</h2>
       <div class="head-right">
@@ -90,7 +90,7 @@
     <p class="fine clay-muted" data-i18n="acct.draft">Prices in IDR. Draft pricing — may change.</p>
   </section>
 
-  <section>
+  <section id="ordersSection">
     <h2 class="clay-h" data-i18n="acct.orders">Payment history</h2>
     <div class="clay-panel orders"><table>
       <thead><tr><th data-i18n="acct.colDate">Date</th><th data-i18n="acct.colPlan">Plan</th><th data-i18n="acct.colAmount">Amount</th><th data-i18n="acct.colStatus">Status</th></tr></thead>
@@ -139,7 +139,12 @@
       const list=el('ul');(plan.features[lang()==='id-ID'?'id':'en']||[]).forEach(f=>list.append(el('li',{textContent:f})));
       card.append(el('h3',{className:'clay-h',textContent:plan.name}),priceNode,
         el('div',{className:'save',textContent:saving>0?t('acct.save','save')+' '+saving+'%':''}),list);
-      if(plan.id==='free'){
+      if(!state.user){
+        // Guest: pricing is public; choosing a plan goes through login first.
+        card.append(el('a',{className:'clay-btn '+(plan.id==='free'?'clay-btn-ghost':'clay-btn-primary'),
+          href:'login.html?mode=register&next='+encodeURIComponent('account.html'),
+          textContent:plan.id==='free'?t('acct.startFree','Start free'):t('acct.choose','Choose')+' '+plan.name}));
+      }else if(plan.id==='free'){
         if(current)card.append(el('button',{className:'clay-btn clay-btn-ghost',disabled:true,textContent:t('acct.active','Your plan')}));
       }else{
         const button=el('button',{className:'clay-btn '+(current?'clay-btn-dark':'clay-btn-primary'),type:'button',
@@ -205,7 +210,19 @@
   async function load(){
     const me=await MFAuth.me(true);
     if(me.offline){notice('err',t('auth.offline','Accounts need the MyFlipbook server (python server.py).'));return;}
-    if(!me.user){location.replace('login.html?next='+encodeURIComponent('account.html'+location.search));return;}
+    if(!me.user){
+      if(orderParam){location.replace('login.html?next='+encodeURIComponent('account.html'+location.search));return;}
+      const plans=await MFAuth.api('GET','/api/billing/plans');
+      state=Object.assign(state,{user:null,plans:plans.plans,provider:plans.provider,paymentsEnabled:plans.paymentsEnabled});
+      $('pageTitle').setAttribute('data-i18n','acct.pricingTitle');
+      $('ordersSection').hidden=true;
+      const login=el('a',{className:'clay-btn clay-btn-dark',href:'login.html?next='+encodeURIComponent('account.html'),textContent:t('auth.login','Log in')});
+      notice('info',t('acct.guest','Log in or create an account to subscribe. The free tools need no account.'),login);
+      if(window.I18N)I18N.apply();
+      renderPlans();
+      return;
+    }
+    $('ordersSection').hidden=false;
     const [plans,orders]=await Promise.all([MFAuth.api('GET','/api/billing/plans'),MFAuth.api('GET','/api/billing/orders')]);
     state=Object.assign(state,{user:me.user,plans:plans.plans,provider:plans.provider,paymentsEnabled:plans.paymentsEnabled,orders:orders.orders});
     if(plans.provider==='tripay'&&!state.methods.length){
@@ -226,7 +243,7 @@
 
   document.querySelectorAll('[data-cycle]').forEach(b=>b.addEventListener('click',()=>{state.cycle=b.dataset.cycle;renderPlans();}));
   $('logout').addEventListener('click',async()=>{await MFAuth.api('POST','/api/auth/logout',{});location.href='index.html';});
-  document.addEventListener('langchange',()=>{if(state.user){renderProfile();renderPlans();renderOrders();renderOrderNotice();}});
+  document.addEventListener('langchange',()=>{if(state.user){renderProfile();renderPlans();renderOrders();renderOrderNotice();}else if(state.plans.length)load();});
   load().catch(error=>notice('err',error.message));
 })();
 </script>
