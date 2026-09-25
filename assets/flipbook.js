@@ -115,6 +115,7 @@
       FlipbookLayout.decorate(newElements);
       book = new St.PageFlip(container, {width, height:Math.round(width / ratio), size:'stretch', minWidth:230, maxWidth:500, minHeight:115, maxHeight:760, autoSize:true, usePortrait:true, startPage:0, showCover:true, ...FlipbookLayout.motion(reduced)});
       book.on('flip', updatePage); book.on('changeOrientation', () => { updatePage(); animate(true); });
+      FlipbookSound.attach(book);
       book.on('changeState', event => {
         if (event.data === 'read') { updatePage(); animate(true); }
         else { stopAnimation(); $('#home').disabled = $('#prev').disabled = $('#next').disabled = true; }
@@ -271,6 +272,7 @@
     } catch(cause) { if(cause.name==='AbortError')status('Penyimpanan dibatalkan.');else { status('Ekspor gagal: '+cause.message); error(cause.message); } }
     finally { exporting=false;exportState();$('#pdf-file').disabled=false;$('#overlay-fields').disabled=!book; }
   }
+  FlipbookSound.bindButton($('#sound'));
   $('#save-project').onclick=()=>exportBook('project');$('#export-html').onclick=()=>exportBook('html');
   $('#export-apk').onclick=()=>exportBook('apk');$('#export-exe').onclick=()=>exportBook('exe');
   fetch('/api/capabilities').then(async response=>{

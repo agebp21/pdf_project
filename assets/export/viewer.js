@@ -67,12 +67,14 @@
     FlipbookLayout.decorate(elements);
     book = new St.PageFlip($('#book'),{width:380,height:Math.round(380/data.ratio),size:'stretch',minWidth:220,maxWidth:750,minHeight:50,maxHeight:1500,autoSize:true,usePortrait:true,showCover:true,startPage:0,...FlipbookLayout.motion(reduced)});
     book.on('flip',update);book.on('changeOrientation',()=>{update();animate()});
+    FlipbookSound.attach(book);
     book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});$('#home').disabled=$('#prev').disabled=$('#next').disabled=true}});
     book.loadFromHTML(elements);update();animate();
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };
     reserveBar(); addEventListener('resize', reserveBar);
+    FlipbookSound.bindButton($('#sound'));
     FlipbookLayout.bind(book,$('#stage'),data.ratio);
     $('#fullscreen').onclick=async()=>{
       try { if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen(); }

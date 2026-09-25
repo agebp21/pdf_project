@@ -85,3 +85,100 @@
     };
   }
 };
+
+// Paper page-turn sound, synthesised with Web Audio (no audio file, works
+// offline, no licensing). Shared by the preview and every exported reader.
+// ES2018 only: exported books must run in old Android WebViews.
+(typeof self!=='undefined'?self:global).FlipbookSound = (function () {
+  const KEY = 'mf-flip-sound';
+  let ctx = null, noise = null, enabled = true;
+  try { enabled = localStorage.getItem(KEY) !== 'off'; } catch (e) {}
+  const buttons = [];
+
+  function context() {
+    if (typeof window === 'undefined') return null;
+    const AC = window.AudioContext || window.webkitAudioContext;
+    if (!AC) return null;
+    if (!ctx) { try { ctx = new AC(); } catch (e) { return null; } }
+    if (ctx.state === 'suspended' && ctx.resume) ctx.resume().catch(() => {});
+    return ctx;
+  }
+  // White noise with a little brown noise mixed in gives paper its body.
+  function noiseBuffer(c) {
+    if (noise) return noise;
+    const length = Math.floor(c.sampleRate * 0.8);
+    noise = c.createBuffer(1, length, c.sampleRate);
+    const data = noise.getChannelData(0);
+    let brown = 0;
+    for (let i = 0; i < length; i++) {
+      const white = Math.random() * 2 - 1;
+      brown = (brown + 0.02 * white) / 1.02;
+      data[i] = white * 0.55 + brown * 3.2;
+    }
+    return noise;
+  }
+  // One filtered noise burst: bandpass sweeping from `from` to `to` Hz.
+  function burst(c, at, duration, peak, from, to) {
+    const source = c.createBufferSource();
+    source.buffer = noiseBuffer(c);
+    source.playbackRate.value = 0.85 + Math.random() * 0.3;
+    const band = c.createBiquadFilter();
+    band.type = 'bandpass'; band.Q.value = 0.8;
+    band.frequency.setValueAtTime(from, at);
+    band.frequency.exponentialRampToValueAtTime(to, at + duration);
+    const high = c.createBiquadFilter();
+    high.type = 'highpass'; high.frequency.value = 300;
+    const gain = c.createGain();
+    gain.gain.setValueAtTime(0.0001, at);
+    gain.gain.exponentialRampToValueAtTime(peak, at + duration * 0.18);
+    gain.gain.exponentialRampToValueAtTime(peak * 0.35, at + duration * 0.6);
+    gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
+    source.connect(band); band.connect(high); high.connect(gain); gain.connect(c.destination);
+    source.start(at, Math.random() * 0.2);
+    source.stop(at + duration + 0.05);
+  }
+  // A page turn: the sheet sweeps across (swish), then settles (soft tap).
+  // `target` lets tests render the sound offline (OfflineAudioContext).
+  function play(target) {
+    if (!enabled) return false;
+    const c = target || context();
+    if (!c) return false;
+    const t = c.currentTime + 0.01;
+    const vary = 0.9 + Math.random() * 0.2;
+    burst(c, t, 0.42 * vary, 0.55, 3600 * vary, 1100);
+    burst(c, t + 0.36 * vary, 0.12, 0.28, 1800, 600);
+    return true;
+  }
+  function render(button) {
+    button.textContent = enabled ? '🔊 Sound' : '🔇 Muted';
+    button.setAttribute('aria-pressed', String(enabled));
+    button.title = enabled ? 'Turn page sound off' : 'Turn page sound on';
+  }
+  function setEnabled(value) {
+    enabled = !!value;
+    try { localStorage.setItem(KEY, enabled ? 'on' : 'off'); } catch (e) {}
+    buttons.forEach(render);
+    if (enabled) context();
+  }
+  // Buttons, keys and swipes put PageFlip in 'flipping'; a mouse/finger drag
+  // only reports 'user_fold' and settles without 'flipping', so play when a
+  // drag is released (paper sounds when let go, whether it turns or not).
+  function attach(book) {
+    let state = 'read';
+    book.on('changeState', event => { state = event.data; if (state === 'flipping') play(); });
+    if (typeof document === 'undefined') return;
+    const release = () => { if (state === 'user_fold') { state = 'released'; play(); } };
+    ['pointerup', 'mouseup', 'touchend'].forEach(name => document.addEventListener(name, release, true));
+  }
+  function bindButton(button) {
+    if (!button) return;
+    buttons.push(button); render(button);
+    button.addEventListener('click', () => { setEnabled(!enabled); });
+  }
+  // Browsers only start audio after a user gesture: unlock on the first one.
+  if (typeof document !== 'undefined') {
+    const unlock = () => { if (enabled) context(); document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); };
+    document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
+  }
+  return { play, attach, setEnabled, bindButton, isEnabled: () => enabled };
+})();

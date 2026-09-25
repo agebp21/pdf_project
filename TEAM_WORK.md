@@ -430,3 +430,8 @@ User menaruh `background.png` (1671x941, teks tertanam) untuk mengganti header h
 ### 25 September 2026 - Bar kategori merah PDF
 
 Bar filter kategori homepage jadi pita merah PDF full-width (#E5252A) tepat di bawah banner: teks putih, aktif = pil putih teks merah, hover putih transparan, focus ring putih. `.showcase.hero-image` diberi z-index 1 supaya lapisan dekoratif fixed (body::before) tidak memudarkan merahnya. Dicek 1440 & 390: tanpa overflow.
+
+### 25 September 2026 - Suara kertas + lipatan buku melengkung
+
+- `FlipbookSound` (di `assets/export/layout.js`, jadi ikut preview + HTML/EXE/APK/editor animasi tanpa ubah daftar file): suara kertas disintesis Web Audio (noise bandpass menyapu + ketukan kecil, variasi acak), tanpa file audio/lisensi, offline. `attach(book)`: bunyi saat state `flipping` (tombol/keyboard/swipe) dan saat drag (`user_fold`) dilepas — PageFlip tidak memancarkan `flipping` untuk drag. Tombol 🔊 Sound / 🔇 Muted (localStorage `mf-flip-sound`). Tes `tests/flip-sound.test.cjs`; Chromium: open cover/next/drag masing-masing 1 bunyi, muted diam; contoh suara `.build/flip-sound-preview.wav`.
+- BUG LAMA diperbaiki: `book-effects.css` memakai `.stf__item--left/--right`, padahal PageFlip memberi class terpisah `--left`/`--right`, jadi efek spine/sampul tidak pernah aktif. Selector kini `[class~="--left"]` (aman untuk WebView lama). Lipatan dibuat melengkung: bayangan makin gelap ke jilid, highlight tipis di puncak lengkung, bayangan tipis di tepi luar.
