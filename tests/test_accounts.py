@@ -143,6 +143,34 @@ class LocalAccountTests(AccountsBase):
         self.assertEqual(other.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})[0], 404)
         self.assertEqual(other.call('GET', '/api/billing/orders')[1]['orders'], [])
 
+    def test_invoice_pdf_for_own_paid_orders(self):
+        client = Client(self.base)
+        client.call('POST', '/api/auth/register', {'email': 'inv@b.co', 'password': 'rahasia-123', 'name': 'Budi'})
+        order = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'yearly'})[1]
+        path = f"/api/billing/orders/{order['orderId']}/invoice.pdf"
+        self.assertEqual(client.call('GET', path)[0], 404, 'no invoice before payment')
+        client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})
+        request = urllib.request.Request(self.base + path)
+        request.add_header('Cookie', '; '.join(f'{c.name}={c.value}' for c in client.jar))
+        with urllib.request.urlopen(request) as response:
+            self.assertEqual(response.headers.get_content_type(), 'application/pdf')
+            self.assertIn(f"MyFlipbook-INV-{order['orderId']}.pdf", response.headers['Content-Disposition'])
+            pdf = response.read()
+        self.assertTrue(pdf.startswith(b'%PDF-1.4') and pdf.rstrip().endswith(b'%%EOF'))
+        try:
+            import pymupdf
+        except ImportError:
+            pymupdf = None
+        if pymupdf:
+            text = pymupdf.open(stream=pdf, filetype='pdf')[0].get_text()
+            for expected in ('INVOICE', 'INV-' + order['orderId'], 'Rp 990.000', 'Budi', 'inv@b.co', 'TEST'):
+                self.assertIn(expected, text)
+        other = Client(self.base)
+        other.call('POST', '/api/auth/register', {'email': 'inv2@b.co', 'password': 'rahasia-123'})
+        self.assertEqual(other.call('GET', path)[0], 404, "someone else's invoice is not reachable")
+        self.assertEqual(Client(self.base).call('GET', path)[0], 401)
+        self.assertEqual(client.call('GET', '/api/billing/orders/../../x/invoice.pdf')[0], 404)
+
     def test_requires_login_and_json(self):
         client = Client(self.base)
         self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[0], 401)

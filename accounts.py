@@ -443,6 +443,15 @@ class Accounts:
                               'WHERE user_id=? ORDER BY created_at DESC LIMIT 50', (user_id,)).fetchall()
         return [dict(row) for row in rows]
 
+    def paid_order(self, user, order_id):
+        """The user's own paid order (and their row) for an invoice, else 404."""
+        with self.connect() as db:
+            order = db.execute('SELECT * FROM orders WHERE id=? AND user_id=?', (order_id, user['id'])).fetchone()
+            owner = db.execute('SELECT * FROM users WHERE id=?', (user['id'],)).fetchone()
+        if not order or order['status'] != 'paid':
+            raise AccountError(404, 'Invoice hanya tersedia untuk pembayaran yang sudah lunas.')
+        return order, owner
+
     def payment_methods(self):
         return self.provider.methods() if hasattr(self.provider, 'methods') else []
 

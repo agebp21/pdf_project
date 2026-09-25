@@ -414,3 +414,7 @@ User: petunjuk pakai bahasa Inggris. `BUKA-APLIKASI.txt` (ZIP Windows) dan `BUKA
 ### 25 September 2026 - Pembayaran dolar lewat Lemon Squeezy
 
 User ingin pembeli luar negeri. Tripay hanya IDR (dicek di dokumentasi). User pilih Lemon Squeezy + harga Pro $9.99/$99, Business $19.99/$199. `accounts.LemonSqueezyProvider` (checkout JSON:API, webhook HMAC X-Signature), `Accounts(provider, usd_provider)`, kolom `orders.currency` (migrasi otomatis), tabel `subscriptions`. Awal dari `subscription_created`, renewal dari `subscription_payment_success` (renewal, per invoice `LS-<id>`, idempotent). Checkout yang gagal sebelum sampai gateway tidak lagi meninggalkan baris "failed". Pricing: toggle Rp/$ + deteksi zona waktu/bahasa, metode Tripay hanya untuk IDR. Tes: 40 Python (2 baru: alur USD lengkap dengan opener palsu, simulasi USD); Chromium: default USD (New York) / IDR (Jakarta), checkout Business $199 simulasi -> paket aktif. Belum: akun + key Lemon Squeezy asli.
+
+### 25 September 2026 - Invoice PDF di riwayat pembayaran
+
+`invoice.py` (writer PDF stdlib: Helvetica/WinAnsi, Flate) + `Accounts.paid_order` + route `GET /api/billing/orders/<id>/invoice.pdf` (401 tanpa login, 404 bila belum lunas/bukan milik user). INVOICE untuk Tripay/Midtrans, RECEIPT untuk Lemon Squeezy (merchant of record), tanda TEST untuk simulasi. Penjual dari `MYFLIPBOOK_INVOICE_SELLER`. UI: kolom Invoice + tombol ⬇ PDF. Tes: `test_invoice_pdf_for_own_paid_orders`; Chromium: beli simulasi -> klik PDF -> file valid, dirender dan dicek.

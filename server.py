@@ -28,6 +28,7 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit
 
 import accounts
+import invoice
 
 ROOT = Path(__file__).resolve().parent
 BUILD = ROOT / '.build'
@@ -481,6 +482,21 @@ class Handler(SimpleHTTPRequestHandler):
             providers = {c: store.provider_for(c).name for c in accounts.CURRENCIES}
             self.send_json(200, {'plans': store.plans(), 'provider': store.provider.name, 'providers': providers,
                                  'paymentsEnabled': {c: name != 'none' for c, name in providers.items()}})
+        elif re.fullmatch(r'/api/billing/orders/[A-Za-z0-9-]{1,64}/invoice\.pdf', path):
+            user = self.current_user()
+            if not user:
+                raise accounts.AccountError(401, 'Silakan masuk dulu.')
+            order, owner = store.paid_order(user, path.split('/')[4])
+            seller = [line.strip() for line in os.environ.get('MYFLIPBOOK_INVOICE_SELLER', 'MyFlipbook|by Sarvamaya').split('|')
+                      if line.strip()]
+            pdf = invoice.build(order, owner, seller)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/pdf')
+            self.send_header('Content-Disposition', f'attachment; filename="MyFlipbook-INV-{order["id"]}.pdf"')
+            self.send_header('Cache-Control', 'private, no-store')
+            self.send_header('Content-Length', str(len(pdf)))
+            self.end_headers()
+            self.wfile.write(pdf)
         elif path == '/api/billing/orders':
             user = self.current_user()
             if not user:
