@@ -306,7 +306,7 @@
         const same=lines.findIndex(other=>other.text===item.text&&Math.abs(other.fontSize-item.fontSize)<Math.max(1,item.fontSize*.1)&&Math.abs(other.baselineX-item.baselineX)<Math.max(2,item.fontSize*.15)&&Math.abs(other.baselineY-item.baselineY)<Math.max(2,item.fontSize*.15));
         if(same<0)lines.push(item);else lines[same]=item;
       }
-      if(rawItems.length&&!lines.length)throw Error('Teks halaman ini memakai outline/font yang belum bisa dipisahkan. Halaman asli tetap dipertahankan.');
+      if(!lines.length){canvas.width=canvas.height=0;await extractOcrPage(pageIndex);return;}
       let backgroundUrl=null;
       if(lines.length||extractedImages.length){const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.92));if(!blob)throw Error('Background gagal dirender');backgroundUrl=URL.createObjectURL(blob);}
       canvas.width=canvas.height=0;
@@ -380,7 +380,69 @@
     if(mode!=='edit')setMode('edit');
     extracting=true;updateButtons();setError('');
     try {if(all){for(let i=0;i<pageCount;i++)await loadPageTextLayer(i);const results=Object.values(extractionResults),empty=results.filter(r=>r.empty).length,failed=results.filter(r=>r.error).length;setError('');setStatus(`Pemeriksaan ${pageCount} halaman selesai: ${empty} tanpa objek terpisah, ${failed} gagal. ${extractionResults[currentPage]?.message||''}`);}else await loadPageTextLayer(currentPage);}
-    finally {extracting=false;updateButtons();}
+    finally {await AnimationOCR.release();extracting=false;updateButtons();}
+  }
+
+  async function extractOcrPage(index){
+    setStatus(`OCR halaman ${index+1}: membaca teks dari gambar…`);
+    const page=await pdfDoc.getPage(index+1),base=page.getViewport({scale:1}),viewport=page.getViewport({scale:2200/Math.max(base.width,base.height)});
+    const canvas=document.createElement('canvas');canvas.width=Math.ceil(viewport.width);canvas.height=Math.ceil(viewport.height);
+    try{
+      await page.render({canvasContext:canvas.getContext('2d'),viewport}).promise;
+      const lines=await AnimationOCR.read(canvas,event=>{if(event.status==='recognizing text')setStatus(`OCR halaman ${index+1}: ${Math.round((event.progress||0)*100)}%`);});
+      const boxes=lines.flatMap(line=>line.words.length?line.words:[line.bbox]);
+      const colors=AnimationOCR.repair(canvas,boxes);let colorIndex=0;
+      const elements=lines.map(line=>{
+        const b=line.bbox,el=makeCustomEl('text');
+        Object.assign(el,{isExtracted:true,isOcr:true,sourceText:line.text,sourceX:b.x0/canvas.width*100,sourceY:b.y0/canvas.height*100,content:line.text,x:b.x0/canvas.width*100,y:b.y0/canvas.height*100,w:(b.x1-b.x0)/canvas.width*100+1,h:(b.y1-b.y0)/canvas.height*130,confidence:line.confidence});
+        el.style.color=colors[colorIndex]||'#222222';colorIndex+=line.words.length||1;el.style.fontSize=(b.y1-b.y0)/canvas.height/.033*18;
+        return el;
+      });
+      const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.94));if(!blob)throw Error('Background OCR gagal dibuat.');
+      const old=getEls(index),manual=old.filter(el=>!el.isExtracted&&!el.isExtractedImage&&!el.isPdfZone);
+      pages[index]={elements:[...elements.map(el=>old.find(previous=>previous.isOcr&&previous.sourceText===el.sourceText&&Math.abs(previous.sourceX-el.sourceX)<.5&&Math.abs(previous.sourceY-el.sourceY)<.5)||el),...manual]};
+      if(imageUrls[index]!==originalImageUrls[index])URL.revokeObjectURL(imageUrls[index]);
+      imageUrls[index]=elements.length?URL.createObjectURL(blob):originalImageUrls[index];
+      extractionResults[index]={empty:!elements.length,message:elements.length?`Halaman ${index+1}: ${elements.length} baris OCR menjadi teks editable. Periksa ejaan dan background; hasil OCR adalah perkiraan. Grafis lain bisa dipisahkan dengan pilih area.`:`Halaman ${index+1}: OCR selesai, tidak menemukan teks. Gunakan Pisahkan area gambar/logo untuk grafis.`};
+      if(index===currentPage){updateEditorImage();renderStage();}updateStrip();setStatus(extractionResults[index].message);
+    }finally{canvas.width=canvas.height=0;page.cleanup();}
+  }
+
+  async function ocrCurrentPage(){
+    if(!pageCount||loading||importing||exporting||extracting)return;
+    if(mode!=='edit')setMode('edit');extracting=true;updateButtons();setError('');
+    try{await extractOcrPage(currentPage);}catch(error){setError('OCR gagal: '+error.message);}finally{await AnimationOCR.release();extracting=false;updateButtons();}
+  }
+
+  function startRegionExtraction(){
+    if(!pageCount||loading||importing||exporting||extracting)return;
+    if(mode!=='edit')setMode('edit');extracting=true;updateButtons();select(null);
+    const overlay=document.createElement('div');overlay.className='ae-region-picker';
+    const outline=document.createElement('div');outline.className='ae-region-box';overlay.append(outline);stageEl.append(overlay);
+    let start=null;
+    setStatus('Tarik kotak mengelilingi gambar/logo. Background bekas area akan diperkirakan. Escape untuk batal.');
+    const cleanup=()=>{overlay.remove();document.removeEventListener('keydown',escape);extracting=false;updateButtons();};
+    const escape=e=>{if(e.key==='Escape'){cleanup();setStatus('Pemisahan area dibatalkan.');}};document.addEventListener('keydown',escape);
+    const point=e=>{const r=overlay.getBoundingClientRect();return {x:clamp((e.clientX-r.left)/r.width,0,1),y:clamp((e.clientY-r.top)/r.height,0,1)};};
+    overlay.addEventListener('pointerdown',e=>{e.preventDefault();e.stopPropagation();start=point(e);overlay.setPointerCapture?.(e.pointerId);});
+    overlay.addEventListener('pointermove',e=>{if(!start)return;const end=point(e);Object.assign(outline.style,{left:Math.min(start.x,end.x)*100+'%',top:Math.min(start.y,end.y)*100+'%',width:Math.abs(start.x-end.x)*100+'%',height:Math.abs(start.y-end.y)*100+'%'});});
+    overlay.addEventListener('pointerup',async e=>{
+      if(!start)return;const end=point(e),rect={x:Math.min(start.x,end.x),y:Math.min(start.y,end.y),w:Math.abs(start.x-end.x),h:Math.abs(start.y-end.y)};start=null;
+      if(rect.w<.005||rect.h<.005){cleanup();setStatus('Area terlalu kecil. Pilih ulang gambar/logo.');return;}
+      document.removeEventListener('keydown',escape);
+      try{
+        const img=await new Promise((resolve,reject)=>{const image=new Image();image.onload=()=>resolve(image);image.onerror=()=>reject(Error('Gambar halaman gagal dibaca'));image.src=imageUrls[currentPage];});
+        const canvas=document.createElement('canvas');canvas.width=img.naturalWidth;canvas.height=img.naturalHeight;canvas.getContext('2d').drawImage(img,0,0);
+        const x=Math.floor(rect.x*canvas.width),y=Math.floor(rect.y*canvas.height),w=Math.max(1,Math.floor(rect.w*canvas.width)),h=Math.max(1,Math.floor(rect.h*canvas.height));
+        const crop=document.createElement('canvas');crop.width=w;crop.height=h;crop.getContext('2d').drawImage(canvas,x,y,w,h,0,0,w,h);
+        const el=makeCustomEl('image');Object.assign(el,{isExtractedImage:true,sourceKey:uid(),src:crop.toDataURL('image/png'),content:'Area gambar',x:rect.x*100,y:rect.y*100,w:rect.w*100,h:rect.h*100});
+        AnimationOCR.repair(canvas,[{x0:x,y0:y,x1:x+w,y1:y+h,padding:0}]);
+        const blob=await new Promise(resolve=>canvas.toBlob(resolve,'image/jpeg',.94));if(!blob)throw Error('Background gagal dibuat');
+        if(imageUrls[currentPage]!==originalImageUrls[currentPage])URL.revokeObjectURL(imageUrls[currentPage]);imageUrls[currentPage]=URL.createObjectURL(blob);
+        getEls(currentPage).push(el);updateEditorImage();renderStage();select(el.id);updateStrip();
+        canvas.width=crop.width=0;setStatus('Area menjadi elemen gambar. Periksa tepi dan background; gunakan Pulihkan konten asli jika hasil belum sesuai.');
+      }catch(error){setError(error.message);}finally{cleanup();}
+    });
   }
 
   /* ══════════════════════════════════════════════════════════
@@ -669,7 +731,7 @@
 
   function updateButtons(){
     const busy=loading||importing||exporting||extracting,ready=pageCount>0&&!busy;
-    ['#ae-add-text','#ae-add-hotspot','#ae-load-page','#ae-load-all','#ae-clear-zones','#ae-export','#ae-mode-edit','#ae-mode-preview'].forEach(id=>{if($(id))$(id).disabled=!ready;});
+    ['#ae-add-text','#ae-add-hotspot','#ae-load-page','#ae-load-all','#ae-clear-zones','#ae-export','#ae-mode-edit','#ae-mode-preview','#ae-ocr-page','#ae-extract-region'].forEach(id=>{if($(id))$(id).disabled=!ready;});
     if($('#ae-doc-file'))$('#ae-doc-file').disabled=busy;
     $('#ae-inspector')?.querySelectorAll('input,textarea,select,button').forEach(el=>el.disabled=busy);
     stripEl?.querySelectorAll('button').forEach(el=>el.disabled=busy);
@@ -789,6 +851,8 @@
     on('#ae-add-hotspot', 'click',  ()=>addCustomEl('hotspot'));
     on('#ae-load-page',   'click',  ()=>loadTextLayers(false));
     on('#ae-load-all',    'click',  ()=>loadTextLayers(true));
+    on('#ae-ocr-page','click',ocrCurrentPage);
+    on('#ae-extract-region','click',startRegionExtraction);
     on('#ae-clear-zones', 'click',  ()=>clearZones());
     on('#ae-delete-btn',  'click',  ()=>deleteSelected());
     on('#ae-prev',        'click',  ()=>goPage(currentPage-1));

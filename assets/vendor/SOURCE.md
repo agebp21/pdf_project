@@ -24,3 +24,7 @@ under its MIT license (see `JSZIP-LICENSE.txt`).
 
 The PageFlip upstream MIT license is included as `PAGEFLIP-LICENSE.txt`,
 from https://github.com/Nodlik/StPageFlip/blob/master/LICENSE.
+
+- pdf-lib 1.17.1: official npm distribution (pdf-lib/dist/pdf-lib.min.js); MIT license in PDFLIB-LICENSE.md. Used locally to turn imported images into valid PDFs in the animation editor.
+
+- OCR editor: Tesseract.js 5.1.1 and tesseract.js-core 5.1.1, unmodified npm distributions (Apache-2.0), under `ocr/`. Core .wasm.js distributions embed WASM, including SIMD/LSTM variants. Engine docs: https://github.com/naptha/tesseract.js/blob/v5.1.1/docs/api.md . Language data eng/ind/msa from tesseract-ocr/tessdata_fast tag 4.1.0 (Apache-2.0), gzip-compressed for local loading: https://github.com/tesseract-ocr/tessdata_fast/tree/4.1.0 . License files included. OCR does not upload documents or require CDN access.

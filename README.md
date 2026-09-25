@@ -9,7 +9,18 @@ cd E:\PDF_Project
 python server.py
 ```
 
-Buka `http://127.0.0.1:8080/`. Server hanya menerima koneksi loopback. Jika port 8080 sudah terpakai oleh server proyek, gunakan yang sudah aktif atau hentikan server tersebut terlebih dahulu. `python server.py --port 8081` juga tersedia.
+Buka `http://127.0.0.1:8080/`. Default-nya server hanya menerima koneksi dari PC ini (loopback). Jika port 8080 sudah terpakai oleh server proyek, gunakan yang sudah aktif atau hentikan server tersebut terlebih dahulu. `python server.py --port 8081` juga tersedia.
+
+### Akses dari PC lain di jaringan yang sama
+
+1. Jalankan server mode LAN: `python server.py --host 0.0.0.0` (catat IP yang ditampilkan, mis. `http://192.168.18.16:8080/`).
+2. Di PC ini, izinkan port di firewall (PowerShell sebagai Administrator, sekali saja):
+   ```powershell
+   New-NetFirewallRule -DisplayName "PDF Tools (8080)" -Direction Inbound -Protocol TCP -LocalPort 8080 -Action Allow -Profile Private
+   ```
+3. Di PC lain (satu WiFi/jaringan), buka `http://<IP-PC-ini>:8080/`.
+
+Catatan: mode LAN hanya untuk jaringan tepercaya (WiFi rumah/kantor). Semua PC di jaringan yang membuka halaman bisa memakai endpoint build/konversi; jangan expose ke internet publik.
 
 HTML, CSS, dan JavaScript tidak membutuhkan build frontend. Python memakai standard library. Flutter dibutuhkan hanya untuk APK/EXE, bukan ekspor HTML atau penyimpanan proyek.
 
@@ -91,3 +102,21 @@ Fixture dan hasil ada di `.build/qa-office/` (diabaikan Git). Tes memeriksa gamb
 Open the matching card in the converter. All three accept a PDF and a page range (`all` or `1-3,5`); results can be downloaded or sent to Flipbook. Watermark supports text or PNG/JPEG, position/size/opacity. Numbering supports a starting number and position. Crop accepts four margins in mm, relative to the displayed page, including rotated pages. Cropping hides content outside CropBox; it is not permanent redaction. No page/file quota is imposed; memory and format constraints remain.
 
 Tests: `node tests/pdf-edit.test.cjs` and `node tests/pdf-edit-ui.test.cjs` (the QA-only dependencies in `.build/qa-runtime` are required, as described in QA_REPORT.md).
+
+## Editor animasi
+
+Buka `http://127.0.0.1:8080/animation.html`. Impor PDF, dokumen Office (memerlukan LibreOffice/server lokal), atau gambar raster yang didukung browser. Load konten memisahkan teks horizontal yang didukung menjadi elemen editable/animasi dan merender background tanpa teks tersebut. Teks raster, outline, atau rotasi tidak dipisahkan; font pengganti bisa mengubah layout. Tombol Pulihkan teks asli membatalkan ekstraksi halaman. Teks dan tombol tambahan juga tersedia.
+
+Gunakan Preview untuk mencoba animasi, kemudian ekspor HTML ZIP dan ekstrak seluruh isinya sebelum membuka `index.html` secara offline. Dialog lokasi simpan digunakan bila browser mendukungnya; jika tidak, unduhan mengikuti pengaturan browser. Editor ini belum menyediakan simpan/buka proyek yang dapat diedit atau ekspor animasi APK/EXE.
+
+Tes tambahan: `node tests/animation-playback.test.cjs` dan `node tests/animation-editor.test.cjs`. Tes editor memakai fixture `.build/qa-office/layout.docx.pdf` dari `python tests/qa-office.py` dan dependensi QA di `.build/qa-runtime`. Tes DOM bukan pemeriksaan visual browser.
+
+Editor juga memisahkan gambar raster dan grup transparansi yang didukung menjadi elemen gambar animasi. Background satu halaman, grafis tanpa grup, serta logo yang sudah menyatu dalam gambar background tetap utuh; belum ada segmentasi/inpainting. Pada contoh PSJ, ilustrasi bangunan bisa dipisahkan, sedangkan logo di background belum. Tombol link diatur saat Edit dan dibuka lewat Preview/hasil ekspor; alamat domain tanpa skema dinormalisasi menjadi HTTPS.
+
+### OCR dan pemisahan area pada editor
+
+`Load konten` mencoba ekstraksi PDF asli terlebih dahulu, lalu OCR lokal jika tidak ada teks native yang berhasil dipisahkan. `OCR ulang halaman` memproses gambar seluruh halaman (berguna untuk dokumen campuran). Model Inggris, Indonesia, dan Melayu sudah disertakan; file dokumen tidak diunggah ke layanan OCR. Tulisan kecil/dekoratif bisa terlewat atau salah, sehingga teks hasil OCR perlu diperiksa.
+
+`Pisahkan area gambar / logo` memungkinkan drag kotak pada halaman untuk membuat elemen gambar yang bisa dianimasikan. Pengisian bekas teks/area memakai perkiraan dari tepi, bukan rekonstruksi grafis sempurna; pola kompleks bisa meninggalkan artefak. `Pulihkan konten asli halaman` membatalkan ekstraksi. Hasil animasi termasuk OCR/area masuk HTML ZIP; ekspor APK/EXE editor ini belum terhubung ke backend v1.
+
+Tes OCR nyata: `node tests/animation-ocr.test.cjs` (memerlukan tesseract.js 5.1.1 di .build/qa-runtime). Tambahkan path gambar sebagai argumen untuk QA lokal; contoh uji halaman infografis pada sesi ini memakai PSJ halaman 5 dan tidak ikut Git.

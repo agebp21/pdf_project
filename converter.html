@@ -517,7 +517,7 @@ $('#convertBtn').addEventListener('click', async ()=>{
     log('Convert success');
   }catch(e){
     console.error(e);
-    showError('Convert failed: '+(e.message||e)+'\nOpen via http://localhost:8080 (not file://) or check the F12 console');
+    showError('Convert failed: '+(e.message||e)+'\nOpen via http://'+(location.host||'localhost:8080')+' (not file://) or check the F12 console');
     log(e.stack||e);
   }finally{
     $('#btnSpinner').classList.add('hidden'); $('#convertBtn').disabled=false; updateFileUI({preserveError:true});

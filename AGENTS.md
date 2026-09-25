@@ -10,7 +10,7 @@
 ## Arah produk dan keputusan pengguna
 
 - Satu aplikasi: konversi dokumen → hasil PDF → **Jadikan Flipbook** → tambah animasi/interaksi.
-- Flipbook menyatu dalam PDF Project, bukan proyek atau aplikasi demo terpisah. `animation.html` hanya contoh fitur.
+- Flipbook menyatu dalam PDF Project. `animation.html` sekarang editor animasi tersendiri dalam aplikasi yang sama; pembaca biasa tetap di `flipbook.html`. Lihat handoff terbaru untuk batas ekspor masing-masing.
 - Gunakan engine flipbook dari `https://github.com/agebp21/sarvamaya-flipbook-studio`; sumber salinan ada di `assets/vendor/SOURCE.md`.
 - Buku dimulai dari halaman pertama PDF sebagai sampul depan. Buka sampul dahulu, lalu tampilkan isi.
 - Pengguna sudah meminta penghapusan batas 50 MB dan 100 halaman. Jangan memasang kembali batas ukuran/halaman tanpa arahan baru. Tangani dokumen besar lewat pengelolaan memori dan pemuatan bertahap.

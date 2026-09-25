@@ -192,5 +192,57 @@ class ConvertApiTests(unittest.TestCase):
         self.assertTrue(server.safe_office_name('x' * 150 + '.docx').endswith('.docx'))
 
 
+class LanHostTests(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.port = cls.httpd.server_port
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        cls.thread.join()
+
+    def raw_get(self, host_header, origin=None):
+        import socket
+        sock = socket.create_connection(('127.0.0.1', self.port), timeout=10)
+        request = f'GET /api/capabilities HTTP/1.1\r\nHost: {host_header}\r\n'
+        if origin is not None:
+            request += f'Origin: {origin}\r\n'
+        request += 'Connection: close\r\n\r\n'
+        sock.sendall(request.encode())
+        data = b''
+        while b'\r\n' not in data:
+            chunk = sock.recv(1024)
+            if not chunk:
+                break
+            data += chunk
+        sock.close()
+        return int(data.split(b' ')[1])
+
+    def test_lan_ip_host_allowed(self):
+        ip = server.lan_ip()
+        if not ip:
+            self.skipTest('tidak ada jaringan LAN')
+        self.assertEqual(self.raw_get(f'{ip}:{self.port}'), 200)
+
+    def test_wrong_port_rejected(self):
+        self.assertEqual(self.raw_get(f'127.0.0.1:{self.port + 1}'), 403)
+
+    def test_untrusted_name_rejected(self):
+        self.assertEqual(self.raw_get(f'evil.example:{self.port}'), 403)
+
+    def test_origin_mismatch_rejected(self):
+        ip = server.lan_ip() or '127.0.0.1'
+        self.assertEqual(self.raw_get(f'{ip}:{self.port}', f'http://evil.example:{self.port}'), 403)
+
+    def test_local_addresses_contains_loopback(self):
+        self.assertIn('127.0.0.1', server.local_addresses())
+        self.assertIn('localhost', server.local_addresses())
+
+
 if __name__ == '__main__':
     unittest.main()

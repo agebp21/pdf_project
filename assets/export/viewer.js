@@ -5,7 +5,7 @@
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let book, frame = 0;
   try {
-    if (!data || data.version !== 1 || !Number.isInteger(data.pageCount) || data.pageCount < 1) throw Error('Invalid book data.');
+    if (!data || ![1,2].includes(data.version) || (data.version===2&&!globalThis.AnimationPlayback) || !Number.isInteger(data.pageCount) || data.pageCount < 1) throw Error('Invalid book data.');
       document.title = data.title; $('#title').textContent = data.title;
       const elements = Array.from({length:data.pageCount}, (_, index) => {
       const page = document.createElement('article'); page.className = 'page';
@@ -23,6 +23,12 @@
       return page;
     });
     $('#book').append(...elements);
+    const players=elements.map((page,index)=>{
+      if(data.version!==2)return null;
+      const ratio=data.pageRatios?.[index]||data.ratio;
+      const w=ratio<data.ratio?ratio/data.ratio*100:100,h=ratio>data.ratio?data.ratio/ratio*100:100;
+      return AnimationPlayback.mount(page,data.pages?.[String(index)]?.elements||[],{count:data.pageCount,imageBox:{x:(100-w)/2,y:(100-h)/2,w,h},goPage:index=>{if(book.getState()==='read'){book.turnToPage(index);update();animate();}}});
+    });
     function visible() {
       const first = book.getCurrentPageIndex();
       return [first, ...(first > 0 && book.getOrientation() === 'landscape' && first + 1 < data.pageCount ? [first + 1] : [])];
@@ -35,11 +41,12 @@
       $('#next').textContent = cover ? 'Open cover →' : '→';
       $('#next').setAttribute('aria-label', cover ? 'Open cover' : 'Next page');
       elements.forEach((page,index) => { page.setAttribute('aria-hidden', String(!pages.includes(index))); });
-      $('#replay').disabled = !pages.some(index => data.overlays[String(index)]);
+      $('#replay').disabled = !pages.some(index => data.overlays[String(index)]||data.pages?.[String(index)]?.elements?.length);
     }
     function animate(automatic = true) {
       cancelAnimationFrame(frame);
       const pages = visible(), start = performance.now();
+      players.forEach((player,index)=>{if(pages.includes(index))player?.play();else player?.stop();});
       if (!pages.some(index => data.overlays[String(index)])) return;
       function draw(now) {
         const progress = automatic && reduced ? 1 : Math.min(1,(now-start)/1800), eased = 1-Math.pow(1-progress,3);
@@ -56,7 +63,7 @@
     FlipbookLayout.decorate(elements);
     book = new St.PageFlip($('#book'),{width:380,height:Math.round(380/data.ratio),size:'stretch',minWidth:220,maxWidth:750,minHeight:50,maxHeight:1500,autoSize:true,usePortrait:true,showCover:true,startPage:0,...FlipbookLayout.motion(reduced)});
     book.on('flip',update);book.on('changeOrientation',()=>{update();animate()});
-    book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);$('#home').disabled=$('#prev').disabled=$('#next').disabled=true}});
+    book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);players.forEach(p=>p?.stop());$('#home').disabled=$('#prev').disabled=$('#next').disabled=true}});
     book.loadFromHTML(elements);update();animate();
     FlipbookLayout.bind(book,$('#stage'),data.ratio);
     $('#fullscreen').onclick=async()=>{
@@ -72,6 +79,6 @@
     $('#home').onclick=()=>{if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
     $('#prev').onclick=()=>book.flipPrev();$('#next').onclick=()=>book.flipNext();$('#replay').onclick=()=>animate(false);
     document.addEventListener('keydown',event=>{if(event.key==='ArrowRight'&&!$('#next').disabled)book.flipNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)book.flipPrev()});
-    document.addEventListener('visibilitychange',()=>{if(document.hidden)cancelAnimationFrame(frame)});
+    document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);players.forEach(p=>p?.stop());}else animate()});
   } catch(cause) { $('#error').hidden=false;$('#error').textContent='Buku gagal dibuka. '+cause.message; }
 })();

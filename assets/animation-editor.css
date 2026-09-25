@@ -366,3 +366,5 @@ a{color:inherit}
 .ae-order-row.active { border-color:#4a7c59; background:#eef4ee; font-weight:700; }
 .ae-order-delay { flex-shrink:0; font-variant-numeric:tabular-nums; color:#4a7c59; font-weight:700; }
 .ae-order-name { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.ae-region-picker{position:absolute;inset:0;z-index:100;cursor:crosshair;touch-action:none;background:#ffffff08}
+.ae-region-box{position:absolute;pointer-events:none;border:2px dashed #f4bd34;background:#f4bd3420}

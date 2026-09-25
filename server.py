@@ -1,4 +1,8 @@
-"""Loopback-only PDF Tools server and serialized native build service."""
+"""PDF Tools server and serialized native build service.
+
+Loopback-only by default. Pass --host 0.0.0.0 to serve trusted LAN PCs;
+Host/Origin/token checks still apply against this machine's own addresses.
+"""
 import argparse
 import csv
 import hashlib
@@ -9,6 +13,7 @@ from pathlib import Path
 import re
 import secrets
 import shutil
+import socket
 import subprocess
 import tempfile
 import threading
@@ -253,14 +258,51 @@ def build_job(job_id, target):
         BUILD_LOCK.release()
 
 
+def local_addresses():
+    """Hostnames/IPs milik mesin ini untuk validasi header Host."""
+    names = {'localhost', '127.0.0.1', '::1'}
+    try:
+        names.add(socket.gethostname())
+        for family, _, _, _, sockaddr in socket.getaddrinfo(socket.gethostname(), None):
+            names.add(sockaddr[0])
+    except OSError:
+        pass
+    try:
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        probe.connect(('8.8.8.8', 80))
+        names.add(probe.getsockname()[0])
+        probe.close()
+    except OSError:
+        pass
+    return names
+
+
+def lan_ip():
+    """IP LAN utama untuk ditampilkan; None bila tidak ada jaringan."""
+    try:
+        probe = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        probe.connect(('8.8.8.8', 80))
+        ip = probe.getsockname()[0]
+        probe.close()
+        return None if ip.startswith('127.') else ip
+    except OSError:
+        return None
+
+
 class Handler(SimpleHTTPRequestHandler):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, directory=str(ROOT), **kwargs)
 
     def trusted(self):
-        hosts = {f'localhost:{self.server.server_port}', f'127.0.0.1:{self.server.server_port}'}
         host, origin = self.headers.get('Host', ''), self.headers.get('Origin')
-        return host in hosts and (not origin or origin == 'http://' + host)
+        name, separator, host_port = host.rpartition(':')
+        if not separator or host_port != str(self.server.server_port):
+            return False
+        if name.startswith('[') and name.endswith(']'):
+            name = name[1:-1]
+        if name not in local_addresses():
+            return False
+        return not origin or origin == 'http://' + host
 
     def send_json(self, status, body):
         encoded = json.dumps(body).encode()
@@ -418,7 +460,12 @@ class Handler(SimpleHTTPRequestHandler):
 if __name__ == '__main__':
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8080)
+    parser.add_argument('--host', default='127.0.0.1',
+                        help='127.0.0.1 = PC ini saja (default); 0.0.0.0 = boleh diakses PC lain di jaringan tepercaya')
     args = parser.parse_args()
-    httpd = ThreadingHTTPServer(('127.0.0.1', args.port), Handler)
-    print(f'PDF Tools: http://127.0.0.1:{args.port}/', flush=True)
+    httpd = ThreadingHTTPServer((args.host, args.port), Handler)
+    shown = lan_ip() if args.host == '0.0.0.0' else (None if args.host.startswith('127.') else args.host)
+    print(f'PDF Tools: http://{shown or args.host}:{args.port}/', flush=True)
+    if args.host == '0.0.0.0':
+        print('Mode LAN: hanya untuk jaringan tepercaya (WiFi rumah/kantor).', flush=True)
     httpd.serve_forever()

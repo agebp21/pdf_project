@@ -292,3 +292,74 @@ Navigasi preview dipusatkan, tombol Home kembali langsung ke sampul. Home juga d
 - Belum diuji: QA visual browser (drag, animasi, link klik, export buka di browser).
 
 
+
+### 18 September 2026 - takeover animation continuation (Codex)
+
+User requested continuation of Antigravity animation work. Preserve existing uncommitted animation.html, animation-editor.css/js changes. Scope: repair multi-format import, preview/links, zone placement, export runtime and save handling; add regression tests. Own these files and new animation playback assets for this task. No parallel agent work.
+
+### 18 September 2026 - Animation continuation completed locally (Codex)
+
+- Files: animation.html; assets/animation-editor.js/css; new assets/animation-playback.js/css; assets/export/viewer.js; local pdf-lib and vendor source/license; two animation tests; AGENTS.md, README.md, FEATURE_CHECKLIST.md, PROJECT_HANDOFF.md, TEAM_WORK.md.
+- Preserved Antigravity changes and repaired screenshot-related CSS conflicts, import PDF/Office/images, preview/link playback, PDF zone positioning, and v2 HTML export/save cancellation.
+- Validation: both animation suites, export/save-location, engine/runtime and existing editor suites passed; 16 Python tests passed; JS syntax/diff clean, related HTTP assets 200. Tests exercise actual PDF.js/pdf-lib/PageFlip inside simulated DOM.
+- Limits: no direct browser/device visual check (CUA surfaces unavailable); PDF zones are highlights; animation editor project save/load and APK/EXE export are not wired. Normal reader remains compatible. No commit/push in this task.
+
+### 18 September 2026 - Follow-up: controls reported nonfunctional
+
+User reports editor controls still do not work. Exact browser failure is not yet reproduced; CUA still exposes no browsers. Added persistent canvas action/error feedback so scrolled sidebar cannot hide extraction/export errors, visible PDF zone outlines and explicit scan/image limitation. Fixed stale inspector selection after replacing document, clear-zones from Preview, and clicking Preview again to replay. Files: animation.html, assets/animation-editor.js/css, tests/animation-editor.test.cjs. Extended real-PDF/simulated-DOM regression passed including image zero-text feedback, custom text selection, replay and clear preservation; JS syntax and diff check passed. User clarification requested on Add Text behavior; do not treat the user's full reported issue as resolved. Not committed/pushed.
+
+### 18 September 2026 - Preview effect visibility
+
+Screenshot confirmed PDF zones in Preview but their default 600ms fade on faint rectangles was barely observable; original PDF pixels never moved. New PDF zones default to 1400ms looping pulse. Shared playback adds a strong animated amber emphasis for PDF zones (two passes for entrance effects, looping for pulse), cancels both handles on replay/destroy, and retains reduced-motion behavior. Preview reports current page/active effects/empty or reduced-motion state; load-all summary no longer leaves the last page extraction message over the current page. This is animated highlighting, not extraction/animation of original PDF objects. Tests: animation-editor, animation-playback (new emphasis/cancellation assertions), export suite, syntax and diff checks passed. No actual browser visual verification. Files: animation-editor.js, animation-playback.js, playback test, handoff/team notes. Local only, no commit/push.
+
+### 18 September 2026 - Actual editable text extraction replaces highlights
+
+User clarified that PDF text must be extracted, not highlighted. Load content now rerenders page graphics through a scoped canvas context proxy, suppressing only fillText/strokeText calls matching horizontal PDF text items. Those items become editable draggable text elements with captured color, approximate size/family and normal animations; updated backgrounds and text elements are exported together. Unmatched raster/outline/rotated text remains in the original page. Restore resets background and removes extracted elements; re-extraction retains edits/animations via source coordinates. No vendor edits. Exact embedded font/layout fidelity is not guaranteed; browser/device visual QA and the user's 88-page file remain unverified.
+
+Touched animation-editor.js/css, animation-playback.js/css, animation.html, animation-editor.test.cjs, README/checklist and handoff/team notes. Passed real PDF.js render/extraction test with browser-like disableFontFace:false, editable inspector/content, replacement background URL, exported text and restoration; playback/export/runtime suites passed. Earlier highlight-only notes are superseded for newly extracted text. Local changes, no commit/push.
+
+### 18 September 2026 - Duplicate layered text follow-up
+
+User screenshot still shows double text. Reproduced one cause with a real PDF drawing identical text twice with shadow offset. Extraction now matches nearest baseline, prefers fill paint over stroke, and consolidates overlapping identical text runs (shadow/faux bold) into one foreground editable element after suppressing both original paints. Regression checks exactly one extracted element and every background pixel is white in the synthetic two-layer PDF. Animation editor/playback/export suites and syntax/diff checks pass. The user's 88-page PDF has not been supplied; requested its local path. Do not claim the screenshot-specific issue fully resolved: arbitrary vector outlines/raster duplicates remain outside canvas text suppression. Files: animation-editor.js, animation-editor.test.cjs, handoff/team notes. Local only, no commit/push.
+
+### 18 September 2026 - Verified duplicate-text fix against user's Downloads PDF
+
+Located Downloads/PSJ 2026-2030.pdf (88 pages), matching the screenshot. Cover has repeated normal text plus per-glyph Type3 outlines. Type3 font ascent/descent contains non-finite values; now use finite fallback metrics. Added render-task-scoped adapter for pinned PDF.js 3.11.174: match Type3 glyphs to a co-located normal text run, suppress their painting while retaining glyph advancement/clipping/state, restore temporary glyph operator lists in finally. No vendor source modified. This adapter accesses _intentStates/render-task graphics and must be revalidated before upgrading PDF.js. Standalone Type3 text without a matching normal-text run is preserved.
+
+Tested first two pages of the actual file via PDF.js/editor/export runtime. Generated background confirms cover title/subtitle/date text removed and original logo/building artwork preserved; lower building region retains 40,688 bright pixels vs 41,109 before JPEG rerender, subtitle residual gray text pixels are zero. Full 88-page extraction and interactive browser visual QA not performed. Private input and generated evidence stay outside Git (.build/qa-animation). Added synthetic Type3 path glyph duplicate to animation-editor regression; asserts exactly one editable element per text and pixel-white background after both paint paths removed. Animation editor/playback/export suites and JS syntax pass. Files: animation-editor.js, animation-editor.test.cjs, handoff/team notes. No commit/push.
+
+### 18 September 2026 - PDF image/group extraction and link buttons
+
+User confirmed graphics should be separated from PDF, not uploaded independently. Added extraction of axis-aligned raster image paints and top-level composited transparency groups into PNG-backed editable image elements. Full-page images (>=80% area), rotated/group-internal paints and active soft-mask paints remain in the background; this is an extraction heuristic, not an upload quota. Extracted PNGs retain alpha, can be moved/resized/rotated/animated/linked, and embed into HTML offline export. Restore content returns originals. Ungrouped vectors and graphics baked into page-wide images are not independently extracted. Complex clipping/stack order requires more QA.
+
+Tested the user's PSJ cover directly: one building illustration group extracted and its PNG visually inspected. Top logo belongs to the full-page background raster, so it remains inseparable by this method. No automatic segmentation/inpainting implemented. First-two-page editor/export test passed, not all 88 pages.
+
+Links: new hotspot opens URL settings, invalid/empty destination reports feedback in Preview, bare hostnames normalize to HTTPS, external targets use native anchors with noopener/noreferrer, pointer/mouse/touch propagation prevents page-flip interference. Edit selects; Preview follows links. Page links retained. Tests assert extracted image in actual Office-PDF fixture and offline reader, self-contained PNG export, URL anchor/normalization and existing playback; engine/export/editor suites, JS syntax/diff checks pass. No live browser navigation QA. Files: animation.html, editor/playback JS/CSS, two tests, docs. Local only; no commit/push.
+
+### 18 September 2026 - Image-only infographics extraction feedback
+
+User screenshot matches PSJ page 5. Read-only PDF inspection confirms pages 4 and 5 each contain one raster image and zero PDF text objects. This is not a stalled text extraction; OCR/segmentation is not implemented. Added per-page extraction outcomes, removed repeated load hint after a completed empty extraction, restored correct page status on navigation, and summarized empty/failed pages after load-all. Clear/import reset outcomes. Manual elements remain available. Do not claim raster text/logo extraction works.
+
+Actual PSJ page 5 -> cover extraction -> page 5 navigation passed in PDF.js/JSDOM; image-only status explains OCR requirement, next-page extraction works, no stuck controls or runtime errors. Added regression assertions to animation-editor test; suite, JS syntax/diff checks pass. Read-only render of pages 4/5 confirms screenshot. No interactive browser QA. Files: animation-editor.js, animation-editor.test.cjs, handoff/team notes. Local changes, no commit/push.
+
+### 18 September 2026 - OCR fallback for every readable document/page, manual graphics regions
+
+User wants an extraction path even for image-only documents. Added assets/animation-ocr.js with local Tesseract.js/core 5.1.1 and tessdata_fast 4.1.0 eng/ind/msa (licenses/sources included, ~21MB). Native extraction falls back to OCR when no native text is captured; explicit OCR button handles mixed pages. Two passes (original + dark-letter contrast) merge overlapping results, confidence-filter words, and turn recognized lines into editable animatable text. Original preserved; background approximated from unioned word masks with border interpolation. Matching OCR edits survive reload. OCR worker released after batch. No server/dependency changes required at runtime, no document uploads/CDN.
+
+Added manual drag-rectangle extraction for arbitrary graphics/logo areas, producing PNG overlay plus approximate background repair. This provides a route for flattened graphics but is NOT automatic semantic segmentation and does not reconstruct obscured artwork perfectly. Low-confidence/decorative text may remain unrecognized. Languages currently English/Indonesian/Malay. All supported input documents can be processed, not a guarantee every pixel/text/font is recovered.
+
+Validation: actual PSJ page 5 -> real OCR -> 54 editable lines -> HTML ZIP passed in PDF.js/JSDOM; real OCR module test (54 lines/123 word boxes), synthetic raster OCR and pixel-removal test, native editor/manual-region/playback/export tests passed. Inspected repaired raster: decorative label/outline remnants and interpolation artefacts are still possible; UI explains review/restore. Syntax checks and local engine/model HTTP 200. No direct browser/device UI check or 88-page OCR stress test.
+
+User also asked export status: editor HTML v2 is implemented/tested; server/native build manifest accepts v1 only, so editor APK/EXE remain unwired. Do not call these working animation exports. No commit/push performed by this session; other sessions committed frontend changes during work, and index.html changes were left untouched. New OCR assets/tests remain untracked until explicitly committed with their dependencies. Updated README/checklist/vendor source.
+
+### 18 September 2026 - Ordinary PDF flipbook export verification and save fixes
+
+User clarified the broken exports concern flipbook.html, not animation editor. Kept animation work untouched. Built/downloaded real ordinary v1 exports using PSJ 2026-2030.pdf, all 88 pages: .build/qa/PSJ-88-HTML.zip (13,848,524 bytes), PSJ-88.apk (59,388,600), PSJ-88-Windows.zip (25,270,671). Each archive has exactly 88 page images and matching manifest. EXE MZ signature/packaged support files and APK assets verified. API job IDs: APK 419132c6ad4c4cbeb3ec7fb9d6f0da69; EXE c15d16a91b6c40b9b02ccf6b838df3c6. Private sample/export artifacts are ignored, not committed.
+
+Fixed exposed-but-blocked save picker: SecurityError/NotSupportedError now fall back to normal download; AbortError remains cancellation with no download. Native builds refresh capability/session token immediately before submission, preventing stale-token failures after server restart. Detailed failures now appear in export-status near controls rather than generic failure with detail only below reader. Exact original user symptom remains unconfirmed (clarification asked); don't claim it was conclusively one of these causes.
+
+Tests: save-location regressions; qa-editor DOM flow now includes native APK/EXE submit/status/save mocks with fresh-token assertions; actual PSJ 88-page PDF load/project/HTML flow passed; real localhost Flutter builds/downloads for both targets passed; archive integrity assertions passed; export suite, 16 Python tests, JS syntax and diff checks passed. No actual Android install or Windows app/browser UI launch verified; build success is not device-runtime QA. Files touched: assets/flipbook.js, assets/flipbook-export.js, tests/qa-editor.cjs, tests/save-location.test.cjs, handoff/team notes. No commit/push by this session.
+
+### 22 September 2026 - server --host 0.0.0.0 untuk akses LAN
+
+Tujuan: PC lain membuka app dari server PC ini. Yang dikerjakan: flag `--host` di `server.py` (default loopback tidak berubah), `trusted()` menerima IP/hostname mesin sendiri dengan port cocok + tolak nama asing/port salah (anti DNS-rebinding dipertahankan), pesan error converter pakai `location.host` dinamis, 5 tes baru `LanHostTests`, README ada panduan firewall. File milik sesi lain tidak disentuh (hanya append docs ini + handoff + README). Hasil: 21 Python OK, node --check OK, E2E LAN nyata 200 via 192.168.18.16. Belum: uji browser dari PC lain beneran, belum commit/push. Koordinasi: sesi lain yang pegang converter/server harap perhatikan `trusted()` baru bila menambah endpoint.

@@ -42,7 +42,7 @@ Diperbarui: 17 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 | HTML to PDF | Ekstraksi teks tanpa batas 30.000 karakter sebelumnya. | Belum mempertahankan layout/CSS halaman web. |
 | OCR ekstraksi | Tesseract Inggris/Indonesia dan filter kualitas tersedia. | Akurasi scan/poster, waktu proses, file besar. Bukan OCR PDF searchable. |
 | Notebook PDF | Halaman dan fungsi ringkasan/chat ada, sebagian memakai Gemini. | QA menyeluruh, akurasi jawaban, koneksi API, penyimpanan kunci, serta kesiapan produksi. |
-| Demo / editor animasi | Demo grafik/proses dan overlay statistik tersedia; editor pengguna masih disembunyikan sesuai permintaan. | Editor animasi lengkap untuk PDF pengguna belum tersedia. |
+| Editor animasi (`animation.html`) | Ekstraksi native teks/gambar/grup; OCR lokal otomatis untuk halaman raster; area gambar/logo manual; elemen editable dan HTML ZIP offline. OCR PSJ halaman 5 teruji, 54 baris. | OCR Inggris/Indonesia/Melayu dan perbaikan background bersifat perkiraan. Pemisahan semua grafis secara otomatis belum tersedia. APK/EXE editor belum terhubung; browser/device QA belum lengkap. |
 | Build APK / Windows EXE | Build dan unduhan paket berhasil pada sesi sebelumnya; isi aset diverifikasi. | Paket lama mendahului beberapa update terbaru; rebuild dan uji runtime perangkat diperlukan. APK signing debug; EXE belum ditandatangani dan memerlukan WebView2. |
 | Offline HTML | Semua aset pembaca sudah dikemas lokal. | Buka paket melalui browser nyata tanpa jaringan belum diverifikasi langsung. |
 
