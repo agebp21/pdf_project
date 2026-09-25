@@ -55,7 +55,10 @@ def get_accounts():
     with ACCOUNTS_LOCK:
         if ACCOUNTS is None:
             key = os.environ.get('MIDTRANS_SERVER_KEY', '').strip()
-            if key:
+            tripay = [os.environ.get(n, '').strip() for n in ('TRIPAY_API_KEY', 'TRIPAY_PRIVATE_KEY', 'TRIPAY_MERCHANT_CODE')]
+            if all(tripay):
+                provider = accounts.TripayProvider(*tripay, production=os.environ.get('TRIPAY_PRODUCTION') == '1')
+            elif key:
                 provider = accounts.MidtransProvider(key, os.environ.get('MIDTRANS_PRODUCTION') == '1')
             elif hosted() and os.environ.get('MYFLIPBOOK_MOCK_PAYMENTS') != '1':
                 provider = accounts.DisabledProvider()  # public site without a gateway: no fake payments
@@ -374,7 +377,7 @@ class Handler(SimpleHTTPRequestHandler):
         forwarded = self.headers.get('X-Forwarded-For', '') if hosted() else ''
         return forwarded.split(',')[0].strip() or self.client_address[0]
 
-    def read_json(self, limit=64 * 1024):
+    def read_body(self, limit=64 * 1024):
         if self.headers.get_content_type() != 'application/json':
             raise accounts.AccountError(415, 'Permintaan harus JSON.')
         try:
@@ -383,8 +386,11 @@ class Handler(SimpleHTTPRequestHandler):
             size = -1
         if not 0 <= size <= limit:
             raise accounts.AccountError(413, 'Permintaan terlalu besar.')
+        return self.rfile.read(size)
+
+    def read_json(self, raw):
         try:
-            data = json.loads(self.rfile.read(size) or b'{}')
+            data = json.loads(raw or b'{}')
         except ValueError:
             raise accounts.AccountError(400, 'JSON tidak valid.')
         if not isinstance(data, dict):
@@ -401,6 +407,8 @@ class Handler(SimpleHTTPRequestHandler):
         store = get_accounts()
         if path == '/api/auth/me':
             self.send_json(200, {'user': self.current_user(), 'loginRequired': hosted()})
+        elif path == '/api/billing/methods':
+            self.send_json(200, {'methods': store.payment_methods()})
         elif path == '/api/billing/plans':
             self.send_json(200, {'plans': store.plans(), 'provider': store.provider.name,
                                  'paymentsEnabled': store.provider.name != 'none'})
@@ -414,7 +422,13 @@ class Handler(SimpleHTTPRequestHandler):
 
     def account_post(self, path):
         store = get_accounts()
-        data = self.read_json()
+        raw = self.read_body()
+        if path == '/api/billing/tripay/callback':
+            # Signature covers the raw body, so verify before parsing.
+            status = store.provider_callback(raw, self.headers)
+            self.send_json(200, {'success': True, 'status': status})
+            return
+        data = self.read_json(raw)
         if path == '/api/billing/midtrans/notify':
             status = store.provider_notification(data)
             self.send_json(200, {'status': status})
@@ -435,7 +449,8 @@ class Handler(SimpleHTTPRequestHandler):
         if not user:
             raise accounts.AccountError(401, 'Silakan masuk dulu.')
         if path == '/api/billing/checkout':
-            self.send_json(200, store.checkout(user, data.get('plan'), data.get('cycle'), self.base_url()))
+            self.send_json(200, store.checkout(user, data.get('plan'), data.get('cycle'), self.base_url(),
+                                               data.get('method')))
         elif path == '/api/billing/mock/pay':
             store.mock_pay(user, str(data.get('orderId', '')))
             self.send_json(200, {'user': self.current_user()})
@@ -571,7 +586,7 @@ class Handler(SimpleHTTPRequestHandler):
             try:
                 self.account_post(self.path)
             except accounts.AccountError as cause:
-                self.send_json(cause.status, {'error': str(cause)})
+                self.send_json(cause.status, {'error': str(cause), 'success': False})
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
         feature = 'office' if self.path in OFFICE_ROUTES else match[1] if match else None
@@ -638,7 +653,7 @@ if __name__ == '__main__':
     store = get_accounts()
     if hosted():
         print('Mode hosting: ' + ', '.join(sorted(CONFIG['public_hosts'])) +
-              f' | pembayaran: {store.provider.name if store.provider.name != "none" else "NONAKTIF (isi MIDTRANS_SERVER_KEY)"}',
+              f' | pembayaran: {store.provider.name if store.provider.name != "none" else "NONAKTIF (isi TRIPAY_* atau MIDTRANS_SERVER_KEY)"}',
               flush=True)
     # On Windows SO_REUSEADDR lets a second server silently share the port
     # (the old one keeps answering). Fail loudly instead.

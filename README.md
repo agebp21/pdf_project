@@ -29,19 +29,21 @@ HTML, CSS, dan JavaScript tidak membutuhkan build frontend. Python memakai stand
 - Halaman: `login.html` (masuk/daftar) dan `account.html` (paket, checkout, riwayat pembayaran). Tombol Masuk/akun ada di nav semua halaman (`assets/auth.js`).
 - Backend: `accounts.py` (stdlib). SQLite di `.data/myflipbook.sqlite3` (diabaikan Git; ubah lewat `MYFLIPBOOK_DB`). Password PBKDF2-SHA256, session cookie HttpOnly + SameSite=Lax, hanya hash token yang disimpan. Login dibatasi 5 gagal / 15 menit per IP+email.
 - Paket (harga **draf**, ubah di `PLANS` pada `accounts.py`): Free Rp0; Pro Rp59.000/bulan atau Rp590.000/tahun (+ build APK); Business Rp149.000/bulan atau Rp1.490.000/tahun (+ build EXE). Tool browser tetap gratis.
-- Pembayaran: **Midtrans Snap**. Isi `MIDTRANS_SERVER_KEY` (sandbox `SB-...`; `MIDTRANS_PRODUCTION=1` untuk live). Di dashboard Midtrans, set *Payment Notification URL* ke `https://<domain>/api/billing/midtrans/notify`. Notifikasi dicek signature SHA-512 + nominal; paket diperpanjang tepat sekali per order.
+- Pembayaran utama: **Tripay** (QRIS, Virtual Account, e-wallet). Isi `TRIPAY_API_KEY`, `TRIPAY_PRIVATE_KEY`, `TRIPAY_MERCHANT_CODE` (dari dashboard Tripay → Merchant → API; sandbox dulu, `TRIPAY_PRODUCTION=1` untuk live). User memilih metode bayar di halaman akun (daftar channel aktif diambil dari Tripay), lalu diarahkan ke halaman checkout Tripay. Callback `https://<domain>/api/billing/tripay/callback` dikirim otomatis per transaksi; dicek HMAC-SHA256 body mentah + nomor referensi Tripay. Tripay dipakai bila ketiga variabelnya terisi.
+- Alternatif: **Midtrans Snap**. Isi `MIDTRANS_SERVER_KEY` (sandbox `SB-...`; `MIDTRANS_PRODUCTION=1` untuk live). Di dashboard Midtrans, set *Payment Notification URL* ke `https://<domain>/api/billing/midtrans/notify`. Notifikasi dicek signature SHA-512 + nominal; paket diperpanjang tepat sekali per order.
 - Tanpa key, mode lokal memakai **simulasi pembayaran** (tombol di halaman akun) untuk uji alur. Di mode hosting tanpa key, checkout dimatikan (kecuali `MYFLIPBOOK_MOCK_PAYMENTS=1`).
 - Mode lokal (tanpa `--public-host`) tidak mewajibkan login, sama seperti sebelumnya.
 
 ## Hosting
 
 ```bash
-MIDTRANS_SERVER_KEY=SB-Mid-server-xxx MYFLIPBOOK_BASE_URL=https://myflipbook.id \
+TRIPAY_API_KEY=DEV-xxx TRIPAY_PRIVATE_KEY=xxx TRIPAY_MERCHANT_CODE=T0000 MYFLIPBOOK_BASE_URL=https://myflipbook.id \
 python server.py --host 127.0.0.1 --port 8080 --public-host myflipbook.id --public-host www.myflipbook.id
 ```
 
 - Jalankan di belakang reverse proxy HTTPS (nginx/Caddy) yang meneruskan `Host` dan `X-Forwarded-For`, mis. nginx: `proxy_pass http://127.0.0.1:8080; proxy_set_header Host $host; proxy_set_header X-Forwarded-For $remote_addr; client_max_body_size 200m;`.
 - `--public-host` mengaktifkan mode hosting: cookie `Secure`, token konversi/build hanya untuk user login, Word/Excel/PPT→PDF butuh login (paket Free cukup), APK butuh Pro, EXE butuh Business. `--insecure-cookies` hanya untuk uji tanpa HTTPS.
+- Uji callback sandbox dari PC ini: `ngrok http 8080`, lalu jalankan server dengan `--public-host <subdomain>.ngrok-free.app` dan `MYFLIPBOOK_BASE_URL=https://<subdomain>.ngrok-free.app` supaya Tripay bisa memanggil callback.
 - Contoh variabel: [.env.example](.env.example). Konversi Office butuh LibreOffice di server; build APK/EXE butuh Flutter (EXE hanya di Windows).
 - Batasan saat ini: belum ada reset password via email, verifikasi email, atau halaman admin; server satu proses (ThreadingHTTPServer) cocok untuk skala kecil. Build native tetap satu antrean.
 

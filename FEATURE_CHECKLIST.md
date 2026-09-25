@@ -61,7 +61,7 @@ Diperbarui: 25 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 - [ ] AI Summarizer sebagai tool terpisah.
 - [ ] Translate PDF.
 - [ ] Workflow (kartu tampil "Coming soon", tidak bisa diklik).
-- [x] Akun/login, paket, pembayaran Midtrans Snap (+ simulasi lokal), kontrol akses mode hosting — `tests/test_accounts.py` (13 tes) + alur UI Chromium (daftar → pilih paket → bayar simulasi → plan aktif). Belum: reset password via email, verifikasi email, halaman admin, uji Midtrans sandbox dengan key asli.
+- [x] Akun/login, paket, pembayaran Tripay (utama) / Midtrans Snap (+ simulasi lokal), kontrol akses mode hosting — `tests/test_accounts.py` (14 tes; Tripay: signature transaksi, pilihan channel, callback HMAC/referensi/event) + alur UI Chromium (daftar → pilih paket → bayar simulasi → plan aktif). Belum: reset password via email, verifikasi email, halaman admin, uji Tripay sandbox dengan key asli (request ke sandbox sudah tercapai: key palsu dijawab "Invalid API Key").
 - [ ] Autosave proyek dan editor animasi lengkap.
 - [ ] QA performa dokumen besar serta rilis aplikasi bertanda tangan.
 

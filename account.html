@@ -34,6 +34,9 @@
   .toggle{display:inline-flex;background:#fff;border:1px solid #E4DED0;border-radius:999px;padding:4px;box-shadow:inset 0 2px 6px rgba(28,25,23,.05)}
   .toggle button{border:0;background:transparent;border-radius:999px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer;color:#57534E}
   .toggle button.on{background:#1A3C34;color:#FFF7EA}
+  .method{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800}
+  .method select{border:1px solid #E4DED0;border-radius:999px;padding:8px 12px;background:#fff;font:700 12px 'Plus Jakarta Sans',sans-serif;max-width:260px}
+  .head-right{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
   .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
   .plan{padding:20px;display:flex;flex-direction:column;gap:10px;position:relative}
   .plan.current{outline:2px solid #1A3C34}
@@ -75,9 +78,12 @@
   <section>
     <div class="head">
       <h2 class="clay-h" data-i18n="acct.plans">Plans</h2>
-      <div class="toggle" role="group">
-        <button type="button" data-cycle="monthly" class="on" data-i18n="acct.monthly">Monthly</button>
-        <button type="button" data-cycle="yearly" data-i18n="acct.yearly">Yearly</button>
+      <div class="head-right">
+        <label class="method" id="methodBox" hidden><span data-i18n="acct.method">Payment method</span> <select id="method"></select></label>
+        <div class="toggle" role="group">
+          <button type="button" data-cycle="monthly" class="on" data-i18n="acct.monthly">Monthly</button>
+          <button type="button" data-cycle="yearly" data-i18n="acct.yearly">Yearly</button>
+        </div>
       </div>
     </div>
     <div class="plans" id="plans"></div>
@@ -101,7 +107,7 @@
   const rupiah=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
   const date=s=>new Date(s*1000).toLocaleDateString(lang(),{day:'numeric',month:'short',year:'numeric'});
   const orderParam=new URLSearchParams(location.search).get('order');
-  let state={user:null,plans:[],provider:'mock',paymentsEnabled:true,orders:[],cycle:'monthly'};
+  let state={user:null,plans:[],provider:'mock',paymentsEnabled:true,orders:[],cycle:'monthly',methods:[]};
 
   function el(tag,props,...children){const node=Object.assign(document.createElement(tag),props||{});node.append(...children);return node;}
   function notice(kind,message,action){
@@ -190,7 +196,8 @@
   async function checkout(plan,button){
     button.disabled=true;
     try{
-      const result=await MFAuth.api('POST','/api/billing/checkout',{plan,cycle:state.cycle});
+      const method=state.methods.length?$('method').value:undefined;
+      const result=await MFAuth.api('POST','/api/billing/checkout',{plan,cycle:state.cycle,method});
       location.href=result.redirectUrl; // Midtrans Snap page, or back here (mock) with ?order=
     }catch(error){notice('err',error.message);button.disabled=false;}
   }
@@ -201,6 +208,19 @@
     if(!me.user){location.replace('login.html?next='+encodeURIComponent('account.html'+location.search));return;}
     const [plans,orders]=await Promise.all([MFAuth.api('GET','/api/billing/plans'),MFAuth.api('GET','/api/billing/orders')]);
     state=Object.assign(state,{user:me.user,plans:plans.plans,provider:plans.provider,paymentsEnabled:plans.paymentsEnabled,orders:orders.orders});
+    if(plans.provider==='tripay'&&!state.methods.length){
+      // Gateway channels (QRIS, VA, e-wallet) grouped as Tripay reports them.
+      state.methods=(await MFAuth.api('GET','/api/billing/methods')).methods;
+      const select=$('method');select.replaceChildren();
+      const groups={};
+      state.methods.forEach(m=>{(groups[m.group||'']=groups[m.group||'']||[]).push(m);});
+      Object.entries(groups).forEach(([group,items])=>{
+        const parent=group?el('optgroup',{label:group}):select;
+        items.forEach(m=>parent.append(el('option',{value:m.code,textContent:m.name})));
+        if(parent!==select)select.append(parent);
+      });
+      $('methodBox').hidden=!state.methods.length;
+    }
     renderProfile();renderPlans();renderOrders();renderOrderNotice();
   }
 

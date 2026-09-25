@@ -5,6 +5,9 @@ Passwords: PBKDF2-HMAC-SHA256, per-user salt. Sessions: random token in an
 HttpOnly cookie; only its SHA-256 is stored, so a leaked DB can't log in.
 
 Payments go through a provider object:
+  * TripayProvider — Tripay closed payment (QRIS / VA / e-wallet), hosted
+    checkout page + HMAC-signed callback (set TRIPAY_API_KEY,
+    TRIPAY_PRIVATE_KEY, TRIPAY_MERCHANT_CODE; TRIPAY_PRODUCTION=1 for live).
   * MidtransProvider — Midtrans Snap redirect + signed HTTP notification
     (set MIDTRANS_SERVER_KEY; MIDTRANS_PRODUCTION=1 for live).
   * MockProvider — local development only: an order can be marked paid from
@@ -26,6 +29,7 @@ import time
 import urllib.error
 import urllib.request
 from pathlib import Path
+from urllib.parse import urlencode
 
 PBKDF2_ITERATIONS = 600_000
 SESSION_SECONDS = 30 * 24 * 3600
@@ -84,7 +88,7 @@ def token_hash(token):
 class MockProvider:
     name = 'mock'
 
-    def create(self, order, user, base_url):
+    def create(self, order, user, base_url, method=None):
         return dict(redirect_url=f'/account.html?order={order["id"]}', reference=None)
 
 
@@ -92,8 +96,97 @@ class DisabledProvider:
     """Public host without a payment gateway configured: no checkout."""
     name = 'none'
 
-    def create(self, order, user, base_url):
+    def create(self, order, user, base_url, method=None):
         raise AccountError(503, 'Pembayaran belum diaktifkan di server ini.')
+
+
+class TripayProvider:
+    """Tripay closed payment: https://tripay.co.id/developer"""
+    name = 'tripay'
+    # Shown if the channel list can't be fetched; Tripay still rejects
+    # channels that aren't active for the merchant.
+    FALLBACK_METHODS = [('QRIS', 'QRIS', 'QRIS'), ('BRIVA', 'BRI Virtual Account', 'Virtual Account'),
+                        ('BNIVA', 'BNI Virtual Account', 'Virtual Account'),
+                        ('MANDIRIVA', 'Mandiri Virtual Account', 'Virtual Account'),
+                        ('BCAVA', 'BCA Virtual Account', 'Virtual Account')]
+
+    def __init__(self, api_key, private_key, merchant_code, production=False, opener=None):
+        self.api_key, self.private_key, self.merchant_code = api_key, private_key, merchant_code
+        self.base = 'https://tripay.co.id/api' if production else 'https://tripay.co.id/api-sandbox'
+        self.opener = opener or urllib.request.urlopen
+        self._methods, self._methods_at = None, 0
+        self._lock = threading.Lock()
+
+    def _call(self, path, form=None):
+        headers = {'Authorization': 'Bearer ' + self.api_key, 'Accept': 'application/json'}
+        data = None
+        if form is not None:
+            data = urlencode(form).encode()
+            headers['Content-Type'] = 'application/x-www-form-urlencoded'
+        request = urllib.request.Request(self.base + path, data=data, headers=headers,
+                                         method='POST' if form is not None else 'GET')
+        try:
+            with self.opener(request, timeout=20) as response:
+                return json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            try:
+                return json.loads(error.read())
+            except ValueError:
+                raise AccountError(502, 'Gateway pembayaran menolak permintaan.') from error
+        except (urllib.error.URLError, ValueError, OSError) as cause:
+            raise AccountError(502, 'Gateway pembayaran tidak bisa dihubungi. Coba lagi sebentar.') from cause
+
+    def methods(self):
+        """Active payment channels, cached for 10 minutes."""
+        with self._lock:
+            if self._methods and time.time() - self._methods_at < 600:
+                return self._methods
+            try:
+                data = self._call('/merchant/payment-channel')
+                channels = [dict(code=c['code'], name=c['name'], group=c.get('group', ''), icon=c.get('icon_url', ''))
+                            for c in data.get('data') or [] if c.get('active', True)]
+            except (AccountError, KeyError, TypeError):
+                channels = []
+            if channels:
+                self._methods, self._methods_at = channels, time.time()
+                return channels
+            return [dict(code=c, name=n, group=g, icon='') for c, n, g in self.FALLBACK_METHODS]
+
+    def create(self, order, user, base_url, method=None):
+        if method not in {m['code'] for m in self.methods()}:
+            raise AccountError(400, 'Pilih metode pembayaran.')
+        signature = hmac.new(self.private_key.encode(), (self.merchant_code + order['id'] + str(order['amount'])).encode(),
+                             hashlib.sha256).hexdigest()
+        form = {
+            'method': method, 'merchant_ref': order['id'], 'amount': order['amount'],
+            'customer_name': (user['name'] or user['email'].split('@')[0])[:100], 'customer_email': user['email'],
+            'order_items[0][sku]': f'{order["plan"]}-{order["cycle"]}',
+            'order_items[0][name]': f'MyFlipbook {PLANS[order["plan"]]["name"]} ({order["cycle"]})',
+            'order_items[0][price]': order['amount'], 'order_items[0][quantity]': 1,
+            'callback_url': f'{base_url}/api/billing/tripay/callback',
+            'return_url': f'{base_url}/account.html?order={order["id"]}',
+            'expired_time': int(time.time()) + 24 * 3600, 'signature': signature,
+        }
+        data = self._call('/transaction/create', form)
+        result = data.get('data') or {}
+        if not data.get('success') or not result.get('checkout_url'):
+            raise AccountError(502, 'Tripay: ' + str(data.get('message') or 'transaksi ditolak.'))
+        return dict(redirect_url=result['checkout_url'], reference=result.get('reference'))
+
+    def verify_callback(self, raw, headers):
+        """Return (merchant_ref, status, reference) for a genuine callback."""
+        if headers.get('X-Callback-Event') != 'payment_status':
+            raise AccountError(400, 'Event callback tidak dikenal.')
+        expected = hmac.new(self.private_key.encode(), raw, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, headers.get('X-Callback-Signature', '')):
+            raise AccountError(403, 'Signature callback tidak valid.')
+        try:
+            payload = json.loads(raw)
+        except ValueError:
+            raise AccountError(400, 'JSON tidak valid.')
+        status = {'PAID': 'paid', 'EXPIRED': 'expired', 'FAILED': 'failed', 'REFUND': 'refund'}.get(
+            payload.get('status'), 'pending')
+        return str(payload.get('merchant_ref', '')), status, str(payload.get('reference', ''))
 
 
 class MidtransProvider:
@@ -105,7 +198,7 @@ class MidtransProvider:
         self.base = 'https://app.midtrans.com' if production else 'https://app.sandbox.midtrans.com'
         self.opener = opener or urllib.request.urlopen
 
-    def create(self, order, user, base_url):
+    def create(self, order, user, base_url, method=None):
         body = dict(
             transaction_details=dict(order_id=order['id'], gross_amount=order['amount']),
             item_details=[dict(id=f'{order["plan"]}-{order["cycle"]}', price=order['amount'], quantity=1,
@@ -268,7 +361,10 @@ class Accounts:
                               'WHERE user_id=? ORDER BY created_at DESC LIMIT 50', (user_id,)).fetchall()
         return [dict(row) for row in rows]
 
-    def checkout(self, user, plan, cycle, base_url=''):
+    def payment_methods(self):
+        return self.provider.methods() if hasattr(self.provider, 'methods') else []
+
+    def checkout(self, user, plan, cycle, base_url='', method=None):
         if plan not in PLANS or plan == 'free' or cycle not in CYCLE_SECONDS:
             raise AccountError(400, 'Paket atau periode tidak valid.')
         order = dict(id=f'MF-{int(time.time())}-{secrets.token_hex(4)}', plan=plan, cycle=cycle,
@@ -278,7 +374,7 @@ class Accounts:
                        'VALUES(?,?,?,?,?,?,?,?)', (order['id'], user['id'], plan, cycle, order['amount'],
                                                    'pending', self.provider.name, int(time.time())))
         try:
-            created = self.provider.create(order, user, base_url)
+            created = self.provider.create(order, user, base_url, method)
         except AccountError:
             self.set_status(order['id'], 'failed')
             raise
@@ -320,6 +416,23 @@ class Accounts:
         if not order or order['user_id'] != user['id']:
             raise AccountError(404, 'Order tidak ditemukan.')
         self.mark_paid(order_id)
+
+    def provider_callback(self, raw, headers):
+        """Tripay-style callback: signed raw body, bound to our stored reference."""
+        if not hasattr(self.provider, 'verify_callback'):
+            raise AccountError(404, 'Callback gateway tidak aktif.')
+        order_id, status, reference = self.provider.verify_callback(raw, headers)
+        with self.connect() as db:
+            order = db.execute('SELECT reference FROM orders WHERE id=?', (order_id,)).fetchone()
+        if not order:
+            raise AccountError(404, 'Order tidak ditemukan.')
+        if order['reference'] and order['reference'] != reference:
+            raise AccountError(400, 'Referensi transaksi tidak cocok.')
+        if status == 'paid':
+            self.mark_paid(order_id)
+        elif status in ('failed', 'expired'):
+            self.set_status(order_id, status)
+        return status
 
     def provider_notification(self, payload):
         if not hasattr(self.provider, 'verify'):

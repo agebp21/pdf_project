@@ -1,4 +1,6 @@
 import hashlib
+import hmac
+from urllib.parse import parse_qs
 import http.cookiejar
 import json
 from pathlib import Path
@@ -36,7 +38,8 @@ class Client:
             with self.opener.open(request) as response:
                 raw, status, cookie = response.read(), response.status, response.headers.get('Set-Cookie')
         except urllib.error.HTTPError as error:
-            raw, status, cookie = error.read(), error.code, error.headers.get('Set-Cookie')
+            with error:
+                raw, status, cookie = error.read(), error.code, error.headers.get('Set-Cookie')
         if self.host and cookie:
             name, _, rest = cookie.partition('=')
             value = rest.split(';')[0]
@@ -147,6 +150,7 @@ class LocalAccountTests(AccountsBase):
                                          headers={'Content-Type': 'application/x-www-form-urlencoded'})
         with self.assertRaises(urllib.error.HTTPError) as result:
             urllib.request.urlopen(request)
+        result.exception.close()
         self.assertEqual(result.exception.code, 415)
 
     def test_cross_origin_post_rejected(self):
@@ -218,6 +222,65 @@ class MidtransTests(AccountsBase):
         self.assertIn('exe', user['entitlements'])
         # A later "expire" for the same order must not undo the payment.
         self.notify(Client(self.base), order['orderId'], 149000, status='expire')
+        self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
+
+
+class TripayTests(AccountsBase):
+    requests = []
+
+    @staticmethod
+    def opener(request, timeout):
+        TripayTests.requests.append(request)
+        if request.full_url.endswith('/merchant/payment-channel'):
+            return FakeResponse({'success': True, 'data': [
+                {'code': 'QRIS', 'name': 'QRIS', 'group': 'E-Wallet', 'active': True},
+                {'code': 'BRIVA', 'name': 'BRI Virtual Account', 'group': 'Virtual Account', 'active': True},
+                {'code': 'OVO', 'name': 'OVO', 'group': 'E-Wallet', 'active': False}]})
+        return FakeResponse({'success': True, 'data': {'reference': 'T0001TEST', 'status': 'UNPAID',
+                                                       'checkout_url': 'https://tripay.co.id/checkout/T0001TEST'}})
+
+    provider = accounts.TripayProvider('DEV-api', 'priv-key', 'T0001', opener=opener.__func__)
+
+    def callback(self, body, key='priv-key', event='payment_status'):
+        raw = json.dumps(body).encode()
+        signature = hmac.new(key.encode(), raw, hashlib.sha256).hexdigest()
+        request = urllib.request.Request(self.base + '/api/billing/tripay/callback', data=raw, method='POST', headers={
+            'Content-Type': 'application/json', 'X-Callback-Signature': signature, 'X-Callback-Event': event})
+        try:
+            with urllib.request.urlopen(request) as response:
+                return response.status, json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            with error:
+                return error.code, json.loads(error.read())
+
+    def test_tripay_checkout_and_callback(self):
+        client = Client(self.base)
+        client.call('POST', '/api/auth/register', {'email': 'tri@b.co', 'password': 'rahasia-123', 'name': 'Tri'})
+        methods = client.call('GET', '/api/billing/methods')[1]['methods']
+        self.assertEqual([m['code'] for m in methods], ['QRIS', 'BRIVA'], 'inactive channels hidden')
+        self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[0], 400,
+                         'a payment method is required')
+        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly', 'method': 'QRIS'})
+        self.assertEqual(status, 200)
+        self.assertEqual(order['redirectUrl'], 'https://tripay.co.id/checkout/T0001TEST')
+        create = self.requests[-1]
+        self.assertTrue(create.full_url.startswith('https://tripay.co.id/api-sandbox/transaction/create'))
+        self.assertEqual(create.get_header('Authorization'), 'Bearer DEV-api')
+        form = {k: v[0] for k, v in parse_qs(create.data.decode()).items()}
+        expected = hmac.new(b'priv-key', ('T0001' + order['orderId'] + '59000').encode(), hashlib.sha256).hexdigest()
+        self.assertEqual(form['signature'], expected)
+        self.assertEqual((form['method'], form['amount'], form['order_items[0][quantity]']), ('QRIS', '59000', '1'))
+        self.assertTrue(form['callback_url'].endswith('/api/billing/tripay/callback'))
+        body = {'reference': 'T0001TEST', 'merchant_ref': order['orderId'], 'status': 'PAID', 'total_amount': 59000}
+        # Forged signature, wrong event, and a mismatched reference change nothing.
+        self.assertEqual(self.callback(body, key='guess')[0], 403)
+        self.assertEqual(self.callback(body, event='other')[0], 400)
+        self.assertEqual(self.callback(dict(body, reference='T0001OTHER'))[0], 400)
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'free')
+        status, reply = self.callback(body)
+        self.assertEqual((status, reply['success']), (200, True))
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
+        self.callback(dict(body, status='EXPIRED'))
         self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
 
 
