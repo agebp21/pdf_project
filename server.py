@@ -130,6 +130,18 @@ def unpack_book(archive, destination):
     return data
 
 
+WINDOWS_HOW_TO = '''HOW TO OPEN THIS BOOK (Windows)
+
+1. Right-click the ZIP and choose "Extract All". Extract EVERYTHING into one folder.
+2. Open that folder and double-click sarvamaya_book.exe.
+
+Keep the "data" folder and the .dll files next to the .exe, or the app will not start.
+Requires Microsoft Edge WebView2 Runtime. Most Windows 10/11 PCs already have it;
+otherwise get it free from https://developer.microsoft.com/microsoft-edge/webview2/
+No internet connection is needed to read the book.
+'''
+
+
 def app_name(title):
     """Book title as a safe app name: printable, no leading @/? (Android
     resource syntax), max 50 chars, never empty."""
@@ -333,7 +345,7 @@ def build_job(job_id, target):
                 for file in release.rglob('*'):
                     if file.is_file():
                         package.write(file, file.relative_to(release).as_posix())
-                package.writestr('BUKA-APLIKASI.txt', 'Ekstrak seluruh ZIP, lalu jalankan sarvamaya_book.exe. Folder data dan DLL harus tetap bersama EXE. Memerlukan Microsoft Edge WebView2 Runtime. Buku tersedia offline.\n')
+                package.writestr('HOW-TO-OPEN.txt', WINDOWS_HOW_TO)
         job.update(status='done', message='Build selesai.', artifact=output.name, download=f'/api/jobs/{job_id}/download')
     except Exception as cause:
         with log.open('a', encoding='utf-8') as stream:

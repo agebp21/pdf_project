@@ -1,6 +1,16 @@
 'use strict';
 (() => {
   const positions = new Set(['top-left','top-right','bottom-left','bottom-right']);
+  // Reader-facing instructions packed into every offline HTML book.
+  const HOW_TO_OPEN = [
+    'HOW TO OPEN THIS BOOK',
+    '',
+    '1. Extract the WHOLE ZIP into one folder (right-click > Extract All).',
+    '2. Open index.html in any web browser.',
+    '',
+    'No internet connection or server is needed.',
+    'Keep index.html together with the other files and the "pages" folder.',
+    ''].join('\n');
   function validate(data) {
     if (!data || data.version !== 1 || typeof data.title !== 'string' || !Number.isInteger(data.pageCount) || data.pageCount < 1 || !Number.isFinite(data.ratio) || data.ratio <= 0) throw Error('Format proyek tidak valid atau belum didukung.');
     if (!data.overlays || typeof data.overlays !== 'object' || Array.isArray(data.overlays)) throw Error('Data animasi tidak valid.');
@@ -24,7 +34,7 @@
     zip.file('ENGINE-SOURCE.md',await asset('assets/vendor/SOURCE.md'));
     zip.file('PAGEFLIP-LICENSE.txt',await asset('assets/vendor/PAGEFLIP-LICENSE.txt'));
     zip.file('book.json',JSON.stringify(data,null,2));zip.file('book-data.js',scriptData(data));
-    zip.file('BUKA-BUKU.txt','Ekstrak SELURUH ZIP, lalu buka index.html di browser. Tidak perlu internet atau server. Jangan memindahkan index.html tanpa file lainnya. Animasi dan sampul sudah disertakan.\n');
+    zip.file('HOW-TO-OPEN.txt',HOW_TO_OPEN);
     for(let i=0;i<imageUrls.length;i++) {
       onProgress(`Mengemas halaman ${i+1} / ${imageUrls.length}…`);
       const response=await fetch(imageUrls[i]);if(!response.ok)throw Error('Gambar halaman gagal dibaca.');
@@ -86,5 +96,5 @@
     return true;
   }
   const filename = title => (title.replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-|-$/g,'').slice(0,80)||'flipbook');
-  globalThis.FlipbookExport={validate,scriptData,packageBook,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote};
+  globalThis.FlipbookExport={validate,scriptData,packageBook,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,HOW_TO_OPEN};
 })();

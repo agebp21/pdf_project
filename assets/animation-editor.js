@@ -829,7 +829,7 @@
       zip.file('JSZIP-LICENSE.txt',await txt('assets/vendor/JSZIP-LICENSE.txt'));
       zip.file('book-data.js','window.FLIPBOOK_DATA = '+JSON.stringify(data).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029')+';\n');
       zip.file('book.json',JSON.stringify(data,null,2));
-      zip.file('BUKA-BUKU.txt','Extract semua file, lalu buka index.html di browser.\nTidak butuh internet atau server.\n');
+      zip.file('HOW-TO-OPEN.txt',FlipbookExport.HOW_TO_OPEN);
       for(let i=0;i<imageUrls.length;i++){setStatus(`Paket halaman ${i+1}/${imageUrls.length}…`);const r=await fetch(imageUrls[i]);if(!r.ok)throw Error('Page image unavailable.');zip.file(`pages/${i+1}.jpg`,await r.arrayBuffer());}
       setStatus('Membuat ZIP…');
       const blob=await zip.generateAsync({type:'blob',compression:'STORE'},m=>setStatus(`Kompres ${Math.round(m.percent)}%…`));
