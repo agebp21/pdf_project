@@ -192,8 +192,35 @@
     } catch(cause) { error('Proyek gagal dibuka: ' + cause.message); }
     finally { exporting = false; exportState(); $('#pdf-file').disabled=false; $('#overlay-fields').disabled=!book; }
   });
+  // Paywall (server decides; this only explains it before any work starts).
+  function lockedFor(target, caps) {
+    if (target === 'project' || !caps || !caps.paywall) return null;
+    const need = target === 'exe' ? 'exe' : target === 'apk' ? 'apk' : 'export';
+    if ((caps.entitlements || []).includes(need)) return null;
+    return target === 'exe' ? 'Business' : 'Pro';
+  }
+  function showPaywall(plan) {
+    const box = $('#export-status');
+    const link = Object.assign(document.createElement('a'), { href: 'account.html', textContent: 'Lihat paket →' });
+    link.style.fontWeight = '800';
+    box.replaceChildren('Ekspor ini butuh paket ' + (plan === 'Business' ? 'Business' : 'Pro atau Business') + '. Preview dan simpan proyek tetap gratis. ', link);
+  }
+  function markLocked() {
+    for (const [id, target] of [['#export-html','html'],['#export-apk','apk'],['#export-exe','exe']]) {
+      const button = $(id), plan = lockedFor(target, buildConfig);
+      if (!button.dataset.label) button.dataset.label = button.textContent;
+      button.textContent = button.dataset.label + (plan ? ' · ' + plan.toUpperCase() : '');
+    }
+  }
   async function exportBook(target) {
     if (!sourcePdf || opening || exporting) return;
+    if (target !== 'project') {
+      // Use the config loaded with the page so the save dialog still opens
+      // within the click; fetch only if it never arrived.
+      if (!buildConfig) { try { const r = await fetch('/api/capabilities', { cache: 'no-store' }); if (r.ok) { buildConfig = await r.json(); markLocked(); } } catch (e) {} }
+      const plan = lockedFor(target, buildConfig);
+      if (plan) { showPaywall(plan); return; }
+    }
     exporting = true; exportState(); $('#pdf-file').disabled=true; $('#overlay-fields').disabled=true;
     error(''); $('#build-download').hidden=true;
     const status = message => { $('#export-status').textContent=message; };
@@ -248,7 +275,7 @@
   $('#export-apk').onclick=()=>exportBook('apk');$('#export-exe').onclick=()=>exportBook('exe');
   fetch('/api/capabilities').then(async response=>{
     if(!response.ok)throw Error('Layanan build belum berjalan');
-    buildConfig=await response.json();exportState();
+    buildConfig=await response.json();exportState();markLocked();
     $('#build-availability').textContent=buildConfig.apk||buildConfig.exe?'Build APK/EXE memakai komputer ini. Build pertama dapat memerlukan beberapa menit dan internet untuk dependensi.':'Flutter belum tersedia. Ekspor HTML dan simpan proyek tetap bisa digunakan.';
   }).catch(()=>{ $('#build-availability').textContent='Untuk build APK/EXE, jalankan server proyek dengan python server.py. Ekspor HTML tetap tersedia.'; });
   const source = new URLSearchParams(location.search).get('source');

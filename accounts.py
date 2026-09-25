@@ -36,20 +36,21 @@ SESSION_SECONDS = 30 * 24 * 3600
 CYCLE_SECONDS = {'monthly': 30 * 24 * 3600, 'yearly': 365 * 24 * 3600}
 EMAIL_RE = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$')
 
-# Entitlements are what the server enforces on a public host:
-#   office -> Word/Excel/PowerPoint to PDF via LibreOffice
+# Entitlements the server enforces (see server.entitlement_error):
+#   office -> Word/Excel/PowerPoint to PDF via LibreOffice (login on a public host)
+#   export -> flipbook export (offline HTML package, also the animation editor)
 #   apk    -> Android build, exe -> Windows build
-# Browser-only tools (converter, flipbook, HTML export) stay free.
+# Browser tools and flipbook preview / project save stay free.
 PLANS = {
     'free': dict(name='Free', monthly=0, yearly=0, entitlements=['office'],
-                 features=dict(id=['Semua tool PDF di browser', 'PDF to Flipbook + ekspor HTML offline',
+                 features=dict(id=['Semua tool PDF di browser', 'PDF to Flipbook: baca & preview',
                                    'Word/Excel/PPT ke PDF'],
-                               en=['Every in-browser PDF tool', 'PDF to Flipbook + offline HTML export',
+                               en=['Every in-browser PDF tool', 'PDF to Flipbook: read & preview',
                                    'Word/Excel/PPT to PDF'])),
-    'pro': dict(name='Pro', monthly=59_000, yearly=590_000, entitlements=['office', 'apk'],
-                features=dict(id=['Semua fitur Free', 'Build aplikasi Android (APK)', 'Prioritas fitur baru'],
-                              en=['Everything in Free', 'Build Android apps (APK)', 'Early access to new features'])),
-    'business': dict(name='Business', monthly=149_000, yearly=1_490_000, entitlements=['office', 'apk', 'exe'],
+    'pro': dict(name='Pro', monthly=99_000, yearly=990_000, entitlements=['office', 'export', 'apk'],
+                features=dict(id=['Semua fitur Free', 'Ekspor flipbook: HTML offline', 'Build aplikasi Android (APK)'],
+                              en=['Everything in Free', 'Flipbook export: offline HTML', 'Build Android apps (APK)'])),
+    'business': dict(name='Business', monthly=149_000, yearly=1_490_000, entitlements=['office', 'export', 'apk', 'exe'],
                      features=dict(id=['Semua fitur Pro', 'Build aplikasi Windows (EXE)', 'Cocok untuk tim & instansi'],
                                    en=['Everything in Pro', 'Build Windows apps (EXE)', 'Made for teams & institutions'])),
 }

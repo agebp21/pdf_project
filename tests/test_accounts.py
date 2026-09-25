@@ -267,11 +267,12 @@ class TripayTests(AccountsBase):
         self.assertTrue(create.full_url.startswith('https://tripay.co.id/api-sandbox/transaction/create'))
         self.assertEqual(create.get_header('Authorization'), 'Bearer DEV-api')
         form = {k: v[0] for k, v in parse_qs(create.data.decode()).items()}
-        expected = hmac.new(b'priv-key', ('T0001' + order['orderId'] + '59000').encode(), hashlib.sha256).hexdigest()
+        price = str(accounts.PLANS['pro']['monthly'])
+        expected = hmac.new(b'priv-key', ('T0001' + order['orderId'] + price).encode(), hashlib.sha256).hexdigest()
         self.assertEqual(form['signature'], expected)
-        self.assertEqual((form['method'], form['amount'], form['order_items[0][quantity]']), ('QRIS', '59000', '1'))
+        self.assertEqual((form['method'], form['amount'], form['order_items[0][quantity]']), ('QRIS', price, '1'))
         self.assertTrue(form['callback_url'].endswith('/api/billing/tripay/callback'))
-        body = {'reference': 'T0001TEST', 'merchant_ref': order['orderId'], 'status': 'PAID', 'total_amount': 59000}
+        body = {'reference': 'T0001TEST', 'merchant_ref': order['orderId'], 'status': 'PAID', 'total_amount': int(price)}
         # Forged signature, wrong event, and a mismatched reference change nothing.
         self.assertEqual(self.callback(body, key='guess')[0], 403)
         self.assertEqual(self.callback(body, event='other')[0], 400)
@@ -284,12 +285,53 @@ class TripayTests(AccountsBase):
         self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
 
 
-class HostedModeTests(AccountsBase):
+class PaywallTests(AccountsBase):
     def setUp(self):
-        server.CONFIG.update(public_hosts={'myflipbook.test'}, secure=True, base_url='')
+        server.CONFIG['paywall'] = True
 
     def tearDown(self):
-        server.CONFIG.update(public_hosts=set(), secure=False)
+        server.CONFIG['paywall'] = False
+
+    def get(self, client, path):
+        return client.call('GET', path)[0]
+
+    def test_export_needs_pro_preview_stays_free(self):
+        guest, free, pro = Client(self.base), Client(self.base), Client(self.base)
+        free.call('POST', '/api/auth/register', {'email': 'free-pw@b.co', 'password': 'rahasia-123'})
+        pro.call('POST', '/api/auth/register', {'email': 'pro-pw@b.co', 'password': 'rahasia-123'})
+        order = pro.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[1]
+        self.assertEqual(order['amount'], 99000)
+        pro.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})
+        for template in ('viewer.js', 'viewer.css', 'index.html'):
+            path = '/assets/export/' + template
+            self.assertEqual(self.get(guest, path), 401)
+            self.assertEqual(self.get(free, path), 402)
+            self.assertEqual(self.get(pro, path), 200)
+        # Preview assets shared with flipbook.html stay public.
+        for public in ('/assets/export/layout.js', '/assets/export/book-effects.css', '/flipbook.html'):
+            self.assertEqual(self.get(guest, public), 200)
+        caps = free.call('GET', '/api/capabilities')[1]
+        self.assertTrue(caps['paywall'])
+        self.assertNotIn('export', caps['entitlements'])
+        self.assertIn('export', pro.call('GET', '/api/capabilities')[1]['entitlements'])
+        # Builds: free blocked, Pro may build APK but not EXE (Business).
+        headers = {'X-Build-Token': server.TOKEN}
+        self.assertEqual(free.call('POST', '/api/build/apk', {}, headers=headers)[0], 402)
+        self.assertEqual(pro.call('POST', '/api/build/apk', {}, headers=headers)[0], 400, 'passes the gate')
+        status, body, _ = pro.call('POST', '/api/build/exe', {}, headers=headers)
+        self.assertEqual(status, 402)
+        self.assertIn('Business', body['error'])
+        # Office conversion stays free locally.
+        self.assertEqual(guest.call('POST', '/api/convert/word-to-pdf', {}, headers=headers)[0], 400)
+
+
+class HostedModeTests(AccountsBase):
+    def setUp(self):
+        # Mirrors `server.py --public-host ...` (paywall on by default).
+        server.CONFIG.update(public_hosts={'myflipbook.test'}, secure=True, base_url='', paywall=True)
+
+    def tearDown(self):
+        server.CONFIG.update(public_hosts=set(), secure=False, paywall=False)
 
     def test_public_host_login_gates_server_features(self):
         guest = Client(self.base, host='myflipbook.test')

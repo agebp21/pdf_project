@@ -15,6 +15,7 @@
 - Buku dimulai dari halaman pertama PDF sebagai sampul depan. Buka sampul dahulu, lalu tampilkan isi.
 - Pengguna sudah meminta penghapusan batas 50 MB dan 100 halaman. Jangan memasang kembali batas ukuran/halaman tanpa arahan baru. Tangani dokumen besar lewat pengelolaan memori dan pemuatan bertahap.
 - Nama produk: **MyFlipbook** (dulu PDF Tools). Key penyimpanan internal `pdf-tools-*` sengaja dipertahankan.
+- Ekspor flipbook berbayar (keputusan user 25 Sep): Free = preview + simpan proyek; ekspor HTML/APK = Pro (Rp99.000/bln), EXE = Business. Jangan membuka template `assets/export/{index.html,viewer.js,viewer.css}` untuk publik.
 - Subscription sudah ada: `accounts.py` + `login.html`/`account.html`, Midtrans Snap. Harga di `PLANS` masih draf; jangan dianggap final. Mode hosting via `--public-host` (lihat README).
 - Tool katalog yang belum dibuat tampil "Coming soon" (daftar `SOON` di `index.html`); hapus id dari daftar itu ketika tool-nya jadi.
 - Ekspor HTML offline, simpan/buka proyek, dan build APK/EXE lokal sudah memiliki implementasi; lihat handoff untuk bukti pengujian dan batas rilis.

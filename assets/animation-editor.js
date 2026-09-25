@@ -796,8 +796,13 @@
   /* ══════════════════════════════════════════════════════════
      EXPORT HTML ZIP
      ══════════════════════════════════════════════════════════ */
+  // Paywall hint, loaded once so the save dialog still opens within the click.
+  // The server enforces it anyway (export templates need Pro/Business).
+  let exportCaps=null;
+  fetch('/api/capabilities',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{exportCaps=c;}).catch(()=>{});
   async function exportHTML(){
     if(!pageCount||exporting||loading||importing||extracting)return;
+    if(exportCaps&&exportCaps.paywall&&!(exportCaps.entitlements||[]).includes('export')){setError('Export flipbook butuh paket Pro atau Business. Buka account.html untuk upgrade.');return;}
     exporting=true;updateButtons();setStatus('Menyiapkan export…');setError('');
     try{
       const title=($('#ae-title')?.value.trim()||sourceName.replace(/\.pdf$/i,'')||'Flipbook');

@@ -40,7 +40,12 @@ PAGES = {'index.html', 'converter.html', 'flipbook.html', 'animation.html', 'not
          'login.html', 'account.html'}
 # public_hosts: domains served in hosting mode (login + entitlements enforced).
 # secure: Secure cookies (HTTPS). base_url: absolute URL for payment callbacks.
-CONFIG = dict(public_hosts=set(), secure=False, base_url='')
+# paywall: exports/builds need a paid plan. Off when imported (tests),
+# on when server.py runs unless --no-paywall.
+CONFIG = dict(public_hosts=set(), secure=False, base_url='', paywall=False)
+# Export-only templates: without them no offline package can be built, so
+# the paywall holds even if someone edits the page's JavaScript.
+EXPORT_TEMPLATES = {'assets/export/index.html', 'assets/export/viewer.js', 'assets/export/viewer.css'}
 ACCOUNTS = None
 ACCOUNTS_LOCK = threading.Lock()
 
@@ -458,18 +463,25 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(404, {'error': 'Tidak ditemukan.'})
 
     def entitlement_error(self, feature):
-        """Hosting mode only: None when allowed, else (status, message)."""
-        if not hosted():
+        """None when allowed, else (status, message).
+
+        Office conversion is gated on a public host only; exports and
+        native builds whenever the paywall is on.
+        """
+        if not (hosted() if feature == 'office' else CONFIG['paywall']):
             return None
         user = self.current_user()
         if not user:
             return 401, 'Silakan masuk dulu untuk memakai fitur ini.'
         if feature not in user['entitlements']:
-            return 402, 'Fitur ini butuh paket yang lebih tinggi. Upgrade di halaman Akun.'
+            plan = 'Business' if feature == 'exe' else 'Pro atau Business'
+            return 402, f'Fitur ini butuh paket {plan}. Upgrade di halaman Harga/Akun.'
         return None
 
     def end_headers(self):
         self.send_header('X-Content-Type-Options', 'nosniff')
+        if unquote(urlsplit(self.path).path).lstrip('/') in EXPORT_TEMPLATES:
+            self.send_header('Cache-Control', 'no-store')
         super().end_headers()
 
     def do_GET(self):
@@ -487,10 +499,11 @@ class Handler(SimpleHTTPRequestHandler):
             flutter = bool(shutil.which('flutter'))
             office = bool(find_soffice())
             # Hosting: the build/convert token is only handed to signed-in users.
-            user = self.current_user() if hosted() else None
+            user = self.current_user() if hosted() or CONFIG['paywall'] else None
             token = TOKEN if not hosted() or user else None
             self.send_json(200, dict(apk=flutter, exe=flutter and os.name == 'nt', office=office, token=token,
-                                     loginRequired=hosted(), entitlements=user['entitlements'] if user else None))
+                                     loginRequired=hosted(), paywall=CONFIG['paywall'],
+                                     entitlements=user['entitlements'] if user else None))
             return
         match = re.fullmatch(r'/api/jobs/([a-f0-9]{32})(?:/(download|log))?', path)
         if match:
@@ -520,6 +533,11 @@ class Handler(SimpleHTTPRequestHandler):
         if not allowed or not file.is_relative_to(ROOT) or not file.is_file():
             self.send_error(404)
             return
+        if relative in EXPORT_TEMPLATES:
+            denied = self.entitlement_error('export')
+            if denied:
+                self.send_json(denied[0], {'error': denied[1]})
+                return
         super().do_GET()
 
     def convert_office(self):
@@ -644,11 +662,14 @@ if __name__ == '__main__':
     parser.add_argument('--public-host', action='append', default=[],
                         help='Domain publik (bisa diulang), mis. myflipbook.id. Mengaktifkan mode hosting: '
                              'login wajib untuk fitur server, cookie Secure, pembayaran Midtrans.')
+    parser.add_argument('--no-paywall', action='store_true',
+                        help='Ekspor flipbook & build tanpa paket berbayar (pemakaian internal).')
     parser.add_argument('--insecure-cookies', action='store_true',
                         help='Mode hosting tanpa HTTPS (hanya untuk uji coba).')
     args = parser.parse_args()
     CONFIG['public_hosts'] = {h.strip().lower() for h in args.public_host if h.strip()}
     CONFIG['secure'] = hosted() and not args.insecure_cookies
+    CONFIG['paywall'] = not args.no_paywall
     CONFIG['base_url'] = os.environ.get('MYFLIPBOOK_BASE_URL', '')
     store = get_accounts()
     if hosted():
