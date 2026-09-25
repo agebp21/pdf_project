@@ -69,6 +69,10 @@
     book.on('flip',update);book.on('changeOrientation',()=>{update();animate()});
     book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});$('#home').disabled=$('#prev').disabled=$('#next').disabled=true}});
     book.loadFromHTML(elements);update();animate();
+    // Like the preview, the book ends above the control bar so the bar never
+    // covers the bottom of a page (measured: the bar wraps on small phones).
+    const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };
+    reserveBar(); addEventListener('resize', reserveBar);
     FlipbookLayout.bind(book,$('#stage'),data.ratio);
     $('#fullscreen').onclick=async()=>{
       try { if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen(); }

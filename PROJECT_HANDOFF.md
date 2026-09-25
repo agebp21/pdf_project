@@ -466,3 +466,7 @@ User: "narasi pdf" (= Notebook PDF: ringkasan/podcast) dan animasi diberi coming
 ### 25 September 2026 - Export mengikuti susunan halaman preview
 
 User: hasil flipbook harus sesuai preview. `FlipbookLayout.geometry` dulu memakai aturan tambahan (lebar/tinggi < rasio x 1,5 -> satu halaman) sehingga PDF landscape tampil satu halaman di ekspor tapi dua halaman di preview. Aturan kini sama dengan preview: spread dua halaman bila lebar area >= 700px, satu halaman di HP; berlaku untuk HTML, EXE, APK. Diverifikasi Chromium: portrait & landscape di 1280x800, 1440x900, 390x844 -> status preview == ekspor. Tes export/qa-runtime/qa-editor/idle/viewer-compat lolos.
+
+### 25 September 2026 - Buku ekspor pas di semua ukuran layar
+
+User: tampilan landscape seperti preview (sampul sendiri di kanan) sudah benar, dan harus sesuai dimensi media. Diukur 2 bentuk PDF x 7 layar (1366x768, 1920x1080, 1440x900, 1024x768, 768x1024, 390x844, 844x390): buku selalu di dalam layar dan dibesarkan sampai salah satu sisi. Perbaikan: area buku kini berhenti di atas bar kontrol (tinggi bar diukur, bar bisa 2 baris di HP) sehingga halaman tidak pernah tertutup tombol (sebelumnya 62px di desktop, 16px di HP miring); judul overlay hanya muncul di perangkat ber-mouse (di layar sentuh hover "nyangkut" dan menutupi halaman). Semua kombinasi: overlap 0.
