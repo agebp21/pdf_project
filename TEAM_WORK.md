@@ -363,3 +363,14 @@ Tests: save-location regressions; qa-editor DOM flow now includes native APK/EXE
 ### 22 September 2026 - server --host 0.0.0.0 untuk akses LAN
 
 Tujuan: PC lain membuka app dari server PC ini. Yang dikerjakan: flag `--host` di `server.py` (default loopback tidak berubah), `trusted()` menerima IP/hostname mesin sendiri dengan port cocok + tolak nama asing/port salah (anti DNS-rebinding dipertahankan), pesan error converter pakai `location.host` dinamis, 5 tes baru `LanHostTests`, README ada panduan firewall. File milik sesi lain tidak disentuh (hanya append docs ini + handoff + README). Hasil: 21 Python OK, node --check OK, E2E LAN nyata 200 via 192.168.18.16. Belum: uji browser dari PC lain beneran, belum commit/push. Koordinasi: sesi lain yang pegang converter/server harap perhatikan `trusted()` baru bila menambah endpoint.
+
+### 25 September 2026 - MyFlipbook: rebrand, coming soon, Office layout, login + billing
+
+Permintaan user: ganti nama jadi MyFlipbook, beresi PDF ke Word/Excel/PPT + bisa dijadikan flipbook, login + billing (rencana hosting), sisanya coming soon, lalu push.
+- Commit awal `9ec0a29` menyimpan kerja sesi lama yang belum di-commit (OCR editor, mode LAN) setelah suite tes lolos.
+- Rebrand: judul, nav, i18n, server, metadata dokumen. Key IndexedDB/localStorage `pdf-tools-*` tidak diganti agar data pengguna tidak hilang.
+- Coming soon: 12 kartu (workflow, edit, sign, protect, PDF/A, repair, scan, compare, redact, forms, AI summarizer, translate) abu-abu dan tidak bisa diklik; converter `?tool=` yang belum ada menampilkan status coming soon tanpa area upload.
+- `assets/pdf-layout.js`: render halaman tanpa teks (proxy canvas, vendor tidak diubah) + run teks berposisi. Word (keep look/flowing+tabel), PPT (text box), Excel (sheet Data dulu, angka asli). Hasil Office menawarkan "Turn source PDF into Flipbook".
+- Akun: `accounts.py` (SQLite, PBKDF2, session hash, throttle login, order idempotent, Midtrans Snap + signature, provider simulasi/nonaktif). `server.py`: `/api/auth/*`, `/api/billing/*`, `--public-host`, gating entitlement, dan tidak lagi bisa bind port dobel di Windows. UI: `login.html`, `account.html`, `assets/auth.js` (chip nav di semua halaman), i18n EN/ID.
+- Verifikasi: 34 tes Python (21 lama + 13 akun/Midtrans/hosting), semua suite Node termasuk `office-export.test.cjs` baru; output Word/PPT dirender LibreOffice dan dicek visual; alur UI akun diuji di Chromium (Playwright) desktop + lebar 390px tanpa error JS.
+- Belum: uji Midtrans sandbox dengan key asli, reset password/verifikasi email, admin, uji Word/PowerPoint asli (bukan LibreOffice), deploy nyata.

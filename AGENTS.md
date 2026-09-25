@@ -14,7 +14,9 @@
 - Gunakan engine flipbook dari `https://github.com/agebp21/sarvamaya-flipbook-studio`; sumber salinan ada di `assets/vendor/SOURCE.md`.
 - Buku dimulai dari halaman pertama PDF sebagai sampul depan. Buka sampul dahulu, lalu tampilkan isi.
 - Pengguna sudah meminta penghapusan batas 50 MB dan 100 halaman. Jangan memasang kembali batas ukuran/halaman tanpa arahan baru. Tangani dokumen besar lewat pengelolaan memori dan pemuatan bertahap.
-- Rencana subscription: paket bertingkat dengan pembayaran bulanan/tahunan; tahunan lebih hemat dibanding 12 kali pembayaran bulanan. Harga dan kuota belum final.
+- Nama produk: **MyFlipbook** (dulu PDF Tools). Key penyimpanan internal `pdf-tools-*` sengaja dipertahankan.
+- Subscription sudah ada: `accounts.py` + `login.html`/`account.html`, Midtrans Snap. Harga di `PLANS` masih draf; jangan dianggap final. Mode hosting via `--public-host` (lihat README).
+- Tool katalog yang belum dibuat tampil "Coming soon" (daftar `SOON` di `index.html`); hapus id dari daftar itu ketika tool-nya jadi.
 - Ekspor HTML offline, simpan/buka proyek, dan build APK/EXE lokal sudah memiliki implementasi; lihat handoff untuk bukti pengujian dan batas rilis.
 
 ## Aturan perubahan

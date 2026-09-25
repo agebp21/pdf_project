@@ -6,6 +6,7 @@
 <title>Notebook PDF — like NotebookLM</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="assets/ui-clay.css">
+<script src="assets/auth.js" defer></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/pdf.js/3.11.174/pdf.min.js"></script>
@@ -27,7 +28,7 @@
 <div class="sticky top-3 z-50 max-w-[1440px] mx-auto px-4 pt-3">
   <nav class="clay-nav">
   <a href="index.html" class="clay-brand"><span class="clay-brand-mark">MF</span> <span class="clay-brand-name">MyFlipbook</span> <span class="ml-1 px-2 py-0.5 rounded-full bg-[#4C1D95] text-white text-[10px] font-extrabold">Notebook ✨</span></a>
-  <a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">← All tools</a>
+  <span style="display:flex;align-items:center;gap:8px"><span data-auth-slot></span><a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">← All tools</a></span>
   </nav>
 </div>
 

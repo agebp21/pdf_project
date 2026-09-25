@@ -1,6 +1,6 @@
 # Checklist fitur PDF Project
 
-Diperbarui: 17 September 2026. Status berdasarkan kode dan bukti tes, bukan hanya keberadaan kartu menu.
+Diperbarui: 25 September 2026. Status berdasarkan kode dan bukti tes, bukan hanya keberadaan kartu menu.
 
 **Arti centang:** fungsi yang disebut sudah lolos pengujian dalam lingkup di kolom bukti. Bukan jaminan semua dokumen, browser, atau perangkat sudah teruji. Katalog berisi 34 kartu: 18 tool converter, 3 halaman langsung (flipbook/notebook/demo), dan 13 fitur katalog belum dibuat.
 
@@ -35,9 +35,9 @@ Diperbarui: 17 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 | Compress PDF | PDF hasil valid; jumlah halaman tetap. | Level memakai operasi simpan serupa; pengurangan ukuran tidak dijamin. |
 | Image to PDF | Jalur berbagai format tersedia; smoke test UTIF pernah lolos. | Pengujian browser lengkap per format, terutama HEIC/TIFF. GIF/TIFF multipage memakai frame pertama. |
 | PDF to JPG | Implementasi render halaman dan ZIP tersedia. | Tes end-to-end jalur converter dengan dokumen nyata; bukan hanya rendering PDF di flipbook. |
-| PDF to Word | DOCX asli dengan gambar halaman dan paragraf editabel; smoke test library tercatat. | Uji dokumen nyata di browser; bukan rekonstruksi layout Word editabel yang identik. |
-| PDF to Excel | Gambar halaman, teks/OCR editabel, tabel dengan filter, deteksi beberapa kolom. | Akurasi tabel rumit, file besar, dan OCR nyata; gambar tetap berupa piksel. |
-| PDF to PowerPoint | PPTX asli; gambar halaman pada slide dan teks pada speaker notes. | Uji browser/dokumen nyata; isi slide belum menjadi objek teks/gambar terpisah. |
+| PDF to Word | Mode "keep look": background tanpa teks + frame teks editabel per baris, satu section per halaman seukuran PDF. Mode flowing: heading, paragraf, tabel Word asli. Scan: gambar + OCR. `office-export.test.cjs` (library asli) + render LibreOffice fixture 2 halaman: tampilan cocok, teks sekali (tidak dobel). | Uji di MS Word asli dan dokumen desain berat; Type3/outline text tetap gambar; lebar font pengganti bisa beda. |
+| PDF to Excel | Sheet Data (tabel Excel, kolom terpisah) di depan; angka ID/EN, Rp, %, negatif jadi angka asli; kode berawalan 0 / >15 digit tetap teks. Sheet gambar halaman kedua. | Akurasi tabel rumit, file besar, OCR nyata. "1.250" dibaca ribuan (format Indonesia). |
+| PDF to PowerPoint | Ukuran slide mengikuti PDF; background tanpa teks + tiap baris jadi text box editabel; notes berisi teks/OCR. Dirender LibreOffice: cocok dengan PDF. | Uji di PowerPoint asli; gambar/vektor belum jadi objek terpisah. |
 | PowerPoint to PDF | Backend LibreOffice tersedia, tes API dengan stub lolos. | Fixture PPT/PPTX nyata pada jalur terbaru belum diuji dalam sesi ini. |
 | HTML to PDF | Ekstraksi teks tanpa batas 30.000 karakter sebelumnya. | Belum mempertahankan layout/CSS halaman web. |
 | OCR ekstraksi | Tesseract Inggris/Indonesia dan filter kualitas tersedia. | Akurasi scan/poster, waktu proses, file besar. Bukan OCR PDF searchable. |
@@ -60,8 +60,8 @@ Diperbarui: 17 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 - [ ] PDF Forms.
 - [ ] AI Summarizer sebagai tool terpisah.
 - [ ] Translate PDF.
-- [ ] Workflow (kartu masih mengarah ke Merge).
-- [ ] Akun/login, database pengguna, paket subscription, pembayaran, dan kontrol akses.
+- [ ] Workflow (kartu tampil "Coming soon", tidak bisa diklik).
+- [x] Akun/login, paket, pembayaran Midtrans Snap (+ simulasi lokal), kontrol akses mode hosting — `tests/test_accounts.py` (13 tes) + alur UI Chromium (daftar → pilih paket → bayar simulasi → plan aktif). Belum: reset password via email, verifikasi email, halaman admin, uji Midtrans sandbox dengan key asli.
 - [ ] Autosave proyek dan editor animasi lengkap.
 - [ ] QA performa dokumen besar serta rilis aplikasi bertanda tangan.
 

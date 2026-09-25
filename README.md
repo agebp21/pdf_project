@@ -24,6 +24,27 @@ Catatan: mode LAN hanya untuk jaringan tepercaya (WiFi rumah/kantor). Semua PC d
 
 HTML, CSS, dan JavaScript tidak membutuhkan build frontend. Python memakai standard library. Flutter dibutuhkan hanya untuk APK/EXE, bukan ekspor HTML atau penyimpanan proyek.
 
+## Akun, paket, dan pembayaran
+
+- Halaman: `login.html` (masuk/daftar) dan `account.html` (paket, checkout, riwayat pembayaran). Tombol Masuk/akun ada di nav semua halaman (`assets/auth.js`).
+- Backend: `accounts.py` (stdlib). SQLite di `.data/myflipbook.sqlite3` (diabaikan Git; ubah lewat `MYFLIPBOOK_DB`). Password PBKDF2-SHA256, session cookie HttpOnly + SameSite=Lax, hanya hash token yang disimpan. Login dibatasi 5 gagal / 15 menit per IP+email.
+- Paket (harga **draf**, ubah di `PLANS` pada `accounts.py`): Free Rp0; Pro Rp59.000/bulan atau Rp590.000/tahun (+ build APK); Business Rp149.000/bulan atau Rp1.490.000/tahun (+ build EXE). Tool browser tetap gratis.
+- Pembayaran: **Midtrans Snap**. Isi `MIDTRANS_SERVER_KEY` (sandbox `SB-...`; `MIDTRANS_PRODUCTION=1` untuk live). Di dashboard Midtrans, set *Payment Notification URL* ke `https://<domain>/api/billing/midtrans/notify`. Notifikasi dicek signature SHA-512 + nominal; paket diperpanjang tepat sekali per order.
+- Tanpa key, mode lokal memakai **simulasi pembayaran** (tombol di halaman akun) untuk uji alur. Di mode hosting tanpa key, checkout dimatikan (kecuali `MYFLIPBOOK_MOCK_PAYMENTS=1`).
+- Mode lokal (tanpa `--public-host`) tidak mewajibkan login, sama seperti sebelumnya.
+
+## Hosting
+
+```bash
+MIDTRANS_SERVER_KEY=SB-Mid-server-xxx MYFLIPBOOK_BASE_URL=https://myflipbook.id \
+python server.py --host 127.0.0.1 --port 8080 --public-host myflipbook.id --public-host www.myflipbook.id
+```
+
+- Jalankan di belakang reverse proxy HTTPS (nginx/Caddy) yang meneruskan `Host` dan `X-Forwarded-For`, mis. nginx: `proxy_pass http://127.0.0.1:8080; proxy_set_header Host $host; proxy_set_header X-Forwarded-For $remote_addr; client_max_body_size 200m;`.
+- `--public-host` mengaktifkan mode hosting: cookie `Secure`, token konversi/build hanya untuk user login, Word/Excel/PPT→PDF butuh login (paket Free cukup), APK butuh Pro, EXE butuh Business. `--insecure-cookies` hanya untuk uji tanpa HTTPS.
+- Contoh variabel: [.env.example](.env.example). Konversi Office butuh LibreOffice di server; build APK/EXE butuh Flutter (EXE hanya di Windows).
+- Batasan saat ini: belum ada reset password via email, verifikasi email, atau halaman admin; server satu proses (ThreadingHTTPServer) cocok untuk skala kecil. Build native tetap satu antrean.
+
 ## Buat dan ekspor buku
 
 1. Pilih **PDF to Flipbook**, lalu unggah PDF. Atau klik **Jadikan Flipbook** pada hasil converter yang berupa PDF.
@@ -58,13 +79,14 @@ Implementasi mengikuti [panduan File System Access](https://developer.chrome.com
 - APK saat ini memakai signing debug bawaan template Flutter untuk pengujian lokal. Belum siap sebagai rilis Play Store. EXE belum ditandatangani dengan sertifikat penerbit.
 - Judul buku menentukan application ID Android: buku dengan judul sama memperbarui aplikasi yang sama, judul berbeda mendapat ID berbeda.
 - Layanan build menjalankan satu pekerjaan pada satu waktu. Hasil dan log berada di `.build/<job-id>/`, diabaikan Git. Jangan menghapus file saat build berjalan. Belum ada pembersihan otomatis.
-- Server ini untuk lingkungan lokal tepercaya, bukan backend subscription publik.
+- Mode default server untuk lingkungan lokal tepercaya. Untuk publik, pakai mode hosting (`--public-host` di belakang HTTPS, lihat bagian Hosting).
 
 ## Pengujian
 
 ```powershell
 node tests/export.test.cjs
 node tests/save-location.test.cjs
+node tests/office-export.test.cjs
 python -m unittest discover -s tests -p test_*.py
 node --check assets/flipbook.js
 node --check assets/export/viewer.js
@@ -78,7 +100,7 @@ Untuk memeriksa wrapper native: jalankan `flutter pub get` lalu `flutter analyze
 - Tidak ada batas ukuran/halaman buatan aplikasi, tetapi seluruh PDF masih dirender sebelum buku tampil; dokumen besar memakai waktu dan memori lebih banyak.
 - Isi PDF menjadi gambar; animasi statistik adalah elemen tambahan di atas gambar tersebut.
 - Grafik/proses interaktif masih tersedia sebagai demo, belum editor lengkap untuk PDF pengguna.
-- PDF ke Word/PPT sudah menghasilkan DOCX/PPTX; halaman berupa gambar dengan teks editabel tambahan (PPT di speaker notes). Kartu katalog yang belum dibuat tetap coming soon.
+- PDF ke Word/PPT mempertahankan tampilan: background halaman tanpa teks + teks editabel di posisi aslinya (Word: frame per baris, PPT: text box). Word juga punya mode teks mengalir + tabel. Teks Type3/outline/scan tetap di gambar (scan dapat teks OCR). Font diganti ke font Office terdekat, jadi lebar baris bisa sedikit beda. Kartu katalog yang belum dibuat tampil "Coming soon" dan tidak bisa diklik.
 - Converter lama masih sebagian memakai CDN. Offline yang dimaksud pada fitur ekspor adalah paket buku hasilnya.
 
 Checklist status fitur dan bukti tes: [FEATURE_CHECKLIST.md](FEATURE_CHECKLIST.md).

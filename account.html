@@ -1,0 +1,214 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Account — MyFlipbook</title>
+<script src="assets/i18n.js"></script>
+<link rel="stylesheet" href="assets/ui-clay.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+  body{margin:0;min-height:100dvh;background:#FBFAF7;color:#1C1917}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:-1;
+    background:radial-gradient(700px 420px at 50% 0%,#EDF3E4 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
+  .wrap{max-width:1100px;margin:0 auto;padding:12px 16px 56px}
+  .nav-right{display:flex;align-items:center;gap:8px}
+  .lang{border:1px solid #E8E2D4;background:#E9E4FF;border-radius:999px;padding:7px 12px;font-weight:800;font-size:12px;cursor:pointer}
+  h1{margin:32px 0 16px;font-size:32px}
+  h2{margin:0 0 12px;font-size:21px}
+  .profile{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px}
+  .who b{display:block;font-size:17px}
+  .who span{font-size:13px}
+  .plan-now{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
+  .chip{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;background:#E4F3C2;color:#1A3C34}
+  .chip.paid{background:#1A3C34;color:#FFF7EA}
+  .notice{margin:16px 0 0;padding:14px 16px;border-radius:16px;font-size:13px;line-height:1.5;display:flex;flex-wrap:wrap;gap:10px;align-items:center;justify-content:space-between}
+  .notice.info{background:#1A3C34;color:#FFF7EA}
+  .notice.warn{background:#FFF7ED;border:1px solid #FED7AA;color:#9A3412}
+  .notice.ok{background:#EFF6EC;border:1px solid #BBD8B0;color:#1A3C34}
+  .notice.err{background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C}
+  section{margin-top:28px}
+  .head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}
+  .toggle{display:inline-flex;background:#fff;border:1px solid #E4DED0;border-radius:999px;padding:4px;box-shadow:inset 0 2px 6px rgba(28,25,23,.05)}
+  .toggle button{border:0;background:transparent;border-radius:999px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer;color:#57534E}
+  .toggle button.on{background:#1A3C34;color:#FFF7EA}
+  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
+  .plan{padding:20px;display:flex;flex-direction:column;gap:10px;position:relative}
+  .plan.current{outline:2px solid #1A3C34}
+  .plan h3{margin:0;font-size:20px}
+  .price{font-family:'Fraunces',Georgia,serif;font-weight:900;font-size:26px}
+  .price small{font:700 12px 'Plus Jakarta Sans',sans-serif;color:#78716C}
+  .save{font-size:11px;font-weight:800;color:#15803D;min-height:14px}
+  .plan ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:#57534E;flex:1}
+  .plan .clay-btn{width:100%}
+  table{width:100%;border-collapse:collapse;font-size:12.5px}
+  th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #EFE9DC}
+  th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#78716C}
+  .orders{padding:6px 8px;overflow-x:auto}
+  .fine{font-size:11.5px;margin-top:8px}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="clay-nav">
+    <a href="index.html" class="clay-brand"><span class="clay-brand-mark">MF</span> <span class="clay-brand-name">MyFlipbook</span></a>
+    <div class="nav-right">
+      <button type="button" class="lang" data-lang-toggle>ID</button>
+      <a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px" data-i18n="auth.back">← All tools</a>
+    </div>
+  </nav>
+
+  <h1 class="clay-h" data-i18n="acct.title">Your account</h1>
+  <div class="clay-panel profile" id="profile" hidden>
+    <div class="who"><b id="who"></b><span class="clay-muted" id="email"></span></div>
+    <div class="plan-now">
+      <span class="clay-muted" data-i18n="acct.plan">Current plan</span> <span class="chip" id="planChip"></span>
+      <span class="clay-muted" id="until"></span>
+      <button class="clay-btn clay-btn-ghost" id="logout" type="button" data-i18n="acct.logout">Log out</button>
+    </div>
+  </div>
+  <div id="notice"></div>
+
+  <section>
+    <div class="head">
+      <h2 class="clay-h" data-i18n="acct.plans">Plans</h2>
+      <div class="toggle" role="group">
+        <button type="button" data-cycle="monthly" class="on" data-i18n="acct.monthly">Monthly</button>
+        <button type="button" data-cycle="yearly" data-i18n="acct.yearly">Yearly</button>
+      </div>
+    </div>
+    <div class="plans" id="plans"></div>
+    <p class="fine clay-muted" data-i18n="acct.draft">Prices in IDR. Draft pricing — may change.</p>
+  </section>
+
+  <section>
+    <h2 class="clay-h" data-i18n="acct.orders">Payment history</h2>
+    <div class="clay-panel orders"><table>
+      <thead><tr><th data-i18n="acct.colDate">Date</th><th data-i18n="acct.colPlan">Plan</th><th data-i18n="acct.colAmount">Amount</th><th data-i18n="acct.colStatus">Status</th></tr></thead>
+      <tbody id="orders"></tbody>
+    </table></div>
+  </section>
+</div>
+<script src="assets/auth.js"></script>
+<script>
+(function(){
+  const $=id=>document.getElementById(id);
+  const t=(key,fallback)=>{const v=window.I18N?I18N.t(key):key;return v===key?fallback:v;};
+  const lang=()=>window.I18N&&I18N.get()==='id'?'id-ID':'en-US';
+  const rupiah=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+  const date=s=>new Date(s*1000).toLocaleDateString(lang(),{day:'numeric',month:'short',year:'numeric'});
+  const orderParam=new URLSearchParams(location.search).get('order');
+  let state={user:null,plans:[],provider:'mock',paymentsEnabled:true,orders:[],cycle:'monthly'};
+
+  function el(tag,props,...children){const node=Object.assign(document.createElement(tag),props||{});node.append(...children);return node;}
+  function notice(kind,message,action){
+    const box=el('div',{className:'notice '+kind},el('span',{textContent:message}));
+    if(action)box.append(action);
+    $('notice').replaceChildren(box);
+  }
+
+  function renderProfile(){
+    const u=state.user;
+    $('profile').hidden=false;
+    $('who').textContent=u.name||u.email.split('@')[0];
+    $('email').textContent=u.email;
+    $('planChip').textContent=u.planName;
+    $('planChip').className='chip'+(u.plan!=='free'?' paid':'');
+    $('until').textContent=u.planExpiresAt?t('acct.until','Active until')+' '+date(u.planExpiresAt):'';
+  }
+
+  function renderPlans(){
+    const grid=$('plans');grid.replaceChildren();
+    state.plans.forEach(plan=>{
+      const current=state.user&&state.user.plan===plan.id;
+      const card=el('div',{className:'clay-panel plan'+(current?' current':'')});
+      const price=plan[state.cycle];
+      const per=state.cycle==='yearly'?t('acct.perYear','/year'):t('acct.perMonth','/month');
+      const priceNode=el('div',{className:'price'},rupiah(price));
+      priceNode.append(' ',el('small',{textContent:plan.id==='free'?t('acct.free','Free'):per}));
+      const saving=state.cycle==='yearly'&&plan.monthly?Math.round((1-plan.yearly/(plan.monthly*12))*100):0;
+      const list=el('ul');(plan.features[lang()==='id-ID'?'id':'en']||[]).forEach(f=>list.append(el('li',{textContent:f})));
+      card.append(el('h3',{className:'clay-h',textContent:plan.name}),priceNode,
+        el('div',{className:'save',textContent:saving>0?t('acct.save','save')+' '+saving+'%':''}),list);
+      if(plan.id==='free'){
+        if(current)card.append(el('button',{className:'clay-btn clay-btn-ghost',disabled:true,textContent:t('acct.active','Your plan')}));
+      }else{
+        const button=el('button',{className:'clay-btn '+(current?'clay-btn-dark':'clay-btn-primary'),type:'button',
+          textContent:current?t('acct.extend','Extend'):t('acct.choose','Choose')+' '+plan.name,disabled:!state.paymentsEnabled});
+        button.addEventListener('click',()=>checkout(plan.id,button));
+        card.append(button);
+      }
+      grid.append(card);
+    });
+    document.querySelectorAll('[data-cycle]').forEach(b=>b.classList.toggle('on',b.dataset.cycle===state.cycle));
+  }
+
+  function renderOrders(){
+    const body=$('orders');body.replaceChildren();
+    if(!state.orders.length){body.append(el('tr',{},el('td',{colSpan:4,className:'clay-muted',textContent:t('acct.noOrders','No payments yet.')})));return;}
+    state.orders.forEach(o=>{
+      const plan=state.plans.find(p=>p.id===o.plan);
+      body.append(el('tr',{},
+        el('td',{textContent:date(o.created_at)}),
+        el('td',{textContent:(plan?plan.name:o.plan)+' · '+t('acct.'+o.cycle,o.cycle)}),
+        el('td',{textContent:rupiah(o.amount)}),
+        el('td',{textContent:t('status.'+o.status,o.status)})));
+    });
+  }
+
+  function renderOrderNotice(){
+    if(!state.paymentsEnabled&&!orderParam){notice('warn',t('acct.disabled','Online payment is not enabled on this server yet.'));return;}
+    if(!orderParam)return;
+    const order=state.orders.find(o=>o.id===orderParam);
+    if(!order)return;
+    if(order.status==='paid'){notice('ok',t('acct.paidMsg','Payment received — your plan is active.'));return;}
+    if(order.status!=='pending'){notice('err',t('status.'+order.status,order.status));return;}
+    if(state.provider==='mock'){
+      const pay=el('button',{className:'clay-btn clay-btn-primary',type:'button',textContent:t('acct.mockPay','Simulate payment')});
+      pay.addEventListener('click',async()=>{pay.disabled=true;try{await MFAuth.api('POST','/api/billing/mock/pay',{orderId:order.id});await load();}catch(e){notice('err',e.message);}});
+      notice('info',t('acct.mock','Local test mode: no payment gateway is configured. Simulate this payment?')+' ('+rupiah(order.amount)+')',pay);
+    }else{
+      notice('info',t('acct.pending','Waiting for payment confirmation…'));
+      pollOrder();
+    }
+  }
+
+  let polls=0;
+  function pollOrder(){
+    if(polls++>=15)return;
+    setTimeout(async()=>{
+      const {orders}=await MFAuth.api('GET','/api/billing/orders');
+      state.orders=orders;
+      const order=orders.find(o=>o.id===orderParam);
+      if(order&&order.status!=='pending')await load();else pollOrder();
+    },4000);
+  }
+
+  async function checkout(plan,button){
+    button.disabled=true;
+    try{
+      const result=await MFAuth.api('POST','/api/billing/checkout',{plan,cycle:state.cycle});
+      location.href=result.redirectUrl; // Midtrans Snap page, or back here (mock) with ?order=
+    }catch(error){notice('err',error.message);button.disabled=false;}
+  }
+
+  async function load(){
+    const me=await MFAuth.me(true);
+    if(me.offline){notice('err',t('auth.offline','Accounts need the MyFlipbook server (python server.py).'));return;}
+    if(!me.user){location.replace('login.html?next='+encodeURIComponent('account.html'+location.search));return;}
+    const [plans,orders]=await Promise.all([MFAuth.api('GET','/api/billing/plans'),MFAuth.api('GET','/api/billing/orders')]);
+    state=Object.assign(state,{user:me.user,plans:plans.plans,provider:plans.provider,paymentsEnabled:plans.paymentsEnabled,orders:orders.orders});
+    renderProfile();renderPlans();renderOrders();renderOrderNotice();
+  }
+
+  document.querySelectorAll('[data-cycle]').forEach(b=>b.addEventListener('click',()=>{state.cycle=b.dataset.cycle;renderPlans();}));
+  $('logout').addEventListener('click',async()=>{await MFAuth.api('POST','/api/auth/logout',{});location.href='index.html';});
+  document.addEventListener('langchange',()=>{if(state.user){renderProfile();renderPlans();renderOrders();renderOrderNotice();}});
+  load().catch(error=>notice('err',error.message));
+})();
+</script>
+</body>
+</html>

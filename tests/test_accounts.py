@@ -1,0 +1,271 @@
+import hashlib
+import http.cookiejar
+import json
+from pathlib import Path
+import sys
+import tempfile
+import threading
+import unittest
+import urllib.error
+import urllib.request
+
+sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+import accounts
+import server
+
+
+class Client:
+    def __init__(self, base, host=None):
+        self.base, self.host = base, host
+        self.jar = http.cookiejar.CookieJar()
+        self.opener = urllib.request.build_opener(urllib.request.HTTPCookieProcessor(self.jar))
+
+    def call(self, method, path, body=None, headers=None):
+        data = json.dumps(body).encode() if body is not None else None
+        request = urllib.request.Request(self.base + path, data=data, method=method, headers=dict(headers or {}))
+        if data is not None:
+            request.add_header('Content-Type', 'application/json')
+        if self.host:
+            request.add_header('Host', self.host)
+            # Behind the proxy the browser talks to https://host; the cookie
+            # jar keys cookies by the URL, so pass the session cookie by hand.
+            cookie = '; '.join(f'{c.name}={c.value}' for c in self.jar)
+            if cookie:
+                request.add_header('Cookie', cookie)
+        try:
+            with self.opener.open(request) as response:
+                raw, status, cookie = response.read(), response.status, response.headers.get('Set-Cookie')
+        except urllib.error.HTTPError as error:
+            raw, status, cookie = error.read(), error.code, error.headers.get('Set-Cookie')
+        if self.host and cookie:
+            name, _, rest = cookie.partition('=')
+            value = rest.split(';')[0]
+            self.jar.clear()
+            if value:
+                self.jar.set_cookie(http.cookiejar.Cookie(0, name, value, None, False, '', False, False, '/', True,
+                                                          False, None, False, None, None, {}))
+        return status, (json.loads(raw) if raw[:1] in (b'{', b'[') else raw), cookie
+
+
+class AccountsBase(unittest.TestCase):
+    provider = None
+
+    @classmethod
+    def setUpClass(cls):
+        cls.temporary = tempfile.TemporaryDirectory()
+        cls.previous = (server.ACCOUNTS, dict(server.CONFIG))
+        server.ACCOUNTS = accounts.Accounts(Path(cls.temporary.name) / 'accounts.db', cls.provider)
+        cls.httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.base = 'http://127.0.0.1:' + str(cls.httpd.server_port)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        cls.thread.join()
+        server.ACCOUNTS, config = cls.previous
+        server.CONFIG.clear()
+        server.CONFIG.update(config)
+        cls.temporary.cleanup()
+
+
+class LocalAccountTests(AccountsBase):
+    def test_register_login_me_logout(self):
+        client = Client(self.base)
+        status, body, cookie = client.call('POST', '/api/auth/register',
+                                           {'email': 'Sari@Example.com', 'password': 'rahasia-123', 'name': 'Sari'})
+        self.assertEqual(status, 201)
+        self.assertEqual(body['user']['email'], 'sari@example.com')
+        self.assertEqual(body['user']['plan'], 'free')
+        self.assertIn('HttpOnly', cookie)
+        self.assertIn('SameSite=Lax', cookie)
+        self.assertNotIn('Secure', cookie, 'local HTTP must not set Secure cookies')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['name'], 'Sari')
+        self.assertEqual(client.call('POST', '/api/auth/logout', {})[0], 200)
+        self.assertIsNone(client.call('GET', '/api/auth/me')[1]['user'])
+        status, body, _ = client.call('POST', '/api/auth/login', {'email': 'sari@example.com', 'password': 'rahasia-123'})
+        self.assertEqual(status, 200)
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['email'], 'sari@example.com')
+
+    def test_validation_and_duplicates(self):
+        client = Client(self.base)
+        self.assertEqual(client.call('POST', '/api/auth/register', {'email': 'bad', 'password': 'rahasia-123'})[0], 400)
+        self.assertEqual(client.call('POST', '/api/auth/register', {'email': 'a@b.co', 'password': 'short'})[0], 400)
+        self.assertEqual(client.call('POST', '/api/auth/register', {'email': 'dup@b.co', 'password': 'rahasia-123'})[0], 201)
+        self.assertEqual(client.call('POST', '/api/auth/register', {'email': 'DUP@b.co', 'password': 'rahasia-123'})[0], 409)
+
+    def test_wrong_password_and_throttle(self):
+        client = Client(self.base)
+        client.call('POST', '/api/auth/register', {'email': 'throttle@b.co', 'password': 'rahasia-123'})
+        for _ in range(5):
+            self.assertEqual(client.call('POST', '/api/auth/login', {'email': 'throttle@b.co', 'password': 'wrong-pass'})[0], 401)
+        self.assertEqual(client.call('POST', '/api/auth/login', {'email': 'throttle@b.co', 'password': 'rahasia-123'})[0], 429)
+        self.assertEqual(client.call('POST', '/api/auth/login', {'email': 'nobody@b.co', 'password': 'whatever1'})[0], 401)
+
+    def test_password_is_hashed(self):
+        client = Client(self.base)
+        client.call('POST', '/api/auth/register', {'email': 'hash@b.co', 'password': 'rahasia-123'})
+        with server.ACCOUNTS.connect() as db:
+            stored = db.execute("SELECT password_hash FROM users WHERE email='hash@b.co'").fetchone()[0]
+            tokens = [row[0] for row in db.execute('SELECT token_hash FROM sessions')]
+        self.assertTrue(stored.startswith('pbkdf2_sha256$'))
+        self.assertNotIn('rahasia-123', stored)
+        session = next(c.value for c in client.jar)
+        self.assertNotIn(session, tokens, 'only the token hash is stored')
+        self.assertIn(hashlib.sha256(session.encode()).hexdigest(), tokens)
+
+    def test_mock_checkout_extends_plan_once(self):
+        client = Client(self.base)
+        client.call('POST', '/api/auth/register', {'email': 'buyer@b.co', 'password': 'rahasia-123'})
+        self.assertEqual(client.call('GET', '/api/billing/plans')[1]['provider'], 'mock')
+        self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'free', 'cycle': 'monthly'})[0], 400)
+        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'yearly'})
+        self.assertEqual(status, 200)
+        self.assertEqual(order['amount'], accounts.PLANS['pro']['yearly'])
+        self.assertEqual(client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})[0], 200)
+        user = client.call('GET', '/api/auth/me')[1]['user']
+        self.assertEqual(user['plan'], 'pro')
+        self.assertIn('apk', user['entitlements'])
+        first_expiry = user['planExpiresAt']
+        client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['planExpiresAt'], first_expiry, 'paying twice extends once')
+        orders = client.call('GET', '/api/billing/orders')[1]['orders']
+        self.assertEqual(orders[0]['status'], 'paid')
+        # Someone else can't pay (or see) this order.
+        other = Client(self.base)
+        other.call('POST', '/api/auth/register', {'email': 'other@b.co', 'password': 'rahasia-123'})
+        self.assertEqual(other.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})[0], 404)
+        self.assertEqual(other.call('GET', '/api/billing/orders')[1]['orders'], [])
+
+    def test_requires_login_and_json(self):
+        client = Client(self.base)
+        self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[0], 401)
+        self.assertEqual(client.call('GET', '/api/billing/orders')[0], 401)
+        request = urllib.request.Request(self.base + '/api/auth/login', data=b'email=x', method='POST',
+                                         headers={'Content-Type': 'application/x-www-form-urlencoded'})
+        with self.assertRaises(urllib.error.HTTPError) as result:
+            urllib.request.urlopen(request)
+        self.assertEqual(result.exception.code, 415)
+
+    def test_cross_origin_post_rejected(self):
+        client = Client(self.base)
+        status = client.call('POST', '/api/auth/register', {'email': 'x@evil.co', 'password': 'rahasia-123'},
+                             headers={'Origin': 'https://evil.example'})[0]
+        self.assertEqual(status, 403)
+
+    def test_pages_served(self):
+        for page in ('login.html', 'account.html'):
+            with urllib.request.urlopen(self.base + '/' + page) as response:
+                self.assertEqual(response.status, 200)
+
+    def test_local_mode_needs_no_login_for_capabilities(self):
+        body = Client(self.base).call('GET', '/api/capabilities')[1]
+        self.assertTrue(body['token'])
+        self.assertFalse(body['loginRequired'])
+
+
+class FakeResponse:
+    def __init__(self, body):
+        self.body = body
+
+    def read(self):
+        return json.dumps(self.body).encode()
+
+    def __enter__(self):
+        return self
+
+    def __exit__(self, *args):
+        return False
+
+
+class MidtransTests(AccountsBase):
+    captured = []
+    provider = accounts.MidtransProvider(
+        'SB-server-key', opener=lambda request, timeout: MidtransTests.captured.append(request) or
+        FakeResponse({'token': 'snap-token', 'redirect_url': 'https://app.sandbox.midtrans.com/snap/v4/redirection/x'}))
+
+    def notify(self, client, order_id, amount, status='settlement', key='SB-server-key'):
+        gross = f'{amount}.00'
+        signature = hashlib.sha512((order_id + '200' + gross + key).encode()).hexdigest()
+        return client.call('POST', '/api/billing/midtrans/notify', {
+            'order_id': order_id, 'status_code': '200', 'gross_amount': gross, 'signature_key': signature,
+            'transaction_status': status, 'fraud_status': 'accept'})
+
+    def test_snap_checkout_and_signed_notification(self):
+        client = Client(self.base)
+        client.call('POST', '/api/auth/register', {'email': 'mid@b.co', 'password': 'rahasia-123', 'name': 'Mid'})
+        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'business', 'cycle': 'monthly'})
+        self.assertEqual(status, 200)
+        self.assertTrue(order['redirectUrl'].startswith('https://app.sandbox.midtrans.com/'))
+        request = self.captured[-1]
+        self.assertTrue(request.full_url.endswith('/snap/v1/transactions'))
+        payload = json.loads(request.data)
+        self.assertEqual(payload['transaction_details'], {'order_id': order['orderId'], 'gross_amount': 149000})
+        self.assertTrue(request.get_header('Authorization').startswith('Basic '))
+        # Mock payment is not available with a real gateway.
+        self.assertEqual(client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})[0], 404)
+        # Forged signature / wrong amount are rejected; plan unchanged.
+        self.assertEqual(self.notify(Client(self.base), order['orderId'], 149000, key='guess')[0], 403)
+        self.assertEqual(self.notify(Client(self.base), order['orderId'], 1000)[0], 400)
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'free')
+        # A genuine settlement upgrades the account.
+        status, body, _ = self.notify(Client(self.base), order['orderId'], 149000)
+        self.assertEqual((status, body['status']), (200, 'paid'))
+        user = client.call('GET', '/api/auth/me')[1]['user']
+        self.assertEqual(user['plan'], 'business')
+        self.assertIn('exe', user['entitlements'])
+        # A later "expire" for the same order must not undo the payment.
+        self.notify(Client(self.base), order['orderId'], 149000, status='expire')
+        self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
+
+
+class HostedModeTests(AccountsBase):
+    def setUp(self):
+        server.CONFIG.update(public_hosts={'myflipbook.test'}, secure=True, base_url='')
+
+    def tearDown(self):
+        server.CONFIG.update(public_hosts=set(), secure=False)
+
+    def test_public_host_login_gates_server_features(self):
+        guest = Client(self.base, host='myflipbook.test')
+        caps = guest.call('GET', '/api/capabilities')[1]
+        self.assertTrue(caps['loginRequired'])
+        self.assertIsNone(caps['token'], 'no build/convert token without login')
+        status, body, _ = guest.call('POST', '/api/convert/word-to-pdf', {}, headers={'X-Build-Token': server.TOKEN})
+        self.assertEqual(status, 401)
+        member = Client(self.base, host='myflipbook.test')
+        status, _, cookie = member.call('POST', '/api/auth/register', {'email': 'host@b.co', 'password': 'rahasia-123'},
+                                        headers={'Origin': 'https://myflipbook.test'})
+        self.assertEqual(status, 201)
+        self.assertIn('Secure', cookie)
+        caps = member.call('GET', '/api/capabilities')[1]
+        self.assertEqual(caps['token'], server.TOKEN)
+        # Free plan: Office conversion allowed (reaches the converter), APK needs Pro.
+        status = member.call('POST', '/api/convert/word-to-pdf', {}, headers={'X-Build-Token': server.TOKEN})[0]
+        self.assertEqual(status, 400, 'passes the gate; rejected only for the bogus body')
+        status, body, _ = member.call('POST', '/api/build/apk', {}, headers={'X-Build-Token': server.TOKEN})
+        self.assertEqual(status, 402)
+
+    def test_foreign_host_and_origin_rejected(self):
+        self.assertEqual(Client(self.base, host='evil.test').call('GET', '/api/auth/me')[0], 403)
+        status = Client(self.base, host='myflipbook.test').call(
+            'POST', '/api/auth/login', {'email': 'a@b.co', 'password': 'x'}, headers={'Origin': 'https://evil.test'})[0]
+        self.assertEqual(status, 403)
+
+    def test_disabled_gateway_blocks_checkout(self):
+        store = server.ACCOUNTS
+        previous = store.provider
+        store.provider = accounts.DisabledProvider()
+        try:
+            client = Client(self.base, host='myflipbook.test')
+            client.call('POST', '/api/auth/register', {'email': 'nogw@b.co', 'password': 'rahasia-123'})
+            self.assertFalse(client.call('GET', '/api/billing/plans')[1]['paymentsEnabled'])
+            self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[0], 503)
+        finally:
+            store.provider = previous
+
+
+if __name__ == '__main__':
+    unittest.main()

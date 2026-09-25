@@ -13,12 +13,14 @@
   <script defer src="assets/animation-playback.js"></script>
   <script defer src="assets/animation-ocr.js"></script>
   <script defer src="assets/animation-editor.js"></script>
+  <script defer src="assets/auth.js"></script>
 </head>
 <body style="margin:0;padding:0;background:#faf4e8;display:flex;flex-direction:column;height:100dvh;overflow:hidden">
 
 <header class="topbar" style="flex-shrink:0">
   <a class="brand" href="index.html"><span>MF</span> MyFlipbook</a>
-  <a class="back-link badge" href="index.html" style="margin-left:auto">← Back to tools</a>
+  <span data-auth-slot style="margin-left:auto;margin-right:10px"></span>
+  <a class="back-link badge" href="index.html">← Back to tools</a>
 </header>
 
 <div class="ae-app" style="flex:1;min-height:0">

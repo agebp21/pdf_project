@@ -1,7 +1,11 @@
-"""MyFlipbook server and serialized native build service.
+"""MyFlipbook server: static app, accounts/billing, Office conversion, native builds.
 
 Loopback-only by default. Pass --host 0.0.0.0 to serve trusted LAN PCs;
 Host/Origin/token checks still apply against this machine's own addresses.
+
+Hosting: pass --public-host your.domain (behind an HTTPS reverse proxy).
+Then login is required for server-side features and plan entitlements are
+enforced (see accounts.py). Local mode keeps working without an account.
 """
 import argparse
 import csv
@@ -19,8 +23,11 @@ import tempfile
 import threading
 import uuid
 import zipfile
+from http.cookies import CookieError, SimpleCookie
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit
+
+import accounts
 
 ROOT = Path(__file__).resolve().parent
 BUILD = ROOT / '.build'
@@ -28,6 +35,35 @@ TOKEN = secrets.token_urlsafe(32)
 JOBS = {}
 BUILD_LOCK = threading.Lock()
 POSITIONS = {'top-left', 'top-right', 'bottom-left', 'bottom-right'}
+SESSION_COOKIE = 'mf_session'
+PAGES = {'index.html', 'converter.html', 'flipbook.html', 'animation.html', 'notebook.html',
+         'login.html', 'account.html'}
+# public_hosts: domains served in hosting mode (login + entitlements enforced).
+# secure: Secure cookies (HTTPS). base_url: absolute URL for payment callbacks.
+CONFIG = dict(public_hosts=set(), secure=False, base_url='')
+ACCOUNTS = None
+ACCOUNTS_LOCK = threading.Lock()
+
+
+def hosted():
+    return bool(CONFIG['public_hosts'])
+
+
+def get_accounts():
+    """Create the account store on first use (tests may preset ACCOUNTS)."""
+    global ACCOUNTS
+    with ACCOUNTS_LOCK:
+        if ACCOUNTS is None:
+            key = os.environ.get('MIDTRANS_SERVER_KEY', '').strip()
+            if key:
+                provider = accounts.MidtransProvider(key, os.environ.get('MIDTRANS_PRODUCTION') == '1')
+            elif hosted() and os.environ.get('MYFLIPBOOK_MOCK_PAYMENTS') != '1':
+                provider = accounts.DisabledProvider()  # public site without a gateway: no fake payments
+            else:
+                provider = accounts.MockProvider()
+            db = os.environ.get('MYFLIPBOOK_DB') or str(ROOT / '.data' / 'myflipbook.sqlite3')
+            ACCOUNTS = accounts.Accounts(db, provider)
+        return ACCOUNTS
 
 
 def validate_manifest(data):
@@ -295,6 +331,9 @@ class Handler(SimpleHTTPRequestHandler):
 
     def trusted(self):
         host, origin = self.headers.get('Host', ''), self.headers.get('Origin')
+        if host.lower() in CONFIG['public_hosts']:
+            # Behind the HTTPS proxy: same-site Origin only.
+            return not origin or origin in ('https://' + host, 'http://' + host)
         name, separator, host_port = host.rpartition(':')
         if not separator or host_port != str(self.server.server_port):
             return False
@@ -304,14 +343,115 @@ class Handler(SimpleHTTPRequestHandler):
             return False
         return not origin or origin == 'http://' + host
 
-    def send_json(self, status, body):
+    def send_json(self, status, body, cookie=None):
         encoded = json.dumps(body).encode()
         self.send_response(status)
         self.send_header('Content-Type', 'application/json')
         self.send_header('Cache-Control', 'no-store')
         self.send_header('Content-Length', str(len(encoded)))
+        if cookie is not None:
+            self.send_header('Set-Cookie', cookie)
         self.end_headers()
         self.wfile.write(encoded)
+
+    # ---- accounts helpers --------------------------------------------------
+    def session_token(self):
+        try:
+            morsel = SimpleCookie(self.headers.get('Cookie', '')).get(SESSION_COOKIE)
+        except CookieError:
+            return None
+        return morsel.value if morsel else None
+
+    def current_user(self):
+        return get_accounts().user_for(self.session_token())
+
+    def session_cookie(self, token):
+        max_age = accounts.SESSION_SECONDS if token else 0
+        secure = '; Secure' if CONFIG['secure'] else ''
+        return f'{SESSION_COOKIE}={token or ""}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}{secure}'
+
+    def client_ip(self):
+        forwarded = self.headers.get('X-Forwarded-For', '') if hosted() else ''
+        return forwarded.split(',')[0].strip() or self.client_address[0]
+
+    def read_json(self, limit=64 * 1024):
+        if self.headers.get_content_type() != 'application/json':
+            raise accounts.AccountError(415, 'Permintaan harus JSON.')
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+        except ValueError:
+            size = -1
+        if not 0 <= size <= limit:
+            raise accounts.AccountError(413, 'Permintaan terlalu besar.')
+        try:
+            data = json.loads(self.rfile.read(size) or b'{}')
+        except ValueError:
+            raise accounts.AccountError(400, 'JSON tidak valid.')
+        if not isinstance(data, dict):
+            raise accounts.AccountError(400, 'JSON tidak valid.')
+        return data
+
+    def base_url(self):
+        if CONFIG['base_url']:
+            return CONFIG['base_url'].rstrip('/')
+        scheme = 'https' if CONFIG['secure'] else 'http'
+        return f'{scheme}://{self.headers.get("Host", "")}'
+
+    def account_get(self, path):
+        store = get_accounts()
+        if path == '/api/auth/me':
+            self.send_json(200, {'user': self.current_user(), 'loginRequired': hosted()})
+        elif path == '/api/billing/plans':
+            self.send_json(200, {'plans': store.plans(), 'provider': store.provider.name,
+                                 'paymentsEnabled': store.provider.name != 'none'})
+        elif path == '/api/billing/orders':
+            user = self.current_user()
+            if not user:
+                raise accounts.AccountError(401, 'Silakan masuk dulu.')
+            self.send_json(200, {'orders': store.orders(user['id'])})
+        else:
+            self.send_json(404, {'error': 'Tidak ditemukan.'})
+
+    def account_post(self, path):
+        store = get_accounts()
+        data = self.read_json()
+        if path == '/api/billing/midtrans/notify':
+            status = store.provider_notification(data)
+            self.send_json(200, {'status': status})
+            return
+        if path == '/api/auth/register':
+            token = store.register(data.get('email'), data.get('password'), data.get('name'))
+            self.send_json(201, {'user': store.user_for(token)}, cookie=self.session_cookie(token))
+            return
+        if path == '/api/auth/login':
+            token = store.login(data.get('email'), data.get('password'), self.client_ip())
+            self.send_json(200, {'user': store.user_for(token)}, cookie=self.session_cookie(token))
+            return
+        if path == '/api/auth/logout':
+            store.logout(self.session_token())
+            self.send_json(200, {'ok': True}, cookie=self.session_cookie(None))
+            return
+        user = self.current_user()
+        if not user:
+            raise accounts.AccountError(401, 'Silakan masuk dulu.')
+        if path == '/api/billing/checkout':
+            self.send_json(200, store.checkout(user, data.get('plan'), data.get('cycle'), self.base_url()))
+        elif path == '/api/billing/mock/pay':
+            store.mock_pay(user, str(data.get('orderId', '')))
+            self.send_json(200, {'user': self.current_user()})
+        else:
+            self.send_json(404, {'error': 'Tidak ditemukan.'})
+
+    def entitlement_error(self, feature):
+        """Hosting mode only: None when allowed, else (status, message)."""
+        if not hosted():
+            return None
+        user = self.current_user()
+        if not user:
+            return 401, 'Silakan masuk dulu untuk memakai fitur ini.'
+        if feature not in user['entitlements']:
+            return 402, 'Fitur ini butuh paket yang lebih tinggi. Upgrade di halaman Akun.'
+        return None
 
     def end_headers(self):
         self.send_header('X-Content-Type-Options', 'nosniff')
@@ -322,10 +462,20 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(403, {'error': 'Akses hanya dari localhost proyek.'})
             return
         path = unquote(urlsplit(self.path).path)
+        if path.startswith(('/api/auth/', '/api/billing/')):
+            try:
+                self.account_get(path)
+            except accounts.AccountError as cause:
+                self.send_json(cause.status, {'error': str(cause)})
+            return
         if path == '/api/capabilities':
             flutter = bool(shutil.which('flutter'))
             office = bool(find_soffice())
-            self.send_json(200, dict(apk=flutter, exe=flutter and os.name == 'nt', office=office, token=TOKEN))
+            # Hosting: the build/convert token is only handed to signed-in users.
+            user = self.current_user() if hosted() else None
+            token = TOKEN if not hosted() or user else None
+            self.send_json(200, dict(apk=flutter, exe=flutter and os.name == 'nt', office=office, token=token,
+                                     loginRequired=hosted(), entitlements=user['entitlements'] if user else None))
             return
         match = re.fullmatch(r'/api/jobs/([a-f0-9]{32})(?:/(download|log))?', path)
         if match:
@@ -351,7 +501,7 @@ class Handler(SimpleHTTPRequestHandler):
             return
         relative = path.lstrip('/') or 'index.html'
         file = (ROOT / relative).resolve()
-        allowed = relative in {'index.html', 'converter.html', 'flipbook.html', 'animation.html', 'notebook.html'} or (relative.startswith('assets/') and file.is_relative_to(ROOT / 'assets'))
+        allowed = relative in PAGES or (relative.startswith('assets/') and file.is_relative_to(ROOT / 'assets'))
         if not allowed or not file.is_relative_to(ROOT) or not file.is_file():
             self.send_error(404)
             return
@@ -414,13 +564,27 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(405)
 
     def do_POST(self):
-        if not self.trusted() or not secrets.compare_digest(self.headers.get('X-Build-Token', ''), TOKEN):
+        if not self.trusted():
+            self.send_json(403, {'error': 'Akses ditolak.'})
+            return
+        if self.path.startswith(('/api/auth/', '/api/billing/')):
+            try:
+                self.account_post(self.path)
+            except accounts.AccountError as cause:
+                self.send_json(cause.status, {'error': str(cause)})
+            return
+        match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
+        feature = 'office' if self.path in OFFICE_ROUTES else match[1] if match else None
+        denied = feature and self.entitlement_error(feature)
+        if denied:
+            self.send_json(denied[0], {'error': denied[1]})
+            return
+        if not secrets.compare_digest(self.headers.get('X-Build-Token', ''), TOKEN):
             self.send_json(403, {'error': 'Sesi build tidak valid. Refresh halaman.'})
             return
         if self.path in OFFICE_ROUTES:
             self.convert_office()
             return
-        match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
         if not match or self.headers.get_content_type() != 'application/zip':
             self.send_json(400, {'error': 'Permintaan build tidak valid.'})
             return
@@ -462,7 +626,23 @@ if __name__ == '__main__':
     parser.add_argument('--port', type=int, default=8080)
     parser.add_argument('--host', default='127.0.0.1',
                         help='127.0.0.1 = PC ini saja (default); 0.0.0.0 = boleh diakses PC lain di jaringan tepercaya')
+    parser.add_argument('--public-host', action='append', default=[],
+                        help='Domain publik (bisa diulang), mis. myflipbook.id. Mengaktifkan mode hosting: '
+                             'login wajib untuk fitur server, cookie Secure, pembayaran Midtrans.')
+    parser.add_argument('--insecure-cookies', action='store_true',
+                        help='Mode hosting tanpa HTTPS (hanya untuk uji coba).')
     args = parser.parse_args()
+    CONFIG['public_hosts'] = {h.strip().lower() for h in args.public_host if h.strip()}
+    CONFIG['secure'] = hosted() and not args.insecure_cookies
+    CONFIG['base_url'] = os.environ.get('MYFLIPBOOK_BASE_URL', '')
+    store = get_accounts()
+    if hosted():
+        print('Mode hosting: ' + ', '.join(sorted(CONFIG['public_hosts'])) +
+              f' | pembayaran: {store.provider.name if store.provider.name != "none" else "NONAKTIF (isi MIDTRANS_SERVER_KEY)"}',
+              flush=True)
+    # On Windows SO_REUSEADDR lets a second server silently share the port
+    # (the old one keeps answering). Fail loudly instead.
+    ThreadingHTTPServer.allow_reuse_address = os.name != 'nt'
     httpd = ThreadingHTTPServer((args.host, args.port), Handler)
     shown = lan_ip() if args.host == '0.0.0.0' else (None if args.host.startswith('127.') else args.host)
     print(f'MyFlipbook: http://{shown or args.host}:{args.port}/', flush=True)

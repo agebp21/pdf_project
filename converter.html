@@ -7,6 +7,7 @@
 <script src="assets/flipbook-transfer.js"></script>
 <script src="assets/pdf-edit.js"></script>
 <script src="assets/pdf-layout.js"></script>
+<script src="assets/auth.js" defer></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="assets/ui-clay.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -45,7 +46,7 @@
   <div class="sticky top-3 z-50 max-w-[1440px] mx-auto px-4 pt-3">
     <nav class="clay-nav">
       <a href="index.html" class="clay-brand"><span class="clay-brand-mark">MF</span> <span class="clay-brand-name">MyFlipbook</span></a>
-      <a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">← All tools</a>
+      <span style="display:flex;align-items:center;gap:8px"><span data-auth-slot></span><a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">← All tools</a></span>
     </nav>
   </div>
 
@@ -277,6 +278,7 @@ function renderHeader(){
   // so nobody converts with the wrong tool by accident.
   $('#drop').classList.toggle('hidden', !!comingSoonName);
   if(comingSoonName){
+    $('#options').replaceChildren();
     $('#toolTitle').textContent=comingSoonName;
     $('#toolBadge').textContent='Coming soon';
     $('#toolIcon').textContent='⏳';
@@ -1521,6 +1523,7 @@ async function convertOfficeToPdf(tool, extensions){
   let caps;
   try { caps=await serverCapabilities(); } catch(e) {}
   if(!caps) throw new Error('This conversion needs the project server. Run: python server.py, then reopen this page on localhost.');
+  if(caps.loginRequired && !caps.token) throw new Error('Please log in first (login.html) to convert Office files on this server.');
   if(!caps.office) throw new Error('LibreOffice was not found. Install LibreOffice and restart the project server.');
   const types={
     docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',doc:'application/msword',
