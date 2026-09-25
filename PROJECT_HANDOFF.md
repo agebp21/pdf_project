@@ -486,3 +486,7 @@ User ingin pembeli luar negeri. Tripay hanya IDR (dicek di dokumentasi). User pi
 ### 25 September 2026 - Banner hero dari background.png
 
 User menaruh `background.png` (1671x941, teks tertanam) untuk mengganti header homepage. Hero lama (judul + ikon) diganti `<picture>`: `assets/img/hero-1671|900.webp/jpg` (88 KB webp dari PNG 1,3 MB) dan potongan kiri khusus HP `hero-mobile.*` (<=640px) agar teks terbaca. H1 tersembunyi untuk SEO/screen reader, `#horde` tetap ada (hidden) karena dipakai JS. Catatan untuk desain: gambar bertuliskan "PDDF TO FLIPBOOK" (typo) dan "100% Free"/"FREE" padahal ekspor/APK/EXE berbayar; teks gambar tidak ikut i18n. `background.png` asli tidak di-commit.
+
+### 25 September 2026 - Typo banner diperbaiki
+
+"PDDF" -> "PDF" di tagline banner: D kedua dihapus dengan menggeser teks mulai F 20px ke kiri pada pita y 204-224 (font/warna/spasi asli, latar hampir putih rata; perubahan hanya di bbox (257,204)-(660,224)). Disimpan `background-fixed.png` (asli tidak ditimpa, keduanya tidak di-commit); semua `assets/img/hero-*` dibuat ulang dari versi ini.
