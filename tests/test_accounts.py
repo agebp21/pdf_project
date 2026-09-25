@@ -57,7 +57,8 @@ class AccountsBase(unittest.TestCase):
     def setUpClass(cls):
         cls.temporary = tempfile.TemporaryDirectory()
         cls.previous = (server.ACCOUNTS, dict(server.CONFIG))
-        server.ACCOUNTS = accounts.Accounts(Path(cls.temporary.name) / 'accounts.db', cls.provider)
+        server.ACCOUNTS = accounts.Accounts(Path(cls.temporary.name) / 'accounts.db', cls.provider,
+                                            getattr(cls, 'usd_provider', None))
         cls.httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
         cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
         cls.thread.start()
@@ -334,6 +335,103 @@ class PaywallTests(AccountsBase):
         self.assertIn(b'ae-app', Client(self.base).call('GET', '/animation.html')[1], '--no-paywall keeps the editor')
 
 
+class LemonSqueezyTests(AccountsBase):
+    requests = []
+
+    @staticmethod
+    def opener(request, timeout):
+        LemonSqueezyTests.requests.append(request)
+        return FakeResponse({'data': {'type': 'checkouts', 'id': 'chk_1',
+                                      'attributes': {'url': 'https://myflipbook.lemonsqueezy.com/checkout/custom/chk_1'}}})
+
+    usd_provider = accounts.LemonSqueezyProvider(
+        'ls-api', '4242', 'whsec', {('pro', 'monthly'): '111', ('pro', 'yearly'): '112'}, opener=opener.__func__)
+
+    def webhook(self, event, body, secret='whsec'):
+        raw = json.dumps(body).encode()
+        signature = hmac.new(secret.encode(), raw, hashlib.sha256).hexdigest()
+        request = urllib.request.Request(self.base + '/api/billing/lemonsqueezy/webhook', data=raw, method='POST', headers={
+            'Content-Type': 'application/json', 'X-Signature': signature, 'X-Event-Name': event})
+        try:
+            with urllib.request.urlopen(request) as response:
+                return response.status, json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            with error:
+                return error.code, json.loads(error.read())
+
+    def expiry(self, client):
+        return client.call('GET', '/api/auth/me')[1]['user']['planExpiresAt']
+
+    def test_usd_subscription_initial_and_renewal(self):
+        client = Client(self.base)
+        client.call('POST', '/api/auth/register', {'email': 'usd@b.co', 'password': 'rahasia-123', 'name': 'Jane'})
+        plans = client.call('GET', '/api/billing/plans')[1]
+        self.assertEqual(plans['providers'], {'IDR': 'mock', 'USD': 'lemonsqueezy'})
+        self.assertEqual(plans['plans'][1]['usd'], {'monthly': 999, 'yearly': 9900})
+        self.assertEqual(client.call('POST', '/api/billing/checkout',
+                                     {'plan': 'business', 'cycle': 'monthly', 'currency': 'USD'})[0], 503,
+                         'variant not configured')
+        self.assertEqual(client.call('POST', '/api/billing/checkout',
+                                     {'plan': 'pro', 'cycle': 'monthly', 'currency': 'EUR'})[0], 400)
+        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly', 'currency': 'USD'})
+        self.assertEqual(status, 200)
+        self.assertEqual((order['amount'], order['currency']), (999, 'USD'))
+        self.assertTrue(order['redirectUrl'].startswith('https://myflipbook.lemonsqueezy.com/checkout/'))
+        request = self.requests[-1]
+        self.assertEqual(request.full_url, 'https://api.lemonsqueezy.com/v1/checkouts')
+        self.assertEqual(request.get_header('Authorization'), 'Bearer ls-api')
+        self.assertEqual(request.get_header('Content-type'), 'application/vnd.api+json')
+        body = json.loads(request.data)['data']
+        self.assertEqual(body['relationships']['variant']['data'], {'type': 'variants', 'id': '111'})
+        self.assertEqual(body['relationships']['store']['data'], {'type': 'stores', 'id': '4242'})
+        self.assertEqual(body['attributes']['checkout_data']['custom']['order_id'], order['orderId'])
+        # Simulated payment can't mark a real-gateway order paid.
+        self.assertEqual(client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})[0], 404)
+        created = {'meta': {'event_name': 'subscription_created', 'custom_data': {'order_id': order['orderId']}},
+                   'data': {'type': 'subscriptions', 'id': '9001', 'attributes': {'status': 'active'}}}
+        self.assertEqual(self.webhook('subscription_created', created, secret='guess')[0], 403)
+        self.assertIsNone(self.expiry(client))
+        self.assertEqual(self.webhook('subscription_created', created), (200, {'status': 'paid'}))
+        first = self.expiry(client)
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
+        self.webhook('subscription_created', created)  # retried delivery
+        self.assertEqual(self.expiry(client), first)
+        initial = {'meta': {'event_name': 'subscription_payment_success'},
+                   'data': {'type': 'subscription-invoices', 'id': '7001',
+                            'attributes': {'subscription_id': 9001, 'billing_reason': 'initial', 'status': 'paid',
+                                           'total': 999, 'currency': 'USD'}}}
+        self.assertEqual(self.webhook('subscription_payment_success', initial), (200, {'status': 'ignored'}))
+        self.assertEqual(self.expiry(client), first, 'initial invoice is not counted twice')
+        renewal = json.loads(json.dumps(initial))
+        renewal['data']['id'] = '7002'
+        renewal['data']['attributes']['billing_reason'] = 'renewal'
+        self.assertEqual(self.webhook('subscription_payment_success', renewal), (200, {'status': 'paid'}))
+        self.webhook('subscription_payment_success', renewal)  # retried delivery
+        self.assertEqual(self.expiry(client), first + accounts.CYCLE_SECONDS['monthly'], 'renewal extends once')
+        orders = client.call('GET', '/api/billing/orders')[1]['orders']
+        self.assertEqual(sorted((o['id'][:3], o['currency'], o['status']) for o in orders),
+                         [('LS-', 'USD', 'paid'), ('MF-', 'USD', 'paid')])
+        unknown = json.loads(json.dumps(renewal))
+        unknown['data']['id'] = '7003'
+        unknown['data']['attributes']['subscription_id'] = 12345
+        self.assertEqual(self.webhook('subscription_payment_success', unknown)[0], 404)
+
+    def test_usd_simulation_with_local_mock(self):
+        store = server.ACCOUNTS
+        previous = store.usd_provider
+        store.usd_provider = accounts.MockProvider()
+        try:
+            client = Client(self.base)
+            client.call('POST', '/api/auth/register', {'email': 'usdmock@b.co', 'password': 'rahasia-123'})
+            order = client.call('POST', '/api/billing/checkout',
+                                {'plan': 'business', 'cycle': 'yearly', 'currency': 'USD'})[1]
+            self.assertEqual((order['amount'], order['currency']), (19900, 'USD'))
+            self.assertEqual(client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})[0], 200)
+            self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'business')
+        finally:
+            store.usd_provider = previous
+
+
 class HostedModeTests(AccountsBase):
     def setUp(self):
         # Mirrors `server.py --public-host ...` (paywall on by default).
@@ -375,7 +473,7 @@ class HostedModeTests(AccountsBase):
         try:
             client = Client(self.base, host='myflipbook.test')
             client.call('POST', '/api/auth/register', {'email': 'nogw@b.co', 'password': 'rahasia-123'})
-            self.assertFalse(client.call('GET', '/api/billing/plans')[1]['paymentsEnabled'])
+            self.assertFalse(client.call('GET', '/api/billing/plans')[1]['paymentsEnabled']['IDR'])
             self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[0], 503)
         finally:
             store.provider = previous

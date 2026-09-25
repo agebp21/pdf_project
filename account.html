@@ -80,6 +80,10 @@
       <h2 class="clay-h" data-i18n="acct.plans">Plans</h2>
       <div class="head-right">
         <label class="method" id="methodBox" hidden><span data-i18n="acct.method">Payment method</span> <select id="method"></select></label>
+        <div class="toggle" role="group" aria-label="Currency">
+          <button type="button" data-currency="IDR">Rp</button>
+          <button type="button" data-currency="USD">$ USD</button>
+        </div>
         <div class="toggle" role="group">
           <button type="button" data-cycle="monthly" class="on" data-i18n="acct.monthly">Monthly</button>
           <button type="button" data-cycle="yearly" data-i18n="acct.yearly">Yearly</button>
@@ -87,7 +91,7 @@
       </div>
     </div>
     <div class="plans" id="plans"></div>
-    <p class="fine clay-muted" data-i18n="acct.draft">Prices in IDR. Draft pricing — may change.</p>
+    <p class="fine clay-muted" data-i18n="acct.draft">Rupiah (QRIS, bank transfer, e-wallet) for Indonesia; US dollars (card, PayPal) everywhere else.</p>
   </section>
 
   <section id="ordersSection">
@@ -105,9 +109,20 @@
   const t=(key,fallback)=>{const v=window.I18N?I18N.t(key):key;return v===key?fallback:v;};
   const lang=()=>window.I18N&&I18N.get()==='id'?'id-ID':'en-US';
   const rupiah=n=>new Intl.NumberFormat('id-ID',{style:'currency',currency:'IDR',maximumFractionDigits:0}).format(n);
+  // IDR amounts are rupiah, USD amounts are cents (as the gateways use them).
+  const money=(amount,currency)=>currency==='USD'?new Intl.NumberFormat('en-US',{style:'currency',currency:'USD'}).format(amount/100):rupiah(amount);
+  // Indonesian browsers/time zones start in rupiah, everyone else in dollars.
+  const defaultCurrency=()=>{
+    try{if(/^Asia\/(Jakarta|Pontianak|Makassar|Jayapura)$/.test(Intl.DateTimeFormat().resolvedOptions().timeZone))return 'IDR';}catch(e){}
+    return /^id\b/i.test(navigator.language||'')?'IDR':'USD';
+  };
+  let savedCurrency=null;try{savedCurrency=localStorage.getItem('mf-currency');}catch(e){}
   const date=s=>new Date(s*1000).toLocaleDateString(lang(),{day:'numeric',month:'short',year:'numeric'});
   const orderParam=new URLSearchParams(location.search).get('order');
-  let state={user:null,plans:[],provider:'mock',paymentsEnabled:true,orders:[],cycle:'monthly',methods:[]};
+  let state={user:null,plans:[],providers:{},paymentsEnabled:{},orders:[],cycle:'monthly',methods:[],
+    currency:savedCurrency==='IDR'||savedCurrency==='USD'?savedCurrency:defaultCurrency()};
+  const payable=()=>state.paymentsEnabled[state.currency]!==false;
+  const priceOf=(plan,cycle)=>state.currency==='USD'?plan.usd[cycle]:plan[cycle];
 
   function el(tag,props,...children){const node=Object.assign(document.createElement(tag),props||{});node.append(...children);return node;}
   function notice(kind,message,action){
@@ -131,11 +146,11 @@
     state.plans.forEach(plan=>{
       const current=state.user&&state.user.plan===plan.id;
       const card=el('div',{className:'clay-panel plan'+(current?' current':'')});
-      const price=plan[state.cycle];
+      const price=priceOf(plan,state.cycle);
       const per=state.cycle==='yearly'?t('acct.perYear','/year'):t('acct.perMonth','/month');
-      const priceNode=el('div',{className:'price'},rupiah(price));
+      const priceNode=el('div',{className:'price'},money(price,state.currency));
       priceNode.append(' ',el('small',{textContent:plan.id==='free'?t('acct.free','Free'):per}));
-      const saving=state.cycle==='yearly'&&plan.monthly?Math.round((1-plan.yearly/(plan.monthly*12))*100):0;
+      const saving=state.cycle==='yearly'&&priceOf(plan,'monthly')?Math.round((1-priceOf(plan,'yearly')/(priceOf(plan,'monthly')*12))*100):0;
       const list=el('ul');(plan.features[lang()==='id-ID'?'id':'en']||[]).forEach(f=>list.append(el('li',{textContent:f})));
       card.append(el('h3',{className:'clay-h',textContent:plan.name}),priceNode,
         el('div',{className:'save',textContent:saving>0?t('acct.save','save')+' '+saving+'%':''}),list);
@@ -148,13 +163,16 @@
         if(current)card.append(el('button',{className:'clay-btn clay-btn-ghost',disabled:true,textContent:t('acct.active','Your plan')}));
       }else{
         const button=el('button',{className:'clay-btn '+(current?'clay-btn-dark':'clay-btn-primary'),type:'button',
-          textContent:current?t('acct.extend','Extend'):t('acct.choose','Choose')+' '+plan.name,disabled:!state.paymentsEnabled});
+          textContent:current?t('acct.extend','Extend'):t('acct.choose','Choose')+' '+plan.name,disabled:!payable()});
         button.addEventListener('click',()=>checkout(plan.id,button));
         card.append(button);
       }
       grid.append(card);
     });
     document.querySelectorAll('[data-cycle]').forEach(b=>b.classList.toggle('on',b.dataset.cycle===state.cycle));
+    document.querySelectorAll('[data-currency]').forEach(b=>b.classList.toggle('on',b.dataset.currency===state.currency));
+    // Tripay channels (QRIS/VA/e-wallet) only apply to rupiah payments.
+    $('methodBox').hidden=!(state.currency==='IDR'&&state.methods.length);
   }
 
   function renderOrders(){
@@ -165,22 +183,26 @@
       body.append(el('tr',{},
         el('td',{textContent:date(o.created_at)}),
         el('td',{textContent:(plan?plan.name:o.plan)+' · '+t('acct.'+o.cycle,o.cycle)}),
-        el('td',{textContent:rupiah(o.amount)}),
+        el('td',{textContent:money(o.amount,o.currency)}),
         el('td',{textContent:t('status.'+o.status,o.status)})));
     });
   }
 
   function renderOrderNotice(){
-    if(!state.paymentsEnabled&&!orderParam){notice('warn',t('acct.disabled','Online payment is not enabled on this server yet.'));return;}
+    if(!orderParam){
+      if(!payable())notice('warn',t('acct.disabled','Online payment is not enabled on this server yet.'));
+      else $('notice').replaceChildren();
+      return;
+    }
     if(!orderParam)return;
     const order=state.orders.find(o=>o.id===orderParam);
     if(!order)return;
     if(order.status==='paid'){notice('ok',t('acct.paidMsg','Payment received — your plan is active.'));return;}
     if(order.status!=='pending'){notice('err',t('status.'+order.status,order.status));return;}
-    if(state.provider==='mock'){
+    if(order.provider==='mock'){
       const pay=el('button',{className:'clay-btn clay-btn-primary',type:'button',textContent:t('acct.mockPay','Simulate payment')});
       pay.addEventListener('click',async()=>{pay.disabled=true;try{await MFAuth.api('POST','/api/billing/mock/pay',{orderId:order.id});await load();}catch(e){notice('err',e.message);}});
-      notice('info',t('acct.mock','Local test mode: no payment gateway is configured. Simulate this payment?')+' ('+rupiah(order.amount)+')',pay);
+      notice('info',t('acct.mock','Local test mode: no payment gateway is configured. Simulate this payment?')+' ('+money(order.amount,order.currency)+')',pay);
     }else{
       notice('info',t('acct.pending','Waiting for payment confirmation…'));
       pollOrder();
@@ -201,8 +223,8 @@
   async function checkout(plan,button){
     button.disabled=true;
     try{
-      const method=state.methods.length?$('method').value:undefined;
-      const result=await MFAuth.api('POST','/api/billing/checkout',{plan,cycle:state.cycle,method});
+      const method=state.currency==='IDR'&&state.methods.length?$('method').value:undefined;
+      const result=await MFAuth.api('POST','/api/billing/checkout',{plan,cycle:state.cycle,method,currency:state.currency});
       location.href=result.redirectUrl; // Midtrans Snap page, or back here (mock) with ?order=
     }catch(error){notice('err',error.message);button.disabled=false;}
   }
@@ -213,7 +235,7 @@
     if(!me.user){
       if(orderParam){location.replace('login.html?next='+encodeURIComponent('account.html'+location.search));return;}
       const plans=await MFAuth.api('GET','/api/billing/plans');
-      state=Object.assign(state,{user:null,plans:plans.plans,provider:plans.provider,paymentsEnabled:plans.paymentsEnabled});
+      state=Object.assign(state,{user:null,plans:plans.plans,providers:plans.providers||{},paymentsEnabled:plans.paymentsEnabled||{}});
       $('pageTitle').setAttribute('data-i18n','acct.pricingTitle');
       $('ordersSection').hidden=true;
       const login=el('a',{className:'clay-btn clay-btn-dark',href:'login.html?next='+encodeURIComponent('account.html'),textContent:t('auth.login','Log in')});
@@ -224,8 +246,8 @@
     }
     $('ordersSection').hidden=false;
     const [plans,orders]=await Promise.all([MFAuth.api('GET','/api/billing/plans'),MFAuth.api('GET','/api/billing/orders')]);
-    state=Object.assign(state,{user:me.user,plans:plans.plans,provider:plans.provider,paymentsEnabled:plans.paymentsEnabled,orders:orders.orders});
-    if(plans.provider==='tripay'&&!state.methods.length){
+    state=Object.assign(state,{user:me.user,plans:plans.plans,providers:plans.providers||{},paymentsEnabled:plans.paymentsEnabled||{},orders:orders.orders});
+    if(state.providers.IDR==='tripay'&&!state.methods.length){
       // Gateway channels (QRIS, VA, e-wallet) grouped as Tripay reports them.
       state.methods=(await MFAuth.api('GET','/api/billing/methods')).methods;
       const select=$('method');select.replaceChildren();
@@ -236,12 +258,16 @@
         items.forEach(m=>parent.append(el('option',{value:m.code,textContent:m.name})));
         if(parent!==select)select.append(parent);
       });
-      $('methodBox').hidden=!state.methods.length;
+
     }
     renderProfile();renderPlans();renderOrders();renderOrderNotice();
   }
 
   document.querySelectorAll('[data-cycle]').forEach(b=>b.addEventListener('click',()=>{state.cycle=b.dataset.cycle;renderPlans();}));
+  document.querySelectorAll('[data-currency]').forEach(b=>b.addEventListener('click',()=>{
+    state.currency=b.dataset.currency;try{localStorage.setItem('mf-currency',state.currency);}catch(e){}
+    renderPlans();if(state.user&&!orderParam)renderOrderNotice();
+  }));
   $('logout').addEventListener('click',async()=>{await MFAuth.api('POST','/api/auth/logout',{});location.href='index.html';});
   document.addEventListener('langchange',()=>{if(state.user){renderProfile();renderPlans();renderOrders();renderOrderNotice();}else if(state.plans.length)load();});
   load().catch(error=>notice('err',error.message));

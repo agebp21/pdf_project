@@ -72,8 +72,18 @@ def get_accounts():
                 provider = accounts.DisabledProvider()  # public site without a gateway: no fake payments
             else:
                 provider = accounts.MockProvider()
+            ls = [os.environ.get(n, '').strip() for n in
+                  ('LEMONSQUEEZY_API_KEY', 'LEMONSQUEEZY_STORE_ID', 'LEMONSQUEEZY_SIGNING_SECRET')]
+            if all(ls):
+                variants = {(plan, cycle): os.environ.get(f'LEMONSQUEEZY_VARIANT_{plan.upper()}_{cycle.upper()}', '').strip()
+                            for plan in ('pro', 'business') for cycle in ('monthly', 'yearly')}
+                usd_provider = accounts.LemonSqueezyProvider(*ls, variants)
+            elif hosted() and os.environ.get('MYFLIPBOOK_MOCK_PAYMENTS') != '1':
+                usd_provider = accounts.DisabledProvider()
+            else:
+                usd_provider = accounts.MockProvider()
             db = os.environ.get('MYFLIPBOOK_DB') or str(ROOT / '.data' / 'myflipbook.sqlite3')
-            ACCOUNTS = accounts.Accounts(db, provider)
+            ACCOUNTS = accounts.Accounts(db, provider, usd_provider)
         return ACCOUNTS
 
 
@@ -468,8 +478,9 @@ class Handler(SimpleHTTPRequestHandler):
         elif path == '/api/billing/methods':
             self.send_json(200, {'methods': store.payment_methods()})
         elif path == '/api/billing/plans':
-            self.send_json(200, {'plans': store.plans(), 'provider': store.provider.name,
-                                 'paymentsEnabled': store.provider.name != 'none'})
+            providers = {c: store.provider_for(c).name for c in accounts.CURRENCIES}
+            self.send_json(200, {'plans': store.plans(), 'provider': store.provider.name, 'providers': providers,
+                                 'paymentsEnabled': {c: name != 'none' for c, name in providers.items()}})
         elif path == '/api/billing/orders':
             user = self.current_user()
             if not user:
@@ -480,7 +491,12 @@ class Handler(SimpleHTTPRequestHandler):
 
     def account_post(self, path):
         store = get_accounts()
-        raw = self.read_body()
+        # Gateway webhooks can be larger than our own JSON requests.
+        raw = self.read_body(256 * 1024 if path == '/api/billing/lemonsqueezy/webhook' else 64 * 1024)
+        if path == '/api/billing/lemonsqueezy/webhook':
+            status = store.lemonsqueezy_webhook(raw, self.headers)
+            self.send_json(200, {'status': status})
+            return
         if path == '/api/billing/tripay/callback':
             # Signature covers the raw body, so verify before parsing.
             status = store.provider_callback(raw, self.headers)
@@ -508,7 +524,7 @@ class Handler(SimpleHTTPRequestHandler):
             raise accounts.AccountError(401, 'Silakan masuk dulu.')
         if path == '/api/billing/checkout':
             self.send_json(200, store.checkout(user, data.get('plan'), data.get('cycle'), self.base_url(),
-                                               data.get('method')))
+                                               data.get('method'), str(data.get('currency') or 'IDR')))
         elif path == '/api/billing/mock/pay':
             store.mock_pay(user, str(data.get('orderId', '')))
             self.send_json(200, {'user': self.current_user()})
@@ -737,7 +753,8 @@ if __name__ == '__main__':
     store = get_accounts()
     if hosted():
         print('Mode hosting: ' + ', '.join(sorted(CONFIG['public_hosts'])) +
-              f' | pembayaran: {store.provider.name if store.provider.name != "none" else "NONAKTIF (isi TRIPAY_* atau MIDTRANS_SERVER_KEY)"}',
+              f' | Rupiah: {store.provider.name if store.provider.name != "none" else "NONAKTIF (isi TRIPAY_*)"}'
+              f' | Dolar: {store.usd_provider.name if store.usd_provider.name != "none" else "NONAKTIF (isi LEMONSQUEEZY_*)"}',
               flush=True)
     # On Windows SO_REUSEADDR lets a second server silently share the port
     # (the old one keeps answering). Fail loudly instead.

@@ -474,3 +474,7 @@ User: tampilan landscape seperti preview (sampul sendiri di kanan) sudah benar, 
 ### 25 September 2026 - Petunjuk dalam paket berbahasa Inggris
 
 User: petunjuk pakai bahasa Inggris. `BUKA-APLIKASI.txt` (ZIP Windows) dan `BUKA-BUKU.txt` (ZIP HTML, flipbook + editor animasi) diganti `HOW-TO-OPEN.txt` berbahasa Inggris (`server.WINDOWS_HOW_TO`, `FlipbookExport.HOW_TO_OPEN`). Build Windows tetap ZIP (keputusan user). Diverifikasi di build EXE nyata; tes export/save/editor/runtime + 38 Python lolos.
+
+### 25 September 2026 - Pembayaran dolar lewat Lemon Squeezy
+
+User ingin pembeli luar negeri. Tripay hanya IDR (dicek di dokumentasi). User pilih Lemon Squeezy + harga Pro $9.99/$99, Business $19.99/$199. `accounts.LemonSqueezyProvider` (checkout JSON:API, webhook HMAC X-Signature), `Accounts(provider, usd_provider)`, kolom `orders.currency` (migrasi otomatis), tabel `subscriptions`. Awal dari `subscription_created`, renewal dari `subscription_payment_success` (renewal, per invoice `LS-<id>`, idempotent). Checkout yang gagal sebelum sampai gateway tidak lagi meninggalkan baris "failed". Pricing: toggle Rp/$ + deteksi zona waktu/bahasa, metode Tripay hanya untuk IDR. Tes: 40 Python (2 baru: alur USD lengkap dengan opener palsu, simulasi USD); Chromium: default USD (New York) / IDR (Jakarta), checkout Business $199 simulasi -> paket aktif. Belum: akun + key Lemon Squeezy asli.

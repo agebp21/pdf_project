@@ -8,6 +8,9 @@ Payments go through a provider object:
   * TripayProvider — Tripay closed payment (QRIS / VA / e-wallet), hosted
     checkout page + HMAC-signed callback (set TRIPAY_API_KEY,
     TRIPAY_PRIVATE_KEY, TRIPAY_MERCHANT_CODE; TRIPAY_PRODUCTION=1 for live).
+  * LemonSqueezyProvider — USD subscriptions for buyers abroad (merchant of
+    record handles foreign tax). Hosted checkout per plan variant; renewals
+    arrive as signed webhooks (set LEMONSQUEEZY_* env vars).
   * MidtransProvider — Midtrans Snap redirect + signed HTTP notification
     (set MIDTRANS_SERVER_KEY; MIDTRANS_PRODUCTION=1 for live).
   * MockProvider — local development only: an order can be marked paid from
@@ -34,6 +37,8 @@ from urllib.parse import urlencode
 PBKDF2_ITERATIONS = 600_000
 SESSION_SECONDS = 30 * 24 * 3600
 CYCLE_SECONDS = {'monthly': 30 * 24 * 3600, 'yearly': 365 * 24 * 3600}
+# Amounts: IDR in rupiah, USD in cents (as the gateways expect them).
+CURRENCIES = ('IDR', 'USD')
 EMAIL_RE = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$')
 
 # Entitlements the server enforces (see server.entitlement_error):
@@ -42,15 +47,17 @@ EMAIL_RE = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$')
 #   apk    -> Android build, exe -> Windows build
 # Browser tools and flipbook preview / project save stay free.
 PLANS = {
-    'free': dict(name='Free', monthly=0, yearly=0, entitlements=['office'],
+    'free': dict(name='Free', monthly=0, yearly=0, usd_monthly=0, usd_yearly=0, entitlements=['office'],
                  features=dict(id=['Semua tool PDF di browser', 'PDF to Flipbook: baca & preview',
                                    'Word/Excel/PPT ke PDF'],
                                en=['Every in-browser PDF tool', 'PDF to Flipbook: read & preview',
                                    'Word/Excel/PPT to PDF'])),
-    'pro': dict(name='Pro', monthly=99_000, yearly=990_000, entitlements=['office', 'export', 'apk'],
+    'pro': dict(name='Pro', monthly=99_000, yearly=990_000, usd_monthly=999, usd_yearly=9_900,
+                entitlements=['office', 'export', 'apk'],
                 features=dict(id=['Semua fitur Free', 'Ekspor flipbook: HTML offline', 'Build aplikasi Android (APK)'],
                               en=['Everything in Free', 'Flipbook export: offline HTML', 'Build Android apps (APK)'])),
-    'business': dict(name='Business', monthly=149_000, yearly=1_490_000, entitlements=['office', 'export', 'apk', 'exe'],
+    'business': dict(name='Business', monthly=149_000, yearly=1_490_000, usd_monthly=1_999, usd_yearly=19_900,
+                     entitlements=['office', 'export', 'apk', 'exe'],
                      features=dict(id=['Semua fitur Pro', 'Build aplikasi Windows (EXE)', 'Cocok untuk tim & instansi'],
                                    en=['Everything in Pro', 'Build Windows apps (EXE)', 'Made for teams & institutions'])),
 }
@@ -190,6 +197,64 @@ class TripayProvider:
         return str(payload.get('merchant_ref', '')), status, str(payload.get('reference', ''))
 
 
+class LemonSqueezyProvider:
+    """Lemon Squeezy (merchant of record): https://docs.lemonsqueezy.com/api"""
+    name = 'lemonsqueezy'
+    BASE = 'https://api.lemonsqueezy.com/v1'
+
+    def __init__(self, api_key, store_id, signing_secret, variants, opener=None):
+        # variants: {('pro', 'monthly'): '12345', ...} — subscription variants
+        # created in the Lemon Squeezy dashboard with the USD prices in PLANS.
+        self.api_key, self.store_id, self.signing_secret = api_key, str(store_id), signing_secret
+        self.variants = {key: str(value) for key, value in variants.items() if value}
+        self.opener = opener or urllib.request.urlopen
+
+    def create(self, order, user, base_url, method=None):
+        variant = self.variants.get((order['plan'], order['cycle']))
+        if not variant:
+            raise AccountError(503, 'Paket ini belum disiapkan untuk pembayaran dolar.')
+        body = {'data': {
+            'type': 'checkouts',
+            'attributes': {
+                'checkout_data': {'email': user['email'], 'name': user['name'] or user['email'].split('@')[0],
+                                  'custom': {'order_id': order['id'], 'user_id': str(user['id'])}},
+                'product_options': {'redirect_url': f'{base_url}/account.html?order={order["id"]}'},
+            },
+            'relationships': {'store': {'data': {'type': 'stores', 'id': self.store_id}},
+                              'variant': {'data': {'type': 'variants', 'id': variant}}},
+        }}
+        request = urllib.request.Request(self.BASE + '/checkouts', data=json.dumps(body).encode(), method='POST', headers={
+            'Accept': 'application/vnd.api+json', 'Content-Type': 'application/vnd.api+json',
+            'Authorization': 'Bearer ' + self.api_key})
+        try:
+            with self.opener(request, timeout=20) as response:
+                data = json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            try:
+                detail = json.loads(error.read())['errors'][0]['detail']
+            except (ValueError, KeyError, IndexError, TypeError):
+                detail = f'HTTP {error.code}'
+            raise AccountError(502, 'Lemon Squeezy: ' + str(detail)) from error
+        except (urllib.error.URLError, ValueError, OSError) as cause:
+            raise AccountError(502, 'Gateway pembayaran tidak bisa dihubungi. Coba lagi sebentar.') from cause
+        try:
+            return dict(redirect_url=data['data']['attributes']['url'], reference=str(data['data']['id']))
+        except (KeyError, TypeError):
+            raise AccountError(502, 'Lemon Squeezy tidak mengembalikan halaman checkout.')
+
+    def verify_webhook(self, raw, headers):
+        """Return (event_name, payload) for a genuine webhook (HMAC-SHA256 hex of the raw body)."""
+        expected = hmac.new(self.signing_secret.encode(), raw, hashlib.sha256).hexdigest()
+        if not hmac.compare_digest(expected, headers.get('X-Signature', '')):
+            raise AccountError(403, 'Signature webhook tidak valid.')
+        try:
+            payload = json.loads(raw)
+        except ValueError:
+            raise AccountError(400, 'JSON tidak valid.')
+        event = headers.get('X-Event-Name') or (payload.get('meta') or {}).get('event_name', '')
+        return event, payload
+
+
 class MidtransProvider:
     """Midtrans Snap: https://docs.midtrans.com/reference/backend-integration"""
     name = 'midtrans'
@@ -240,10 +305,11 @@ class MidtransProvider:
 
 
 class Accounts:
-    def __init__(self, path, provider=None):
+    def __init__(self, path, provider=None, usd_provider=None):
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
-        self.provider = provider or MockProvider()
+        self.provider = provider or MockProvider()          # IDR (Tripay / Midtrans)
+        self.usd_provider = usd_provider or MockProvider()  # USD (Lemon Squeezy)
         self._failures = {}
         self._failure_lock = threading.Lock()
         with self.connect() as db:
@@ -262,7 +328,16 @@ class Accounts:
                     provider TEXT NOT NULL, reference TEXT, redirect_url TEXT,
                     created_at INTEGER NOT NULL, paid_at INTEGER);
                 CREATE INDEX IF NOT EXISTS orders_user ON orders(user_id, created_at);
+                CREATE TABLE IF NOT EXISTS subscriptions(
+                    provider TEXT NOT NULL, external_id TEXT NOT NULL,
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    plan TEXT NOT NULL, cycle TEXT NOT NULL, order_id TEXT, created_at INTEGER NOT NULL,
+                    PRIMARY KEY(provider, external_id));
             ''')
+            # Databases created before USD pricing: add the currency column.
+            columns = {row['name'] for row in db.execute('PRAGMA table_info(orders)')}
+            if 'currency' not in columns:
+                db.execute("ALTER TABLE orders ADD COLUMN currency TEXT NOT NULL DEFAULT 'IDR'")
 
     @contextlib.contextmanager
     def connect(self):
@@ -351,39 +426,49 @@ class Accounts:
                 db.execute('DELETE FROM sessions WHERE token_hash=?', (token_hash(token),))
 
     # ---- billing ----------------------------------------------------------
+    def provider_for(self, currency):
+        if currency not in CURRENCIES:
+            raise AccountError(400, 'Mata uang tidak didukung.')
+        return self.usd_provider if currency == 'USD' else self.provider
+
     def plans(self):
         return [dict(id=key, name=p['name'], monthly=p['monthly'], yearly=p['yearly'],
+                     usd=dict(monthly=p['usd_monthly'], yearly=p['usd_yearly']),
                      features=p['features'], entitlements=p['entitlements'])
                 for key, p in PLANS.items()]
 
     def orders(self, user_id):
         with self.connect() as db:
-            rows = db.execute('SELECT id, plan, cycle, amount, status, provider, created_at, paid_at FROM orders '
+            rows = db.execute('SELECT id, plan, cycle, amount, currency, status, provider, created_at, paid_at FROM orders '
                               'WHERE user_id=? ORDER BY created_at DESC LIMIT 50', (user_id,)).fetchall()
         return [dict(row) for row in rows]
 
     def payment_methods(self):
         return self.provider.methods() if hasattr(self.provider, 'methods') else []
 
-    def checkout(self, user, plan, cycle, base_url='', method=None):
+    def checkout(self, user, plan, cycle, base_url='', method=None, currency='IDR'):
         if plan not in PLANS or plan == 'free' or cycle not in CYCLE_SECONDS:
             raise AccountError(400, 'Paket atau periode tidak valid.')
+        provider = self.provider_for(currency)
+        amount = PLANS[plan]['usd_' + cycle] if currency == 'USD' else PLANS[plan][cycle]
         order = dict(id=f'MF-{int(time.time())}-{secrets.token_hex(4)}', plan=plan, cycle=cycle,
-                     amount=PLANS[plan][cycle])
+                     amount=amount, currency=currency)
         with self.connect() as db:
-            db.execute('INSERT INTO orders(id, user_id, plan, cycle, amount, status, provider, created_at) '
-                       'VALUES(?,?,?,?,?,?,?,?)', (order['id'], user['id'], plan, cycle, order['amount'],
-                                                   'pending', self.provider.name, int(time.time())))
+            db.execute('INSERT INTO orders(id, user_id, plan, cycle, amount, currency, status, provider, created_at) '
+                       'VALUES(?,?,?,?,?,?,?,?,?)', (order['id'], user['id'], plan, cycle, amount, currency,
+                                                     'pending', provider.name, int(time.time())))
         try:
-            created = self.provider.create(order, user, base_url, method)
+            created = provider.create(order, user, base_url, method)
         except AccountError:
-            self.set_status(order['id'], 'failed')
+            # Never reached the gateway: don't leave a "failed" row in the history.
+            with self.connect() as db:
+                db.execute('DELETE FROM orders WHERE id=?', (order['id'],))
             raise
         with self.connect() as db:
             db.execute('UPDATE orders SET reference=?, redirect_url=? WHERE id=?',
                        (created.get('reference'), created['redirect_url'], order['id']))
-        return dict(orderId=order['id'], amount=order['amount'], redirectUrl=created['redirect_url'],
-                    provider=self.provider.name)
+        return dict(orderId=order['id'], amount=amount, currency=currency, redirectUrl=created['redirect_url'],
+                    provider=provider.name)
 
     def set_status(self, order_id, status):
         with self.connect() as db:
@@ -410,13 +495,56 @@ class Accounts:
         return True
 
     def mock_pay(self, user, order_id):
-        if self.provider.name != 'mock':
-            raise AccountError(404, 'Simulasi pembayaran tidak aktif.')
         with self.connect() as db:
-            order = db.execute('SELECT user_id FROM orders WHERE id=?', (order_id,)).fetchone()
+            order = db.execute('SELECT user_id, provider FROM orders WHERE id=?', (order_id,)).fetchone()
         if not order or order['user_id'] != user['id']:
             raise AccountError(404, 'Order tidak ditemukan.')
+        # Only orders created through the local simulation can be "paid" here.
+        if order['provider'] != 'mock':
+            raise AccountError(404, 'Simulasi pembayaran tidak aktif.')
         self.mark_paid(order_id)
+
+    def lemonsqueezy_webhook(self, raw, headers):
+        """First payment via subscription_created (carries our order id);
+        renewals via subscription_payment_success, found by subscription id.
+        Each Lemon Squeezy invoice extends the plan exactly once."""
+        if not hasattr(self.usd_provider, 'verify_webhook'):
+            raise AccountError(404, 'Webhook gateway tidak aktif.')
+        event, payload = self.usd_provider.verify_webhook(raw, headers)
+        data = payload.get('data') or {}
+        attributes = data.get('attributes') or {}
+        custom = (payload.get('meta') or {}).get('custom_data') or {}
+        now = int(time.time())
+        if event == 'subscription_created':
+            order_id = str(custom.get('order_id', ''))
+            with self.connect() as db:
+                order = db.execute("SELECT * FROM orders WHERE id=? AND provider='lemonsqueezy'", (order_id,)).fetchone()
+                if not order:
+                    raise AccountError(404, 'Order tidak ditemukan.')
+                db.execute('INSERT OR IGNORE INTO subscriptions VALUES(?,?,?,?,?,?,?)',
+                           ('lemonsqueezy', str(data.get('id')), order['user_id'], order['plan'], order['cycle'],
+                            order_id, now))
+            if attributes.get('status') in ('active', 'on_trial'):
+                self.mark_paid(order_id)
+                return 'paid'
+            return 'pending'
+        if event == 'subscription_payment_success' and attributes.get('billing_reason') == 'renewal':
+            if attributes.get('status') != 'paid':
+                return 'ignored'
+            with self.connect() as db:
+                sub = db.execute("SELECT * FROM subscriptions WHERE provider='lemonsqueezy' AND external_id=?",
+                                 (str(attributes.get('subscription_id')),)).fetchone()
+                if not sub:
+                    raise AccountError(404, 'Langganan tidak dikenal.')
+                renewal_id = f'LS-{data.get("id")}'
+                db.execute('INSERT OR IGNORE INTO orders(id, user_id, plan, cycle, amount, currency, status, provider, '
+                           'reference, created_at) VALUES(?,?,?,?,?,?,?,?,?,?)',
+                           (renewal_id, sub['user_id'], sub['plan'], sub['cycle'], int(attributes.get('total') or 0),
+                            str(attributes.get('currency') or 'USD'), 'pending', 'lemonsqueezy',
+                            str(attributes.get('subscription_id')), now))
+            self.mark_paid(renewal_id)
+            return 'paid'
+        return 'ignored'  # initial invoice (counted at subscription_created), cancellations, refunds...
 
     def provider_callback(self, raw, headers):
         """Tripay-style callback: signed raw body, bound to our stored reference."""
