@@ -15,7 +15,9 @@ assert.deepEqual(FlipbookLayout.geometry(1920,1080,.7,0,8),FlipbookLayout.geomet
 assert.deepEqual(FlipbookLayout.geometry(1920,1080,.7,7,8),FlipbookLayout.geometry(1920,1080,.7,1,8));
 assert.equal(FlipbookLayout.geometry(1920,1080,.7,1,8).single,false);
 assert.equal(FlipbookLayout.geometry(390,844,.7,1,8).single,true);
-assert.equal(FlipbookLayout.geometry(1920,1080,2.5,1,8).single,true);
+assert.equal(FlipbookLayout.geometry(1920,1080,2.5,1,8).single,false,'wide pages still spread, like the preview');
+assert.equal(FlipbookLayout.geometry(1280,720,1.29,1,8).single,false,'landscape PDF spreads on a laptop screen');
+assert.equal(FlipbookLayout.geometry(699,900,.7,1,8).single,true);
 assert.equal(FlipbookLayout.geometry(3840,2160,.7,1,8).maxWidth,3840);
 const model = {version:1,title:'Buku <uji> & "offline"',pageCount:3,ratio:.72,overlays:{'1':{label:'Peserta </script>',value:1250,position:'bottom-right'}}};
 const realFetch = global.fetch;

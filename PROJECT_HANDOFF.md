@@ -462,3 +462,7 @@ User: "narasi pdf" (= Notebook PDF: ringkasan/podcast) dan animasi diberi coming
 - Nama app native = judul buku (label Android, judul jendela Windows; escape XML/aapt + universal character name C++), header reader "MYFLIPBOOK", tombol reader Inggris, Replay disembunyikan bila buku tanpa animasi.
 - Responsive: audit 360/390/768/1024/1440 (overflow, elemen keluar layar, tap target <28px). Perbaikan: nav homepage (chip tengah ≥1024, ikon ★ Pricing di HP, CTA ≥640), ikon hero satu baris wrap di HP, select Word layout, tap target debug/test/login switch.
 - Tes: 38 Python + 13 suite Node lolos. Akun uji @test.id dihapus dari DB lokal.
+
+### 25 September 2026 - Export mengikuti susunan halaman preview
+
+User: hasil flipbook harus sesuai preview. `FlipbookLayout.geometry` dulu memakai aturan tambahan (lebar/tinggi < rasio x 1,5 -> satu halaman) sehingga PDF landscape tampil satu halaman di ekspor tapi dua halaman di preview. Aturan kini sama dengan preview: spread dua halaman bila lebar area >= 700px, satu halaman di HP; berlaku untuk HTML, EXE, APK. Diverifikasi Chromium: portrait & landscape di 1280x800, 1440x900, 390x844 -> status preview == ekspor. Tes export/qa-runtime/qa-editor/idle/viewer-compat lolos.

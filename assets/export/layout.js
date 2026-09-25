@@ -14,9 +14,11 @@
     });
   },
   geometry(width,height,ratio,index,count) {
-    // Orientation depends on the reading area, never on the current page.
+    // Same rule as the editor preview so exports look like what was
+    // previewed: a two-page spread from 700px wide, one page on phones.
+    // Depends on the reading area only, never on the current page;
     // showCover keeps the cover alone without enlarging it.
-    const single=count===1 || width<700 || width/height<ratio*1.5;
+    const single=count===1 || width<700;
     return {single,minWidth:single?width+1:1,maxWidth:width,maxHeight:height};
   },
   bind(book,stage,ratio,{compact=false}={}) {
