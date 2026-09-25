@@ -17,6 +17,7 @@
 - Nama produk: **MyFlipbook** (dulu PDF Tools). Key penyimpanan internal `pdf-tools-*` sengaja dipertahankan.
 - Ekspor flipbook berbayar (keputusan user 25 Sep): Free = preview + simpan proyek; ekspor HTML/APK = Pro (Rp99.000/bln), EXE = Business. Jangan membuka template `assets/export/{index.html,viewer.js,viewer.css}` untuk publik.
 - Subscription sudah ada: `accounts.py` + `login.html`/`account.html`, Midtrans Snap. Harga di `PLANS` masih draf; jangan dianggap final. Mode hosting via `--public-host` (lihat README).
+- Notebook PDF dan Flipbook Animation juga "Coming soon" (keputusan user 25 Sep): `server.py` `SOON_PAGES` menampilkan `coming-soon.html` saat paywall aktif; `--no-paywall` membuka halaman aslinya untuk internal.
 - Tool katalog yang belum dibuat tampil "Coming soon" (daftar `SOON` di `index.html`); hapus id dari daftar itu ketika tool-nya jadi.
 - Ekspor HTML offline, simpan/buka proyek, dan build APK/EXE lokal sudah memiliki implementasi; lihat handoff untuk bukti pengujian dan batas rilis.
 

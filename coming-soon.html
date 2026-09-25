@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Coming soon — MyFlipbook</title>
+<script src="assets/i18n.js"></script>
+<link rel="stylesheet" href="assets/ui-clay.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+  body{margin:0;min-height:100dvh;background:#FBFAF7;color:#1C1917}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:-1;
+    background:radial-gradient(700px 420px at 50% 0%,#EDF3E4 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
+  .wrap{max-width:1100px;margin:0 auto;padding:12px 16px 48px}
+  .nav-right{display:flex;align-items:center;gap:8px}
+  .lang{border:1px solid #E8E2D4;background:#E9E4FF;border-radius:999px;padding:7px 12px;font-weight:800;font-size:12px;cursor:pointer}
+  .card{max-width:520px;margin:64px auto 0;padding:36px 28px;text-align:center}
+  .icon{font-size:40px}
+  h1{margin:12px 0 6px;font-size:30px}
+  p{font-size:14px;line-height:1.6;margin:0 0 22px}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <nav class="clay-nav">
+    <a href="index.html" class="clay-brand"><span class="clay-brand-mark">MF</span> <span class="clay-brand-name">MyFlipbook</span></a>
+    <div class="nav-right"><button type="button" class="lang" data-lang-toggle>ID</button></div>
+  </nav>
+  <main class="clay-panel card">
+    <div class="icon">⏳</div>
+    <span class="clay-badge" data-i18n="card.coming">Coming soon</span>
+    <h1 class="clay-h" id="feature">This feature</h1>
+    <p class="clay-muted" data-i18n="soon.body">We're still building this one. Meanwhile, every other MyFlipbook tool is ready to use.</p>
+    <a class="clay-btn clay-btn-primary" href="index.html" data-i18n="auth.back">← All tools</a>
+  </main>
+</div>
+<script>
+  // The server serves this page in place of unreleased features and passes
+  // their name in data-feature (see server.py SOON_PAGES).
+  document.getElementById('feature').textContent=document.documentElement.dataset.feature||'MyFlipbook';
+</script>
+</body>
+</html>

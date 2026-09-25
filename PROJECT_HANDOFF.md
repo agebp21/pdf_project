@@ -450,3 +450,7 @@ User: ekspor flipbook jangan gratis, harus Pro/Business; Pro Rp99.000 (tahunan d
 ### 25 September 2026 - Ekstensi proyek .smflipbook
 
 Chrome menolak `showSaveFilePicker` dengan accept `.sm-flipbook` (TypeError: invalid characters) sehingga "Save project as" gagal. Ekstensi baru `.smflipbook` (permintaan user); file `.sm-flipbook` lama tetap bisa dibuka. `chooseSave` hanya mengirim filter ekstensi yang valid dan mengulang tanpa filter bila TypeError. `qa-editor.cjs` kini membaca aset dari disk + capabilities lokal (tidak tergantung/terkena paywall server 8080). Diverifikasi di Chromium: `.smflipbook` lolos validasi.
+
+### 25 September 2026 - Notebook PDF & Flipbook Animation jadi coming soon
+
+User: "narasi pdf" (= Notebook PDF: ringkasan/podcast) dan animasi diberi coming soon. Katalog + tile abu-abu, chip nav "Notebook AI · Soon", link animasi di flipbook.html dihapus, hero tidak lagi menjanjikan chat AI. `notebook.html`/`animation.html` diganti `coming-soon.html` oleh server saat paywall aktif (kode asli tetap ada; `--no-paywall` untuk internal). Tes: 37 Python (baru: halaman coming soon + bypass internal), animation-editor/qa-runtime/qa-editor/office-export lolos; dicek di Chromium.

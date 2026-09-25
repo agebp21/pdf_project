@@ -324,6 +324,15 @@ class PaywallTests(AccountsBase):
         # Office conversion stays free locally.
         self.assertEqual(guest.call('POST', '/api/convert/word-to-pdf', {}, headers=headers)[0], 400)
 
+    def test_unreleased_pages_show_coming_soon(self):
+        for page, name in (('notebook.html', 'Notebook PDF'), ('animation.html', 'Flipbook Animation')):
+            status, body, _ = Client(self.base).call('GET', '/' + page)
+            self.assertEqual(status, 200)
+            self.assertIn(f'data-feature="{name}"', body.decode())
+            self.assertNotIn('ae-app', body.decode())
+        server.CONFIG['paywall'] = False
+        self.assertIn(b'ae-app', Client(self.base).call('GET', '/animation.html')[1], '--no-paywall keeps the editor')
+
 
 class HostedModeTests(AccountsBase):
     def setUp(self):

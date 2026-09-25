@@ -37,7 +37,10 @@ BUILD_LOCK = threading.Lock()
 POSITIONS = {'top-left', 'top-right', 'bottom-left', 'bottom-right'}
 SESSION_COOKIE = 'mf_session'
 PAGES = {'index.html', 'converter.html', 'flipbook.html', 'animation.html', 'notebook.html',
-         'login.html', 'account.html'}
+         'login.html', 'account.html', 'coming-soon.html'}
+# Unreleased features: on a normal run (paywall on) these pages show the
+# coming-soon page; --no-paywall keeps them usable internally.
+SOON_PAGES = {'notebook.html': 'Notebook PDF', 'animation.html': 'Flipbook Animation'}
 # public_hosts: domains served in hosting mode (login + entitlements enforced).
 # secure: Secure cookies (HTTPS). base_url: absolute URL for payment callbacks.
 # paywall: exports/builds need a paid plan. Off when imported (tests),
@@ -532,6 +535,16 @@ class Handler(SimpleHTTPRequestHandler):
         allowed = relative in PAGES or (relative.startswith('assets/') and file.is_relative_to(ROOT / 'assets'))
         if not allowed or not file.is_relative_to(ROOT) or not file.is_file():
             self.send_error(404)
+            return
+        if relative in SOON_PAGES and CONFIG['paywall']:
+            page = (ROOT / 'coming-soon.html').read_text(encoding='utf-8').replace(
+                '<html lang="en">', f'<html lang="en" data-feature="{SOON_PAGES[relative]}">', 1).encode()
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Cache-Control', 'no-store')
+            self.send_header('Content-Length', str(len(page)))
+            self.end_headers()
+            self.wfile.write(page)
             return
         if relative in EXPORT_TEMPLATES:
             denied = self.entitlement_error('export')

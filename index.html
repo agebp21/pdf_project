@@ -82,7 +82,7 @@
     <div class="hidden md:flex items-center gap-2 text-[12px] font-bold">
       <a href="#grid" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.all">✳ All tools</a>
       <a href="flipbook.html" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.flip">▤ Flipbook</a>
-      <a href="notebook.html" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.note">✦ Notebook AI</a>
+      <span class="chip rounded-full px-3.5 py-1.5 opacity-60 cursor-not-allowed" title="Coming soon" data-i18n="nav.note">✦ Notebook AI · Soon</span>
       <a href="account.html" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.pricing">★ Pricing</a>
     </div>
     <div class="flex items-center gap-2">
@@ -97,7 +97,7 @@
 <!-- SHOWCASE (Clay-style dark hero) -->
 <section class="showcase">
   <h1><span data-i18n="hero.t1">Every PDF task,</span><br><em data-i18n="hero.t2">done</em> <span class="hl" data-i18n="hero.t3">the chill way.</span></h1>
-  <p class="sub"><span data-i18n="hero.subA">Merge, split, compress, convert, then turn your PDF into an </span><b data-i18n="hero.subB">interactive flipbook</b><span data-i18n="hero.subC"> + chat with your docs via AI. Not that red clone — this is the elegant cream GenZ edition.</span></p>
+  <p class="sub"><span data-i18n="hero.subA">Merge, split, compress, convert, then turn your PDF into an </span><b data-i18n="hero.subB">interactive flipbook</b><span data-i18n="hero.subC"> you can share anywhere. Not that red clone — this is the elegant cream GenZ edition.</span></p>
   <div class="horde-rows" id="horde" aria-label="Tool icon showcase"></div>
   <div class="showcase-bar">
     <div id="filters"></div>
@@ -187,7 +187,7 @@
   ];
 
   // Catalog tools not built yet: shown as "Coming soon", not clickable.
-  const SOON = new Set(["workflow","edit-pdf","sign-pdf","protect-pdf","pdf-to-pdfa","repair-pdf","scan-to-pdf","compare-pdf","redact-pdf","pdf-forms","ai-summarizer","translate-pdf"]);
+  const SOON = new Set(["notebook","flipbook-animation","workflow","edit-pdf","sign-pdf","protect-pdf","pdf-to-pdfa","repair-pdf","scan-to-pdf","compare-pdf","redact-pdf","pdf-forms","ai-summarizer","translate-pdf"]);
   tools.forEach(t => { if (SOON.has(t.id)) t.soon = true; });
   const soonLabel = () => (window.I18N ? I18N.t('card.coming') : 'Coming soon');
 
