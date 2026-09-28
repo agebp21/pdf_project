@@ -527,3 +527,7 @@ Sebelumnya 🔖 Mark di spread dua halaman selalu menandai halaman kiri. Sekaran
 ### 28 September 2026 - Ujung buka sampul tidak patah lagi
 
 Model sudut FlipbookCurl lama membagi putaran rata ke semua strip bersarang, jadi di akhir (theta=PI) sampul berbentuk setengah tabung lalu diganti halaman datar -> terlihat patah. Model baru: orientasi strip = clamp(theta - bend*s^2, 0..PI) (sisi spine berputar kaku, tepi bebas tertinggal, rata di awal & akhir, tidak menembus buku), bend = ±1.15*sin(pi*e); bayangan per strip dari orientasinya; overlay fade-out 0.18 s. Tes export.test diganti (rata di kedua ujung, spine kaku, tepi tertinggal, clamp).
+
+### 28 September 2026 - Glitch kiri saat kembali ke Home
+
+Saat menutup sampul, bagian kiri tampak tergeser/terpotong. Perbaikan FlipbookCurl: (1) tepi bebas tertinggal maksimal 0.75x jarak putar (sebelumnya menempel & terseret datar di atas buku), (2) perspektif w*6 (dulu w*3.2, lembar terangkat tampak membesar), (3) geser ke tengah saat menutup baru mulai di setengah animasi dengan durasi sisa animasi (kalau di awal halaman kiri terseret keluar stage; kalau setelahnya ada hentakan kedua), (4) halaman 2 baru ditampilkan lagi setelah overlay hilang. Dicek per frame (Home dari 6-7): tidak ada kedip.

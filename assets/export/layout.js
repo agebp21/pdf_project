@@ -475,7 +475,7 @@
       stage.className = 'cover-curl';
       stage.style.left = (geo.x - geo.w) + 'px'; stage.style.top = geo.y + 'px';
       stage.style.width = geo.w * 2 + 'px'; stage.style.height = geo.h + 'px';
-      stage.style.perspective = Math.round(geo.w * 3.2) + 'px';
+      stage.style.perspective = Math.round(geo.w * 6) + 'px';
       const width = geo.w / self.STRIPS, strips = [];
       let parent = stage;
       const face = (url, x, back) => {
@@ -517,21 +517,25 @@
         strips[i].shades[1].style.background = 'linear-gradient(to left,' + a + ',' + b + ')';
       });
     }
-    function run(from, to, done) {
+    function run(from, to, done, after, halfway) {
       busy = true;
       const view = build(slot()), direction = to > from ? 1 : -1, start = performance.now();
       pose(view.strips, from, 0);
       if (opts.onTurn) opts.onTurn();
       const frame = now => {
         const t = Math.min(1, (now - start) / self.DURATION), e = ease(t);
-        pose(view.strips, from + (to - from) * e, direction * 1.15 * Math.sin(Math.PI * e));
+        // The free edge trails by at most 3/4 of the distance turned so far:
+        // more and it would rest on the book and be dragged flat across it.
+        const theta = from + (to - from) * e;
+        if (halfway && e >= 0.5) { halfway(); halfway = null; }
+        pose(view.strips, theta, direction * Math.min(Math.sin(Math.PI * e), 0.75 * Math.abs(theta - from)));
         if (t < 1) { requestAnimationFrame(frame); return; }
         done();
         // Let the book repaint under the overlay, then fade it out so the
         // swap to the real page (with its spine shading) doesn't blink.
         requestAnimationFrame(() => {
           view.stage.style.transition = 'opacity .18s ease-out'; view.stage.style.opacity = '0';
-          setTimeout(() => { view.stage.remove(); busy = false; }, 200);
+          setTimeout(() => { view.stage.remove(); busy = false; if (after) after(); }, 200);
         });
       };
       requestAnimationFrame(frame);
@@ -547,7 +551,20 @@
       if (!ready() || book.getCurrentPageIndex() === 0) return false;
       if (book.getCurrentPageIndex() !== 1) book.turnToPage(1);   // Home from deep pages: close from the first spread
       pages[1].classList.add('curl-hidden');
-      run(Math.PI, 0, () => { pages[1].classList.remove('curl-hidden'); book.turnToPage(0); });
+      // Slide to the closed-cover centre during the second half of the turn,
+      // once the cover has left the left page (earlier would drag that page
+      // off the stage; afterwards would be a second jerk). centerCover
+      // settles on the same value later.
+      const slide = () => {
+        const bounds = book.getBoundsRect();
+        if (!bounds || !bounds.pageWidth) return;
+        root.style.transitionDuration = (self.DURATION / 2000).toFixed(2) + 's';
+        root.style.transform = 'translateX(' + (-bounds.pageWidth / 2).toFixed(1) + 'px)';
+      };
+      // Page 2 comes back only once the overlay is gone: PageFlip draws the
+      // closed cover a frame later, and until then it would flash on the left.
+      run(Math.PI, 0, () => { book.turnToPage(0); },
+        () => { pages[1].classList.remove('curl-hidden'); root.style.transitionDuration = ''; }, slide);
       return true;
     }
     // A click on the closed cover opens it with the curl (mouse only: touch
