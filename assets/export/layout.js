@@ -391,3 +391,118 @@
     return { refresh, close, marks: () => marks.slice() };
   },
 };
+
+// Curved cover turn. PageFlip folds a page along one straight crease, which
+// looks stiff for a cover; this opens/closes the cover as a chain of thin
+// vertical strips, the free edge leading so the board bends, shaded by angle.
+// The book itself jumps to the spread underneath; the overlay hides the cut.
+// Landscape only (portrait/reduced motion fall back to the normal flip).
+// ES2018 for old Android WebViews.
+(typeof self!=='undefined'?self:global).FlipbookCurl = {
+  STRIPS: 36,
+  DURATION: 1250,
+  // Rotation of each strip for a sheet turned `theta` (0..PI) with `bend`
+  // (radians spread over the sheet; positive = free edge ahead).
+  angles(theta, bend, n) {
+    const out = [];
+    for (let i = 0; i < n; i++) out.push(theta / n + bend * (i / (n - 1) - 0.5) * 2 / n);
+    return out;
+  },
+  bind(book, root, pages, options) {
+    const self = this, opts = options || {};
+    let busy = false;
+    const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    const src = i => { const img = pages[i] && pages[i].querySelector('img'); return img ? (img.currentSrc || img.src) : ''; };
+    function ready() {
+      return !opts.reduced && !busy && pages.length >= 3 && book.getOrientation() === 'landscape' &&
+        ['read', 'fold_corner'].indexOf(book.getState()) >= 0;
+    }
+    // Right-hand page slot relative to root (where the closed cover sits).
+    function slot() {
+      const bounds = book.getBoundsRect(), block = root.querySelector('.stf__block') || root;
+      const b = block.getBoundingClientRect(), r = root.getBoundingClientRect();
+      return { x: b.left - r.left + bounds.left + bounds.pageWidth, y: b.top - r.top + bounds.top, w: bounds.pageWidth, h: bounds.height };
+    }
+    function build(geo) {
+      const stage = document.createElement('div');
+      stage.className = 'cover-curl';
+      stage.style.left = (geo.x - geo.w) + 'px'; stage.style.top = geo.y + 'px';
+      stage.style.width = geo.w * 2 + 'px'; stage.style.height = geo.h + 'px';
+      stage.style.perspective = Math.round(geo.w * 3.2) + 'px';
+      const width = geo.w / self.STRIPS, strips = [];
+      let parent = stage;
+      const face = (url, x, back) => {
+        const el = document.createElement('div');
+        el.className = back ? 'cover-curl-face cover-curl-back' : 'cover-curl-face';
+        el.style.backgroundImage = 'url("' + url + '")';
+        el.style.backgroundSize = geo.w + 'px ' + geo.h + 'px';
+        el.style.backgroundPosition = (-x) + 'px 0';
+        const shade = document.createElement('div'); shade.className = 'cover-curl-shade';
+        el.appendChild(shade);
+        return el;
+      };
+      for (let i = 0; i < self.STRIPS; i++) {
+        const strip = document.createElement('div');
+        strip.className = 'cover-curl-strip';
+        strip.style.left = (i === 0 ? geo.w : width) + 'px';
+        strip.style.width = (width + 0.7) + 'px'; strip.style.height = geo.h + 'px';
+        const front = face(src(0), i * width, false), back = face(src(1), geo.w - (i + 1) * width, true);
+        strip.appendChild(front); strip.appendChild(back);
+        parent.appendChild(strip); parent = strip;
+        strips.push({ el: strip, shades: [front.firstChild, back.firstChild] });
+      }
+      root.appendChild(stage);
+      return { stage, strips };
+    }
+    function pose(strips, theta, bend) {
+      const phis = self.angles(theta, bend, strips.length);
+      // Light falls off as the sheet turns away from the viewer. Each strip
+      // gets a gradient from its own angle to the next one's, so the bend
+      // shades smoothly instead of in steps.
+      const dark = [];
+      let total = 0;
+      phis.forEach(phi => { dark.push((1 - Math.abs(Math.cos(total))) * 0.5); total += phi; });
+      dark.push((1 - Math.abs(Math.cos(total))) * 0.5);
+      phis.forEach((phi, i) => {
+        strips[i].el.style.transform = 'rotateY(' + (-phi).toFixed(4) + 'rad)';
+        const a = 'rgba(0,0,0,' + dark[i].toFixed(3) + ')', b = 'rgba(0,0,0,' + dark[i + 1].toFixed(3) + ')';
+        strips[i].shades[0].style.background = 'linear-gradient(to right,' + a + ',' + b + ')';
+        strips[i].shades[1].style.background = 'linear-gradient(to left,' + a + ',' + b + ')';
+      });
+    }
+    function run(from, to, done) {
+      busy = true;
+      const view = build(slot()), direction = to > from ? 1 : -1, start = performance.now();
+      pose(view.strips, from, 0);
+      if (opts.onTurn) opts.onTurn();
+      const frame = now => {
+        const t = Math.min(1, (now - start) / self.DURATION), e = ease(t);
+        pose(view.strips, from + (to - from) * e, direction * 2.4 * Math.sin(Math.PI * e));
+        if (t < 1) { requestAnimationFrame(frame); return; }
+        done();
+        // Let the book repaint under the overlay before removing it.
+        requestAnimationFrame(() => { view.stage.remove(); busy = false; });
+      };
+      requestAnimationFrame(frame);
+    }
+    function open() {
+      if (!ready() || book.getCurrentPageIndex() !== 0) return false;
+      pages[1].classList.add('curl-hidden');       // the cover's back face shows it while turning (class: PageFlip rewrites inline styles)
+      book.turnToPage(1);                            // spread behind the overlay (and the book slides to centre)
+      run(0, Math.PI, () => { pages[1].classList.remove('curl-hidden'); });
+      return true;
+    }
+    function close() {
+      if (!ready() || book.getCurrentPageIndex() === 0) return false;
+      if (book.getCurrentPageIndex() !== 1) book.turnToPage(1);   // Home from deep pages: close from the first spread
+      pages[1].classList.add('curl-hidden');
+      run(Math.PI, 0, () => { pages[1].classList.remove('curl-hidden'); book.turnToPage(0); });
+      return true;
+    }
+    // A click on the closed cover opens it with the curl (mouse only: touch
+    // swipes/drags keep PageFlip's own turn).
+    pages[0].addEventListener('mousedown', event => { if (book.getCurrentPageIndex() === 0 && ready()) event.stopPropagation(); });
+    pages[0].addEventListener('click', () => { if (book.getCurrentPageIndex() === 0) open(); });
+    return { open, close, busy: () => busy };
+  },
+};

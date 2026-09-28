@@ -13,7 +13,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, marks = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, marks = null, curl = null;
   function exportState() {
     $('#export-fields').disabled = !sourcePdf || opening || exporting;
     $('#export-apk').disabled = !buildConfig?.apk;
@@ -128,6 +128,7 @@
       book.loadFromHTML(newElements);
       disposeLayout=FlipbookLayout.bind(book,$('#reader-stage'),ratio,{compact:true});
       FlipbookLayout.centerCover(book, container, reduced);
+      curl = FlipbookCurl.bind(book, container, newElements, {reduced, onTurn: () => FlipbookSound.play()});
       sourcePdf = blob;
       $('#export-title').value = project ? project.title : name.replace(/\.pdf$/i,'');
       if (project) for (const [index,config] of Object.entries(project.overlays)) { overlays.set(Number(index),config); renderOverlay(Number(index),config); }
@@ -169,10 +170,16 @@
     if (file) openPdf(file, file.name);
     event.target.value = '';
   });
-  $('#prev').addEventListener('click', () => book?.flipPrev());
-  $('#next').addEventListener('click', () => book?.flipNext());
+  // The cover opens/closes with the curved turn; other pages use PageFlip.
+  // Ignore clicks while a cover turn is still animating.
+  const goPrev = () => { if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; book.flipPrev(); };
+  const goNext = () => { if (!book || curl?.busy()) return; if (!curl?.open()) book.flipNext(); };
+  $('#prev').addEventListener('click', goPrev);
+  $('#next').addEventListener('click', goNext);
   $('#home').addEventListener('click', () => {
-    if (!book || opening || book.getState() !== 'read') return;
+    if (!book || opening || curl?.busy()) return;
+    if (curl?.close()) return;
+    if (book.getState() !== 'read') return;
     book.turnToPage(0); updatePage(); animate(true);
   });
   FlipbookIdle.bind({

@@ -84,6 +84,7 @@
     FlipbookSound.bindButton($('#sound'));
     FlipbookLayout.bind(book,$('#stage'),data.ratio);
     FlipbookLayout.centerCover(book, $('#book'), reduced);
+    const curl = FlipbookCurl.bind(book, $('#book'), elements, {reduced, onTurn: () => FlipbookSound.play()});
     $('#fullscreen').onclick=async()=>{
       try { if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen(); }
       catch(cause){$('#error').hidden=false;$('#error').textContent='Fullscreen is not available on this device.';}
@@ -94,9 +95,12 @@
       active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0,
       home: () => { book.turnToPage(0); update(); animate(); }
     });
-    $('#home').onclick=()=>{if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
-    $('#prev').onclick=()=>book.flipPrev();$('#next').onclick=()=>book.flipNext();$('#replay').onclick=()=>animate(false);
-    document.addEventListener('keydown',event=>{if(event.key==='ArrowRight'&&!$('#next').disabled)book.flipNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)book.flipPrev()});
+    // The cover opens/closes with the curved turn; ignore clicks while it animates.
+    const goPrev=()=>{if(curl.busy())return;if(book.getCurrentPageIndex()===1&&curl.close())return;book.flipPrev()};
+    const goNext=()=>{if(curl.busy())return;if(!curl.open())book.flipNext()};
+    $('#home').onclick=()=>{if(curl.busy()||curl.close())return;if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
+    $('#prev').onclick=goPrev;$('#next').onclick=goNext;$('#replay').onclick=()=>animate(false);
+    document.addEventListener('keydown',event=>{if(event.key==='ArrowRight'&&!$('#next').disabled)goNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)goPrev()});
     document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});}else animate()});
   } catch(cause) { $('#error').hidden=false;$('#error').textContent='The book could not be opened. '+cause.message; }
 })();
