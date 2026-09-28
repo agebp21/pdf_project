@@ -459,3 +459,7 @@ PageFlip melipat halaman lurus satu garis -> terkesan kaku. `FlipbookCurl` (layo
 ### 28 September 2026 - Bookmark halaman kiri/kanan
 
 Sebelumnya 🔖 Mark di spread dua halaman selalu menandai halaman kiri. Sekarang: satu halaman tampil (cover/portrait) -> langsung toggle; dua halaman -> popup "Bookmark a page" berisi Left/Right (thumbnail + status), bisa menandai salah satu atau keduanya, popup tetap terbuka, ikut berganti saat buku di-flip dan tertutup kalau tinggal satu halaman. Tes: bookmarks.test.
+
+### 28 September 2026 - Ujung buka sampul tidak patah lagi
+
+Model sudut FlipbookCurl lama membagi putaran rata ke semua strip bersarang, jadi di akhir (theta=PI) sampul berbentuk setengah tabung lalu diganti halaman datar -> terlihat patah. Model baru: orientasi strip = clamp(theta - bend*s^2, 0..PI) (sisi spine berputar kaku, tepi bebas tertinggal, rata di awal & akhir, tidak menembus buku), bend = ±1.15*sin(pi*e); bayangan per strip dari orientasinya; overlay fade-out 0.18 s. Tes export.test diganti (rata di kedua ujung, spine kaku, tepi tertinggal, clamp).

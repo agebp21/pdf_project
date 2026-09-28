@@ -27,10 +27,13 @@ assert.equal(FlipbookLayout.motion(true).flippingTime,1);
 }
 { // Curved cover turn: strip angles always add up to the turn; the free edge leads when opening.
   const n=FlipbookCurl.STRIPS,sum=a=>a.reduce((x,y)=>x+y,0);
-  for(const theta of [0,1,Math.PI])for(const bend of [-2.4,0,2.4])assert.ok(Math.abs(sum(FlipbookCurl.angles(theta,bend,n))-theta)<1e-9);
-  const opening=FlipbookCurl.angles(1.5,2.4,n);
-  assert.ok(opening[n-1]>opening[0],'outer strips turn more than the spine side (the board bends)');
-  assert.deepEqual(FlipbookCurl.angles(1,0,4),[.25,.25,.25,.25],'no bend = flat sheet');
+  const orient=a=>a.reduce((o,x)=>(o.push((o.length?o[o.length-1]:0)+x),o),[]);
+  for(const theta of [0,Math.PI])for(const bend of [-1.15,0,1.15])assert.ok(orient(FlipbookCurl.angles(theta,bend*Math.sin(theta?Math.PI:0),n)).every(o=>Math.abs(o-theta)<1e-9),'flat at both ends (no half-tube before the swap)');
+  const mid=orient(FlipbookCurl.angles(Math.PI/2,1.15,n));
+  assert.ok(Math.abs(mid[0]-Math.PI/2)<1e-9,'spine side turns rigidly');
+  assert.ok(mid[n-1]<mid[0]&&mid.every((o,i)=>!i||o<=mid[i-1]+1e-12),'free edge trails smoothly (the board curls)');
+  assert.ok(orient(FlipbookCurl.angles(.2,1.15,n)).every(o=>o>=0)&&orient(FlipbookCurl.angles(3,-1.15,n)).every(o=>o<=Math.PI+1e-12),'never dips through the book');
+  assert.ok(Math.abs(sum(FlipbookCurl.angles(Math.PI,0,n))-Math.PI)<1e-9);
 }
 assert.equal(FlipbookLayout.geometry(1920,1080,.7,0,8).single,false);
 assert.deepEqual(FlipbookLayout.geometry(1920,1080,.7,0,8),FlipbookLayout.geometry(1920,1080,.7,1,8));

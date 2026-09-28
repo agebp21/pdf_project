@@ -440,11 +440,19 @@
 (typeof self!=='undefined'?self:global).FlipbookCurl = {
   STRIPS: 36,
   DURATION: 1250,
-  // Rotation of each strip for a sheet turned `theta` (0..PI) with `bend`
-  // (radians spread over the sheet; positive = free edge ahead).
+  // Rotation of each strip (relative to the previous one, as the strips are
+  // nested) for a cover turned `theta` (0..PI) about the spine. The spine
+  // side turns rigidly with theta; the free edge trails by up to `bend`
+  // radians (sign = turn direction), so the board curls mid-turn and lies
+  // flat again at both ends. Clamped so no part dips through the book.
   angles(theta, bend, n) {
     const out = [];
-    for (let i = 0; i < n; i++) out.push(theta / n + bend * (i / (n - 1) - 0.5) * 2 / n);
+    let previous = 0;
+    for (let i = 0; i < n; i++) {
+      const s = n > 1 ? i / (n - 1) : 0;
+      const angle = Math.max(0, Math.min(Math.PI, theta - bend * s * s));
+      out.push(angle - previous); previous = angle;
+    }
     return out;
   },
   bind(book, root, pages, options) {
@@ -500,8 +508,8 @@
       // shades smoothly instead of in steps.
       const dark = [];
       let total = 0;
-      phis.forEach(phi => { dark.push((1 - Math.abs(Math.cos(total))) * 0.5); total += phi; });
-      dark.push((1 - Math.abs(Math.cos(total))) * 0.5);
+      phis.forEach(phi => { total += phi; dark.push((1 - Math.abs(Math.cos(total))) * 0.5); });
+      dark.push(dark[dark.length - 1]);
       phis.forEach((phi, i) => {
         strips[i].el.style.transform = 'rotateY(' + (-phi).toFixed(4) + 'rad)';
         const a = 'rgba(0,0,0,' + dark[i].toFixed(3) + ')', b = 'rgba(0,0,0,' + dark[i + 1].toFixed(3) + ')';
@@ -516,11 +524,15 @@
       if (opts.onTurn) opts.onTurn();
       const frame = now => {
         const t = Math.min(1, (now - start) / self.DURATION), e = ease(t);
-        pose(view.strips, from + (to - from) * e, direction * 2.4 * Math.sin(Math.PI * e));
+        pose(view.strips, from + (to - from) * e, direction * 1.15 * Math.sin(Math.PI * e));
         if (t < 1) { requestAnimationFrame(frame); return; }
         done();
-        // Let the book repaint under the overlay before removing it.
-        requestAnimationFrame(() => { view.stage.remove(); busy = false; });
+        // Let the book repaint under the overlay, then fade it out so the
+        // swap to the real page (with its spine shading) doesn't blink.
+        requestAnimationFrame(() => {
+          view.stage.style.transition = 'opacity .18s ease-out'; view.stage.style.opacity = '0';
+          setTimeout(() => { view.stage.remove(); busy = false; }, 200);
+        });
       };
       requestAnimationFrame(frame);
     }
