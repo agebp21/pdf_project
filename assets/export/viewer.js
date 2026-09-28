@@ -73,6 +73,10 @@
     Object.keys(data.links || {}).forEach(key => FlipbookLinks.mount(elements[Number(key)], data.links[key], goPage));
     book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});$('#home').disabled=$('#prev').disabled=$('#next').disabled=true}});
     book.loadFromHTML(elements);update();animate();
+    // After loadFromHTML: PageFlip has no current page before that.
+    const marks = FlipbookBookmarks.bind({key: FlipbookBookmarks.key(data.title, data.pageCount, data.ratio), pages: elements,
+      visible, goPage, toggle: $('#bookmark'), open: $('#bookmarks')});
+    book.on('flip', () => marks.refresh());
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };

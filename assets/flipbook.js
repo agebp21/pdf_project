@@ -13,7 +13,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {};
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, marks = null;
   function exportState() {
     $('#export-fields').disabled = !sourcePdf || opening || exporting;
     $('#export-apk').disabled = !buildConfig?.apk;
@@ -138,6 +138,10 @@
       // Skip pages already on screen; a hovered corner (fold_corner) may still flip.
       const goPage = target => { if (book && ['read', 'fold_corner'].includes(book.getState()) && !visiblePages().includes(target)) book.flip(target, 'top'); };
       Object.entries(bookLinks).forEach(([index, list]) => FlipbookLinks.mount(newElements[Number(index)], list, goPage));
+      marks?.close();
+      marks = FlipbookBookmarks.bind({key: FlipbookBookmarks.key(name, newElements.length, ratio), pages: newElements,
+        visible: visiblePages, goPage, toggle: $('#bookmark'), open: $('#bookmarks')});
+      book.on('flip', () => marks.refresh());
       const linkCount = found.stats.internal + found.stats.toc + found.stats.external;
       $('#load-status').textContent = `${newElements.length} pages ready. The first page is the front cover.` +
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');

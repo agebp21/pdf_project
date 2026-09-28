@@ -262,3 +262,101 @@
     page.appendChild(layer);
   },
 };
+
+// Reader bookmarks: a ribbon on marked pages and a list to jump back to
+// them, kept per book on this device. ES2018 for old Android WebViews.
+(typeof self!=='undefined'?self:global).FlipbookBookmarks = {
+  // Stable per-book key: title + page count (+ ratio) hashed.
+  key(title, pageCount, ratio) {
+    let hash = 5381;
+    const text = String(title) + '|' + pageCount + '|' + Math.round((ratio || 1) * 1000);
+    for (let i = 0; i < text.length; i++) hash = ((hash << 5) + hash + text.charCodeAt(i)) >>> 0;
+    return 'mf-bookmarks:' + hash.toString(36);
+  },
+  load(key) {
+    try { const list = JSON.parse(localStorage.getItem(key) || '[]'); return Array.isArray(list) ? list.filter(Number.isInteger) : []; } catch (e) { return []; }
+  },
+  save(key, list) { try { localStorage.setItem(key, JSON.stringify(list)); } catch (e) {} },
+  /* options: {key, pages (elements), visible(): indexes on screen, goPage(i), toggle (button), open (button)} */
+  bind(options) {
+    const self = this, pages = options.pages;
+    let marks = self.load(options.key).filter(i => i >= 0 && i < pages.length).sort((a, b) => a - b);
+    let panel = null;
+    const label = i => (i === 0 ? 'Cover' : 'Page ' + (i + 1));
+    function ribbons() {
+      pages.forEach((page, index) => {
+        const existing = page.querySelector('.book-ribbon');
+        if (marks.indexOf(index) >= 0 && !existing) {
+          const ribbon = document.createElement('span');
+          ribbon.className = 'book-ribbon'; ribbon.setAttribute('aria-hidden', 'true');
+          page.appendChild(ribbon);
+        } else if (marks.indexOf(index) < 0 && existing) existing.remove();
+      });
+    }
+    function refresh() {
+      const on = options.visible().some(i => marks.indexOf(i) >= 0);
+      if (options.toggle) {
+        options.toggle.textContent = on ? '🔖 Marked' : '🔖 Mark';
+        options.toggle.setAttribute('aria-pressed', String(on));
+        options.toggle.title = on ? 'Remove the bookmark on this page' : 'Bookmark this page';
+      }
+      if (options.open) {
+        options.open.textContent = '☰ ' + marks.length;
+        options.open.title = 'Bookmarks (' + marks.length + ')';
+        options.open.setAttribute('aria-label', 'Bookmarks, ' + marks.length);
+      }
+      ribbons();
+      if (panel) render();
+    }
+    function persist() { marks.sort((a, b) => a - b); self.save(options.key, marks); refresh(); }
+    function toggle() {
+      const visible = options.visible(), marked = visible.filter(i => marks.indexOf(i) >= 0);
+      if (marked.length) marks = marks.filter(i => marked.indexOf(i) < 0);
+      else if (visible.length) marks.push(visible[0]);
+      persist();
+    }
+    function close() {
+      if (!panel) return;
+      panel.remove(); panel = null;
+      document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', escape);
+      if (options.open) options.open.setAttribute('aria-expanded', 'false');
+    }
+    function outside(event) { if (panel && !panel.contains(event.target) && event.target !== options.open) close(); }
+    function escape(event) { if (event.key === 'Escape') close(); }
+    function render() {
+      while (panel.firstChild) panel.removeChild(panel.firstChild);
+      const title = document.createElement('p'); title.className = 'book-marks-title'; title.textContent = 'Bookmarks';
+      panel.appendChild(title);
+      if (!marks.length) {
+        const empty = document.createElement('p'); empty.className = 'book-marks-empty';
+        empty.textContent = 'No bookmarks yet. Press 🔖 Mark to keep your place.';
+        panel.appendChild(empty); return;
+      }
+      marks.forEach(index => {
+        const row = document.createElement('div'); row.className = 'book-mark';
+        const go = document.createElement('button'); go.type = 'button'; go.className = 'book-mark-go';
+        const image = pages[index].querySelector('img');
+        if (image && image.src) { const thumb = document.createElement('img'); thumb.src = image.src; thumb.alt = ''; go.appendChild(thumb); }
+        const text = document.createElement('span'); text.textContent = label(index); go.appendChild(text);
+        go.addEventListener('click', () => { close(); options.goPage(index); });
+        const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'book-mark-remove';
+        remove.textContent = '×'; remove.title = 'Remove bookmark'; remove.setAttribute('aria-label', 'Remove bookmark on ' + label(index));
+        remove.addEventListener('click', () => { marks = marks.filter(i => i !== index); persist(); });
+        row.appendChild(go); row.appendChild(remove); panel.appendChild(row);
+      });
+    }
+    function open() {
+      if (panel) { close(); return; }
+      panel = document.createElement('div'); panel.className = 'book-marks'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Bookmarks');
+      render(); document.body.appendChild(panel);
+      if (options.open) options.open.setAttribute('aria-expanded', 'true');
+      document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', escape);
+    }
+    // onclick (not addEventListener): the preview rebinds these buttons for
+    // every PDF it opens, and handlers must not pile up.
+    if (options.toggle) options.toggle.onclick = toggle;
+    if (options.open) options.open.onclick = open;
+    refresh();
+    return { refresh, close, marks: () => marks.slice() };
+  },
+};

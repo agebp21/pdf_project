@@ -22,3 +22,16 @@
 .book-links{position:absolute;top:0;right:0;bottom:0;left:0;z-index:3;pointer-events:none}
 .book-link{position:absolute;display:block;pointer-events:auto;border-radius:4px;cursor:pointer;-webkit-tap-highlight-color:rgba(255,196,0,.35)}
 .book-link:hover,.book-link:focus-visible{background:rgba(255,196,0,.22);box-shadow:0 0 0 1px rgba(214,150,0,.55);outline:none}
+
+/* Reader bookmarks: a red ribbon on marked pages + the bookmarks list. */
+.book-ribbon{position:absolute;top:0;right:9%;z-index:4;width:22px;height:46px;background:linear-gradient(90deg,#b3121a,#e5252a 45%,#c21820);box-shadow:0 2px 6px rgba(0,0,0,.35);pointer-events:none;clip-path:polygon(0 0,100% 0,100% 100%,50% 78%,0 100%)}
+[class~="--left"] .book-ribbon{right:auto;left:9%}
+.book-marks{position:fixed;left:50%;bottom:92px;transform:translateX(-50%);z-index:2100;width:320px;max-width:calc(100vw - 24px);max-height:60vh;overflow:auto;padding:12px;border-radius:14px;background:#fffdf8;color:#1c1917;border:1px solid #e4ded0;box-shadow:0 18px 50px rgba(0,0,0,.28);font:14px/1.4 system-ui,sans-serif}
+.book-marks-title{margin:2px 4px 8px;font-weight:800;font-size:13px;letter-spacing:.04em;text-transform:uppercase;color:#78716c}
+.book-marks-empty{margin:4px;color:#57534e}
+.book-mark{display:flex;align-items:center;gap:6px;margin-top:6px}
+.book-mark-go{flex:1;display:flex;align-items:center;gap:10px;padding:6px;border:1px solid #efe9dc;border-radius:10px;background:#fff;cursor:pointer;text-align:left;font:inherit;color:inherit}
+.book-mark-go:hover,.book-mark-go:focus-visible{background:#fff4e5;outline:none;border-color:#e5252a}
+.book-mark-go img{width:34px;height:46px;object-fit:cover;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.2);background:#fff}
+.book-mark-remove{width:32px;height:32px;border:1px solid #efe9dc;border-radius:999px;background:#fff;cursor:pointer;font-size:18px;line-height:1;color:#78716c}
+.book-mark-remove:hover{color:#b3121a;border-color:#e5252a}
