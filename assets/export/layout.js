@@ -1,14 +1,16 @@
 'use strict';
 (typeof self!=='undefined'?self:global).FlipbookLayout = {
   motion(reduced) {
-    return {useMouseEvents:true,drawShadow:true,maxShadowOpacity:.38,flippingTime:reduced?1:950,showPageCorners:!reduced,disableFlipByClick:false,mobileScrollSupport:true,swipeDistance:30};
+    return {useMouseEvents:true,drawShadow:true,maxShadowOpacity:.38,flippingTime:reduced?1:1150,showPageCorners:!reduced,disableFlipByClick:false,mobileScrollSupport:true,swipeDistance:30};
   },
   decorate(pages) {
     pages.forEach((page,index)=>{
       // A hard cover has two faces. Only an even page count has a separate
       // closing back-cover sheet in this engine's cover-first spreads.
       const hard=index<2||(pages.length>=4&&pages.length%2===0&&index>=pages.length-2);
-      page.dataset.density=hard?'hard':'soft';
+      // Covers keep their board look but bend like paper when turned: a
+      // 'hard' page swings as a rigid plate, which reads as stiff.
+      page.dataset.density='soft';
       page.classList.add('book-paper');
       if(hard)page.classList.add('book-board');
     });
@@ -20,6 +22,35 @@
     // showCover keeps the cover alone without enlarging it.
     const single=count===1 || width<700;
     return {single,minWidth:single?width+1:1,maxWidth:width,maxHeight:height};
+  },
+  // A closed book sits centred: the front cover alone would otherwise fill
+  // only the right half (and a lone back cover the left half). Opening the
+  // cover slides the book to its spread position while the cover turns;
+  // closing it turns first, then glides back to the centre.
+  centerCover(book, root, reduced) {
+    const count = () => book.getPageCount();
+    const closedShift = () => {
+      if (book.getOrientation() !== 'landscape') return 0;
+      const rect = book.getBoundsRect(), index = book.getCurrentPageIndex();
+      if (!rect || !rect.pageWidth) return 0;
+      if (index === 0) return -rect.pageWidth / 2;
+      if (index === count() - 1 && count() % 2 === 0) return rect.pageWidth / 2;
+      return 0;
+    };
+    const apply = x => { root.style.transform = x ? 'translateX(' + x.toFixed(1) + 'px)' : ''; };
+    const settle = () => apply(closedShift());
+    root.classList.add('book-shift');
+    if (reduced) root.classList.add('book-shift-instant');
+    book.on('changeState', event => {
+      // Leaving a closed cover by button/key/swipe: slide while it opens.
+      // (A drag keeps the book still under the finger; it settles on release.)
+      if (event.data === 'flipping' && closedShift() !== 0) apply(0);
+      if (event.data === 'read') settle();
+    });
+    book.on('flip', settle); book.on('changeOrientation', settle);
+    if (typeof ResizeObserver !== 'undefined') new ResizeObserver(() => settle()).observe(root);
+    settle();
+    return settle;
   },
   bind(book,stage,ratio,{compact=false}={}) {
     let signature='',frame=0;

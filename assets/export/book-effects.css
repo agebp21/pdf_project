@@ -35,3 +35,8 @@
 .book-mark-go img{width:34px;height:46px;object-fit:cover;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.2);background:#fff}
 .book-mark-remove{width:32px;height:32px;border:1px solid #efe9dc;border-radius:999px;background:#fff;cursor:pointer;font-size:18px;line-height:1;color:#78716c}
 .book-mark-remove:hover{color:#b3121a;border-color:#e5252a}
+
+/* Closed book centred; slides smoothly to the open spread (see centerCover). */
+.book-shift{transition:transform 1.15s cubic-bezier(.45,.05,.25,1);will-change:transform}
+.book-shift-instant{transition:none}
+@media (prefers-reduced-motion:reduce){.book-shift{transition:none}}

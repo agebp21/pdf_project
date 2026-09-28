@@ -127,6 +127,7 @@
       });
       book.loadFromHTML(newElements);
       disposeLayout=FlipbookLayout.bind(book,$('#reader-stage'),ratio,{compact:true});
+      FlipbookLayout.centerCover(book, container, reduced);
       sourcePdf = blob;
       $('#export-title').value = project ? project.title : name.replace(/\.pdf$/i,'');
       if (project) for (const [index,config] of Object.entries(project.overlays)) { overlays.set(Number(index),config); renderOverlay(Number(index),config); }

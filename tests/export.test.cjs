@@ -5,11 +5,26 @@ global.JSZip = require('../assets/vendor/jszip.min.js');
 require('../assets/flipbook-export.js');
 const api = global.FlipbookExport;
 require('../assets/export/layout.js');
-const pages=Array.from({length:8},()=>({dataset:{},classList:{add(){}}}));
+const pages=Array.from({length:8},()=>{const classes=[];return {dataset:{},classes,classList:{add(name){classes.push(name)}}}});
 FlipbookLayout.decorate(pages);
-assert.deepEqual(pages.map(page=>page.dataset.density),['hard','hard','soft','soft','soft','soft','hard','hard']);
+// Covers bend like paper when turned (a rigid 'hard' plate looked stiff) but keep the board look.
+assert.deepEqual(pages.map(page=>page.dataset.density),Array(8).fill('soft'));
+assert.deepEqual(pages.map(page=>page.classes.includes('book-board')),[true,true,false,false,false,false,true,true]);
+assert.equal(FlipbookLayout.motion(false).flippingTime,1150,'slower, smoother turns');
 assert.equal(FlipbookLayout.motion(false).useMouseEvents,true);
 assert.equal(FlipbookLayout.motion(true).flippingTime,1);
+{ // Closed covers sit centred and slide to the spread when opened.
+  const handlers={},state={index:0,orientation:'landscape'};
+  const book={getPageCount:()=>12,getOrientation:()=>state.orientation,getCurrentPageIndex:()=>state.index,getBoundsRect:()=>({pageWidth:400}),on:(n,f)=>{(handlers[n]=handlers[n]||[]).push(f)}};
+  const root={style:{},classList:{add(){}}};
+  const emit=(n,d)=>(handlers[n]||[]).forEach(f=>f({data:d}));
+  FlipbookLayout.centerCover(book,root,false);
+  assert.equal(root.style.transform,'translateX(-200.0px)','front cover centred');
+  emit('changeState','flipping');assert.equal(root.style.transform,'','opening slides back to the spread');
+  state.index=1;emit('flip');assert.equal(root.style.transform,'','spreads are not shifted');
+  state.index=11;emit('flip');assert.equal(root.style.transform,'translateX(200.0px)','lone back cover centred');
+  state.orientation='portrait';emit('changeOrientation');assert.equal(root.style.transform,'','single-page mode never shifts');
+}
 assert.equal(FlipbookLayout.geometry(1920,1080,.7,0,8).single,false);
 assert.deepEqual(FlipbookLayout.geometry(1920,1080,.7,0,8),FlipbookLayout.geometry(1920,1080,.7,1,8));
 assert.deepEqual(FlipbookLayout.geometry(1920,1080,.7,7,8),FlipbookLayout.geometry(1920,1080,.7,1,8));
