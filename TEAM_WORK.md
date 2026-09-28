@@ -455,3 +455,7 @@ User (mengganti keputusan 25 Sep "sampul di kanan"): sampul awal di tengah, saat
 ### 28 September 2026 - Buka sampul melengkung (FlipbookCurl)
 
 PageFlip melipat halaman lurus satu garis -> terkesan kaku. `FlipbookCurl` (layout.js): overlay 3D 36 strip vertikal berantai (transform-origin kiri, preserve-3d), sudut per strip = theta/n + bend*profil (tepi bebas mendahului; jumlah sudut = theta), bend = ±2.4*sin(pi*e), ease in-out 1.25 s; front = gambar sampul, back = halaman 2 (rotateY 180); bayangan gradien per strip dari sudut strip ke strip berikutnya (tanpa pita/tangga). Buka: turnToPage(1) di belakang overlay (+ centerCover geser), halaman 2 disembunyikan pakai class `curl-hidden` (PageFlip menulis ulang inline style). Tutup: ← di spread pertama / Home (dari halaman dalam: lompat ke spread 1 dulu) lalu turnToPage(0). Klik sampul (mouse) membuka dengan curl; swipe/drag tetap PageFlip. Klik saat animasi diabaikan. Hanya landscape; portrait/reduced motion pakai flip biasa. Dicek Chromium preview + reader offline (keyboard). Tes: export.test (angles).
+
+### 28 September 2026 - Bookmark halaman kiri/kanan
+
+Sebelumnya 🔖 Mark di spread dua halaman selalu menandai halaman kiri. Sekarang: satu halaman tampil (cover/portrait) -> langsung toggle; dua halaman -> popup "Bookmark a page" berisi Left/Right (thumbnail + status), bisa menandai salah satu atau keduanya, popup tetap terbuka, ikut berganti saat buku di-flip dan tertutup kalau tinggal satu halaman. Tes: bookmarks.test.

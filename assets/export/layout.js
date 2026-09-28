@@ -312,7 +312,7 @@
   bind(options) {
     const self = this, pages = options.pages;
     let marks = self.load(options.key).filter(i => i >= 0 && i < pages.length).sort((a, b) => a - b);
-    let panel = null;
+    let panel = null, mode = '';
     const label = i => (i === 0 ? 'Cover' : 'Page ' + (i + 1));
     function ribbons() {
       pages.forEach((page, index) => {
@@ -329,7 +329,7 @@
       if (options.toggle) {
         options.toggle.textContent = on ? '🔖 Marked' : '🔖 Mark';
         options.toggle.setAttribute('aria-pressed', String(on));
-        options.toggle.title = on ? 'Remove the bookmark on this page' : 'Bookmark this page';
+        options.toggle.title = options.visible().length > 1 ? 'Bookmark the left or right page' : (on ? 'Remove the bookmark on this page' : 'Bookmark this page');
       }
       if (options.open) {
         options.open.textContent = '☰ ' + marks.length;
@@ -340,22 +340,56 @@
       if (panel) render();
     }
     function persist() { marks.sort((a, b) => a - b); self.save(options.key, marks); refresh(); }
-    function toggle() {
-      const visible = options.visible(), marked = visible.filter(i => marks.indexOf(i) >= 0);
-      if (marked.length) marks = marks.filter(i => marked.indexOf(i) < 0);
-      else if (visible.length) marks.push(visible[0]);
+    function flip(index) {
+      marks = marks.indexOf(index) >= 0 ? marks.filter(i => i !== index) : marks.concat([index]);
       persist();
+    }
+    // One page on screen: mark it. A two-page spread: pick left and/or right.
+    function toggle() {
+      const visible = options.visible();
+      if (visible.length === 1) flip(visible[0]);
+      else if (visible.length > 1) show('pick');
     }
     function close() {
       if (!panel) return;
-      panel.remove(); panel = null;
+      panel.remove(); panel = null; mode = '';
       document.removeEventListener('pointerdown', outside, true); document.removeEventListener('keydown', escape);
       if (options.open) options.open.setAttribute('aria-expanded', 'false');
+      if (options.toggle) options.toggle.setAttribute('aria-expanded', 'false');
     }
-    function outside(event) { if (panel && !panel.contains(event.target) && event.target !== options.open) close(); }
+    function outside(event) {
+      if (panel && !panel.contains(event.target) && event.target !== options.open && event.target !== options.toggle) close();
+    }
     function escape(event) { if (event.key === 'Escape') close(); }
+    function thumb(button, index) {
+      const image = pages[index].querySelector('img');
+      if (image && image.src) { const img = document.createElement('img'); img.src = image.src; img.alt = ''; button.appendChild(img); }
+    }
+    function renderPick() {
+      const visible = options.visible();
+      if (visible.length < 2) { close(); return; }
+      const title = document.createElement('p'); title.className = 'book-marks-title'; title.textContent = 'Bookmark a page';
+      panel.appendChild(title);
+      visible.forEach((index, n) => {
+        const on = marks.indexOf(index) >= 0;
+        const row = document.createElement('div'); row.className = 'book-mark';
+        const pick = document.createElement('button'); pick.type = 'button';
+        pick.className = on ? 'book-mark-go book-mark-pick is-marked' : 'book-mark-go book-mark-pick';
+        pick.setAttribute('aria-pressed', String(on));
+        thumb(pick, index);
+        const text = document.createElement('span');
+        text.textContent = (n === 0 ? 'Left · ' : 'Right · ') + label(index);
+        pick.appendChild(text);
+        const state = document.createElement('b'); state.className = 'book-mark-state';
+        state.textContent = on ? '🔖 Marked' : '＋ Mark';
+        pick.appendChild(state);
+        pick.addEventListener('click', () => flip(index));
+        row.appendChild(pick); panel.appendChild(row);
+      });
+    }
     function render() {
       while (panel.firstChild) panel.removeChild(panel.firstChild);
+      if (mode === 'pick') { renderPick(); return; }
       const title = document.createElement('p'); title.className = 'book-marks-title'; title.textContent = 'Bookmarks';
       panel.appendChild(title);
       if (!marks.length) {
@@ -366,8 +400,7 @@
       marks.forEach(index => {
         const row = document.createElement('div'); row.className = 'book-mark';
         const go = document.createElement('button'); go.type = 'button'; go.className = 'book-mark-go';
-        const image = pages[index].querySelector('img');
-        if (image && image.src) { const thumb = document.createElement('img'); thumb.src = image.src; thumb.alt = ''; go.appendChild(thumb); }
+        thumb(go, index);
         const text = document.createElement('span'); text.textContent = label(index); go.appendChild(text);
         go.addEventListener('click', () => { close(); options.goPage(index); });
         const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'book-mark-remove';
@@ -376,13 +409,19 @@
         row.appendChild(go); row.appendChild(remove); panel.appendChild(row);
       });
     }
-    function open() {
-      if (panel) { close(); return; }
-      panel = document.createElement('div'); panel.className = 'book-marks'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Bookmarks');
+    function show(kind) {
+      const same = panel && mode === kind;
+      close();
+      if (same) return;
+      mode = kind;
+      panel = document.createElement('div'); panel.className = 'book-marks'; panel.setAttribute('role', 'dialog');
+      panel.setAttribute('aria-label', kind === 'pick' ? 'Bookmark a page' : 'Bookmarks');
       render(); document.body.appendChild(panel);
-      if (options.open) options.open.setAttribute('aria-expanded', 'true');
+      const button = kind === 'pick' ? options.toggle : options.open;
+      if (button) button.setAttribute('aria-expanded', 'true');
       document.addEventListener('pointerdown', outside, true); document.addEventListener('keydown', escape);
     }
+    function open() { show('list'); }
     // onclick (not addEventListener): the preview rebinds these buttons for
     // every PDF it opens, and handlers must not pile up.
     if (options.toggle) options.toggle.onclick = toggle;

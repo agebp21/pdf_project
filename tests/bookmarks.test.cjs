@@ -20,11 +20,32 @@ let marks = bind();
 const mark = w.document.getElementById('mark'), list = w.document.getElementById('list');
 assert.equal(mark.textContent, '🔖 Mark'); assert.equal(list.textContent, '☰ 0');
 
+visible = [0]; mark.click();
+assert.deepEqual(marks.marks(), [0], 'a single page is marked directly');
+mark.click(); assert.deepEqual(marks.marks(), [], 'and unmarked again');
+assert.equal(w.document.querySelector('.book-marks'), null, 'no picker for one page');
+
+// A spread: Mark opens a left/right picker; either or both pages can be marked.
 visible = [3, 4]; marks.refresh(); mark.click();
-assert.deepEqual(marks.marks(), [3], 'a spread bookmarks its left page');
+let picks = [...w.document.querySelectorAll('.book-mark-pick')];
+assert.deepEqual(picks.map(p => p.querySelector('span').textContent), ['Left · Page 4', 'Right · Page 5']);
+assert.equal(mark.getAttribute('aria-expanded'), 'true');
+picks[1].click();
+assert.deepEqual(marks.marks(), [4], 'right page of a spread can be marked');
+picks = [...w.document.querySelectorAll('.book-mark-pick')];
+assert.equal(picks[1].getAttribute('aria-pressed'), 'true', 'picker stays open and shows the state');
+picks[0].click();
+assert.deepEqual(marks.marks(), [3, 4], 'both pages of a spread');
+w.document.querySelectorAll('.book-mark-pick')[1].click();
+assert.deepEqual(marks.marks(), [3], 'unmark one side only');
 assert.ok(pages[3].querySelector('.book-ribbon'), 'ribbon on the marked page');
+assert.equal(pages[4].querySelector('.book-ribbon'), null);
 assert.equal(mark.textContent, '🔖 Marked'); assert.equal(mark.getAttribute('aria-pressed'), 'true');
-visible = [1, 2]; marks.refresh(); mark.click();
+mark.click(); assert.equal(w.document.querySelector('.book-marks'), null, 'Mark again closes the picker');
+visible = [1, 2]; marks.refresh(); mark.click(); w.document.querySelector('.book-mark-pick').click();
+visible = [5]; marks.refresh();
+assert.equal(w.document.querySelector('.book-marks'), null, 'picker closes when the spread becomes one page');
+visible = [1, 2];
 assert.deepEqual(marks.marks(), [1, 3]); assert.equal(list.textContent, '☰ 2');
 assert.deepEqual(JSON.parse(localStorage.getItem(key)), [1, 3], 'saved on this device');
 
@@ -43,9 +64,9 @@ assert.equal(pages[1].querySelector('.book-ribbon'), null, 'ribbon removed');
 w.document.dispatchEvent(new w.KeyboardEvent('keydown', { key: 'Escape' }));
 assert.equal(w.document.querySelector('.book-marks'), null, 'Escape closes');
 
-visible = [3, 4]; marks.refresh(); mark.click();
-assert.deepEqual(marks.marks(), [], 'pressing again on a marked spread removes it');
-mark.click();
+visible = [3, 4]; marks.refresh(); mark.click(); w.document.querySelector('.book-mark-pick').click();
+assert.deepEqual(marks.marks(), [], 'pressing again on a marked page removes it');
+w.document.querySelector('.book-mark-pick').click(); mark.click();
 // Opening the same book again (preview rebinds buttons per PDF): no duplicate handlers.
 marks = bind();
 assert.deepEqual(marks.marks(), [3], 'bookmarks survive reopening the book');
@@ -55,4 +76,4 @@ list.click();
 assert.equal(w.document.querySelectorAll('.book-marks').length, 1);
 localStorage.setItem(key, 'not json');
 assert.deepEqual(B.load(key), [], 'corrupt storage is ignored');
-console.log('PASS bookmarks: ribbons, spread marking, list jump/remove, Escape, persistence per book, rebind without duplicates');
+console.log('PASS bookmarks: ribbons, left/right picker on spreads, list jump/remove, Escape, persistence per book, rebind without duplicates');
