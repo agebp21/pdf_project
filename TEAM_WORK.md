@@ -435,3 +435,7 @@ Bar filter kategori homepage jadi pita merah PDF full-width (#E5252A) tepat di b
 
 - `FlipbookSound` (di `assets/export/layout.js`, jadi ikut preview + HTML/EXE/APK/editor animasi tanpa ubah daftar file): suara kertas disintesis Web Audio (noise bandpass menyapu + ketukan kecil, variasi acak), tanpa file audio/lisensi, offline. `attach(book)`: bunyi saat state `flipping` (tombol/keyboard/swipe) dan saat drag (`user_fold`) dilepas — PageFlip tidak memancarkan `flipping` untuk drag. Tombol 🔊 Sound / 🔇 Muted (localStorage `mf-flip-sound`). Tes `tests/flip-sound.test.cjs`; Chromium: open cover/next/drag masing-masing 1 bunyi, muted diam; contoh suara `.build/flip-sound-preview.wav`.
 - BUG LAMA diperbaiki: `book-effects.css` memakai `.stf__item--left/--right`, padahal PageFlip memberi class terpisah `--left`/`--right`, jadi efek spine/sampul tidak pernah aktif. Selector kini `[class~="--left"]` (aman untuk WebView lama). Lipatan dibuat melengkung: bayangan makin gelap ke jilid, highlight tipis di puncak lengkung, bayangan tipis di tepi luar.
+
+### 28 September 2026 - Suara kertas lebih natural
+
+Sintesis diganti: gelombang dihitung per-sample (seed deterministik, 3 variasi di-cache per gaya/sample-rate) dengan 3 bagian — crinkle (burst mikro acak, paling rapat saat kertas melengkung), swoosh (noise SVF bandpass yang menyapu), landing (thump rendah + slap). Stereo pan kanan->kiri. Gaya: paper (default), crisp, thick (`FlipbookSound.setStyle`). Contoh WAV: `.build/flip-sound-samples/`. Tes flip-sound (1 source per flip) + compat ES2018 + Chromium lolos.

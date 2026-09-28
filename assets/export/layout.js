@@ -91,7 +91,8 @@
 // ES2018 only: exported books must run in old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookSound = (function () {
   const KEY = 'mf-flip-sound';
-  let ctx = null, noise = null, enabled = true;
+  let ctx = null, enabled = true, style = 'paper';
+  const cache = {};
   try { enabled = localStorage.getItem(KEY) !== 'off'; } catch (e) {}
   const buttons = [];
 
@@ -103,52 +104,100 @@
     if (ctx.state === 'suspended' && ctx.resume) ctx.resume().catch(() => {});
     return ctx;
   }
-  // White noise with a little brown noise mixed in gives paper its body.
-  function noiseBuffer(c) {
-    if (noise) return noise;
-    const length = Math.floor(c.sampleRate * 0.8);
-    noise = c.createBuffer(1, length, c.sampleRate);
-    const data = noise.getChannelData(0);
-    let brown = 0;
-    for (let i = 0; i < length; i++) {
-      const white = Math.random() * 2 - 1;
-      brown = (brown + 0.02 * white) / 1.02;
-      data[i] = white * 0.55 + brown * 3.2;
+  // A real page turn has three parts: tiny crinkles while the sheet lifts
+  // and bends, an air "swoosh" while it swings over, and a soft slap when it
+  // lands. Rendered sample by sample (deterministic per seed) and cached.
+  const STYLES = {
+    paper: { dur: 0.62, crinkle: 0.6, grain: [2500, 7000], swoosh: 0.45, sweep: [700, 2600, 900], flap: 0.35, thump: 110 },
+    crisp: { dur: 0.52, crinkle: 1.0, grain: [3500, 9500], swoosh: 0.3, sweep: [1200, 4200, 1500], flap: 0.5, thump: 150 },
+    thick: { dur: 0.74, crinkle: 0.3, grain: [1500, 4500], swoosh: 0.65, sweep: [400, 1500, 600], flap: 0.6, thump: 80 },
+  };
+  function random(seed) {
+    let x = (seed >>> 0) || 1;
+    return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; };
+  }
+  // Smooth rise/fall between a and b with its peak at m (0 outside).
+  function hump(t, a, m, b) {
+    if (t <= a || t >= b) return 0;
+    const v = t < m ? Math.sin((t - a) / (m - a) * Math.PI / 2) : Math.cos((t - m) / (b - m) * Math.PI / 2);
+    return v * v;
+  }
+  function synth(name, rate, seed) {
+    const st = STYLES[name] || STYLES.paper, T = st.dur, n = Math.floor(rate * T);
+    const out = new Float32Array(n), rnd = random(seed);
+    // Swoosh: noise through a state-variable bandpass whose centre sweeps.
+    let low = 0, band = 0;
+    for (let i = 0; i < n; i++) {
+      const t = i / rate, p = Math.min(1, t / (T * 0.8));
+      const f = p < 0.5 ? st.sweep[0] + (st.sweep[1] - st.sweep[0]) * p * 2 : st.sweep[1] + (st.sweep[2] - st.sweep[1]) * (p - 0.5) * 2;
+      const k = 2 * Math.sin(Math.PI * Math.min(f, rate / 6) / rate);
+      low += k * band; band += k * ((rnd() * 2 - 1) - low - 0.9 * band);
+      out[i] += band * st.swoosh * hump(t, 0, T * 0.3, T * 0.82);
     }
-    return noise;
+    // Crinkle: sparse micro-bursts (random clicks), densest while the sheet bends.
+    for (let t = 0; t < T * 0.75;) {
+      const shape = hump(t, 0.01, T * 0.25, T * 0.75);
+      t += -Math.log(1 - rnd()) / (60 + 320 * shape * st.crinkle);
+      const at = Math.floor(t * rate), len = Math.floor(rate * (0.0015 + rnd() * 0.004));
+      const amp = (0.25 + rnd() * 0.75) * st.crinkle * (0.15 + shape);
+      const fc = st.grain[0] + rnd() * (st.grain[1] - st.grain[0]), a = Math.exp(-2 * Math.PI * fc / rate);
+      let lp = 0;
+      for (let j = 0; j < len && at + j < n; j++) {
+        const x = (rnd() * 2 - 1) * Math.exp(-j / (len * 0.35));
+        lp = lp * a + x * (1 - a);
+        out[at + j] += (x - lp) * amp * 0.6;
+      }
+    }
+    // Landing: low thump plus a short, dull slap.
+    const land = Math.floor(T * 0.78 * rate);
+    let dull = 0;
+    for (let j = 0; j < rate * 0.09 && land + j < n; j++) {
+      const t = j / rate;
+      dull += ((rnd() * 2 - 1) - dull) * 0.25;
+      out[land + j] += (Math.sin(2 * Math.PI * st.thump * t) * Math.exp(-t / 0.018) * 0.7 + dull * Math.exp(-t / 0.012) * 1.2) * st.flap;
+    }
+    let peak = 0;
+    for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(out[i]));
+    const gain = peak ? 0.6 / peak : 0;
+    for (let i = 0; i < n; i++) out[i] *= gain * Math.min(1, i / (rate * 0.005), (n - i) / (rate * 0.02));
+    return out;
   }
-  // One filtered noise burst: bandpass sweeping from `from` to `to` Hz.
-  function burst(c, at, duration, peak, from, to) {
-    const source = c.createBufferSource();
-    source.buffer = noiseBuffer(c);
-    source.playbackRate.value = 0.85 + Math.random() * 0.3;
-    const band = c.createBiquadFilter();
-    band.type = 'bandpass'; band.Q.value = 0.8;
-    band.frequency.setValueAtTime(from, at);
-    band.frequency.exponentialRampToValueAtTime(to, at + duration);
-    const high = c.createBiquadFilter();
-    high.type = 'highpass'; high.frequency.value = 300;
-    const gain = c.createGain();
-    gain.gain.setValueAtTime(0.0001, at);
-    gain.gain.exponentialRampToValueAtTime(peak, at + duration * 0.18);
-    gain.gain.exponentialRampToValueAtTime(peak * 0.35, at + duration * 0.6);
-    gain.gain.exponentialRampToValueAtTime(0.0001, at + duration);
-    source.connect(band); band.connect(high); high.connect(gain); gain.connect(c.destination);
-    source.start(at, Math.random() * 0.2);
-    source.stop(at + duration + 0.05);
+  // Three pre-rendered variations per style and sample rate, picked at random.
+  function buffers(c) {
+    const key = style + '@' + c.sampleRate;
+    if (!cache[key]) {
+      cache[key] = [11, 23, 37].map(seed => {
+        const data = synth(style, c.sampleRate, seed + style.length * 101);
+        const buffer = c.createBuffer(1, data.length, c.sampleRate);
+        buffer.getChannelData(0).set(data);
+        return buffer;
+      });
+    }
+    return cache[key];
   }
-  // A page turn: the sheet sweeps across (swish), then settles (soft tap).
   // `target` lets tests render the sound offline (OfflineAudioContext).
   function play(target) {
     if (!enabled) return false;
     const c = target || context();
     if (!c) return false;
-    const t = c.currentTime + 0.01;
-    const vary = 0.9 + Math.random() * 0.2;
-    burst(c, t, 0.42 * vary, 0.55, 3600 * vary, 1100);
-    burst(c, t + 0.36 * vary, 0.12, 0.28, 1800, 600);
+    const list = buffers(c), source = c.createBufferSource();
+    source.buffer = list[Math.floor(Math.random() * list.length)];
+    source.playbackRate.value = 0.94 + Math.random() * 0.12;
+    const gain = c.createGain();
+    gain.gain.value = 0.9;
+    let last = gain;
+    // The sheet travels from the right-hand page to the left.
+    if (c.createStereoPanner) {
+      const pan = c.createStereoPanner(), t = c.currentTime;
+      pan.pan.setValueAtTime(0.45, t);
+      pan.pan.linearRampToValueAtTime(-0.45, t + STYLES[style].dur);
+      gain.connect(pan); last = pan;
+    }
+    source.connect(gain); last.connect(c.destination);
+    source.start();
     return true;
   }
+  function setStyle(name) { if (STYLES[name]) style = name; }
   function render(button) {
     button.textContent = enabled ? '🔊 Sound' : '🔇 Muted';
     button.setAttribute('aria-pressed', String(enabled));
@@ -180,5 +229,5 @@
     const unlock = () => { if (enabled) context(); document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); };
     document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
   }
-  return { play, attach, setEnabled, bindButton, isEnabled: () => enabled };
+  return { play, attach, setEnabled, bindButton, setStyle, synth, styles: Object.keys(STYLES), isEnabled: () => enabled };
 })();

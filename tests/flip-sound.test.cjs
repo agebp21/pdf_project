@@ -18,7 +18,7 @@ global.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (
 global.document = { addEventListener: (name, fn) => { (listeners[name] = listeners[name] || []).push(fn); }, removeEventListener() {} };
 require('../assets/export/layout.js');
 const sound = global.FlipbookSound;
-const turns = () => sources / 2;
+const turns = () => sources; // one buffer source per page turn
 
 // A fake PageFlip that only emits state changes.
 const handlers = [];
