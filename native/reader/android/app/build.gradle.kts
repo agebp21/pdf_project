@@ -30,11 +30,23 @@ android {
         versionName = flutter.versionName
     }
 
+    // MyFlipbook's release key, provided by the build service (server.py) via
+    // the environment; plain `flutter build` falls back to the debug key.
+    val releaseStore = System.getenv("MYFLIPBOOK_KEYSTORE")
+    signingConfigs {
+        create("release") {
+            if (releaseStore != null) {
+                storeFile = file(releaseStore)
+                storePassword = System.getenv("MYFLIPBOOK_KEY_PASSWORD")
+                keyAlias = System.getenv("MYFLIPBOOK_KEY_ALIAS")
+                keyPassword = System.getenv("MYFLIPBOOK_KEY_PASSWORD")
+            }
+        }
+    }
+
     buildTypes {
         release {
-            // TODO: Add your own signing config for the release build.
-            // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.getByName("debug")
+            signingConfig = signingConfigs.getByName(if (releaseStore != null) "release" else "debug")
         }
     }
 }

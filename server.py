@@ -21,6 +21,8 @@ import socket
 import subprocess
 import tempfile
 import threading
+import time
+import unicodedata
 import uuid
 import zipfile
 from http.cookies import CookieError, SimpleCookie
@@ -32,6 +34,8 @@ import invoice
 
 ROOT = Path(__file__).resolve().parent
 BUILD = ROOT / '.build'
+DATA = ROOT / '.data'
+ANDROID_SIGNING = DATA / 'android-signing.json'
 TOKEN = secrets.token_urlsafe(32)
 JOBS = {}
 BUILD_LOCK = threading.Lock()
@@ -171,13 +175,73 @@ def unpack_book(archive, destination):
 WINDOWS_HOW_TO = '''HOW TO OPEN THIS BOOK (Windows)
 
 1. Right-click the ZIP and choose "Extract All". Extract EVERYTHING into one folder.
-2. Open that folder and double-click sarvamaya_book.exe.
+2. Open that folder and double-click {exe}.
+
+If Windows shows "Windows protected your PC", click "More info" and then "Run anyway".
 
 Keep the "data" folder and the .dll files next to the .exe, or the app will not start.
 Requires Microsoft Edge WebView2 Runtime. Most Windows 10/11 PCs already have it;
 otherwise get it free from https://developer.microsoft.com/microsoft-edge/webview2/
 No internet connection is needed to read the book.
 '''
+
+
+def android_app_id(title):
+    """Readable, stable Android package per book: id.myflipbook.<slug>_<hash>.
+    Same title = same package, so a rebuilt book installs as an update."""
+    ascii_title = unicodedata.normalize('NFKD', title).encode('ascii', 'ignore').decode().lower()
+    slug = re.sub(r'[^a-z0-9]+', '_', ascii_title).strip('_')[:24].strip('_')
+    if not slug or not slug[0].isalpha():
+        slug = ('book_' + slug).strip('_')
+    return f'id.myflipbook.{slug}_{hashlib.sha256(title.encode()).hexdigest()[:6]}'
+
+
+def exe_name(title):
+    """Book title as a Windows file name (without .exe)."""
+    name = re.sub(r'[<>:"/\\|?*]', '', app_name(title)).strip(' .')
+    if not name or re.fullmatch(r'(?i)(con|prn|aux|nul|com\d|lpt\d)', name):
+        return 'MyFlipbook'
+    return name
+
+
+def find_keytool():
+    homes = [os.environ.get('JAVA_HOME'), r'C:\Program Files\Android\Android Studio\jbr',
+             '/Applications/Android Studio.app/Contents/jbr/Contents/Home']
+    for home in filter(None, homes):
+        tool = Path(home) / 'bin' / ('keytool.exe' if os.name == 'nt' else 'keytool')
+        if tool.is_file():
+            return str(tool)
+    return shutil.which('keytool')
+
+
+def android_signing():
+    """MyFlipbook's own release key: made once, kept in .data/ (never in Git),
+    the same for every build so reinstalling a book updates it. Returns the
+    Gradle environment, or None (debug key) when keytool is unavailable."""
+    info = None
+    if ANDROID_SIGNING.is_file():
+        info = json.loads(ANDROID_SIGNING.read_text(encoding='utf-8'))
+        if not Path(info['store']).is_file():
+            info = None
+    if not info:
+        keytool = find_keytool()
+        if not keytool:
+            return None
+        DATA.mkdir(exist_ok=True)
+        store = DATA / 'android-release.jks'
+        if store.exists():  # never overwrite a key: apps signed with it could no longer be updated
+            store = DATA / f'android-release-{int(time.time())}.jks'
+        info = {'store': str(store), 'password': secrets.token_urlsafe(24), 'alias': 'myflipbook'}
+        env = dict(os.environ, MYFLIPBOOK_KEY_PASSWORD=info['password'])
+        subprocess.run([keytool, '-genkeypair', '-keystore', str(store), '-storetype', 'PKCS12',
+                        '-storepass:env', 'MYFLIPBOOK_KEY_PASSWORD', '-keypass:env', 'MYFLIPBOOK_KEY_PASSWORD',
+                        '-alias', info['alias'], '-keyalg', 'RSA', '-keysize', '2048', '-validity', '10000',
+                        '-dname', 'CN=MyFlipbook, O=MyFlipbook, C=ID'],
+                       env=env, check=True, capture_output=True, timeout=120,
+                       creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+        ANDROID_SIGNING.write_text(json.dumps(info), encoding='utf-8')
+    return {'MYFLIPBOOK_KEYSTORE': info['store'], 'MYFLIPBOOK_KEY_PASSWORD': info['password'],
+            'MYFLIPBOOK_KEY_ALIAS': info['alias']}
 
 
 def app_name(title):
@@ -206,7 +270,8 @@ def wide_literal(text):
 
 
 def brand_native(workspace, title):
-    """Show the book title as the Android launcher label and Windows window title."""
+    """Show the book title as the Android launcher label, Windows window title
+    and Windows file details."""
     name = app_name(title)
     manifest = workspace / 'android/app/src/main/AndroidManifest.xml'
     manifest.write_text(re.sub(r'android:label="[^"]*"', lambda _: f'android:label="{xml_attr(name)}"',
@@ -214,6 +279,15 @@ def brand_native(workspace, title):
     runner = workspace / 'windows/runner/main.cpp'
     runner.write_text(runner.read_text(encoding='utf-8').replace('window.Create(L"sarvamaya_book"',
                                                                  f'window.Create(L"{wide_literal(name)}"'), encoding='utf-8')
+    resource = workspace / 'windows/runner/Runner.rc'
+    if resource.is_file():
+        quoted = name.replace('"', '""')
+        text = resource.read_text(encoding='utf-8')
+        for key, value in (('CompanyName', 'MyFlipbook'), ('FileDescription', quoted), ('InternalName', quoted),
+                           ('ProductName', quoted), ('OriginalFilename', exe_name(title).replace('"', '""') + '.exe'),
+                           ('LegalCopyright', 'Made with MyFlipbook')):
+            text = re.sub(r'(VALUE "' + key + r'", )"[^"]*(?:""[^"]*)*"', lambda m: m[1] + '"' + value.replace('\\', '\\\\') + '"', text, count=1)
+        resource.write_text(text, encoding='utf-8')
     return name
 
 
@@ -238,8 +312,8 @@ def plugin_junctions(workspace):
                        env=env, check=True, creationflags=subprocess.CREATE_NO_WINDOW)
 
 
-def run_command(args, cwd, log):
-    env = dict(os.environ, CI='true')
+def run_command(args, cwd, log, extra_env=None):
+    env = dict(os.environ, CI='true', **(extra_env or {}))
     with log.open('ab') as output:
         result = subprocess.run(args, cwd=cwd, stdout=output, stderr=subprocess.STDOUT,
                                 env=env, timeout=3600, creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
@@ -353,7 +427,7 @@ def build_job(job_id, target):
         if book_dir.exists():
             shutil.rmtree(book_dir)
         data = unpack_book(folder / 'input.zip', book_dir)
-        app_id = 'id.sarvamaya.book.b' + hashlib.sha256(data['title'].encode()).hexdigest()[:16]
+        app_id = android_app_id(data['title'])
         gradle = workspace / 'android/app/build.gradle.kts'
         gradle.write_text(re.sub(r'applicationId = "[^"]+"', f'applicationId = "{app_id}"', gradle.read_text(encoding='utf-8')), encoding='utf-8')
         brand_native(workspace, data['title'])
@@ -369,7 +443,18 @@ def build_job(job_id, target):
         if code:
             raise RuntimeError('Dependensi Flutter gagal disiapkan. Unduh log build untuk rinciannya.')
         job['message'] = 'Membangun APK Android…' if target == 'apk' else 'Membangun aplikasi Windows…'
-        if run_command([flutter, 'build', 'apk' if target == 'apk' else 'windows', '--release'], workspace, log):
+        signing = None
+        if target == 'apk':
+            job['message'] = 'Menyiapkan tanda tangan aplikasi…'
+            try:
+                signing = android_signing()
+            except (OSError, subprocess.SubprocessError, ValueError, KeyError) as cause:
+                with log.open('a', encoding='utf-8') as stream:
+                    stream.write(f'\nRelease key unavailable, using the debug key: {cause}\n')
+            job['message'] = 'Membangun APK Android…'
+        # Newer build number every time, so installing a rebuilt book updates it.
+        build = [flutter, 'build', 'apk' if target == 'apk' else 'windows', '--release', f'--build-number={int(time.time() // 60)}']
+        if run_command(build, workspace, log, signing):
             raise RuntimeError('Build gagal. Unduh log build untuk rinciannya.')
         if target == 'apk':
             output = folder / 'flipbook.apk'
@@ -379,11 +464,13 @@ def build_job(job_id, target):
             if not (release / 'sarvamaya_book.exe').is_file():
                 raise RuntimeError('EXE hasil build tidak ditemukan.')
             output = folder / 'flipbook-windows.zip'
+            exe = exe_name(data['title']) + '.exe'
             with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as package:
                 for file in release.rglob('*'):
                     if file.is_file():
-                        package.write(file, file.relative_to(release).as_posix())
-                package.writestr('HOW-TO-OPEN.txt', WINDOWS_HOW_TO)
+                        name = file.relative_to(release).as_posix()
+                        package.write(file, exe if name == 'sarvamaya_book.exe' else name)
+                package.writestr('HOW-TO-OPEN.txt', WINDOWS_HOW_TO.format(exe=exe))
         job.update(status='done', message='Build selesai.', artifact=output.name, download=f'/api/jobs/{job_id}/download')
     except Exception as cause:
         with log.open('a', encoding='utf-8') as stream:

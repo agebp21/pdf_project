@@ -72,6 +72,49 @@ class BuildTests(unittest.TestCase):
             self.assertIn(r'''L"Laporan \"2026\" \U00002014 D\U000000E9sa & Co's"''', runner)
         self.assertEqual(server.app_name('   '), 'MyFlipbook')
 
+    def test_windows_file_details_named_after_book(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            workspace = Path(temporary)
+            for folder in ('android/app/src/main', 'windows/runner'):
+                (workspace / folder).mkdir(parents=True)
+            (workspace / 'android/app/src/main/AndroidManifest.xml').write_text('<application android:label="x"/>', encoding='utf-8')
+            (workspace / 'windows/runner/main.cpp').write_text('window.Create(L"sarvamaya_book"', encoding='utf-8')
+            rc = workspace / 'windows/runner/Runner.rc'
+            rc.write_text('VALUE "CompanyName", "id.sarvamaya" "\\0"\n'
+                          'VALUE "ProductName", "sarvamaya_book" "\\0"\n'
+                          'VALUE "OriginalFilename", "sarvamaya_book.exe" "\\0"\n'
+                          'VALUE "FileVersion", VERSION_AS_STRING "\\0"\n', encoding='utf-8')
+            server.brand_native(workspace, 'Buku "Uji": Désa')
+            text = rc.read_text(encoding='utf-8')
+            self.assertIn('VALUE "CompanyName", "MyFlipbook"', text)
+            self.assertIn('VALUE "ProductName", "Buku ""Uji"": Désa"', text)
+            self.assertIn('VALUE "OriginalFilename", "Buku Uji Désa.exe"', text)
+            self.assertIn('VALUE "FileVersion", VERSION_AS_STRING', text)
+
+    def test_android_package_and_exe_names(self):
+        app_id = server.android_app_id('Uji Export')
+        self.assertRegex(app_id, r'^id\.myflipbook\.uji_export_[0-9a-f]{6}$')
+        self.assertEqual(app_id, server.android_app_id('Uji Export'), 'stable: a rebuild updates the installed app')
+        self.assertNotEqual(app_id, server.android_app_id('Uji Export 2'))
+        for title in ('2026 Report', '行事', '   ', 'Désa & Co'):
+            self.assertRegex(server.android_app_id(title), r'^id\.myflipbook\.[a-z][a-z0-9_]*$', title)
+        self.assertEqual(server.exe_name('a/b:c*?'), 'abc')
+        self.assertEqual(server.exe_name('CON'), 'MyFlipbook')
+        self.assertEqual(server.exe_name('Laporan 2026'), 'Laporan 2026')
+
+    @unittest.skipUnless(server.find_keytool(), 'keytool not installed')
+    def test_android_release_key_made_once(self):
+        with tempfile.TemporaryDirectory() as temporary, \
+                mock.patch.object(server, 'DATA', Path(temporary)), \
+                mock.patch.object(server, 'ANDROID_SIGNING', Path(temporary) / 'android-signing.json'):
+            first = server.android_signing()
+            self.assertTrue(Path(first['MYFLIPBOOK_KEYSTORE']).is_file())
+            self.assertEqual(server.android_signing(), first, 'same key for every build')
+            (Path(temporary) / 'android-signing.json').unlink()
+            second = server.android_signing()
+            self.assertNotEqual(second['MYFLIPBOOK_KEYSTORE'], first['MYFLIPBOOK_KEYSTORE'], 'an existing key file is never overwritten')
+            self.assertTrue(Path(first['MYFLIPBOOK_KEYSTORE']).is_file())
+
     def test_page_links_validated_for_native_books(self):
         data = self.manifest()
         data['pageCount'] = 3

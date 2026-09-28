@@ -467,3 +467,10 @@ Model sudut FlipbookCurl lama membagi putaran rata ke semua strip bersarang, jad
 ### 28 September 2026 - Glitch kiri saat kembali ke Home
 
 Saat menutup sampul, bagian kiri tampak tergeser/terpotong. Perbaikan FlipbookCurl: (1) tepi bebas tertinggal maksimal 0.75x jarak putar (sebelumnya menempel & terseret datar di atas buku), (2) perspektif w*6 (dulu w*3.2, lembar terangkat tampak membesar), (3) geser ke tengah saat menutup baru mulai di setengah animasi dengan durasi sisa animasi (kalau di awal halaman kiri terseret keluar stage; kalau setelahnya ada hentakan kedua), (4) halaman 2 baru ditampilkan lagi setelah overlay hilang. Dicek per frame (Home dari 6-7): tidak ada kedip.
+
+### 28 September 2026 - APK/EXE siap dites
+
+- APK ditandatangani key rilis MyFlipbook sendiri (CN=MyFlipbook, O=MyFlipbook, C=ID), dibuat otomatis sekali oleh server.py via keytool (JAVA_HOME / Android Studio jbr / PATH) di `.data/android-release.jks` + `.data/android-signing.json` (password acak; `.data/` di-gitignore). Key lama tidak pernah ditimpa. **BACKUP kedua file itu**: kalau hilang, aplikasi buku yang sudah terpasang tidak bisa di-update (harus uninstall). Tanpa keytool -> fallback debug key (dicatat di log build). build.gradle.kts membaca env MYFLIPBOOK_KEYSTORE / _KEY_PASSWORD / _KEY_ALIAS.
+- Paket Android: `id.myflipbook.<slug>_<hash6>` (stabil per judul), `--build-number` = menit epoch -> build ulang buku yang sama terpasang sebagai update.
+- EXE diberi nama judul buku (`<Judul>.exe`, karakter terlarang dibuang, CON/PRN dll -> MyFlipbook); Runner.rc: CompanyName MyFlipbook, ProductName/FileDescription = judul. HOW-TO-OPEN menyebut nama exe + langkah SmartScreen.
+- Belum: sertifikat code signing Windows (berbayar) & verifikasi developer Android (akun Google, dilakukan owner).
