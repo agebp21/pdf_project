@@ -72,6 +72,21 @@ class BuildTests(unittest.TestCase):
             self.assertIn(r'''L"Laporan \"2026\" \U00002014 D\U000000E9sa & Co's"''', runner)
         self.assertEqual(server.app_name('   '), 'MyFlipbook')
 
+    def test_page_links_validated_for_native_books(self):
+        data = self.manifest()
+        data['pageCount'] = 3
+        data['links'] = {'0': [{'x': 0.1, 'y': 0.2, 'w': 0.5, 'h': 0.03, 'page': 2},
+                               {'x': 0.1, 'y': 0.3, 'w': 0.5, 'h': 0.03, 'url': 'https://sarvamaya.com'}]}
+        self.assertEqual(server.validate_manifest(data)['links'], data['links'])
+        self.assertEqual(server.validate_manifest(self.manifest())['links'], {}, 'books without links still build')
+        for bad in ({'page': 3}, {'url': 'javascript:alert(1)'}, {'page': 1, 'x': 2}, {'page': True}):
+            data['links'] = {'0': [dict({'x': 0.1, 'y': 0.2, 'w': 0.5, 'h': 0.03}, **bad)]}
+            with self.assertRaises(ValueError):
+                server.validate_manifest(data)
+        data['links'] = {'3': []}
+        with self.assertRaises(ValueError):
+            server.validate_manifest(data)
+
     def test_no_arbitrary_page_limit(self):
         data = self.manifest()
         data['pageCount'] = 1001

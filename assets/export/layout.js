@@ -231,3 +231,34 @@
   }
   return { play, attach, setEnabled, bindButton, setStyle, synth, styles: Object.keys(STYLES), isEnabled: () => enabled };
 })();
+
+// Clickable links on pages (table of contents, cross references, URLs).
+// Coordinates are fractions of the page box; internal links flip to their
+// page with the normal animation. ES2018 for old Android WebViews.
+(typeof self!=='undefined'?self:global).FlipbookLinks = {
+  mount(page, links, goPage) {
+    const old = page.querySelector('.book-links');
+    if (old) old.remove();
+    if (!links || !links.length) return;
+    const layer = document.createElement('div');
+    layer.className = 'book-links';
+    links.forEach(link => {
+      const a = document.createElement('a');
+      a.className = 'book-link';
+      a.style.left = link.x * 100 + '%'; a.style.top = link.y * 100 + '%';
+      a.style.width = link.w * 100 + '%'; a.style.height = link.h * 100 + '%';
+      if (typeof link.url === 'string') {
+        a.href = link.url; a.target = '_blank'; a.rel = 'noopener noreferrer';
+        a.title = link.url;
+      } else {
+        a.href = '#'; a.title = 'Go to page ' + (link.page + 1);
+        a.setAttribute('aria-label', 'Go to page ' + (link.page + 1));
+        a.addEventListener('click', event => { event.preventDefault(); goPage(link.page); });
+      }
+      // Keep PageFlip from starting a page drag when a link is pressed.
+      ['pointerdown', 'mousedown', 'touchstart'].forEach(name => a.addEventListener(name, event => event.stopPropagation()));
+      layer.appendChild(a);
+    });
+    page.appendChild(layer);
+  },
+};

@@ -17,3 +17,8 @@
 .book-idle-panel{max-width:360px;padding:24px;text-align:center;background:#f8faf5;color:#375744;border:1px solid #cbd5c9;border-radius:12px;box-shadow:0 12px 40px #172e3033;font:14px/1.5 system-ui,sans-serif}
 .book-idle-panel p{margin:0 0 16px}
 .book-idle-panel button{border:1px solid #cbd5c9;background:#f8faf5;color:#375744;padding:10px 16px;border-radius:7px;font:inherit;cursor:pointer}
+
+/* Page links (TOC entries, cross references): invisible until hovered. */
+.book-links{position:absolute;top:0;right:0;bottom:0;left:0;z-index:3;pointer-events:none}
+.book-link{position:absolute;display:block;pointer-events:auto;border-radius:4px;cursor:pointer;-webkit-tap-highlight-color:rgba(255,196,0,.35)}
+.book-link:hover,.book-link:focus-visible{background:rgba(255,196,0,.22);box-shadow:0 0 0 1px rgba(214,150,0,.55);outline:none}

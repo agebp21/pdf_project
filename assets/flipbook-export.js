@@ -11,6 +11,25 @@
     'No internet connection or server is needed.',
     'Keep index.html together with the other files and the "pages" folder.',
     ''].join('\n');
+  // Page links: fractions of the page box, a target page or a web/mail URL.
+  function validLinks(links, pageCount) {
+    const out = {};
+    if (links === undefined) return out;
+    if (!links || typeof links !== 'object' || Array.isArray(links)) throw Error('Data tautan tidak valid.');
+    const unit = value => Number.isFinite(value) && value >= 0 && value <= 1;
+    for (const [key, list] of Object.entries(links)) {
+      if (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= pageCount || !Array.isArray(list)) throw Error('Halaman tautan tidak valid.');
+      out[key] = list.slice(0, 200).map(link => {
+        if (!link || ![link.x, link.y, link.w, link.h].every(unit)) throw Error('Posisi tautan tidak valid.');
+        const clean = {x:link.x, y:link.y, w:link.w, h:link.h};
+        if (Number.isInteger(link.page) && link.page >= 0 && link.page < pageCount) clean.page = link.page;
+        else if (typeof link.url === 'string' && /^(https?:\/\/|mailto:)/i.test(link.url) && link.url.length <= 500) clean.url = link.url;
+        else throw Error('Tujuan tautan tidak valid.');
+        return clean;
+      });
+    }
+    return out;
+  }
   function validate(data) {
     if (!data || data.version !== 1 || typeof data.title !== 'string' || !Number.isInteger(data.pageCount) || data.pageCount < 1 || !Number.isFinite(data.ratio) || data.ratio <= 0) throw Error('Format proyek tidak valid atau belum didukung.');
     if (!data.overlays || typeof data.overlays !== 'object' || Array.isArray(data.overlays)) throw Error('Data animasi tidak valid.');
@@ -19,7 +38,7 @@
       if (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= data.pageCount || !config || typeof config.label !== 'string' || !Number.isFinite(config.value) || config.value < 0 || config.value > 999999 || !positions.has(config.position)) throw Error('Data animasi atau nomor halaman tidak valid.');
       overlays[key] = {label:config.label.slice(0,40),value:config.value,position:config.position};
     }
-    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays};
+    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount)};
   }
   const scriptData = data => 'window.FLIPBOOK_DATA = ' + JSON.stringify(validate(data)).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029') + ';\n';
   async function asset(path) {

@@ -13,14 +13,14 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {};
   function exportState() {
     $('#export-fields').disabled = !sourcePdf || opening || exporting;
     $('#export-apk').disabled = !buildConfig?.apk;
     $('#export-exe').disabled = !buildConfig?.exe;
     $('#project-file').disabled = opening || exporting;
   }
-  const model = () => ({version:1,title:$('#export-title').value.trim()||'Buku interaktif',pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays)});
+  const model = () => ({version:1,title:$('#export-title').value.trim()||'Buku interaktif',pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks});
   const error = message => { $('#reader-error').textContent = message; $('#reader-error').hidden = !message; };
   function visiblePages() {
     if (!book) return [];
@@ -102,11 +102,16 @@
         element.append(image); newElements.push(element);
         page.cleanup(); canvas.width = canvas.height = 0;
       }
+      // Table of contents / cross-reference links (never blocks opening the book).
+      let found = {links:{}, stats:{internal:0, external:0, toc:0}};
+      try {
+        if (window.PdfLinks) found = await PdfLinks.extract(newPdf, {progress:(i, n) => { $('#load-status').textContent = `Finding links ${i} / ${n}…`; }});
+      } catch (cause) { console.warn('Links skipped:', cause); }
       if (version !== loadVersion) return false;
       if (book) { disposeLayout?.(); book.destroy(); book = null; }
       if (pdf) await pdf.destroy();
       imageUrls.forEach(url => URL.revokeObjectURL(url));
-      imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true;
+      imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links;
       const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...newElements);
       $('#reader-stage').replaceChildren(container);
       const ratio = natural.width / natural.height;
@@ -130,7 +135,12 @@
       $('#target-page').replaceChildren(...newElements.map((_, index) => {
         const option = document.createElement('option'); option.value = String(index); option.textContent = 'Page ' + (index + 1); return option;
       }));
-      $('#load-status').textContent = `${newElements.length} pages ready. The first page is the front cover.`;
+      // Skip pages already on screen; a hovered corner (fold_corner) may still flip.
+      const goPage = target => { if (book && ['read', 'fold_corner'].includes(book.getState()) && !visiblePages().includes(target)) book.flip(target, 'top'); };
+      Object.entries(bookLinks).forEach(([index, list]) => FlipbookLinks.mount(newElements[Number(index)], list, goPage));
+      const linkCount = found.stats.internal + found.stats.toc + found.stats.external;
+      $('#load-status').textContent = `${newElements.length} pages ready. The first page is the front cover.` +
+        (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');
       updatePage();
       return true;
     } catch (cause) {

@@ -107,7 +107,34 @@ def validate_manifest(data):
                 or item.get('position') not in POSITIONS or not isinstance(item.get('label'), str)):
             raise ValueError('Nilai animasi tidak valid.')
         overlays[key] = dict(label=item['label'][:40], value=value, position=item['position'])
-    return dict(version=1, title=data['title'][:200], pageCount=count, ratio=ratio, overlays=overlays)
+    return dict(version=1, title=data['title'][:200], pageCount=count, ratio=ratio, overlays=overlays,
+                links=validate_links(data.get('links', {}), count))
+
+
+def validate_links(links, count):
+    """Page links: fractions of the page box plus a target page or a web/mail URL."""
+    if not isinstance(links, dict):
+        raise ValueError('Tautan tidak valid.')
+    unit = lambda v: type(v) in (int, float) and math.isfinite(v) and 0 <= v <= 1
+    out = {}
+    for key, items in links.items():
+        if not re.fullmatch(r'0|[1-9][0-9]*', key) or int(key) >= count or not isinstance(items, list):
+            raise ValueError('Halaman tautan tidak valid.')
+        cleaned = []
+        for link in items[:200]:
+            if not isinstance(link, dict) or not all(unit(link.get(k)) for k in ('x', 'y', 'w', 'h')):
+                raise ValueError('Posisi tautan tidak valid.')
+            item = {k: link[k] for k in ('x', 'y', 'w', 'h')}
+            page, url = link.get('page'), link.get('url')
+            if type(page) is int and 0 <= page < count:
+                item['page'] = page
+            elif isinstance(url, str) and re.match(r'(?i)(https?://|mailto:)', url) and len(url) <= 500:
+                item['url'] = url
+            else:
+                raise ValueError('Tujuan tautan tidak valid.')
+            cleaned.append(item)
+        out[key] = cleaned
+    return out
 
 
 def unpack_book(archive, destination):
