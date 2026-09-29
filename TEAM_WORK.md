@@ -529,3 +529,7 @@ Nama file dipad nol (`<nama>-page-01.jpg`) supaya urut, opsi Format JPG/PNG, lat
 ### 29 September 2026 - OCR PDF searchable beneran
 
 `assets/pdf-ocr-layer.js` (`PDFOcrLayer.addWords(lib, doc, page, font, words, toPdf)`): teks Tr 3 + Tz + Tm per kata, koordinat via pdf.js `viewport.convertToPdfPoint` (ikut rotasi/offset MediaBox). `ocrSearchablePdf` sekarang pakai pdf-lib di atas PDF asli (dulu jsPDF: semua halaman jadi JPEG dan ukuran kertas 2x), Tesseract worker sekali untuk semua halaman, render ~290 dpi, lewati halaman yang sudah punya teks (>=20 karakter).
+
+### 29 September 2026 - PDF ke Excel/Word/PPT diuji dokumen sulit
+
+`cellsOf`: ambang kolom = max(6 pt, 0.8 x ukuran huruf) (dulu 50 pt tetap -> tabel rapat tergabung); bullet tunggal di sel pertama digabung ke teks. `excelValue`: persen dibulatkan (toPrecision 15). `excelFormat` baru: numFmt #,##0 / 0.0% / "Rp "#,##0 / "$" untuk angka hasil parsing di sheet Data. Word/PPT tidak diubah; dicek visual lewat LibreOffice.

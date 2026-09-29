@@ -1187,7 +1187,9 @@ function b64ToU8(b64){
 // Split a visual line into table-ish columns at wide X gaps (gutters are far
 // wider than normal word spaces). Returns all detected cell strings.
 function cellsOf(items){
-  const COL_GAP=50;
+  // A column gap is wider than a word space: more than 0.8 of the font size
+  // (a space is ~0.3), at least 6 pt. Tight tables have ~1 em between cells.
+  const fontSize=it=>{ const t=it.transform||[1,0,0,1]; return Math.max(Math.hypot(t[2]||0,t[3]||0), it.height||0) || 10; };
   // Legacy path: spaced display type arrives as single-char items — never
   // split those into columns, rejoin them as one cell instead.
   if(items.length>1 && items.every(x=>x.str.length===1)){
@@ -1200,14 +1202,17 @@ function cellsOf(items){
     if(cur.length){
       const prev=cur[cur.length-1];
       const gap=(it.transform?it.transform[4]:0)-((prev.transform?prev.transform[4]:0)+(prev.width||0));
-      if(gap>COL_GAP) cols.push([]);
+      if(gap>Math.max(6, 0.8*Math.max(fontSize(it), fontSize(prev)))) cols.push([]);
     }
     cols[cols.length-1].push(it);
   }
-  return cols.map(col=>{
+  const cells=cols.map(col=>{
     const single=col.length>1 && col.every(x=>x.str.length===1);
     return (single?col.map(x=>x.str).join(''):col.map(x=>x.str).join(' ')).replace(/\s+/g,' ').trim();
   }).filter(s=>s);
+  // A list bullet sits one indent away from its text: keep them together.
+  if(cells.length>1 && /^[•●○◦▪▫■□◆◇►▶➢✓✔*·–-]$/.test(cells[0])) cells.splice(0,2,cells[0]+' '+cells[1]);
+  return cells;
 }
 // Design PDFs draw display type 2-3x (shadows, outlines, gradients), so raw
 // extraction repeats it: "TV PROGRAM TV PROGRAM TV PROGRAM". Collapse those.
@@ -1337,6 +1342,25 @@ function pagesToMarkdown(pages, title){
 // Turn number-looking cells into real numbers (ID "1.250.000,50", EN
 // "1,250,000.50", "Rp 5.000", "12%", "(1.200)" negatives). Codes with
 // leading zeros or >15 digits (IDs, account numbers) stay text.
+// Excel display format for a number read from text: 12,8% → 0.0%,
+// 1.250.000 → #,##0, Rp 5.000 → "Rp "#,##0 (the cell stays a real number).
+function excelFormat(raw){
+  const text=String(raw??'').trim();
+  if(typeof excelValue(text)!=='number') return null;
+  const body=text.replace(/^[(\-\s]*(?:Rp\.?|IDR|\$|USD)?\s*/i,'').replace(/[%)\s]+$/,'');
+  const tail=/[.,](\d+)$/.exec(body), grouped=/\d[.,]\d{3}(?:[.,]|$)/.test(body);
+  // Same reading as excelValue: two kinds of separator → the last one is the
+  // decimal ("1.000,50"); one kind → thousands when groups of 3 ("1.250",
+  // "1.250.000"), else decimals ("3,14", "12,8").
+  const separators=body.replace(/[^.,]/g,'');
+  const decimals=!tail ? 0 : new Set(separators).size>1 ? tail[1].length : separators.length===1 && tail[1].length!==3 ? tail[1].length : 0;
+  const fraction=decimals?'.'+'0'.repeat(decimals):'';
+  if(/%\)?$/.test(text)) return '0'+fraction+'%';
+  const number=(grouped?'#,##0':'0')+fraction;
+  if(/^\(?-?\s*(Rp|IDR)/i.test(text)) return '"Rp "'+number;
+  if(/^\(?-?\s*(\$|USD)/i.test(text)) return '"$"'+number;
+  return grouped||decimals?number:null;
+}
 function excelValue(raw){
   const text=String(raw??'').trim();
   const m=/^(\(?)(-?)\s*(?:Rp\.?|IDR|\$|USD)?\s*([\d.,\s]+?)\s*(%?)(\)?)$/i.exec(text);
@@ -1356,7 +1380,7 @@ function excelValue(raw){
   if(!/^\d+(\.\d+)?$/.test(digits)) return raw;
   let value=Number(digits);
   if(!Number.isFinite(value)) return raw;
-  if(m[4]) value/=100;
+  if(m[4]) value=Number((value/100).toPrecision(15));
   if(m[2] || (m[1]&&m[5])) value=-value;
   return value;
 }
@@ -1434,13 +1458,14 @@ async function pdfToExcel(){
   pageTexts.forEach(ls=>ls.forEach(l=>{ maxCols=Math.max(maxCols, (l.cells||[l.text]).length); }));
   const multi=maxCols>1;
   wt.columns=multi?[{width:10},{width:8},{width:10},...Array.from({length:maxCols},()=>({width:40}))]:[{width:10},{width:8},{width:10},{width:120}];
-  const tableRows=[];
+  const tableRows=[], rawRows=[];
   content.pages.forEach((pg,idx)=>{
     const i=idx+1;
     pg.lines.forEach(l=>{
       const cells=(l.cells||[l.text]).slice(0,maxCols);
       while(cells.length<maxCols) cells.push('');
       tableRows.push(multi?[i, l.line, l.source, ...cells.map(excelValue)]:[i, l.line, l.source, excelValue(l.text)]);
+      rawRows.push(multi?cells:[l.text]);
       textRows.push(multi?[i, l.line, l.source, cells.join(' | ')]:[i, l.line, l.source, l.text]);
     });
   });
@@ -1454,6 +1479,11 @@ async function pdfToExcel(){
       columns:multi?[{name:'Page', filterButton:true},{name:'Line', filterButton:true},{name:'Source', filterButton:true},...Array.from({length:maxCols},(_,k)=>({name:'Col '+(k+1), filterButton:true}))]:[{name:'Page', filterButton:true},{name:'Line', filterButton:true},{name:'Source', filterButton:true},{name:'Text', filterButton:true}],
       rows:tableRows,
     });
+    // Show parsed numbers the way the PDF wrote them (%, thousands, Rp).
+    rawRows.forEach((cells,r)=>cells.forEach((raw,c)=>{
+      const format=excelFormat(raw);
+      if(format) wt.getCell(r+2, c+4).numFmt=format;
+    }));
   }else{
     wt.addRow(['Page','Line','Source','Text']).font={bold:true};
   }
