@@ -134,7 +134,7 @@ const TOOLS = [
   {id:'pdf-to-word', title:'PDF to Word', desc:'Real .docx that looks like the PDF: text stays editable right on the page (OCR for scans). Or pick a flowing document with real tables.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'PDF file — layout kept, text editable in place (needs internet)'},
   {id:'excel-to-pdf', title:'Excel to PDF', desc:'Convert spreadsheets using their layout and print settings via local LibreOffice.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file - requires the project server and LibreOffice'},
   {id:'pdf-to-excel', title:'PDF to Excel', desc:'Data sheet first: columns split into cells, numbers become real numbers. Page images kept on a second sheet.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pages embedded as images, text/OCR on extra sheets (needs internet)'},
-  {id:'html-to-pdf', title:'HTML to PDF', desc:'Convert halaman HTML jadi PDF dengan 1 klik.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'File .html'},
+  {id:'html-to-pdf', title:'HTML to PDF', desc:'Print a saved web page / HTML file to PDF with its real layout, colours and images.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'.html / .htm file — printed by Edge/Chrome on the project server'},
   {id:'merge-pdf', title:'Merge PDF', desc:'Gabungkan PDF sesuai urutan yang kamu mau.', cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, hint:'Pilih 2+ file PDF untuk digabungkan'},
   {id:'split-pdf', title:'Split PDF', desc:'Extract halaman 1-3, split per N halaman, atau centang manual per halaman.', cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — pilih mode split di bawah'},
   {id:'compress-pdf', title:'Compress PDF', desc:'Shrink PDFs full of photos and scans: images are resized and re-encoded, text stays sharp.', cat:'Optimize PDF', icon:'⇲', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pick Light / Balanced / Strong'},
@@ -203,6 +203,12 @@ function renderHeader(){
       <select id="opt-size" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="a4">A4</option><option value="letter">Letter</option><option value="fit">Same as image (no margin)</option></select></label>
       <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Margin:
       <select id="opt-margin" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="10">Normal</option><option value="0">None</option><option value="20">Wide</option></select></label>`;
+  }else if(t.id==='html-to-pdf'){
+    html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Paper:
+      <select id="opt-paper" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="a4">A4</option><option value="letter">Letter</option><option value="a3">A3</option><option value="legal">Legal</option></select></label>
+      <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Margin:
+      <select id="opt-html-margin" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="12">Normal</option><option value="0">None</option><option value="20">Wide</option></select></label>
+      <span class="text-[11px] text-gray-500 w-full text-center">Images inside the page must be embedded or online. A page's own print settings (@page) win over these.</span>`;
   }else if(t.id==='pdf-to-jpg'){
     html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Kualitas:
       <select id="opt-quality" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="1.5">Standard</option><option value="2" selected>High (2x)</option><option value="3">Ultra (3x)</option></select></label>
@@ -1532,17 +1538,45 @@ async function ocrSearchablePdf(){
 }
 async function htmlToPdf(){
   const file=files[0];
+  let caps=null;
+  try { caps=await serverCapabilities(); } catch(e) {}
+  if(caps && caps.html && !(caps.loginRequired && !caps.token)){
+    $('#progress').textContent='Printing the page with the browser engine...';
+    const response=await fetch('/api/convert/html-to-pdf',{method:'POST',headers:{
+      'Content-Type':'text/html','X-Build-Token':caps.token,'X-Filename':encodeURIComponent(file.name),
+      'X-Page-Size':$('#opt-paper')?.value||'a4','X-Margin':$('#opt-html-margin')?.value||'12'
+    },body:file});
+    if(!response.ok){
+      let message='HTML conversion failed.';
+      try { message=(await response.json()).error||message; } catch(e) {}
+      throw new Error(message);
+    }
+    const blob=await response.blob();
+    if(await blob.slice(0,5).text()!=='%PDF-') throw new Error('The server did not return a valid PDF.');
+    downloadBlob(new Blob([blob],{type:'application/pdf'}), file.name.replace(/\.html?$/i,'')+'.pdf');
+    const note=document.createElement('p'); note.className='text-[11px] leading-relaxed bg-white p-3 rounded border';
+    note.textContent=caps.loginRequired
+      ? 'Printed with the page layout. For safety on this hosted server, scripts and online images are not loaded — embed images in the file.'
+      : 'Printed with the page layout, colours and images, like Print → Save as PDF.';
+    $('#resultPreview').prepend(note);
+    return;
+  }
+  // No print engine available: text-only fallback, said plainly.
   const text=await file.text();
-  log('HTML size '+text.length);
+  log('HTML size '+text.length+' (text-only fallback)');
   const {jsPDF}=window.jspdf;
   const pdf=new jsPDF({unit:'mm', format:'a4'});
-  const tmp=document.createElement('div'); tmp.innerHTML=text;
-  const plain=tmp.innerText;
-  if(!plain.trim()) throw new Error('HTML kosong');
+  const tmp=new DOMParser().parseFromString(text,'text/html');
+  const plain=tmp.body?tmp.body.innerText||tmp.body.textContent:'';
+  if(!plain.trim()) throw new Error('This HTML file has no text.');
   const lines=pdf.splitTextToSize(plain,170);
   let y=15; pdf.setFontSize(10);
   for(let l of lines){ if(y>280){pdf.addPage(); y=15;} pdf.text(l,15,y); y+=5; }
   downloadBlob(pdf.output('blob'), file.name.replace(/\.html?$/i,'')+'.pdf');
+  const note=document.createElement('p'); note.className='text-[11px] leading-relaxed bg-amber-50 p-3 rounded border border-amber-200';
+  note.textContent=!caps ? 'Text only: open this page via the project server (python server.py) to keep the layout, colours and images.'
+    : 'Text only: Microsoft Edge or Google Chrome was not found on the server, so the layout could not be kept.';
+  $('#resultPreview').prepend(note);
 }
 async function serverCapabilities(){
   const res=await fetch('/api/capabilities');

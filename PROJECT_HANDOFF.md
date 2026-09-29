@@ -585,3 +585,7 @@ Jumlah halaman ganjil berakhir di halaman kanan tanpa lembar balik, jadi buku ti
 ### 29 September 2026 - PDF to JPG dirapikan
 
 Nama file dipad nol (`<nama>-page-01.jpg`) supaya urut, opsi Format JPG/PNG, latar putih eksplisit, halaman sangat besar diperkecil ke batas 12000 px / 60 MP (dilaporkan), PDF berpassword/rusak diberi pesan jelas, deskripsi tidak lagi mengklaim "ambil semua gambar" (fitur itu tidak ada).
+
+### 29 September 2026 - HTML to PDF dengan layout asli
+
+`server.py`: `find_chromium()` (env MYFLIPBOOK_CHROME, PATH, Edge/Chrome default Windows), `prepare_html()` (sisip @page + print-color-adjust di awal head), `html_to_pdf()` (halaman disajikan server loopback sekali pakai dengan CSP ketat; headless Edge `--print-to-pdf`; hosting: CSP script-src none + `--proxy-server=http://127.0.0.1:9 --proxy-bypass-list=<-loopback>;127.0.0.1:PORT`). JANGAN pakai `--blink-settings=scriptEnabled=false`: bikin print-to-pdf gagal. Route `/api/convert/html-to-pdf` (text/html, .html/.htm, maks 20 MB, header X-Page-Size/X-Margin), capabilities `html`. Client: opsi Paper/Margin, fallback teks dengan pemberitahuan.

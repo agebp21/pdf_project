@@ -7,6 +7,7 @@ import unittest
 from unittest import mock
 import zipfile
 import threading
+import time
 import urllib.request
 import urllib.error
 
@@ -265,6 +266,81 @@ class ConvertApiTests(unittest.TestCase):
 
     def test_long_office_names_preserve_extension(self):
         self.assertTrue(server.safe_office_name('x' * 150 + '.docx').endswith('.docx'))
+
+
+class HtmlToPdfTests(unittest.TestCase):
+    """HTML to PDF: print defaults injected, route validation, and (when Edge/
+    Chrome is installed) a real print where local files and the server's
+    network stay out of reach in hosting mode."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.base = 'http://127.0.0.1:' + str(cls.httpd.server_port)
+        with urllib.request.urlopen(cls.base + '/api/capabilities') as response:
+            cls.caps = json.load(response)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        cls.thread.join()
+
+    def post(self, body, **headers):
+        base = {'Content-Type': 'text/html', 'X-Build-Token': self.caps['token'], 'X-Filename': 'laporan.html'}
+        base.update(headers)
+        request = urllib.request.Request(self.base + '/api/convert/html-to-pdf', data=body,
+                                         headers={k: v for k, v in base.items() if v is not None})
+        try:
+            with urllib.request.urlopen(request) as response:
+                return response.status, response.headers, response.read()
+        except urllib.error.HTTPError as error:
+            with error:
+                return error.code, error.headers, error.read()
+
+    def test_print_defaults_go_before_the_page_css(self):
+        out = server.prepare_html(b'<html><HEAD lang="id"><style>@page{size:A5}</style></head><body>x</body></html>', 'letter', 20)
+        self.assertLess(out.index(b'size:letter;margin:20mm'), out.index(b'size:A5'), "the page's own @page wins")
+        self.assertIn(b'print-color-adjust:exact', out)
+        self.assertTrue(server.prepare_html(b'<p>bare</p>').startswith(b'<meta charset="utf-8"><style>'))
+        self.assertIn(b'size:A4;margin:0mm', server.prepare_html(b'<p>x</p>', 'unknown', -5))
+
+    def test_validation(self):
+        self.assertIn('html', self.caps)
+        self.assertEqual(self.post(b'<p>x</p>', **{'X-Build-Token': None})[0], 403)
+        self.assertEqual(self.post(b'<p>x</p>', **{'Content-Type': 'application/pdf'})[0], 400)
+        self.assertEqual(self.post(b'<p>x</p>', **{'X-Filename': 'evil.exe'})[0], 400)
+        with mock.patch.object(server, 'find_chromium', return_value=None):
+            status, _, body = self.post(b'<p>x</p>')
+        self.assertEqual(status, 503)
+        self.assertIn('Edge', json.loads(body)['error'])
+
+    def test_success_with_stubbed_browser(self):
+        seen = {}
+
+        def fake(raw, page_size, margin, allow_network):
+            seen.update(raw=raw, page_size=page_size, margin=margin, allow_network=allow_network)
+            return b'%PDF-1.7 fake'
+        with mock.patch.object(server, 'html_to_pdf', side_effect=fake):
+            status, headers, body = self.post(b'<h1>Hi</h1>', **{'X-Page-Size': 'letter', 'X-Margin': '0'})
+        self.assertEqual(status, 200)
+        self.assertTrue(body.startswith(b'%PDF'))
+        self.assertIn('laporan.pdf', headers.get('Content-Disposition', ''))
+        self.assertEqual((seen['page_size'], seen['margin'], seen['allow_network']), ('letter', 0.0, True))
+
+    @unittest.skipUnless(server.find_chromium(), 'Edge/Chrome not installed')
+    def test_real_print_keeps_files_and_network_out_of_reach(self):
+        page = (b'<!doctype html><html><head><meta charset="utf-8"></head><body style="background:#123456">'
+                b'<h1>Laporan</h1><iframe src="file:///C:/Windows/win.ini"></iframe>'
+                b'<img src="http://169.254.169.254/x"><script>document.title="ran"</script></body></html>')
+        started = time.time()
+        pdf = server.html_to_pdf(page, 'a4', 10, allow_network=False)
+        self.assertTrue(pdf.startswith(b'%PDF-'))
+        self.assertLess(time.time() - started, 30, 'blocked addresses fail fast instead of timing out')
+        self.assertNotIn(b'fonts]', pdf, 'win.ini content never reaches the PDF')
+        self.assertRegex(pdf, rb'/MediaBox\s*\[\s*0 0 59[45]\.\d+ 84[12]\.\d+', 'A4 paper')
 
 
 class LanHostTests(unittest.TestCase):

@@ -26,7 +26,7 @@ import unicodedata
 import uuid
 import zipfile
 from http.cookies import CookieError, SimpleCookie
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import unquote, urlsplit
 
 import accounts
@@ -334,6 +334,116 @@ OFFICE_ROUTES = {
     '/api/convert/word-to-pdf': {'.docx', '.doc'},
     '/api/convert/excel-to-pdf': {'.xlsx', '.xls', '.csv'},
 }
+OFFICE_ROUTES['/api/convert/html-to-pdf'] = {'.html', '.htm'}
+HTML_MAX_BYTES = 20 * 1024 * 1024
+HTML_PAGE_SIZES = {'a4': 'A4', 'letter': 'letter', 'a3': 'A3', 'legal': 'legal'}
+
+
+def find_chromium():
+    """Locate Edge/Chrome/Chromium for HTML to PDF (print engine)."""
+    override = os.environ.get('MYFLIPBOOK_CHROME')
+    if override and Path(override).is_file():
+        return override
+    for name in ('msedge', 'chrome', 'google-chrome', 'google-chrome-stable', 'chromium', 'chromium-browser'):
+        found = shutil.which(name)
+        if found:
+            return found
+    if os.name == 'nt':
+        for base in (os.environ.get('ProgramFiles(x86)', r'C:\Program Files (x86)'),
+                     os.environ.get('ProgramFiles', r'C:\Program Files'),
+                     os.environ.get('LOCALAPPDATA', '')):
+            for relative in ('Microsoft/Edge/Application/msedge.exe', 'Google/Chrome/Application/chrome.exe'):
+                candidate = Path(base) / relative
+                if base and candidate.is_file():
+                    return str(candidate)
+    return None
+
+
+def prepare_html(raw, page_size='a4', margin_mm=12):
+    """Add default print settings (paper, margin, background colours) in
+    front of the document's own CSS, so its own @page rules still win."""
+    size = HTML_PAGE_SIZES.get(page_size, 'A4')
+    margin = max(0, min(40, float(margin_mm)))
+    style = (f'<style>@page{{size:{size};margin:{margin:g}mm}}'
+             'html{-webkit-print-color-adjust:exact;print-color-adjust:exact}</style>').encode()
+    match = re.search(rb'<head\b[^>]*>', raw[:65536], re.I)
+    if match:
+        return raw[:match.end()] + style + raw[match.end():]
+    return b'<meta charset="utf-8">' + style + raw if not re.search(rb'<meta[^>]+charset', raw[:4096], re.I) else style + raw
+
+
+def html_to_pdf(raw, page_size='a4', margin_mm=12, allow_network=True, timeout=90):
+    """Print an HTML document to PDF with headless Edge/Chrome.
+
+    The page is served from a one-shot loopback server with a strict CSP, so
+    it can never read files on this computer. allow_network=False (public
+    hosting): no scripts and every other address goes to a dead proxy, so an
+    uploaded page cannot reach the internet or the server's network.
+    """
+    browser = find_chromium()
+    if not browser:
+        raise RuntimeError('Microsoft Edge / Google Chrome tidak ditemukan di komputer ini.')
+    if not raw.strip():
+        raise ValueError('File HTML kosong.')
+    body = prepare_html(raw, page_size, margin_mm)
+    remote = 'http: https: ' if allow_network else ''
+    csp = (f"default-src 'none'; style-src 'unsafe-inline' data: {remote}; img-src data: blob: {remote}; "
+           f"font-src data: {remote}; media-src data: {remote}; "
+           + ("script-src 'unsafe-inline'" if allow_network else "script-src 'none'"))
+
+    class Page(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path.split('?')[0] != '/':
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Security-Policy', csp)
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    server = HTTPServer(('127.0.0.1', 0), Page)
+    port = server.server_address[1]
+    threading.Thread(target=server.serve_forever, daemon=True).start()
+    workdir = Path(tempfile.mkdtemp(prefix='html-pdf-'))
+    output = workdir / 'out.pdf'
+    args = [browser, '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+            '--disable-extensions', '--disable-sync', '--disable-background-networking', '--mute-audio',
+            f'--user-data-dir={workdir / "profile"}', '--no-pdf-header-footer', '--virtual-time-budget=8000',
+            f'--print-to-pdf={output}']
+    if not allow_network:
+        # Scripts are off through the CSP (script-src 'none'); the
+        # --blink-settings switch would also stop the print engine itself.
+        args += ['--proxy-server=http://127.0.0.1:9',
+                 f'--proxy-bypass-list=<-loopback>;127.0.0.1:{port}']
+    args.append(f'http://127.0.0.1:{port}/')
+    process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    try:
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            raise RuntimeError('Halaman HTML terlalu lama dicetak (lebih dari 90 detik).')
+        data = output.read_bytes() if output.is_file() else b''
+        if not data.startswith(b'%PDF-'):
+            raise RuntimeError('Browser gagal mencetak HTML ini ke PDF.')
+        return data
+    finally:
+        if process.poll() is None:
+            if os.name == 'nt':
+                subprocess.run(['taskkill', '/F', '/T', '/PID', str(process.pid)], capture_output=True,
+                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+            else:
+                process.kill()
+        server.shutdown()
+        server.server_close()
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
 OFFICE_INSTALL_HINT = ('LibreOffice (soffice) tidak ditemukan di komputer ini. '
                        'Pasang dari https://libreoffice.org/download, lalu restart server.')
 
@@ -697,10 +807,11 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/api/capabilities':
             flutter = bool(shutil.which('flutter'))
             office = bool(find_soffice())
+            html = bool(find_chromium())
             # Hosting: the build/convert token is only handed to signed-in users.
             user = self.current_user() if hosted() or CONFIG['paywall'] else None
             token = TOKEN if not hosted() or user else None
-            self.send_json(200, dict(apk=flutter, exe=flutter and os.name == 'nt', office=office, token=token,
+            self.send_json(200, dict(apk=flutter, exe=flutter and os.name == 'nt', office=office, html=html, token=token,
                                      loginRequired=hosted(), paywall=CONFIG['paywall'],
                                      entitlements=user['entitlements'] if user else None))
             return
@@ -748,6 +859,48 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(denied[0], {'error': denied[1]})
                 return
         super().do_GET()
+
+    def convert_html(self):
+        """HTML upload -> PDF printed by headless Edge/Chrome."""
+        if self.headers.get_content_type() != 'text/html':
+            self.send_json(400, {'error': 'Kirim file .html / .htm.'})
+            return
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+        except ValueError:
+            size = -1
+        if size <= 0 or size > HTML_MAX_BYTES:
+            self.send_json(400, {'error': 'Ukuran file HTML tidak valid (maksimal 20 MB).'})
+            return
+        name = re.sub(r'[^A-Za-z0-9._-]', '_', unquote(self.headers.get('X-Filename', '')))
+        if Path(name).suffix.lower() not in {'.html', '.htm'}:
+            self.send_json(400, {'error': 'Ekstensi file harus .html atau .htm.'})
+            return
+        self.connection.settimeout(120)
+        raw = self.rfile.read(size)
+        if len(raw) != size:
+            self.send_json(400, {'error': 'Upload tidak lengkap.'})
+            return
+        try:
+            margin = float(self.headers.get('X-Margin', '12'))
+        except ValueError:
+            margin = 12
+        try:
+            pdf_bytes = html_to_pdf(raw, self.headers.get('X-Page-Size', 'a4'), margin, allow_network=not hosted())
+        except RuntimeError as cause:
+            missing = 'tidak ditemukan' in str(cause)
+            self.send_json(503 if missing else 400, {'error': str(cause)})
+            return
+        except ValueError as cause:
+            self.send_json(400, {'error': str(cause)})
+            return
+        download = (Path(name).stem[:90].strip('.') or 'page') + '.pdf'
+        self.send_response(200)
+        self.send_header('Content-Type', 'application/pdf')
+        self.send_header('Content-Disposition', f'attachment; filename="{download}"')
+        self.send_header('Content-Length', str(len(pdf_bytes)))
+        self.end_headers()
+        self.wfile.write(pdf_bytes)
 
     def convert_office(self):
         """Stream an Office upload to disk and convert via LibreOffice."""
@@ -823,6 +976,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if not secrets.compare_digest(self.headers.get('X-Build-Token', ''), TOKEN):
             self.send_json(403, {'error': 'Sesi build tidak valid. Refresh halaman.'})
+            return
+        if self.path == '/api/convert/html-to-pdf':
+            self.convert_html()
             return
         if self.path in OFFICE_ROUTES:
             self.convert_office()
