@@ -151,7 +151,7 @@
       book.on('flip', () => marks.refresh());
       notes?.close();
       notes = FlipbookNotes.bind({key: FlipbookNotes.key(name, newElements.length, ratio), title: name.replace(/\.pdf$/i, ''),
-        pages: newElements, goPage, open: $('#notes')});
+        pages: newElements, goPage, open: $('#notes'), bookmark: (index, on) => marks.set(index, on)});
       const linkCount = found.stats.internal + found.stats.toc + found.stats.external;
       $('#load-status').textContent = `${newElements.length} pages ready. The first page is the front cover.` +
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');

@@ -537,3 +537,7 @@ Nama file dipad nol (`<nama>-page-01.jpg`) supaya urut, opsi Format JPG/PNG, lat
 ### 29 September 2026 - Catatan pembaca per halaman
 
 `FlipbookNotes` (layout.js): tab `.book-note-tab` di tepi luar tiap halaman (kanan untuk halaman kanan/tunggal, kiri untuk `--left`), ✎ samar / 📝 kuning bila ada isi; editor (autosave 400 ms, maks 5000 karakter, Esc/Done/klik di luar menyimpan, Delete mengosongkan); tombol `#notes` "📝 N" membuka daftar (lompat ke halaman, edit, Download .txt). Simpan per buku di localStorage `mf-notes:<hash>` (key sama dengan bookmark). `FlipbookNotes.typing(event)` dipakai viewer (panah) dan zoom (+/-/0) supaya mengetik tidak membalik/zoom; idle tidak kembali ke sampul saat editor terbuka. Aktif di preview + HTML/APK/EXE. Layar pendek: panel di atas & ringkas. Tes: notes.test.cjs.
+
+### 29 September 2026 - Catatan otomatis mem-bookmark
+
+Catatan baru memanggil `options.bookmark(index, true)` (viewer/preview: `marks.set`); flag `marked` di data catatan mencatat apakah catatan yang menambah bookmark itu. Hapus catatan -> hapus bookmark hanya bila `marked`. `FlipbookBookmarks.bind` sekarang mengembalikan `set(index, on)`. Tab catatan pakai `onclick` (diganti tiap bind) supaya bind ulang tidak memakai handler lama.

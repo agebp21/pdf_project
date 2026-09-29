@@ -438,7 +438,16 @@
     if (options.toggle) options.toggle.onclick = toggle;
     if (options.open) options.open.onclick = open;
     refresh();
-    return { refresh, close, marks: () => marks.slice() };
+    // Mark/unmark one page from elsewhere (a note does this). Returns true
+    // when it changed anything.
+    function set(index, on) {
+      const has = marks.indexOf(index) >= 0;
+      if (on === has || index < 0 || index >= pages.length) return false;
+      marks = on ? marks.concat([index]) : marks.filter(i => i !== index);
+      persist();
+      return true;
+    }
+    return { refresh, close, set, marks: () => marks.slice() };
   },
 };
 
@@ -791,13 +800,14 @@
       const raw = JSON.parse(localStorage.getItem(key) || '{}'), out = {};
       Object.keys(raw || {}).forEach(k => {
         const note = raw[k];
-        if (/^\d+$/.test(k) && note && typeof note.text === 'string' && note.text.trim()) out[k] = {text: note.text.slice(0, this.MAX), updated: Number(note.updated) || 0};
+        if (/^\d+$/.test(k) && note && typeof note.text === 'string' && note.text.trim()) out[k] = {text: note.text.slice(0, this.MAX), updated: Number(note.updated) || 0, marked: note.marked === true};
       });
       return out;
     } catch (e) { return {}; }
   },
   save(key, notes) { try { localStorage.setItem(key, JSON.stringify(notes)); return true; } catch (e) { return false; } },
-  /* options: {key, title, pages (elements), goPage(i), open (button)} */
+  /* options: {key, title, pages (elements), goPage(i), open (button),
+     bookmark(index, on) → true when it changed the page's bookmark} */
   bind(options) {
     const self = this, pages = options.pages;
     let notes = self.load(options.key), editor = null, list = null, editing = -1, timer = 0, saved = true;
@@ -811,9 +821,11 @@
           tab = document.createElement('button'); tab.type = 'button'; tab.className = 'book-note-tab';
           // Keep PageFlip from starting a page turn when the tab is pressed.
           ['pointerdown', 'mousedown', 'touchstart'].forEach(name => tab.addEventListener(name, stop));
-          tab.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); edit(index); });
           page.appendChild(tab);
         }
+        // onclick (replaced on every bind): a rebound book must not keep the
+        // previous binding's handler.
+        tab.onclick = event => { event.preventDefault(); event.stopPropagation(); edit(index); };
         const has = !!notes[index];
         tab.classList.toggle('has-note', has);
         tab.textContent = has ? '📝' : '✎';
@@ -831,8 +843,16 @@
       if (list) renderList();
     }
     function store(index, text) {
-      if (text.trim()) notes[index] = {text: text.slice(0, self.MAX), updated: Date.now()};
-      else delete notes[index];
+      const old = notes[index];
+      if (text.trim()) {
+        // A new note bookmarks its page; remember that it did.
+        const marked = old ? old.marked : !!(options.bookmark && options.bookmark(index, true));
+        notes[index] = {text: text.slice(0, self.MAX), updated: Date.now(), marked: marked};
+      } else {
+        // Removing the note removes the bookmark only if the note added it.
+        if (old && old.marked && options.bookmark) options.bookmark(index, false);
+        delete notes[index];
+      }
       saved = self.save(options.key, notes);
       refresh();
     }

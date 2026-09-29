@@ -86,7 +86,7 @@
     book.on('flip', () => marks.refresh());
     // Reader notes: ✎ on the edge of every page, kept on this device.
     const notes = FlipbookNotes.bind({key: FlipbookNotes.key(data.title, data.pageCount, data.ratio), title: data.title,
-      pages: elements, goPage, open: $('#notes')});
+      pages: elements, goPage, open: $('#notes'), bookmark: (index, on) => marks.set(index, on)});
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };

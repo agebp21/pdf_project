@@ -70,5 +70,25 @@ const sleep = ms => new Promise(resolve => setTimeout(resolve, ms));
   notes.close();
   localStorage.setItem(key, '{broken');
   assert.deepEqual(N.load(key), {}, 'corrupt storage is ignored');
-  console.log('PASS notes: page tabs, autosave, typing guard, list/jump, text export, delete, persistence, rebind');
+
+  // Writing a note bookmarks its page; deleting it removes only a bookmark the note added.
+  localStorage.clear();
+  const marks = global.FlipbookBookmarks.bind({ key: global.FlipbookBookmarks.key('Laporan', 5, 0.7), pages, visible: () => [0], goPage: () => {} });
+  marks.set(4, true);   // the reader bookmarked page 5 by hand
+  notes = N.bind({ key, title: 'Laporan', pages, goPage: () => {}, bookmark: (i, on) => marks.set(i, on) });
+  const write = (page, value) => {
+    pages[page].querySelector('.book-note-tab').click();
+    w.document.querySelector('.book-note-editor textarea').value = value;
+    w.document.querySelector('.book-note-done').click();
+  };
+  write(1, 'Penting');
+  assert.deepEqual([...marks.marks()], [1, 4], 'note on page 2 bookmarks it');
+  assert.ok(pages[1].querySelector('.book-ribbon'), 'ribbon shows on the noted page');
+  write(1, 'Penting sekali');
+  assert.deepEqual([...marks.marks()], [1, 4], 'editing does not toggle it again');
+  write(4, 'Sudah ditandai');
+  write(1, ''); write(4, '');
+  assert.deepEqual([...marks.marks()], [4], 'deleting notes removes only the bookmark a note added');
+  notes.close();
+  console.log('PASS notes: page tabs, autosave, typing guard, list/jump, text export, delete, persistence, rebind, auto-bookmark');
 })().catch(error => { console.error(error); process.exitCode = 1; });
