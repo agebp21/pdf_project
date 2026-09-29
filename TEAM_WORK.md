@@ -486,3 +486,11 @@ Saat menutup sampul, bagian kiri tampak tergeser/terpotong. Perbaikan FlipbookCu
 - Semua export (project, HTML, APK, EXE) membuka dialog Simpan sebagai **saat tombol diklik** (FlipbookExport.chooseSave), lalu jalan sampai selesai dan menulis ke lokasi itu. Batal di dialog = export tidak jalan. Tanpa File System Access API -> download biasa. Setelah build ada link "Simpan salinan lagi…".
 - Progress bar (#export-progress) untuk semua export. Project: ZIP 0-90%, simpan. HTML: halaman 0-55%, ZIP 55-92%, simpan. APK/EXE: kemas 0-12%, upload (XHR, FlipbookExport.upload) 12-20%, build 20-90% dari `job.progress` server (0.05 siapkan, 0.1 pub get, 0.2/0.25 signing, 0.3 compile, 1 selesai) + perkiraan waktu saat compile (tau 45 dtk APK / 20 dtk EXE), unduh-simpan dengan progres Content-Length 90-100%.
 - saveRemote(url, name, handle, onProgress) tidak lagi membuka dialog sendiri.
+
+### 29 September 2026 - Zoom di reader (HTML/APK/EXE)
+
+- `FlipbookZoom` (layout.js): double-tap (250% di titik tap / balik 100%), pinch sampai 400%, geser 1 jari saat zoom; desktop Ctrl+wheel/trackpad pinch di kursor, drag, wheel menggeser saat zoom, dblclick reset; tombol 🔍 (200% -> 300% -> 100%); tombol +/-/0; chip "250% · Reset"; tips sekali di perangkat sentuh (localStorage `mf-zoom-hint`).
+- Yang di-zoom `#stage` (transform-origin 0 0), `main{overflow:hidden}`. Geser dibatasi ke tepi buku (opsi `content()` = bounds PageFlip), bukan ke stage.
+- Saat zoom, gestur di-capture di `main` (stopPropagation) jadi PageFlip tidak ikut -> geser tidak membalik halaman. Tap diam saat zoom tetap boleh click (link TOC). Balik halaman / flip -> zoom reset.
+- Perangkat sentuh: `disableFlipByClick` = true (ditulis SETELAH motion(), yang menyetel false) -> tap tengah halaman tidak membalik; swipe & tap pojok tetap membalik.
+- Layar pendek (max-height 500px): footer lebih ringkas supaya 1 baris di HP landscape.

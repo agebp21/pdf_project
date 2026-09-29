@@ -576,3 +576,188 @@
     return { open, close, busy: () => busy };
   },
 };
+
+// Reader zoom: double-tap / pinch / one-finger pan on touch, Ctrl+wheel and
+// drag on desktop, a 🔍 button, keys + - 0. Zooms the stage around the
+// finger or cursor and keeps the page covering the view. While zoomed the
+// gestures never reach PageFlip, so panning can't turn a page.
+// ES2018 for old Android WebViews.
+(typeof self!=='undefined'?self:global).FlipbookZoom = {
+  MAX: 4,
+  STEPS: [1, 2, 3],
+  // Keep the zoomed book covering the view: no panning past its edges into
+  // the background; an axis where it is smaller than the view is centred.
+  // box = the book inside the stage at 100% ({x, y, w, h}); default: the whole stage.
+  clamp(scale, x, y, width, height, box) {
+    const b = box || { x: 0, y: 0, w: width, h: height };
+    const axis = (pos, view, start, size) => (size * scale <= view
+      ? (view - size * scale) / 2 - start * scale
+      : Math.min(0 - start * scale, Math.max(view - (start + size) * scale, pos)));
+    return { x: axis(x, width, b.x, b.w), y: axis(y, height, b.y, b.h) };
+  },
+  // Pan so the content point under (px, py) stays there when scale changes.
+  anchor(from, to, x, y, px, py) {
+    return { x: px - (px - x) / from * to, y: py - (py - y) / from * to };
+  },
+  /* surface: element receiving gestures; target: element that scales;
+     options: {button, chip, hint, onChange(scale), content(): the book's
+     on-screen rect (client coordinates) so panning stops at its edges} */
+  bind(surface, target, options) {
+    const self = this, opts = options || {};
+    let scale = 1, x = 0, y = 0, gesture = null, lastTap = null, drag = null;
+    target.style.transformOrigin = '0 0';
+    function apply(smooth) {
+      if (scale <= 1.01) { scale = 1; x = 0; y = 0; }
+      const box = self.clamp(scale, x, y, target.clientWidth, target.clientHeight, content());
+      x = box.x; y = box.y;
+      target.style.transition = smooth ? 'transform .28s ease-out' : '';
+      target.style.transform = scale > 1 ? 'translate(' + x.toFixed(1) + 'px,' + y.toFixed(1) + 'px) scale(' + scale.toFixed(3) + ')' : '';
+      document.body.classList.toggle('is-zoomed', scale > 1);
+      const percent = Math.round(scale * 100) + '%';
+      if (opts.button) {
+        opts.button.textContent = scale > 1 ? '🔍 ' + percent : '🔍';
+        opts.button.setAttribute('aria-label', scale > 1 ? 'Zoom ' + percent + ', press to zoom more or reset' : 'Zoom in');
+      }
+      if (opts.chip) { opts.chip.hidden = scale <= 1; const label = opts.chip.querySelector('span'); if (label) label.textContent = percent; }
+      if (opts.onChange) opts.onChange(scale);
+    }
+    function zoomTo(next, px, py, smooth) {
+      next = Math.max(1, Math.min(self.MAX, next));
+      const moved = self.anchor(scale, next, x, y, px, py);
+      scale = next; x = moved.x; y = moved.y; apply(smooth);
+    }
+    // The book's rect inside the stage at 100% (undoing the current zoom).
+    function content() {
+      const rect = opts.content && opts.content();
+      if (!rect || !rect.width) return null;
+      const stage = target.getBoundingClientRect(), current = scale > 1 && target.style.transform ? scale : 1;
+      return { x: (rect.left - stage.left) / current, y: (rect.top - stage.top) / current, w: rect.width / current, h: rect.height / current };
+    }
+    const center = () => ({ x: target.clientWidth / 2, y: target.clientHeight / 2 });
+    // Viewport point relative to the untransformed stage.
+    function point(clientX, clientY) {
+      const box = surface.getBoundingClientRect();
+      return { x: clientX - box.left - target.offsetLeft, y: clientY - box.top - target.offsetTop };
+    }
+    const block = event => { event.stopPropagation(); if (event.cancelable) event.preventDefault(); };
+    const distance = (a, b) => Math.sqrt(Math.pow(a.clientX - b.clientX, 2) + Math.pow(a.clientY - b.clientY, 2));
+    const middle = (a, b) => point((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
+    const capture = { capture: true, passive: false };
+    surface.addEventListener('touchstart', event => {
+      const touches = event.touches;
+      if (touches.length >= 2) {
+        block(event);
+        gesture = { type: 'pinch', start: distance(touches[0], touches[1]), scale: scale, mid: middle(touches[0], touches[1]), x: x, y: y };
+        return;
+      }
+      const p = point(touches[0].clientX, touches[0].clientY), now = Date.now();
+      // Second tap of a double-tap: keep it away from PageFlip entirely.
+      if (lastTap && now - lastTap.time < 320 && Math.abs(p.x - lastTap.x) < 32 && Math.abs(p.y - lastTap.y) < 32) {
+        block(event); gesture = { type: 'double', x: p.x, y: p.y }; return;
+      }
+      if (scale > 1) { block(event); gesture = { type: 'pan', from: p, x: x, y: y, moved: false, time: now }; return; }
+      gesture = { type: 'tap', from: p, moved: false, time: now };   // passes on: a swipe still turns the page
+    }, capture);
+    surface.addEventListener('touchmove', event => {
+      if (!gesture) return;
+      const touches = event.touches;
+      if (gesture.type === 'pinch' && touches.length >= 2) {
+        block(event);
+        const next = Math.max(1, Math.min(self.MAX, gesture.scale * distance(touches[0], touches[1]) / gesture.start));
+        const mid = middle(touches[0], touches[1]);
+        // The content point first pinched follows the fingers.
+        scale = next;
+        x = mid.x - (gesture.mid.x - gesture.x) / gesture.scale * next;
+        y = mid.y - (gesture.mid.y - gesture.y) / gesture.scale * next;
+        apply(false); return;
+      }
+      if (gesture.type === 'pan' || gesture.type === 'double') {
+        block(event);
+        if (gesture.type === 'pan') {
+          const p = point(touches[0].clientX, touches[0].clientY);
+          if (Math.abs(p.x - gesture.from.x) + Math.abs(p.y - gesture.from.y) > 8) gesture.moved = true;
+          x = gesture.x + p.x - gesture.from.x; y = gesture.y + p.y - gesture.from.y; apply(false);
+        }
+        return;
+      }
+      if (gesture.type === 'tap') {
+        const p = point(touches[0].clientX, touches[0].clientY);
+        if (Math.abs(p.x - gesture.from.x) + Math.abs(p.y - gesture.from.y) > 10) gesture.moved = true;
+      }
+    }, capture);
+    surface.addEventListener('touchend', event => {
+      if (!gesture) return;
+      const kind = gesture.type;
+      if (kind === 'pinch') {
+        block(event);
+        if (event.touches.length === 1 && scale > 1) {
+          const p = point(event.touches[0].clientX, event.touches[0].clientY);
+          gesture = { type: 'pan', from: p, x: x, y: y, moved: true, time: Date.now() }; return;
+        }
+        if (event.touches.length === 0) { gesture = null; lastTap = null; if (scale < 1.08) { scale = 1; apply(true); } }
+        return;
+      }
+      if (kind === 'double') {
+        block(event);
+        const at = gesture; gesture = null; lastTap = null;
+        if (scale > 1) { scale = 1; apply(true); } else zoomTo(2.5, at.x, at.y, true);
+        return;
+      }
+      // A still tap while zoomed may be a link: let its click happen.
+      if (kind === 'pan') { event.stopPropagation(); if (gesture.moved && event.cancelable) event.preventDefault(); }
+      const quick = !gesture.moved && Date.now() - gesture.time < 300;
+      lastTap = quick ? { time: Date.now(), x: gesture.from.x, y: gesture.from.y } : null;
+      if (event.touches.length === 0) gesture = null;
+    }, capture);
+    surface.addEventListener('touchcancel', () => { gesture = null; }, capture);
+    // Desktop: Ctrl+wheel (and trackpad pinch) zooms at the cursor, the wheel pans when zoomed.
+    surface.addEventListener('wheel', event => {
+      if (event.ctrlKey) {
+        block(event);
+        const p = point(event.clientX, event.clientY);
+        zoomTo(scale * Math.exp(-event.deltaY * 0.0025), p.x, p.y, false);
+      } else if (scale > 1) {
+        block(event); x -= event.deltaX; y -= event.deltaY; apply(false);
+      }
+    }, capture);
+    surface.addEventListener('mousedown', event => {
+      if (scale <= 1 || event.button !== 0) return;
+      block(event); drag = { from: { x: event.clientX, y: event.clientY }, x: x, y: y, moved: false };
+      document.body.classList.add('is-panning');
+    }, true);
+    window.addEventListener('mousemove', event => {
+      if (!drag) return;
+      if (Math.abs(event.clientX - drag.from.x) + Math.abs(event.clientY - drag.from.y) > 4) drag.moved = true;
+      x = drag.x + event.clientX - drag.from.x; y = drag.y + event.clientY - drag.from.y; apply(false);
+    });
+    let dragged = false;
+    window.addEventListener('mouseup', () => { if (drag) { dragged = drag.moved; drag = null; document.body.classList.remove('is-panning'); } });
+    // A drag that panned is not a click (links, cover).
+    surface.addEventListener('click', event => { if (dragged) { dragged = false; block(event); } }, true);
+    surface.addEventListener('dblclick', event => { if (scale > 1) { block(event); reset(); } }, true);
+    function reset() { if (scale > 1) { scale = 1; apply(true); } }
+    function step() {
+      const next = self.STEPS.filter(value => value > scale + 0.01)[0];
+      const c = center();
+      if (next) zoomTo(next, c.x, c.y, true); else reset();
+    }
+    if (opts.button) opts.button.onclick = step;
+    if (opts.chip) { const button = opts.chip.querySelector('button'); if (button) button.onclick = reset; }
+    document.addEventListener('keydown', event => {
+      if (event.ctrlKey || event.metaKey || event.altKey) return;
+      const c = center();
+      if (event.key === '+' || event.key === '=') zoomTo(scale * 1.5, c.x, c.y, true);
+      else if (event.key === '-') zoomTo(scale / 1.5, c.x, c.y, true);
+      else if (event.key === '0') reset();
+    });
+    addEventListener('resize', reset);
+    // One-time tip on touch devices.
+    if (opts.hint && matchMedia('(hover: none)').matches) {
+      let seen = false;
+      try { seen = localStorage.getItem('mf-zoom-hint') === '1'; localStorage.setItem('mf-zoom-hint', '1'); } catch (e) {}
+      if (!seen) { opts.hint.hidden = false; setTimeout(() => { opts.hint.hidden = true; }, 4000); }
+    }
+    apply(false);
+    return { reset, step, scale: () => scale };
+  },
+};

@@ -65,7 +65,10 @@
       draw(start);
     }
     FlipbookLayout.decorate(elements);
-    book = new St.PageFlip($('#book'),{width:380,height:Math.round(380/data.ratio),size:'stretch',minWidth:220,maxWidth:750,minHeight:50,maxHeight:1500,autoSize:true,usePortrait:true,showCover:true,startPage:0,...FlipbookLayout.motion(reduced)});
+    book = new St.PageFlip($('#book'),{width:380,height:Math.round(380/data.ratio),size:'stretch',minWidth:220,maxWidth:750,minHeight:50,maxHeight:1500,autoSize:true,usePortrait:true,showCover:true,startPage:0,...FlipbookLayout.motion(reduced),
+      // After motion(), which allows click-to-flip: on touch a tap in the middle of a page
+      // doesn't turn it (double-tap zooms); swipes and corner taps still do.
+      disableFlipByClick:matchMedia('(hover: none)').matches});
     book.on('flip',update);book.on('changeOrientation',()=>{update();animate()});
     FlipbookSound.attach(book);
     // Skip pages already on screen; a hovered corner (fold_corner) may still flip.
@@ -103,10 +106,19 @@
       active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0,
       home: () => { book.turnToPage(0); update(); animate(); }
     });
+    const zoom = FlipbookZoom.bind($('main'), $('#stage'), {button: $('#zoom'), chip: $('#zoom-chip'), hint: $('#zoom-hint'),
+      // The pages on screen (PageFlip's bounds inside its block): pan no further than the book.
+      content: () => {
+        const bounds = book.getBoundsRect(), block = document.querySelector('#book .stf__block');
+        if (!bounds || !block) return null;
+        const b = block.getBoundingClientRect(), s = b.width / (block.offsetWidth || b.width);
+        return {left: b.left + bounds.left * s, top: b.top + bounds.top * s, width: bounds.width * s, height: bounds.height * s};
+      }});
+    book.on('flip', () => zoom.reset());
     // The cover opens/closes with the curved turn; ignore clicks while it animates.
-    const goPrev=()=>{if(curl.busy())return;if(book.getCurrentPageIndex()===1&&curl.close())return;book.flipPrev()};
-    const goNext=()=>{if(curl.busy())return;if(!curl.open())book.flipNext()};
-    $('#home').onclick=()=>{if(curl.busy()||curl.close())return;if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
+    const goPrev=()=>{zoom.reset();if(curl.busy())return;if(book.getCurrentPageIndex()===1&&curl.close())return;book.flipPrev()};
+    const goNext=()=>{zoom.reset();if(curl.busy())return;if(!curl.open())book.flipNext()};
+    $('#home').onclick=()=>{zoom.reset();if(curl.busy()||curl.close())return;if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
     $('#prev').onclick=goPrev;$('#next').onclick=goNext;$('#replay').onclick=()=>animate(false);
     document.addEventListener('keydown',event=>{if(event.key==='ArrowRight'&&!$('#next').disabled)goNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)goPrev()});
     document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});}else animate()});

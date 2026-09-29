@@ -43,6 +43,20 @@ assert.equal(FlipbookLayout.geometry(390,844,.7,1,8).single,true);
 assert.equal(FlipbookLayout.geometry(1920,1080,2.5,1,8).single,false,'wide pages still spread, like the preview');
 assert.equal(FlipbookLayout.geometry(1280,720,1.29,1,8).single,false,'landscape PDF spreads on a laptop screen');
 assert.equal(FlipbookLayout.geometry(699,900,.7,1,8).single,true);
+{
+  const Z=FlipbookZoom;
+  assert.deepEqual(Z.clamp(2,50,50,400,300),{x:0,y:0},'no empty edge at the top-left');
+  assert.deepEqual(Z.clamp(2,-900,-900,400,300),{x:-400,y:-300},'nor at the bottom-right');
+  // A book in the middle of a wide stage: never pan into the background beside it.
+  const book={x:200,y:0,w:340,h:240};
+  assert.deepEqual(Z.clamp(2.5,0,0,740,240,book),{x:-500,y:0},'left edge of the book');
+  assert.deepEqual(Z.clamp(2.5,-5000,-5000,740,240,book),{x:-610,y:-360},'right/bottom edge of the book');
+  assert.deepEqual(Z.clamp(1.5,-100,0,740,240,book),{x:-(1.5*340-740)/2-300,y:0},'narrower than the view: centred');
+  const a=Z.anchor(1,2.5,0,0,100,60);
+  assert.deepEqual(a,{x:-150,y:-90},'the tapped point stays under the finger');
+  const b=Z.anchor(2.5,1,a.x,a.y,100,60);
+  assert.ok(Math.abs(b.x)<1e-9&&Math.abs(b.y)<1e-9,'zooming back returns to the start');
+}
 assert.equal(FlipbookLayout.geometry(640,330,.7,1,8).single,false,'landscape phone keeps the two-page spread');
 assert.equal(FlipbookLayout.geometry(640,330,.7,1,8,true).single,true,'compact editor preview: width decides');
 assert.equal(FlipbookLayout.geometry(640,330,.7,1,1).single,true,'one page stays single');
