@@ -30,6 +30,22 @@
     }
     return out;
   }
+  // Word positions for highlights: per page, lines [y, h, x0, w0, x1, w1, ...]
+  // as integers 0..10000 (see pdf-words.js).
+  function validWords(words, pageCount) {
+    const out = {};
+    if (words === undefined) return out;
+    if (!words || typeof words !== 'object' || Array.isArray(words)) throw Error('Data teks halaman tidak valid.');
+    const unit = v => Number.isInteger(v) && v >= 0 && v <= 10000;
+    for (const [key, lines] of Object.entries(words)) {
+      if (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= pageCount || !Array.isArray(lines)) throw Error('Halaman teks tidak valid.');
+      out[key] = lines.slice(0, 400).map(line => {
+        if (!Array.isArray(line) || line.length < 4 || line.length % 2 || line.length > 602 || !line.every(unit)) throw Error('Posisi teks tidak valid.');
+        return line.slice();
+      });
+    }
+    return out;
+  }
   function validate(data) {
     if (!data || data.version !== 1 || typeof data.title !== 'string' || !Number.isInteger(data.pageCount) || data.pageCount < 1 || !Number.isFinite(data.ratio) || data.ratio <= 0) throw Error('Format proyek tidak valid atau belum didukung.');
     if (!data.overlays || typeof data.overlays !== 'object' || Array.isArray(data.overlays)) throw Error('Data animasi tidak valid.');
@@ -38,7 +54,7 @@
       if (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= data.pageCount || !config || typeof config.label !== 'string' || !Number.isFinite(config.value) || config.value < 0 || config.value > 999999 || !positions.has(config.position)) throw Error('Data animasi atau nomor halaman tidak valid.');
       overlays[key] = {label:config.label.slice(0,40),value:config.value,position:config.position};
     }
-    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount)};
+    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words:validWords(data.words,data.pageCount)};
   }
   const scriptData = data => 'window.FLIPBOOK_DATA = ' + JSON.stringify(validate(data)).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029') + ';\n';
   async function asset(path) {

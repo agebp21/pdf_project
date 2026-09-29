@@ -112,7 +112,26 @@ def validate_manifest(data):
             raise ValueError('Nilai animasi tidak valid.')
         overlays[key] = dict(label=item['label'][:40], value=value, position=item['position'])
     return dict(version=1, title=data['title'][:200], pageCount=count, ratio=ratio, overlays=overlays,
-                links=validate_links(data.get('links', {}), count))
+                links=validate_links(data.get('links', {}), count), words=validate_words(data.get('words', {}), count))
+
+
+def validate_words(words, count):
+    """Word positions for reader highlights: per page, lines of integers
+    [y, h, x0, w0, x1, w1, ...] in 1/10000 of the page box."""
+    if not isinstance(words, dict):
+        raise ValueError('Data teks halaman tidak valid.')
+    out = {}
+    for key, lines in words.items():
+        if not re.fullmatch(r'0|[1-9][0-9]*', key) or int(key) >= count or not isinstance(lines, list):
+            raise ValueError('Halaman teks tidak valid.')
+        cleaned = []
+        for line in lines[:400]:
+            if (not isinstance(line, list) or len(line) < 4 or len(line) % 2 or len(line) > 602
+                    or not all(type(v) is int and 0 <= v <= 10000 for v in line)):
+                raise ValueError('Posisi teks tidak valid.')
+            cleaned.append(line)
+        out[key] = cleaned
+    return out
 
 
 def validate_links(links, count):
@@ -147,7 +166,7 @@ def unpack_book(archive, destination):
         names = package.namelist()
         if len(names) != len(set(names)):
             raise ValueError('Entry ZIP duplikat.')
-        if package.getinfo('book.json').file_size > 1024 * 1024:
+        if package.getinfo('book.json').file_size > 16 * 1024 * 1024:   # word positions can be large
             raise ValueError('Metadata buku terlalu besar.')
         data = validate_manifest(json.loads(package.read('book.json')))
         if data['pageCount'] > len(names):

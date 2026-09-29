@@ -661,8 +661,11 @@
     const distance = (a, b) => Math.sqrt(Math.pow(a.clientX - b.clientX, 2) + Math.pow(a.clientY - b.clientY, 2));
     const middle = (a, b) => point((a.clientX + b.clientX) / 2, (a.clientY + b.clientY) / 2);
     const capture = { capture: true, passive: false };
+    // One finger / the mouse belongs to the highlighter while it is on.
+    const highlighting = () => document.body.classList.contains('is-highlighting');
     surface.addEventListener('touchstart', event => {
       const touches = event.touches;
+      if (highlighting() && touches.length < 2) { gesture = null; lastTap = null; return; }
       if (touches.length >= 2) {
         block(event);
         gesture = { type: 'pinch', start: distance(touches[0], touches[1]), scale: scale, mid: middle(touches[0], touches[1]), x: x, y: y };
@@ -739,7 +742,7 @@
       }
     }, capture);
     surface.addEventListener('mousedown', event => {
-      if (scale <= 1 || event.button !== 0) return;
+      if (scale <= 1 || event.button !== 0 || highlighting()) return;
       block(event); drag = { from: { x: event.clientX, y: event.clientY }, x: x, y: y, moved: false };
       document.body.classList.add('is-panning');
     }, true);
@@ -953,5 +956,236 @@
     if (options.open) options.open.onclick = () => { if (list) closeList(); else openList(); };
     refresh();
     return {refresh, text, editing: () => editing >= 0, close() { closeEditor(); closeList(); }, notes: () => JSON.parse(JSON.stringify(notes))};
+  },
+};
+
+// Reader highlights ("stabilo"): in highlighter mode, dragging over a page
+// marks the words under the finger, snapped to the PDF's words line by line
+// (pdf-words.js); on pages without text (scans) it draws a free box. Tap a
+// highlight to recolour or delete it. Kept per book on this device.
+// ES2018 for old Android WebViews.
+(typeof self!=='undefined'?self:global).FlipbookHighlights = {
+  COLORS: {y: '#ffd43b', g: '#69db7c', p: '#f783ac', b: '#4dabf7'},
+  NAMES: {y: 'Yellow', g: 'Green', p: 'Pink', b: 'Blue'},
+  key(title, pageCount, ratio) {
+    return FlipbookBookmarks.key(title, pageCount, ratio).replace('mf-bookmarks:', 'mf-highlights:');
+  },
+  // Stored lines [y, h, x0, w0, ...] (1/10000) → fractions.
+  lines(raw) {
+    return (raw || []).map(l => {
+      const words = [];
+      for (let i = 2; i + 1 < l.length; i += 2) words.push({x: l[i] / 1e4, w: l[i + 1] / 1e4});
+      return {y: l[0] / 1e4, h: l[1] / 1e4, words};
+    }).filter(l => l.words.length);
+  },
+  // The word at/near point p. strict: null when p is not on text (so a
+  // drag that starts in a margin draws a box instead).
+  locate(lines, p, strict) {
+    let best = -1, distance = Infinity;
+    lines.forEach((l, i) => {
+      const d = p.y < l.y ? l.y - p.y : p.y > l.y + l.h ? p.y - (l.y + l.h) : 0;
+      if (d < distance) { distance = d; best = i; }
+    });
+    if (best < 0) return null;
+    const line = lines[best], first = line.words[0], last = line.words[line.words.length - 1];
+    if (strict && (distance > Math.max(line.h * 0.6, 0.008) || p.x < first.x - 0.02 || p.x > last.x + last.w + 0.02)) return null;
+    let word = 0, gap = Infinity;
+    line.words.forEach((w, j) => {
+      const d = p.x < w.x ? w.x - p.x : p.x > w.x + w.w ? p.x - (w.x + w.w) : 0;
+      if (d < gap) { gap = d; word = j; }
+    });
+    return {line: best, word};
+  },
+  // Rectangles [x, y, w, h] covering the words from a to b in reading order,
+  // one per line (split at wide column gaps); null when a is not on text.
+  select(lines, a, b) {
+    let s = this.locate(lines, a, true);
+    if (!s) return null;
+    let e = this.locate(lines, b, false);
+    if (e.line < s.line || (e.line === s.line && e.word < s.word)) { const t = s; s = e; e = t; }
+    const rects = [], r = v => Math.round(v * 10000) / 10000;
+    for (let li = s.line; li <= e.line; li++) {
+      const line = lines[li], from = li === s.line ? s.word : 0, to = li === e.line ? e.word : line.words.length - 1;
+      let seg = null;
+      for (let wi = from; wi <= to; wi++) {
+        const w = line.words[wi];
+        if (seg && w.x - (seg.x + seg.w) > line.h * 2.5) { rects.push([r(seg.x), r(line.y), r(seg.w), r(line.h)]); seg = null; }
+        if (!seg) seg = {x: w.x, w: w.w}; else seg.w = w.x + w.w - seg.x;
+      }
+      if (seg) rects.push([r(seg.x), r(line.y), r(seg.w), r(line.h)]);
+    }
+    return rects;
+  },
+  box(a, b) {
+    const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y), w = Math.abs(a.x - b.x), h = Math.abs(a.y - b.y);
+    const r = v => Math.round(Math.max(0, Math.min(1, v)) * 10000) / 10000;
+    return w > 0.006 && h > 0.006 ? [[r(x), r(y), r(w), r(h)]] : null;
+  },
+  load(key) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(key) || '{}'), out = {}, colors = this.COLORS;
+      const unit = v => typeof v === 'number' && v >= 0 && v <= 1;
+      Object.keys(raw || {}).forEach(k => {
+        if (!/^\d+$/.test(k) || !Array.isArray(raw[k])) return;
+        const list = raw[k].filter(h => h && colors[h.c] && Array.isArray(h.r) && h.r.length && h.r.every(q => Array.isArray(q) && q.length === 4 && q.every(unit)));
+        if (list.length) out[k] = list.map(h => ({c: h.c, r: h.r}));
+      });
+      return out;
+    } catch (e) { return {}; }
+  },
+  save(key, store) { try { localStorage.setItem(key, JSON.stringify(store)); return true; } catch (e) { return false; } },
+  /* options: {key, pages (elements), words ({page: lines}), button} */
+  bind(options) {
+    const self = this, pages = options.pages, words = options.words || {};
+    let store = self.load(options.key), mode = false, selected = null, drag = null;
+    let color = 'y';
+    try { const saved = localStorage.getItem('mf-highlight-color'); if (self.COLORS[saved]) color = saved; } catch (e) {}
+    const lineCache = {};
+    const linesOf = index => (lineCache[index] || (lineCache[index] = self.lines(words[String(index)])));
+    // Colour bar shown in highlighter mode.
+    const bar = document.createElement('div');
+    bar.className = 'book-hl-bar'; bar.hidden = true; bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'Highlighter');
+    ['pointerdown', 'mousedown', 'touchstart'].forEach(name => bar.addEventListener(name, event => event.stopPropagation()));
+    const swatches = {};
+    Object.keys(self.COLORS).forEach(c => {
+      const b = document.createElement('button'); b.type = 'button'; b.className = 'book-hl-swatch';
+      b.style.background = self.COLORS[c]; b.title = self.NAMES[c]; b.setAttribute('aria-label', self.NAMES[c]);
+      b.onclick = () => {
+        color = c;
+        try { localStorage.setItem('mf-highlight-color', c); } catch (e) {}
+        if (selected) { store[selected.page][selected.index].c = c; persist(selected.page); }
+        paintBar();
+      };
+      swatches[c] = b; bar.appendChild(b);
+    });
+    const hint = document.createElement('span'); hint.className = 'book-hl-hint';
+    const remove = document.createElement('button'); remove.type = 'button'; remove.className = 'book-hl-delete'; remove.textContent = 'Delete';
+    remove.onclick = () => {
+      if (!selected) return;
+      const page = selected.page;
+      store[page].splice(selected.index, 1);
+      if (!store[page].length) delete store[page];
+      selected = null; persist(page); paintBar();
+    };
+    const done = document.createElement('button'); done.type = 'button'; done.className = 'book-hl-done'; done.textContent = 'Done';
+    done.onclick = () => setMode(false);
+    bar.appendChild(hint); bar.appendChild(remove); bar.appendChild(done);
+    document.body.appendChild(bar);
+    function paintBar() {
+      Object.keys(swatches).forEach(c => swatches[c].setAttribute('aria-pressed', String(selected ? store[selected.page][selected.index].c === c : c === color)));
+      remove.hidden = !selected;
+      hint.textContent = selected ? 'Pick a colour or delete' : 'Drag over text to highlight';
+      bar.title = hint.textContent;
+    }
+    function render(index) {
+      const page = pages[index];
+      if (!page) return;
+      let layer = page.querySelector('.book-highlights');
+      if (!layer) { layer = document.createElement('div'); layer.className = 'book-highlights'; page.appendChild(layer); }
+      while (layer.firstChild) layer.removeChild(layer.firstChild);
+      (store[index] || []).forEach((h, i) => h.r.forEach(q => {
+        const mark = document.createElement('div');
+        mark.className = 'book-hl' + (selected && selected.page === index && selected.index === i ? ' is-selected' : '');
+        mark.style.left = q[0] * 100 + '%'; mark.style.top = q[1] * 100 + '%';
+        mark.style.width = q[2] * 100 + '%'; mark.style.height = q[3] * 100 + '%';
+        mark.style.background = self.COLORS[h.c];
+        layer.appendChild(mark);
+      }));
+    }
+    function persist(index) { self.save(options.key, store); render(index); }
+    function preview(index, rects) {
+      const page = pages[index];
+      let layer = page.querySelector('.book-hl-preview');
+      if (!layer) { layer = document.createElement('div'); layer.className = 'book-highlights book-hl-preview'; page.appendChild(layer); }
+      while (layer.firstChild) layer.removeChild(layer.firstChild);
+      (rects || []).forEach(q => {
+        const mark = document.createElement('div'); mark.className = 'book-hl is-preview';
+        mark.style.left = q[0] * 100 + '%'; mark.style.top = q[1] * 100 + '%'; mark.style.width = q[2] * 100 + '%'; mark.style.height = q[3] * 100 + '%';
+        mark.style.background = self.COLORS[color];
+        layer.appendChild(mark);
+      });
+    }
+    function point(event, page) {
+      const t = event.touches && event.touches.length ? event.touches[0] : event.changedTouches && event.changedTouches.length ? event.changedTouches[0] : event;
+      const box = page.getBoundingClientRect();
+      return {x: (t.clientX - box.left) / box.width, y: (t.clientY - box.top) / box.height};
+    }
+    const rectsFor = (index, a, b) => self.select(linesOf(index), a, b) || self.box(a, b);
+    function move(event) {
+      if (!drag) return;
+      if (event.cancelable) event.preventDefault();
+      drag.b = point(event, pages[drag.page]);
+      if (Math.abs(drag.b.x - drag.a.x) + Math.abs(drag.b.y - drag.a.y) > 0.008) drag.moved = true;
+      if (drag.moved) preview(drag.page, rectsFor(drag.page, drag.a, drag.b));
+    }
+    function up(event) {
+      if (!drag) return;
+      window.removeEventListener('mousemove', move, true); window.removeEventListener('mouseup', up, true);
+      window.removeEventListener('touchmove', move, true); window.removeEventListener('touchend', up, true);
+      const index = drag.page, a = drag.a, b = drag.moved ? drag.b : a;
+      preview(index, null);
+      if (event && event.cancelable) event.preventDefault();
+      if (!drag.moved) {
+        // Tap: select the highlight under the finger (or clear the selection).
+        const hit = (store[index] || []).findIndex(h => h.r.some(q => a.x >= q[0] && a.x <= q[0] + q[2] && a.y >= q[1] && a.y <= q[1] + q[3]));
+        const previous = selected;
+        selected = hit >= 0 ? {page: index, index: hit} : null;
+        if (previous) render(previous.page);
+        render(index);
+      } else {
+        const rects = rectsFor(index, a, b);
+        if (rects && rects.length) {
+          if (!store[index]) store[index] = [];
+          store[index].push({c: color, r: rects});
+          const previous = selected; selected = null;
+          if (previous) render(previous.page);
+          persist(index);
+        }
+      }
+      drag = null; paintBar();
+    }
+    function down(event, index) {
+      if (!mode || (event.touches && event.touches.length > 1)) return;   // two fingers: let pinch zoom work
+      event.stopPropagation(); if (event.cancelable) event.preventDefault();
+      drag = {page: index, a: point(event, pages[index]), moved: false};
+      drag.b = drag.a;
+      // Capture phase: the page stops mousemove from bubbling (no corner
+      // fold under the highlighter), so listen before it gets there.
+      window.addEventListener('mousemove', move, true); window.addEventListener('mouseup', up, true);
+      window.addEventListener('touchmove', move, {passive: false, capture: true}); window.addEventListener('touchend', up, true);
+    }
+    pages.forEach((page, index) => {
+      // Property handlers: rebinding replaces them instead of stacking.
+      page.onmousedown = event => down(event, index);
+      page.ontouchstart = event => down(event, index);
+      // No page-corner fold animation under the highlighter.
+      page.onmousemove = event => { if (mode) event.stopPropagation(); };
+      render(index);
+    });
+    function escape(event) { if (event.key === 'Escape') setMode(false); }
+    function setMode(on) {
+      mode = on;
+      document.body.classList.toggle('is-highlighting', on);
+      bar.hidden = !on;
+      if (options.button) { options.button.setAttribute('aria-pressed', String(on)); options.button.classList.toggle('is-on', on); }
+      if (on) document.addEventListener('keydown', escape);
+      else {
+        document.removeEventListener('keydown', escape);
+        if (selected) { const page = selected.page; selected = null; render(page); }
+      }
+      paintBar();
+    }
+    if (options.button) {
+      options.button.textContent = '🖍';
+      options.button.title = 'Highlighter';
+      options.button.setAttribute('aria-label', 'Highlighter');
+      options.button.onclick = () => setMode(!mode);
+    }
+    paintBar();
+    return {
+      active: () => mode, setMode,
+      close() { setMode(false); bar.remove(); },
+      store: () => JSON.parse(JSON.stringify(store)),
+    };
   },
 };

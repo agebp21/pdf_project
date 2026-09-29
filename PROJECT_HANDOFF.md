@@ -605,3 +605,9 @@ Nama file dipad nol (`<nama>-page-01.jpg`) supaya urut, opsi Format JPG/PNG, lat
 ### 29 September 2026 - Catatan otomatis mem-bookmark
 
 Catatan baru memanggil `options.bookmark(index, true)` (viewer/preview: `marks.set`); flag `marked` di data catatan mencatat apakah catatan yang menambah bookmark itu. Hapus catatan -> hapus bookmark hanya bila `marked`. `FlipbookBookmarks.bind` sekarang mengembalikan `set(index, on)`. Tab catatan pakai `onclick` (diganti tiap bind) supaya bind ulang tidak memakai handler lama.
+
+### 29 September 2026 - Stabilo (highlighter) pembaca
+
+- `assets/pdf-words.js` (`PdfWords.extract(pdf)`): posisi kata per halaman dari teks PDF saat dibuka di editor -> `words` di model buku: `{page: [[y, h, x0, w0, x1, w1, ...], ...]}` integer 1/10000 kotak halaman (letterbox via `PdfLinks.toBox`), maks 400 baris x 300 kata. Divalidasi `validWords` (flipbook-export.js) dan `validate_words` (server.py); batas book.json server naik ke 16 MB. Uji toc-links: 12 halaman = 2,3 KB.
+- `FlipbookHighlights` (layout.js): tombol `#highlight` 🖍 -> mode stabilo (body.is-highlighting), bar warna vertikal di kiri (kuning/hijau/pink/biru, Done, Delete). Seret di teks -> menempel ke kata per baris (dipotong di celah kolom > 2,5x tinggi baris); mulai di luar teks / halaman scan -> kotak bebas. Tap stabilo -> pilih, ganti warna / hapus. Simpan `mf-highlights:<hash>` (+ warna `mf-highlight-color`). Handler halaman pakai properti on* (bind ulang tidak menumpuk); gerak seret didengar di window fase capture karena halaman menghentikan mousemove (tanpa efek lipat pojok). Zoom mengalah untuk 1 jari/mouse saat stabilo aktif; pinch tetap zoom. Idle tidak aktif saat mode stabilo.
+- Tes: highlights.test.cjs, test_build (validate_words), export.test (validWords).

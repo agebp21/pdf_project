@@ -50,6 +50,23 @@
 .book-note-row{flex-direction:column;align-items:flex-start;gap:2px}
 .book-note-row span{color:#57534e;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
 @media (max-height:520px){.book-note-editor,.book-note-list{top:8px;bottom:auto;max-height:calc(100vh - 70px);max-height:calc(100dvh - 70px)}.book-note-editor textarea{min-height:64px;height:64px;resize:none}.book-note-actions{margin-top:6px}.book-note-actions button{padding:6px 14px}}
+.book-highlights{position:absolute;top:0;right:0;bottom:0;left:0;z-index:3;pointer-events:none}
+.book-hl{position:absolute;border-radius:2px;opacity:.5;mix-blend-mode:multiply}
+.book-hl.is-preview{opacity:.35}
+.book-hl.is-selected{opacity:.7;outline:2px solid #1c1917;outline-offset:1px}
+body.is-highlighting .page,body.is-highlighting .pdf-page{cursor:text}
+body.is-highlighting .book-note-tab{pointer-events:none;opacity:.25}
+.book-hl-bar{position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:2100;display:flex;flex-direction:column;align-items:center;gap:8px;max-height:calc(100vh - 20px);padding:10px 8px;border-radius:18px;background:#fffdf8;border:1px solid #e4ded0;box-shadow:0 12px 34px rgba(0,0,0,.28);font:13px/1.2 system-ui,sans-serif;color:#1c1917}
+.book-hl-bar[hidden]{display:none}
+.book-hl-swatch{width:30px;height:30px;padding:0;border:2px solid #fff;border-radius:999px;box-shadow:0 0 0 1px rgba(0,0,0,.22);cursor:pointer}
+.book-hl-swatch[aria-pressed="true"]{box-shadow:0 0 0 3px #1c1917}
+.book-hl-hint{display:none}
+.book-hl-delete,.book-hl-done{padding:6px 10px;border-radius:999px;font:600 12px system-ui,sans-serif;cursor:pointer}
+.book-hl-delete{border:1px solid #efe9dc;background:#fff;color:#b3121a}
+.book-hl-delete[hidden]{display:none}
+.book-hl-done{border:1px solid #1a3c34;background:#1a3c34;color:#fff}
+#highlight.is-on{background:#ffd43b;border-color:#e0b100}
+@media (max-height:360px){.book-hl-bar{gap:5px;padding:6px}.book-hl-swatch{width:24px;height:24px}}
 .book-note-download{display:block;width:100%;margin-top:10px;padding:9px;border:1px dashed #d6cfbf;border-radius:10px;background:#fff;font:600 13px system-ui,sans-serif;color:#1a3c34;cursor:pointer}
 .book-mark-state{margin-left:auto;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;color:#57534e;background:#f5f0e6;white-space:nowrap}
 .book-mark-pick.is-marked{border-color:#e5252a;background:#fff4e5}

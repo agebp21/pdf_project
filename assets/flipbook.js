@@ -13,14 +13,14 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, marks = null, notes = null, curl = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, marks = null, notes = null, highlights = null, curl = null;
   function exportState() {
     $('#export-fields').disabled = !sourcePdf || opening || exporting;
     $('#export-apk').disabled = !buildConfig?.apk;
     $('#export-exe').disabled = !buildConfig?.exe;
     $('#project-file').disabled = opening || exporting;
   }
-  const model = () => ({version:1,title:$('#export-title').value.trim()||'Buku interaktif',pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks});
+  const model = () => ({version:1,title:$('#export-title').value.trim()||'Buku interaktif',pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords});
   const error = message => { $('#reader-error').textContent = message; $('#reader-error').hidden = !message; };
   // Sheets on screen (may include the blank back cover of an odd page count).
   function sheetsOnScreen() {
@@ -110,11 +110,16 @@
       try {
         if (window.PdfLinks) found = await PdfLinks.extract(newPdf, {progress:(i, n) => { $('#load-status').textContent = `Finding links ${i} / ${n}…`; }});
       } catch (cause) { console.warn('Links skipped:', cause); }
+      // Word positions so readers can highlight text (never blocks opening either).
+      let words = {};
+      try {
+        if (window.PdfWords) words = await PdfWords.extract(newPdf, {progress:(i, n) => { $('#load-status').textContent = `Reading text ${i} / ${n}…`; }});
+      } catch (cause) { console.warn('Words skipped:', cause); }
       if (version !== loadVersion) return false;
       if (book) { disposeLayout?.(); book.destroy(); book = null; }
       if (pdf) await pdf.destroy();
       imageUrls.forEach(url => URL.revokeObjectURL(url));
-      imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links;
+      imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links; bookWords = words;
       // Odd page counts get a blank back cover so the book can close.
       const sheets = FlipbookLayout.withBackCover(newElements, 'pdf-page');
       const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...sheets);
@@ -152,6 +157,9 @@
       notes?.close();
       notes = FlipbookNotes.bind({key: FlipbookNotes.key(name, newElements.length, ratio), title: name.replace(/\.pdf$/i, ''),
         pages: newElements, goPage, open: $('#notes'), bookmark: (index, on) => marks.set(index, on)});
+      highlights?.close();
+      highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(name, newElements.length, ratio),
+        pages: newElements, words: bookWords, button: $('#highlight')});
       const linkCount = found.stats.internal + found.stats.toc + found.stats.external;
       $('#load-status').textContent = `${newElements.length} pages ready. The first page is the front cover.` +
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');

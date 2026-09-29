@@ -72,10 +72,12 @@ global.fetch = async path => {
   assert.throws(()=>api.validate({...model,overlays:{'3':model.overlays['1']}}));
   assert.throws(()=>api.validate({...model,overlays:{'1':{...model.overlays['1'],position:'bad'}}}));
   assert.throws(()=>api.validate({...model,overlays:{'1':{...model.overlays['1'],value:Infinity}}}));
+  assert.deepEqual(api.validate({...model,words:{'0':[[100,200,300,50,400,60]]}}).words,{'0':[[100,200,300,50,400,60]]});
+  for(const bad of [{'9':[[1,2,3,4]]},{'0':[[1,2,3]]},{'0':[[1,2,3,20000]]},{'0':[[1,2,3,4.5]]},[1]])assert.throws(()=>api.validate({...model,words:bad}),/teks/);
   const pdf = new Blob(['%PDF-fixture'],{type:'application/pdf'});
   const saved = await api.saveProject(model,pdf);
   const restored = await api.readProject(saved);
-  assert.deepEqual(restored.data,{...model,links:{}});assert.equal(await restored.pdf.text(),await pdf.text()); // validated projects always carry links (empty here)
+  assert.deepEqual(restored.data,{...model,links:{},words:{}});assert.equal(await restored.pdf.text(),await pdf.text()); // validated projects always carry links and words (empty here)
   const bundle = await api.packageBook(model,['test:1','test:2','test:3']);
   const zip = await JSZip.loadAsync(await bundle.arrayBuffer());
   for(const file of ['index.html','viewer.js','viewer.css','book-data.js','book.json','page-flip.browser.js','pages/1.jpg','pages/3.jpg','PAGEFLIP-LICENSE.txt'])assert.ok(zip.file(file),file);

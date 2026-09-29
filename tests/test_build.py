@@ -73,6 +73,16 @@ class BuildTests(unittest.TestCase):
             self.assertIn(r'''L"Laporan \"2026\" \U00002014 D\U000000E9sa & Co's"''', runner)
         self.assertEqual(server.app_name('   '), 'MyFlipbook')
 
+    def test_highlight_word_positions_validated_for_native_books(self):
+        base = dict(version=1, title='Buku', pageCount=2, ratio=0.7, overlays={})
+        ok = server.validate_manifest(dict(base, words={'1': [[100, 200, 300, 40, 400, 60]]}))
+        self.assertEqual(ok['words'], {'1': [[100, 200, 300, 40, 400, 60]]})
+        self.assertEqual(server.validate_manifest(base)['words'], {}, 'older books without words still build')
+        for bad in ({'2': [[1, 2, 3, 4]]}, {'0': [[1, 2, 3]]}, {'0': [[1, 2, 3, 20000]]}, {'0': [[1, 2, 3, 4.5]]},
+                    {'0': [[1, 2, 3, True]]}, {'0': 'x'}, []):
+            with self.subTest(bad=bad), self.assertRaises(ValueError):
+                server.validate_manifest(dict(base, words=bad))
+
     def test_windows_file_details_named_after_book(self):
         with tempfile.TemporaryDirectory() as temporary:
             workspace = Path(temporary)
