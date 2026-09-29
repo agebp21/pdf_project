@@ -558,3 +558,7 @@ Saat menutup sampul, bagian kiri tampak tergeser/terpotong. Perbaikan FlipbookCu
 - Saat zoom, gestur di-capture di `main` (stopPropagation) jadi PageFlip tidak ikut -> geser tidak membalik halaman. Tap diam saat zoom tetap boleh click (link TOC). Balik halaman / flip -> zoom reset.
 - Perangkat sentuh: `disableFlipByClick` = true (ditulis SETELAH motion(), yang menyetel false) -> tap tengah halaman tidak membalik; swipe & tap pojok tetap membalik.
 - Layar pendek (max-height 500px): footer lebih ringkas supaya 1 baris di HP landscape.
+
+### 29 September 2026 - Pesan "masih di dalam ZIP"
+
+index.html reader punya kotak #extract-help (style inline) yang cuma tampil kalau viewer.css tidak termuat, yaitu saat index.html dibuka langsung dari dalam ZIP tanpa diekstrak (kasus laporan user: halaman polos tanpa buku). viewer.css menyembunyikannya.
