@@ -1,0 +1,261 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Create a workflow — MyFlipbook</title>
+<script src="assets/vendor/pdf-lib.min.js"></script>
+<script src="assets/pdf-edit.js"></script>
+<script src="assets/workflow.js"></script>
+<script src="assets/flipbook-transfer.js"></script>
+<script src="assets/auth.js" defer></script>
+<script src="https://cdn.tailwindcss.com"></script>
+<link rel="stylesheet" href="assets/ui-clay.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  *{font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+  .serif{font-family:'Fraunces',Georgia,serif}
+  body{background:#FBFAF7;color:#1C1917;overflow-x:hidden}
+  .panel{background:linear-gradient(180deg,#FFFFFF,#F8F4EA);border:1px solid #E9E2D4;border-radius:20px;box-shadow:0 14px 34px rgba(28,25,23,.10),inset 0 1px 0 #fff;padding:18px}
+  .step-no{width:26px;height:26px;border-radius:999px;display:grid;place-items:center;font-size:12px;font-weight:800;background:#1A3C34;color:#FFF7EA}
+  .drop{border:2px dashed #C9CFC2;background:#fff;border-radius:16px;transition:all .2s}
+  .drop.drag{border-color:#FF5C28;background:#FFF7ED}
+  .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45)}
+  .btn-tang:disabled{opacity:.5;box-shadow:none}
+  .chip{border:1px solid #E8E2D4;background:#fff;border-radius:999px;padding:6px 12px;font-size:12px;font-weight:700}
+  .chip:hover{border-color:#FF5C28;background:#FFF7ED}
+  .icon-btn{width:30px;height:30px;border-radius:10px;border:1px solid #E8E2D4;background:#fff;font-size:13px}
+  .icon-btn:hover:not(:disabled){border-color:#1A3C34}
+  .icon-btn:disabled{opacity:.35}
+  .field{display:flex;flex-direction:column;gap:4px;font-size:11px;font-weight:700;color:#57534E}
+  .field input,.field select{padding:7px 10px;border:1px solid #E2DCCD;border-radius:10px;background:#fff;font-size:12px;font-weight:500;color:#1C1917}
+  .field input[type=color]{padding:2px;height:34px}
+  .bar{height:10px;border-radius:999px;background:#E7E0D2;overflow:hidden}
+  .bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#D31D24,#F0642A);transition:width .3s ease}
+  [hidden]{display:none!important}
+</style>
+</head>
+<body>
+  <div class="sticky top-3 z-50 max-w-[1440px] mx-auto px-4 pt-3">
+    <nav class="clay-nav">
+      <a href="index.html" class="clay-brand"><span class="clay-brand-mark">MF</span> <span class="clay-brand-name">MyFlipbook</span></a>
+      <span style="display:flex;align-items:center;gap:8px"><span data-auth-slot></span><a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">← All tools</a></span>
+    </nav>
+  </div>
+
+  <header class="max-w-[1440px] mx-auto px-4 pt-8 pb-4 text-center">
+    <p class="inline-flex text-[10px] font-extrabold tracking-[.18em] bg-white border border-[#E8E2D4] rounded-full px-3 py-1">✦ WORKFLOW • 100% IN BROWSER</p>
+    <h1 class="serif text-3xl sm:text-4xl font-black mt-3">Create a workflow</h1>
+    <p class="text-sm text-[#57534E] mt-2 max-w-xl mx-auto">Chain PDF tools into one recipe. Upload once, run every step in order, get one finished PDF. Save recipes to reuse them.</p>
+  </header>
+
+  <main class="max-w-[1440px] mx-auto px-4 pb-16 grid gap-5 lg:grid-cols-3 items-start">
+    <!-- 1. Files -->
+    <section class="panel" aria-labelledby="files-title">
+      <div class="flex items-center gap-2 mb-3"><span class="step-no">1</span><h2 id="files-title" class="font-extrabold">PDF files</h2></div>
+      <label id="drop" class="drop flex flex-col items-center justify-center gap-1 py-8 cursor-pointer text-center">
+        <span class="text-2xl">📄</span>
+        <span class="text-sm font-bold">Drop PDFs here or click to choose</span>
+        <span class="text-xs text-[#78716C]">Several files are merged in this order first</span>
+        <input id="file-input" type="file" accept=".pdf,application/pdf" multiple class="sr-only">
+      </label>
+      <ol id="file-list" class="mt-3 flex flex-col gap-2"></ol>
+      <p id="file-summary" class="mt-2 text-xs text-[#78716C]"></p>
+    </section>
+
+    <!-- 2. Steps -->
+    <section class="panel" aria-labelledby="steps-title">
+      <div class="flex items-center gap-2 mb-3"><span class="step-no">2</span><h2 id="steps-title" class="font-extrabold">Steps</h2></div>
+      <p class="text-xs font-bold text-[#57534E] mb-2">Start from a template</p>
+      <div id="templates" class="flex flex-wrap gap-2 mb-4"></div>
+      <ol id="step-list" class="flex flex-col gap-3"></ol>
+      <p id="no-steps" class="text-xs text-[#78716C] py-3">No steps yet. Pick a template or add steps below.</p>
+      <div class="flex gap-2 mt-3">
+        <select id="add-type" class="flex-1 px-3 py-2 rounded-xl border border-[#E2DCCD] bg-white text-sm" aria-label="Step to add"></select>
+        <button id="add-step" type="button" class="clay-btn" style="padding:8px 14px;font-size:13px">+ Add step</button>
+      </div>
+      <div class="border-t border-[#E9E2D4] mt-5 pt-4">
+        <p class="text-xs font-bold text-[#57534E] mb-2">Save this workflow</p>
+        <div class="flex gap-2">
+          <input id="recipe-name" maxlength="60" placeholder="e.g. Monthly report" class="flex-1 px-3 py-2 rounded-xl border border-[#E2DCCD] bg-white text-sm">
+          <button id="save-recipe" type="button" class="clay-btn clay-btn-ghost" style="padding:8px 14px;font-size:13px">Save</button>
+        </div>
+        <p id="recipe-status" class="text-xs text-[#57534E] mt-2" role="status"></p>
+        <p class="text-xs font-bold text-[#57534E] mt-4 mb-2">My workflows <span class="font-normal text-[#A8A29E]">(saved in this browser)</span></p>
+        <ul id="recipe-list" class="flex flex-col gap-2"></ul>
+      </div>
+    </section>
+
+    <!-- 3. Run -->
+    <section class="panel lg:sticky lg:top-24" aria-labelledby="run-title">
+      <div class="flex items-center gap-2 mb-3"><span class="step-no">3</span><h2 id="run-title" class="font-extrabold">Run</h2></div>
+      <button id="run" type="button" class="btn-tang w-full rounded-2xl py-3 font-extrabold" disabled>Run workflow</button>
+      <p id="run-hint" class="text-xs text-[#78716C] mt-2">Add a PDF and at least one step.</p>
+      <div id="run-progress" class="mt-4" hidden>
+        <div class="flex items-center gap-3"><div class="bar flex-1"><span id="bar-fill"></span></div><b id="bar-text" class="text-xs w-10 text-right">0%</b></div>
+        <ol id="run-log" class="mt-3 flex flex-col gap-1 text-xs"></ol>
+      </div>
+      <p id="run-error" class="mt-3 text-sm text-[#B91C1C] bg-[#FEF2F2] border border-[#FECACA] rounded-xl p-3" role="alert" hidden></p>
+      <div id="result" class="mt-4" hidden>
+        <p id="result-info" class="text-sm font-bold"></p>
+        <div class="flex flex-col gap-2 mt-3">
+          <a id="download" class="btn-tang rounded-2xl py-3 text-center font-extrabold" download>Download PDF</a>
+          <button id="to-flipbook" type="button" class="clay-btn" style="padding:10px 14px;font-size:13px">Turn into Flipbook →</button>
+        </div>
+        <iframe id="preview" title="Result preview" class="w-full h-[380px] rounded-xl border border-[#E9E2D4] bg-white mt-3"></iframe>
+      </div>
+    </section>
+  </main>
+
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const W = window.Workflow;
+  let inputs = [], steps = [], resultUrl = null, resultBlob = null, running = false;
+  const el = (tag, props, ...children) => { const node = Object.assign(document.createElement(tag), props || {}); children.forEach(c => c !== null && node.append(c)); return node; };
+  const kb = n => n > 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
+  const iconButton = (label, text, onclick, disabled) => el('button', {type: 'button', className: 'icon-btn', textContent: text, title: label, ariaLabel: label, disabled: !!disabled, onclick});
+  function move(list, index, delta) { const target = index + delta; if (target < 0 || target >= list.length) return; const [item] = list.splice(index, 1); list.splice(target, 0, item); }
+
+  // ---------- files
+  async function addFiles(fileList) {
+    for (const file of fileList) {
+      if (!/\.pdf$/i.test(file.name) && file.type !== 'application/pdf') { showError(file.name + ' is not a PDF.'); continue; }
+      const entry = {file, name: file.name, pages: null};
+      inputs.push(entry);
+      file.arrayBuffer().then(buffer => PDFLib.PDFDocument.load(buffer)).then(doc => { entry.pages = doc.getPageCount(); renderFiles(); })
+        .catch(() => { entry.pages = -1; renderFiles(); });
+    }
+    renderFiles();
+  }
+  function renderFiles() {
+    const list = $('#file-list'); list.replaceChildren();
+    inputs.forEach((entry, i) => {
+      const pages = entry.pages === null ? 'counting pages…' : entry.pages < 0 ? '⚠ cannot be read' : entry.pages + ' page' + (entry.pages === 1 ? '' : 's');
+      list.append(el('li', {className: 'flex items-center gap-2 bg-white border border-[#E8E2D4] rounded-xl px-3 py-2'},
+        el('span', {className: 'text-xs font-extrabold text-[#A8A29E] w-4', textContent: String(i + 1)}),
+        el('span', {className: 'flex-1 min-w-0'}, el('span', {className: 'block text-sm font-bold truncate', textContent: entry.name}), el('span', {className: 'block text-[11px] text-[#78716C]', textContent: kb(entry.file.size) + ' · ' + pages})),
+        iconButton('Move up', '↑', () => { move(inputs, i, -1); renderFiles(); }, i === 0),
+        iconButton('Move down', '↓', () => { move(inputs, i, 1); renderFiles(); }, i === inputs.length - 1),
+        iconButton('Remove file', '✕', () => { inputs.splice(i, 1); renderFiles(); })));
+    });
+    const total = inputs.reduce((sum, e) => sum + (e.pages > 0 ? e.pages : 0), 0);
+    $('#file-summary').textContent = inputs.length ? inputs.length + ' file' + (inputs.length === 1 ? '' : 's') + (total ? ' · ' + total + ' pages in total' : '') + (inputs.length > 1 ? ' · merged top to bottom' : '') : '';
+    refresh();
+  }
+  $('#file-input').onchange = event => { addFiles([...event.target.files]); event.target.value = ''; };
+  const drop = $('#drop');
+  ['dragenter', 'dragover'].forEach(type => drop.addEventListener(type, e => { e.preventDefault(); drop.classList.add('drag'); }));
+  ['dragleave', 'drop'].forEach(type => drop.addEventListener(type, e => { e.preventDefault(); drop.classList.remove('drag'); }));
+  drop.addEventListener('drop', e => addFiles([...e.dataTransfer.files]));
+
+  // ---------- steps
+  function field(step, spec) {
+    const id = 'f' + Math.random().toString(36).slice(2);
+    let control;
+    if (spec.type === 'select') {
+      control = el('select', {id});
+      spec.options.forEach(option => control.append(el('option', {value: option, textContent: spec.key === 'angle' ? option + '°' : option.replace(/-/g, ' ')})));
+    } else control = el('input', {id, type: spec.type, placeholder: spec.placeholder || ''});
+    if (spec.min !== undefined) control.min = spec.min;
+    if (spec.max !== undefined) control.max = spec.max;
+    control.value = step.options[spec.key];
+    control.oninput = control.onchange = () => { step.options[spec.key] = control.value; };
+    return el('label', {className: 'field', htmlFor: id}, spec.label, control);
+  }
+  function renderSteps() {
+    const list = $('#step-list'); list.replaceChildren();
+    steps.forEach((step, i) => {
+      const spec = W.STEPS[step.type];
+      const grid = el('div', {className: 'grid grid-cols-2 gap-2 mt-3'});
+      spec.fields.forEach(f => grid.append(field(step, f)));
+      list.append(el('li', {className: 'bg-white border border-[#E8E2D4] rounded-2xl p-3'},
+        el('div', {className: 'flex items-center gap-2'},
+          el('span', {className: 'step-no', textContent: String(i + 1)}),
+          el('span', {className: 'flex-1 min-w-0'}, el('span', {className: 'block text-sm font-extrabold', textContent: spec.icon + '  ' + spec.title}), el('span', {className: 'block text-[11px] text-[#78716C]', textContent: spec.desc})),
+          iconButton('Move step up', '↑', () => { move(steps, i, -1); renderSteps(); }, i === 0),
+          iconButton('Move step down', '↓', () => { move(steps, i, 1); renderSteps(); }, i === steps.length - 1),
+          iconButton('Remove step', '✕', () => { steps.splice(i, 1); renderSteps(); })),
+        spec.fields.length ? grid : null));
+    });
+    $('#no-steps').hidden = steps.length > 0;
+    refresh();
+  }
+  const useSteps = list => { steps = list.map(s => W.normalize(s)); renderSteps(); };
+  Object.keys(W.STEPS).forEach(type => $('#add-type').append(el('option', {value: type, textContent: W.STEPS[type].icon + '  ' + W.STEPS[type].title})));
+  $('#add-step').onclick = () => { steps.push(W.normalize({type: $('#add-type').value})); renderSteps(); };
+  W.TEMPLATES.forEach(t => $('#templates').append(el('button', {type: 'button', className: 'chip', textContent: t.name, title: t.steps.map(s => W.STEPS[s.type].title).join(' → '),
+    onclick: () => { useSteps(t.steps); $('#recipe-name').value = ''; recipeStatus('Template "' + t.name + '" loaded. Adjust the steps as you like.'); }})));
+
+  // ---------- recipes
+  const recipeStatus = text => { $('#recipe-status').textContent = text; };
+  function renderRecipes() {
+    const list = $('#recipe-list'); list.replaceChildren();
+    const saved = W.recipes.load();
+    if (!saved.length) list.append(el('li', {className: 'text-xs text-[#A8A29E]', textContent: 'None yet.'}));
+    saved.forEach(recipe => list.append(el('li', {className: 'flex items-center gap-2 bg-white border border-[#E8E2D4] rounded-xl px-3 py-2'},
+      el('span', {className: 'flex-1 min-w-0'}, el('span', {className: 'block text-sm font-bold truncate', textContent: recipe.name}),
+        el('span', {className: 'block text-[11px] text-[#78716C] truncate', textContent: recipe.steps.map(s => (W.STEPS[s.type] || {title: s.type}).title).join(' → ')})),
+      el('button', {type: 'button', className: 'chip', textContent: 'Use', onclick: () => { useSteps(recipe.steps); $('#recipe-name').value = recipe.name; recipeStatus('Loaded "' + recipe.name + '".'); }}),
+      iconButton('Delete workflow', '✕', () => { if (confirm('Delete the workflow "' + recipe.name + '"?')) { W.recipes.remove(recipe.name); renderRecipes(); recipeStatus('Deleted "' + recipe.name + '".'); } }))));
+  }
+  $('#save-recipe').onclick = () => {
+    try { W.recipes.save($('#recipe-name').value, steps); renderRecipes(); recipeStatus('Saved "' + $('#recipe-name').value.trim() + '".'); }
+    catch (cause) { recipeStatus('⚠ ' + cause.message); }
+  };
+
+  // ---------- run
+  function refresh() {
+    const ready = inputs.length > 0 && steps.length > 0 && !running;
+    $('#run').disabled = !ready;
+    $('#run-hint').hidden = ready || running;
+    $('#run-hint').textContent = !inputs.length ? 'Add a PDF to start.' : 'Add at least one step.';
+  }
+  function showError(message) { $('#run-error').textContent = message; $('#run-error').hidden = !message; }
+  function setBar(fraction) { const p = Math.round(Math.max(0, Math.min(1, fraction)) * 100); $('#bar-fill').style.width = p + '%'; $('#bar-text').textContent = p + '%'; }
+  $('#run').onclick = async () => {
+    running = true; refresh(); showError(''); $('#result').hidden = true;
+    const log = $('#run-log'); log.replaceChildren();
+    const rows = [el('li', {textContent: '○ Merge ' + inputs.length + ' file' + (inputs.length === 1 ? '' : 's')})].concat(steps.map((s, i) => el('li', {textContent: '○ ' + (i + 1) + '. ' + W.STEPS[s.type].title})));
+    rows.forEach(r => log.append(r));
+    $('#run-progress').hidden = false; setBar(0);
+    const started = performance.now();
+    try {
+      const files = await Promise.all(inputs.map(async e => ({name: e.name, bytes: await e.file.arrayBuffer()})));
+      let current = -1;
+      const bytes = await W.run(files, steps, p => {
+        if (p.step !== current) {
+          if (current >= 0) rows[current].textContent = rows[current].textContent.replace(/^[○◐]/, '✓');
+          current = p.step; rows[current].textContent = rows[current].textContent.replace(/^○/, '◐');
+        }
+        setBar((p.step + 0.5) / (p.total + 1));
+      });
+      rows.forEach(r => { r.textContent = r.textContent.replace(/^[○◐]/, '✓'); });
+      setBar(1);
+      const doc = await PDFLib.PDFDocument.load(bytes);
+      resultBlob = new Blob([bytes], {type: 'application/pdf'});
+      if (resultUrl) URL.revokeObjectURL(resultUrl);
+      resultUrl = URL.createObjectURL(resultBlob);
+      const name = (($('#recipe-name').value.trim() || inputs[0].name.replace(/\.pdf$/i, '') + '-workflow').replace(/[\\/:*?"<>|]+/g, '-')) + '.pdf';
+      $('#download').href = resultUrl; $('#download').download = name; $('#download').textContent = 'Download ' + name;
+      $('#preview').src = resultUrl;
+      $('#result-info').textContent = '✅ Done in ' + ((performance.now() - started) / 1000).toFixed(1) + ' s · ' + doc.getPageCount() + ' pages · ' + kb(resultBlob.size);
+      $('#result').hidden = false;
+      $('#to-flipbook').disabled = false; $('#to-flipbook').textContent = 'Turn into Flipbook →';
+      $('#to-flipbook').onclick = async () => {
+        $('#to-flipbook').disabled = true; $('#to-flipbook').textContent = 'Preparing book…';
+        try { location.href = 'flipbook.html?source=' + encodeURIComponent(await FlipbookTransfer.save(resultBlob, name)); }
+        catch (cause) { showError('Could not open the flipbook: ' + cause.message); $('#to-flipbook').disabled = false; $('#to-flipbook').textContent = 'Turn into Flipbook →'; }
+      };
+    } catch (cause) {
+      rows.forEach(r => { if (r.textContent.startsWith('◐')) r.textContent = r.textContent.replace(/^◐/, '✕'); });
+      showError(cause.message);
+    } finally { running = false; refresh(); }
+  };
+
+  renderFiles(); renderSteps(); renderRecipes();
+})();
+</script>
+</body>
+</html>

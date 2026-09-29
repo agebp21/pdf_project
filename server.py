@@ -41,7 +41,7 @@ JOBS = {}
 BUILD_LOCK = threading.Lock()
 POSITIONS = {'top-left', 'top-right', 'bottom-left', 'bottom-right'}
 SESSION_COOKIE = 'mf_session'
-PAGES = {'index.html', 'converter.html', 'flipbook.html', 'animation.html', 'notebook.html',
+PAGES = {'index.html', 'converter.html', 'workflow.html', 'flipbook.html', 'animation.html', 'notebook.html',
          'login.html', 'account.html', 'coming-soon.html'}
 # Unreleased features: on a normal run (paywall on) these pages show the
 # coming-soon page; --no-paywall keeps them usable internally.

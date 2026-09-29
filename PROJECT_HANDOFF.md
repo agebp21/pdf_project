@@ -153,7 +153,7 @@ Usulan pengguna dari perbandingan visual iLovePDF vs Sarvamaya. Disimpan sebagai
 - PDF to Flipbook: ada (`flipbook.html`, transfer dari converter via IndexedDB).
 - Animasi Flipbook: ada sebagai demo (`animation.html`) + overlay statistik per halaman di pembaca; panel editor di `flipbook.html` disembunyikan sementara atas permintaan pengguna.
 - Notebook PDF: ada (`notebook.html`, chat/ringkas/podcast/mindmap ala NotebookLM, 100% klaim browser — perlu QA lanjutan).
-- Create a Workflow: BELUM ada builder asli. Kartu `Create a workflow` di `index.html` saat ini hanya link ke `converter.html?tool=merge-pdf`. Jangan diklaim sebagai pipeline otomatis sebelum diimplementasikan.
+- Create a Workflow: tahap 1 SUDAH ada di `workflow.html` + `assets/workflow.js` (lihat catatan 29 September 2026). Belum: langkah konversi Office/gambar, OCR, export flipbook otomatis.
 
 ### Usulan tambahan (backlog, belum diimplementasikan)
 
@@ -566,3 +566,10 @@ index.html reader punya kotak #extract-help (style inline) yang cuma tampil kala
 ### 29 September 2026 - Buku halaman ganjil bisa ditutup
 
 Jumlah halaman ganjil berakhir di halaman kanan tanpa lembar balik, jadi buku tidak bisa ditutup. `FlipbookLayout.withBackCover(pages, className)` menambah sampul belakang kosong (`.book-back-blank`, krem) hanya untuk PageFlip (reader + preview); halaman dokumen, export, bookmark, link tidak berubah. Status menampilkan "Back cover"; tombol → berhenti di lembar terakhir PageFlip.
+
+### 29 September 2026 - Workflow tahap 1
+
+- `workflow.html` (baru, di allowlist PAGES server.py) + mesin `assets/workflow.js` (`Workflow.run(inputs, steps, onProgress)`, `STEPS`, `TEMPLATES`, `recipes` di localStorage `mf-workflows`). Semua di browser: PDF input digabung berurutan, lalu langkah: rotate, keep, remove, watermark (teks, via PDFEdit), page-numbers, crop, compress (object streams; jujur: hasil kecil untuk PDF gambar).
+- UI: upload + urutkan file, template (Ready to send / Draft for review / Scanned pages tidy-up), tambah/urut/hapus langkah dengan opsi, simpan/pakai/hapus resep, progress + checklist per langkah, error menyebut langkah yang gagal, download + preview + "Turn into Flipbook".
+- Kartu "Create a workflow" di index.html sekarang link ke workflow.html (badge New!, keluar dari SOON).
+- Tes: tests/workflow.test.cjs. Tahap berikut (tunggu user): langkah konversi (Word/Excel/PPT/Gambar -> PDF), OCR, export flipbook otomatis.
