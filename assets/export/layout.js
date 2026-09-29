@@ -754,6 +754,7 @@
     if (opts.chip) { const button = opts.chip.querySelector('button'); if (button) button.onclick = reset; }
     document.addEventListener('keydown', event => {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
+      if (/^(INPUT|TEXTAREA|SELECT)$/.test((event.target && event.target.tagName) || '')) return;   // typing a note
       const c = center();
       if (event.key === '+' || event.key === '=') zoomTo(scale * 1.5, c.x, c.y, true);
       else if (event.key === '-') zoomTo(scale / 1.5, c.x, c.y, true);
@@ -768,5 +769,169 @@
     }
     apply(false);
     return { reset, step, scale: () => scale };
+  },
+};
+
+// Reader notes: a small tab on the outer edge of every page opens a note
+// for that page; notes are kept per book on this device (like bookmarks),
+// listed in one panel to jump back, and can be downloaded as a text file.
+// ES2018 for old Android WebViews.
+(typeof self!=='undefined'?self:global).FlipbookNotes = {
+  MAX: 5000,
+  // Keyboard shortcuts must not fire while the reader is typing.
+  typing(event) {
+    const target = event && event.target;
+    return !!target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName || '') || target.isContentEditable === true);
+  },
+  key(title, pageCount, ratio) {
+    return FlipbookBookmarks.key(title, pageCount, ratio).replace('mf-bookmarks:', 'mf-notes:');
+  },
+  load(key) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(key) || '{}'), out = {};
+      Object.keys(raw || {}).forEach(k => {
+        const note = raw[k];
+        if (/^\d+$/.test(k) && note && typeof note.text === 'string' && note.text.trim()) out[k] = {text: note.text.slice(0, this.MAX), updated: Number(note.updated) || 0};
+      });
+      return out;
+    } catch (e) { return {}; }
+  },
+  save(key, notes) { try { localStorage.setItem(key, JSON.stringify(notes)); return true; } catch (e) { return false; } },
+  /* options: {key, title, pages (elements), goPage(i), open (button)} */
+  bind(options) {
+    const self = this, pages = options.pages;
+    let notes = self.load(options.key), editor = null, list = null, editing = -1, timer = 0, saved = true;
+    const label = i => (i === 0 ? 'Cover' : 'Page ' + (i + 1));
+    const count = () => Object.keys(notes).length;
+    const stop = event => event.stopPropagation();
+    function tabs() {
+      pages.forEach((page, index) => {
+        let tab = page.querySelector('.book-note-tab');
+        if (!tab) {
+          tab = document.createElement('button'); tab.type = 'button'; tab.className = 'book-note-tab';
+          // Keep PageFlip from starting a page turn when the tab is pressed.
+          ['pointerdown', 'mousedown', 'touchstart'].forEach(name => tab.addEventListener(name, stop));
+          tab.addEventListener('click', event => { event.preventDefault(); event.stopPropagation(); edit(index); });
+          page.appendChild(tab);
+        }
+        const has = !!notes[index];
+        tab.classList.toggle('has-note', has);
+        tab.textContent = has ? '📝' : '✎';
+        tab.title = has ? 'Your note on ' + label(index) : 'Write a note on ' + label(index);
+        tab.setAttribute('aria-label', tab.title);
+      });
+    }
+    function refresh() {
+      tabs();
+      if (options.open) {
+        options.open.textContent = '📝 ' + count();
+        options.open.title = 'My notes (' + count() + ')';
+        options.open.setAttribute('aria-label', 'My notes, ' + count());
+      }
+      if (list) renderList();
+    }
+    function store(index, text) {
+      if (text.trim()) notes[index] = {text: text.slice(0, self.MAX), updated: Date.now()};
+      else delete notes[index];
+      saved = self.save(options.key, notes);
+      refresh();
+    }
+    function panel(className, title) {
+      const box = document.createElement('div');
+      box.className = 'book-marks ' + className; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', title);
+      ['pointerdown', 'mousedown', 'touchstart'].forEach(name => box.addEventListener(name, stop));
+      const head = document.createElement('p'); head.className = 'book-marks-title'; head.textContent = title;
+      box.appendChild(head);
+      return box;
+    }
+    function button(text, className, onclick) {
+      const b = document.createElement('button'); b.type = 'button'; b.className = className; b.textContent = text; b.onclick = onclick;
+      return b;
+    }
+    function closeEditor() {
+      if (!editor) return;
+      clearTimeout(timer);
+      store(editing, editor.querySelector('textarea').value);
+      editor.remove(); editor = null; editing = -1;
+      document.removeEventListener('pointerdown', outsideEditor, true);
+    }
+    function outsideEditor(event) { if (editor && !editor.contains(event.target) && !(event.target.classList && event.target.classList.contains('book-note-tab'))) closeEditor(); }
+    function edit(index) {
+      closeList();
+      if (editor) { const same = editing === index; closeEditor(); if (same) return; }
+      editing = index;
+      editor = panel('book-note-editor', 'Note · ' + label(index));
+      const area = document.createElement('textarea');
+      area.maxLength = self.MAX; area.rows = 6; area.placeholder = 'Write your note for this page…';
+      area.value = notes[index] ? notes[index].text : '';
+      const status = document.createElement('p'); status.className = 'book-note-status';
+      const say = () => { status.textContent = saved ? 'Saved on this device · ' + area.value.length + ' / ' + self.MAX : 'This browser could not save the note.'; };
+      area.addEventListener('input', () => {
+        status.textContent = 'Saving…';
+        clearTimeout(timer);
+        timer = setTimeout(() => { store(index, area.value); say(); }, 400);
+      });
+      area.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); closeEditor(); } });
+      const row = document.createElement('div'); row.className = 'book-note-actions';
+      row.appendChild(button('Delete', 'book-note-delete', () => { area.value = ''; closeEditor(); }));
+      row.appendChild(button('Done', 'book-note-done', closeEditor));
+      editor.appendChild(area); editor.appendChild(status); editor.appendChild(row);
+      document.body.appendChild(editor);
+      say();
+      document.addEventListener('pointerdown', outsideEditor, true);
+      try { area.focus({preventScroll: true}); } catch (e) { area.focus(); }
+    }
+    function text() {
+      const lines = [(options.title || 'Book') + ' — my notes', ''];
+      Object.keys(notes).map(Number).sort((a, b) => a - b).forEach(i => { lines.push('[' + label(i) + ']', notes[i].text, ''); });
+      return lines.join('\n');
+    }
+    function download() {
+      const blob = new Blob([text()], {type: 'text/plain;charset=utf-8'});
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = String(options.title || 'book').replace(/[\\/:*?"<>|]+/g, '-').slice(0, 80) + ' - notes.txt';
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    }
+    function closeList() {
+      if (!list) return;
+      list.remove(); list = null;
+      document.removeEventListener('pointerdown', outsideList, true);
+      if (options.open) options.open.setAttribute('aria-expanded', 'false');
+    }
+    function outsideList(event) { if (list && !list.contains(event.target) && event.target !== options.open) closeList(); }
+    function renderList() {
+      while (list.childNodes.length > 1) list.removeChild(list.lastChild);
+      const keys = Object.keys(notes).map(Number).sort((a, b) => a - b);
+      if (!keys.length) {
+        const empty = document.createElement('p'); empty.className = 'book-marks-empty';
+        empty.textContent = 'No notes yet. Tap ✎ on the edge of a page to write one.';
+        list.appendChild(empty); return;
+      }
+      keys.forEach(index => {
+        const row = document.createElement('div'); row.className = 'book-mark';
+        const go = document.createElement('button'); go.type = 'button'; go.className = 'book-mark-go book-note-row';
+        const name = document.createElement('b'); name.textContent = label(index);
+        const snippet = document.createElement('span'); snippet.textContent = notes[index].text.replace(/\s+/g, ' ').slice(0, 90);
+        go.appendChild(name); go.appendChild(snippet);
+        go.onclick = () => { closeList(); options.goPage(index); };
+        row.appendChild(go);
+        row.appendChild(button('✎', 'book-mark-remove', () => { closeList(); options.goPage(index); edit(index); }));
+        list.appendChild(row);
+      });
+      list.appendChild(button('⬇ Download notes (.txt)', 'book-note-download', download));
+    }
+    function openList() {
+      if (editor) closeEditor();
+      list = panel('book-note-list', 'My notes');
+      renderList();
+      document.body.appendChild(list);
+      if (options.open) options.open.setAttribute('aria-expanded', 'true');
+      document.addEventListener('pointerdown', outsideList, true);
+    }
+    // onclick: the preview rebinds this button for every PDF it opens.
+    if (options.open) options.open.onclick = () => { if (list) closeList(); else openList(); };
+    refresh();
+    return {refresh, text, editing: () => editing >= 0, close() { closeEditor(); closeList(); }, notes: () => JSON.parse(JSON.stringify(notes))};
   },
 };

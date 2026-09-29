@@ -533,3 +533,7 @@ Nama file dipad nol (`<nama>-page-01.jpg`) supaya urut, opsi Format JPG/PNG, lat
 ### 29 September 2026 - PDF ke Excel/Word/PPT diuji dokumen sulit
 
 `cellsOf`: ambang kolom = max(6 pt, 0.8 x ukuran huruf) (dulu 50 pt tetap -> tabel rapat tergabung); bullet tunggal di sel pertama digabung ke teks. `excelValue`: persen dibulatkan (toPrecision 15). `excelFormat` baru: numFmt #,##0 / 0.0% / "Rp "#,##0 / "$" untuk angka hasil parsing di sheet Data. Word/PPT tidak diubah; dicek visual lewat LibreOffice.
+
+### 29 September 2026 - Catatan pembaca per halaman
+
+`FlipbookNotes` (layout.js): tab `.book-note-tab` di tepi luar tiap halaman (kanan untuk halaman kanan/tunggal, kiri untuk `--left`), ✎ samar / 📝 kuning bila ada isi; editor (autosave 400 ms, maks 5000 karakter, Esc/Done/klik di luar menyimpan, Delete mengosongkan); tombol `#notes` "📝 N" membuka daftar (lompat ke halaman, edit, Download .txt). Simpan per buku di localStorage `mf-notes:<hash>` (key sama dengan bookmark). `FlipbookNotes.typing(event)` dipakai viewer (panah) dan zoom (+/-/0) supaya mengetik tidak membalik/zoom; idle tidak kembali ke sampul saat editor terbuka. Aktif di preview + HTML/APK/EXE. Layar pendek: panel di atas & ringkas. Tes: notes.test.cjs.

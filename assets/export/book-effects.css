@@ -35,6 +35,22 @@
 .book-mark-go img{width:34px;height:46px;object-fit:cover;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.2);background:#fff}
 .book-mark-remove{width:32px;height:32px;border:1px solid #efe9dc;border-radius:999px;background:#fff;cursor:pointer;font-size:18px;line-height:1;color:#78716c}
 .book-mark-remove:hover{color:#b3121a;border-color:#e5252a}
+.book-note-tab{position:absolute;top:14%;right:0;z-index:5;width:28px;height:34px;padding:0;border:1px solid rgba(0,0,0,.14);border-right:0;border-radius:9px 0 0 9px;background:rgba(255,255,255,.82);color:#57534e;font:15px/1 system-ui,sans-serif;cursor:pointer;opacity:.6;box-shadow:-1px 1px 4px rgba(0,0,0,.12);pointer-events:auto;transition:opacity .15s,width .15s}
+[class~="--left"] .book-note-tab{right:auto;left:0;border:1px solid rgba(0,0,0,.14);border-left:0;border-radius:0 9px 9px 0;box-shadow:1px 1px 4px rgba(0,0,0,.12)}
+.book-note-tab:hover,.book-note-tab:focus-visible{opacity:1;width:34px;outline:none}
+.book-note-tab.has-note{opacity:1;background:#fde68a;border-color:#d4a514;color:#1c1917}
+.book-note-editor{width:400px}
+.book-note-editor textarea{display:block;width:100%;min-height:130px;margin:0;padding:10px;border:1px solid #d6cfbf;border-radius:10px;background:#fffbeb;color:#1c1917;font:14px/1.5 system-ui,sans-serif;resize:vertical;box-sizing:border-box}
+.book-note-editor textarea:focus{outline:2px solid #e5252a;outline-offset:1px}
+.book-note-status{margin:6px 2px 0;font-size:11px;color:#78716c}
+.book-note-actions{display:flex;justify-content:space-between;gap:8px;margin-top:10px}
+.book-note-actions button{padding:8px 16px;border-radius:999px;font:600 13px system-ui,sans-serif;cursor:pointer}
+.book-note-done{border:1px solid #1a3c34;background:#1a3c34;color:#fff}
+.book-note-delete{border:1px solid #efe9dc;background:#fff;color:#b3121a}
+.book-note-row{flex-direction:column;align-items:flex-start;gap:2px}
+.book-note-row span{color:#57534e;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+@media (max-height:520px){.book-note-editor,.book-note-list{top:8px;bottom:auto;max-height:calc(100vh - 70px);max-height:calc(100dvh - 70px)}.book-note-editor textarea{min-height:64px;height:64px;resize:none}.book-note-actions{margin-top:6px}.book-note-actions button{padding:6px 14px}}
+.book-note-download{display:block;width:100%;margin-top:10px;padding:9px;border:1px dashed #d6cfbf;border-radius:10px;background:#fff;font:600 13px system-ui,sans-serif;color:#1a3c34;cursor:pointer}
 .book-mark-state{margin-left:auto;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;color:#57534e;background:#f5f0e6;white-space:nowrap}
 .book-mark-pick.is-marked{border-color:#e5252a;background:#fff4e5}
 .book-mark-pick.is-marked .book-mark-state{color:#fff;background:#d31d24}

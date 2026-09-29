@@ -84,6 +84,9 @@
     const marks = FlipbookBookmarks.bind({key: FlipbookBookmarks.key(data.title, data.pageCount, data.ratio), pages: elements,
       visible, goPage, toggle: $('#bookmark'), open: $('#bookmarks')});
     book.on('flip', () => marks.refresh());
+    // Reader notes: ✎ on the edge of every page, kept on this device.
+    const notes = FlipbookNotes.bind({key: FlipbookNotes.key(data.title, data.pageCount, data.ratio), title: data.title,
+      pages: elements, goPage, open: $('#notes')});
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };
@@ -107,7 +110,7 @@
     }
     document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen'});
     FlipbookIdle.bind({
-      active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0,
+      active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !notes.editing(),
       home: () => { book.turnToPage(0); update(); animate(); }
     });
     const zoom = FlipbookZoom.bind($('main'), $('#stage'), {button: $('#zoom'), chip: $('#zoom-chip'), hint: $('#zoom-hint'),
@@ -124,7 +127,7 @@
     const goNext=()=>{zoom.reset();if(curl.busy())return;if(!curl.open())book.flipNext()};
     $('#home').onclick=()=>{zoom.reset();if(curl.busy()||curl.close())return;if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
     $('#prev').onclick=goPrev;$('#next').onclick=goNext;$('#replay').onclick=()=>animate(false);
-    document.addEventListener('keydown',event=>{if(event.key==='ArrowRight'&&!$('#next').disabled)goNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)goPrev()});
+    document.addEventListener('keydown',event=>{if(FlipbookNotes.typing(event))return;if(event.key==='ArrowRight'&&!$('#next').disabled)goNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)goPrev()});
     document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});}else animate()});
   } catch(cause) { $('#error').hidden=false;$('#error').textContent='The book could not be opened. '+cause.message; }
 })();

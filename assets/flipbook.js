@@ -13,7 +13,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, marks = null, curl = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, marks = null, notes = null, curl = null;
   function exportState() {
     $('#export-fields').disabled = !sourcePdf || opening || exporting;
     $('#export-apk').disabled = !buildConfig?.apk;
@@ -149,6 +149,9 @@
       marks = FlipbookBookmarks.bind({key: FlipbookBookmarks.key(name, newElements.length, ratio), pages: newElements,
         visible: visiblePages, goPage, toggle: $('#bookmark'), open: $('#bookmarks')});
       book.on('flip', () => marks.refresh());
+      notes?.close();
+      notes = FlipbookNotes.bind({key: FlipbookNotes.key(name, newElements.length, ratio), title: name.replace(/\.pdf$/i, ''),
+        pages: newElements, goPage, open: $('#notes')});
       const linkCount = found.stats.internal + found.stats.toc + found.stats.external;
       $('#load-status').textContent = `${newElements.length} pages ready. The first page is the front cover.` +
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');
