@@ -1,6 +1,6 @@
 # Checklist fitur PDF Project
 
-Diperbarui: 25 September 2026. Status berdasarkan kode dan bukti tes, bukan hanya keberadaan kartu menu.
+Diperbarui: 29 September 2026. Status berdasarkan kode dan bukti tes, bukan hanya keberadaan kartu menu.
 
 **Arti centang:** fungsi yang disebut sudah lolos pengujian dalam lingkup di kolom bukti. Bukan jaminan semua dokumen, browser, atau perangkat sudah teruji. Katalog berisi 34 kartu: 18 tool converter, 3 halaman langsung (flipbook/notebook/demo), dan 13 fitur katalog belum dibuat.
 
