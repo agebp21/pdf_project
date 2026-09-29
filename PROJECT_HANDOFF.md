@@ -573,3 +573,7 @@ Jumlah halaman ganjil berakhir di halaman kanan tanpa lembar balik, jadi buku ti
 - UI: upload + urutkan file, template (Ready to send / Draft for review / Scanned pages tidy-up), tambah/urut/hapus langkah dengan opsi, simpan/pakai/hapus resep, progress + checklist per langkah, error menyebut langkah yang gagal, download + preview + "Turn into Flipbook".
 - Kartu "Create a workflow" di index.html sekarang link ke workflow.html (badge New!, keluar dari SOON).
 - Tes: tests/workflow.test.cjs. Tahap berikut (tunggu user): langkah konversi (Word/Excel/PPT/Gambar -> PDF), OCR, export flipbook otomatis.
+
+### 29 September 2026 - Compress PDF beneran
+
+`assets/pdf-compress.js` (`PDFCompress.compress(bytes, level, {onProgress, recode})`): gambar DCTDecode dan FlateDecode 8-bit (RGB/Gray/ICC N=1|3, predictor PNG didekode) diperkecil ke sisi maks per level lalu JPEG ulang via canvas; SMask target dilewati & referensi SMask disalin; ganti hanya kalau <95% ukuran lama; hasil tidak pernah lebih besar dari asli. Dipakai converter (Compress PDF, label Light/Balanced/Strong + ringkasan jujur) dan langkah workflow "Compress" (opsi level). Fixture: tests/fixtures/photo.jpg, photo-small.png (alpha), tiny.jpg.

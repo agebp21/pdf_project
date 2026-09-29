@@ -25,8 +25,8 @@
     crop: {title: 'Crop margins', icon: '⌗', desc: 'Trim page edges (mm).',
       fields: ['top', 'right', 'bottom', 'left'].map(side => ({key: side, label: side[0].toUpperCase() + side.slice(1) + ' (mm)', type: 'number', min: 0})).concat([range]),
       defaults: {top: '10', right: '10', bottom: '10', left: '10', range: 'all'}},
-    compress: {title: 'Optimize size', icon: '⇲', desc: 'Re-save compactly. Text PDFs shrink a little; image-heavy PDFs barely change.',
-      fields: [], defaults: {}},
+    compress: {title: 'Compress', icon: '⇲', desc: 'Resize and re-encode photos/scans; text stays sharp.',
+      fields: [{key: 'level', label: 'Level', type: 'select', options: ['low', 'medium', 'high']}], defaults: {level: 'medium'}},
   };
   const TEMPLATES = [
     {name: 'Ready to send', steps: [{type: 'page-numbers'}, {type: 'watermark', options: {text: 'CONFIDENTIAL', opacity: '12'}}, {type: 'compress'}]},
@@ -86,7 +86,10 @@
     if (step.type === 'watermark') return edit().apply(bytes, Object.assign({tool: 'watermark', mode: 'text'}, o), progress);
     if (step.type === 'page-numbers') return edit().apply(bytes, Object.assign({tool: 'page-numbers'}, o), progress);
     if (step.type === 'crop') return edit().apply(bytes, Object.assign({tool: 'crop-pdf'}, o), progress);
-    if (step.type === 'compress') return (await PDF.PDFDocument.load(bytes)).save({useObjectStreams: true});
+    if (step.type === 'compress') {
+      if (globalThis.PDFCompress) return (await globalThis.PDFCompress.compress(bytes, o.level, {onProgress: progress})).bytes;
+      return (await PDF.PDFDocument.load(bytes)).save({useObjectStreams: true});
+    }
     throw Error('Unknown workflow step: ' + step.type);
   }
   /* inputs: [{name, bytes}]; steps: [{type, options}];

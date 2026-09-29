@@ -8,6 +8,7 @@ Diperbarui: 25 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 
 | Status | Fitur | Bukti dan cakupan |
 |---|---|---|
+| [x] | Compress PDF | 29 Sep: foto/scan di dalam PDF diperkecil + di-encode ulang JPEG (Light ≤2400px q.85, Balanced ≤1700px q.72, Strong ≤1150px q.58); teks/vektor tidak disentuh; mask transparansi dipertahankan; gambar hanya diganti bila lebih kecil; file tidak pernah membesar. Chromium nyata: PDF foto 660 KB → 246/122/44 KB, render identik. `pdf-compress.test.cjs`. PDF teks murni hampir tidak mengecil (dilaporkan jujur). CMYK/JPX/JBIG2/indexed dibiarkan. |
 | [x] | Merge PDF | PDF asli digabung; hasil dibuka ulang dan jumlah halaman diperiksa. |
 | [x] | Split / extract PDF | Rentang halaman dan ZIP per halaman lolos pemeriksaan isi. |
 | [x] | Rotate PDF | Rotasi output diverifikasi pada struktur PDF. |
@@ -32,7 +33,6 @@ Diperbarui: 25 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 
 | Fitur | Yang berjalan / bukti | Yang masih perlu diuji atau diperbaiki |
 |---|---|---|
-| Compress PDF | PDF hasil valid; jumlah halaman tetap. | Level memakai operasi simpan serupa; pengurangan ukuran tidak dijamin. |
 | Image to PDF | Jalur berbagai format tersedia; smoke test UTIF pernah lolos. | Pengujian browser lengkap per format, terutama HEIC/TIFF. GIF/TIFF multipage memakai frame pertama. |
 | PDF to JPG | Implementasi render halaman dan ZIP tersedia. | Tes end-to-end jalur converter dengan dokumen nyata; bukan hanya rendering PDF di flipbook. |
 | PDF to Word | Mode "keep look": background tanpa teks + frame teks editabel per baris, satu section per halaman seukuran PDF. Mode flowing: heading, paragraf, tabel Word asli. Scan: gambar + OCR. `office-export.test.cjs` (library asli) + render LibreOffice fixture 2 halaman: tampilan cocok, teks sekali (tidak dobel). | Uji di MS Word asli dan dokumen desain berat; Type3/outline text tetap gambar; lebar font pengganti bisa beda. |

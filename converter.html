@@ -6,6 +6,7 @@
 <title>Converter — MyFlipbook</title>
 <script src="assets/flipbook-transfer.js"></script>
 <script src="assets/pdf-edit.js"></script>
+<script src="assets/pdf-compress.js"></script>
 <script src="assets/pdf-layout.js"></script>
 <script src="assets/auth.js" defer></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -136,7 +137,7 @@ const TOOLS = [
   {id:'html-to-pdf', title:'HTML to PDF', desc:'Convert halaman HTML jadi PDF dengan 1 klik.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'File .html'},
   {id:'merge-pdf', title:'Merge PDF', desc:'Gabungkan PDF sesuai urutan yang kamu mau.', cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, hint:'Pilih 2+ file PDF untuk digabungkan'},
   {id:'split-pdf', title:'Split PDF', desc:'Extract halaman 1-3, split per N halaman, atau centang manual per halaman.', cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — pilih mode split di bawah'},
-  {id:'compress-pdf', title:'Compress PDF', desc:'Kecilkan ukuran PDF tanpa ngerusak kualitas — pilih level kompresi.', cat:'Optimize PDF', icon:'⇲', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'File PDF — pilih level Small / Medium'},
+  {id:'compress-pdf', title:'Compress PDF', desc:'Shrink PDFs full of photos and scans: images are resized and re-encoded, text stays sharp.', cat:'Optimize PDF', icon:'⇲', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pick Light / Balanced / Strong'},
   {id:'rotate-pdf', title:'Rotate PDF', desc:'Putar halaman PDF 90° / 180° / 270° — per halaman atau semua.', cat:'Organize PDF', icon:'↻', color:'#a855a7', bg:'#fae8ff', accept:'.pdf', hint:'File PDF — pilih sudut & halaman'},
   {id:'organize-pdf', title:'Organize PDF', desc:'Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.', cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — preview grid, drag untuk urutkan'},
   {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Real PPTX→PDF via local LibreOffice (needs the project server).', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'PPTX/PPT file — converted on your computer via the local server + LibreOffice'},
@@ -238,10 +239,10 @@ function renderHeader(){
   }else if(t.id==='compress-pdf'){
     html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-3 shadow-sm flex flex-wrap justify-center items-center gap-3">
       <span class="text-xs font-bold">Level:</span>
-      <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="compressLevel" value="low" class="hidden"> <span class="text-xs">Low (ringan)</span></label>
-      <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="compressLevel" value="medium" checked class="hidden"> <span class="text-xs">Medium ⭐</span></label>
-      <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="compressLevel" value="high" class="hidden"> <span class="text-xs">High (maks)</span></label>
-      <span class="text-[11px] text-gray-500">Estimasi: Low -10%, Medium -30%, High -50%*</span>
+      <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="compressLevel" value="low" class="hidden"> <span class="text-xs">Light (best quality)</span></label>
+      <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="compressLevel" value="medium" checked class="hidden"> <span class="text-xs">Balanced ⭐</span></label>
+      <label class="flex items-center gap-1.5 px-3 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="compressLevel" value="high" class="hidden"> <span class="text-xs">Strong (smallest)</span></label>
+      <span class="text-[11px] text-gray-500 w-full text-center">Photos/scans are resized (Light ≤2400px, Balanced ≤1700px, Strong ≤1150px) and re-encoded. Text and vector drawings stay sharp. Text-only PDFs barely shrink.</span>
     </div>`;
   }else if(t.id==='rotate-pdf'){
     html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-3 shadow-sm space-y-3">
@@ -864,21 +865,25 @@ async function splitPdf(){
   }
 }
 async function compressPdf(){
-  if(!window.PDFLib) throw new Error('pdf-lib not loaded');
+  if(!window.PDFLib||!window.PDFCompress) throw new Error('PDF engine not loaded — reload the page');
   const level=document.querySelector('input[name="compressLevel"]:checked')?.value||'medium';
-  log('Compress level='+level);
-  const buf=await files[0].arrayBuffer();
-  const orig=buf.byteLength;
-  $('#progress').textContent='Kompres... '+level;
-  const doc=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
-  // pdf-lib save dengan object streams = lebih kecil; high = tambah compress
-  const bytes=await doc.save({useObjectStreams:true, addDefaultPage:false, objectsPerTick:50});
-  const outBlob=new Blob([bytes],{type:'application/pdf'});
-  const ratio=((1 - bytes.length/orig)*100).toFixed(1);
-  log(`Compress ${orig} -> ${bytes.length} (${ratio}% saved) level=${level}`);
-  // simulasi level: low/medium/high beda tipis karena pdf-lib, tapi kita kasih info
-  downloadBlob(outBlob, files[0].name.replace(/\.pdf$/i,`-compressed-${level}.pdf`));
-  $('#resultPreview').innerHTML=`<p class="text-center py-2 text-xs">📦 Asli: ${(orig/1024).toFixed(1)} KB → Hasil: ${(bytes.length/1024).toFixed(1)} KB<br><b>${ratio}% lebih kecil</b> (${level})<br><span class="text-gray-500">*High pakai object streams maksimal. Untuk gambar besar, hasil bisa 30-50%.</span></p>`+$('#resultPreview').innerHTML;
+  const source=files[0], buf=await source.arrayBuffer();
+  log('Compress level='+level+' size='+buf.byteLength);
+  const {bytes, stats}=await PDFCompress.compress(buf, level, {onProgress:(message)=>{ $('#progress').textContent=message; }});
+  const saved=stats.before?((1-stats.after/stats.before)*100):0;
+  log(`Compress ${stats.before} -> ${stats.after} (${saved.toFixed(1)}%) images=${stats.images} recoded=${stats.recoded} skipped=${stats.skipped}`);
+  downloadBlob(new Blob([bytes],{type:'application/pdf'}), source.name.replace(/\.pdf$/i,'')+`-compressed-${level}.pdf`);
+  const summary=document.createElement('p'); summary.className='text-center py-2 text-xs';
+  const kb=n=>n>1048576?(n/1048576).toFixed(2)+' MB':(n/1024).toFixed(1)+' KB';
+  summary.append(`📦 ${kb(stats.before)} → ${kb(stats.after)}`, document.createElement('br'));
+  const headline=document.createElement('b');
+  headline.textContent=stats.unchanged||saved<1 ? 'Already compact — nothing to gain' : `${saved.toFixed(0)}% smaller (${PDFCompress.LEVELS[level].label})`;
+  summary.append(headline, document.createElement('br'));
+  const note=document.createElement('span'); note.className='text-gray-500';
+  note.textContent=!stats.images ? 'This PDF has no photos or scans; text and drawings are already stored efficiently.'
+    : `${stats.recoded} of ${stats.images} image${stats.images===1?'':'s'} re-encoded`+(stats.skipped?` · ${stats.skipped} kept as-is (already small or special format)`:'')+'.';
+  summary.append(note);
+  $('#resultPreview').prepend(summary);
 }
 async function rotatePdf(){
   if(!window.PDFLib) throw new Error('pdf-lib not loaded');
