@@ -1,7 +1,9 @@
 'use strict';
 (typeof self!=='undefined'?self:global).FlipbookLayout = {
   motion(reduced) {
-    return {useMouseEvents:true,drawShadow:true,maxShadowOpacity:.38,flippingTime:reduced?1:1150,showPageCorners:!reduced,disableFlipByClick:false,mobileScrollSupport:true,swipeDistance:30};
+    // No corner fold on mouse hover: it got in the way of highlighting and
+    // clicking; pages still turn by buttons, swipe, drag and corner click.
+    return {useMouseEvents:true,drawShadow:true,maxShadowOpacity:.38,flippingTime:reduced?1:1150,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true,swipeDistance:30};
   },
   decorate(pages) {
     pages.forEach((page,index)=>{

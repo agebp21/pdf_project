@@ -547,3 +547,7 @@ Catatan baru memanggil `options.bookmark(index, true)` (viewer/preview: `marks.s
 - `assets/pdf-words.js` (`PdfWords.extract(pdf)`): posisi kata per halaman dari teks PDF saat dibuka di editor -> `words` di model buku: `{page: [[y, h, x0, w0, x1, w1, ...], ...]}` integer 1/10000 kotak halaman (letterbox via `PdfLinks.toBox`), maks 400 baris x 300 kata. Divalidasi `validWords` (flipbook-export.js) dan `validate_words` (server.py); batas book.json server naik ke 16 MB. Uji toc-links: 12 halaman = 2,3 KB.
 - `FlipbookHighlights` (layout.js): tombol `#highlight` 🖍 -> mode stabilo (body.is-highlighting), bar warna vertikal di kiri (kuning/hijau/pink/biru, Done, Delete). Seret di teks -> menempel ke kata per baris (dipotong di celah kolom > 2,5x tinggi baris); mulai di luar teks / halaman scan -> kotak bebas. Tap stabilo -> pilih, ganti warna / hapus. Simpan `mf-highlights:<hash>` (+ warna `mf-highlight-color`). Handler halaman pakai properti on* (bind ulang tidak menumpuk); gerak seret didengar di window fase capture karena halaman menghentikan mousemove (tanpa efek lipat pojok). Zoom mengalah untuk 1 jari/mouse saat stabilo aktif; pinch tetap zoom. Idle tidak aktif saat mode stabilo.
 - Tes: highlights.test.cjs, test_build (validate_words), export.test (validWords).
+
+### 29 September 2026 - Tanpa lipatan pojok saat hover
+
+`FlipbookLayout.motion`: `showPageCorners:false` (dulu `!reduced`). Permintaan user: lipatan pojok muncul saat hover dan mengganggu stabilo. Halaman tetap bisa dibalik lewat tombol, swipe, seret dari pojok, klik pojok.
