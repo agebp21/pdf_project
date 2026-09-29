@@ -235,6 +235,16 @@
       button.textContent = button.dataset.label + (plan ? ' · ' + plan.toUpperCase() : '');
     }
   }
+  // Progress bar for every export: fraction 0..1, or null to hide.
+  function progress(fraction) {
+    const bar = $('#export-progress');
+    if (fraction === null) { bar.hidden = true; return; }
+    const percent = Math.max(0, Math.min(100, Math.round(fraction * 100)));
+    bar.hidden = false; bar.setAttribute('aria-valuenow', String(percent));
+    bar.querySelector('span').style.width = percent + '%';
+    $('#export-percent').textContent = percent + '%';
+  }
+  const EXPORT_NAMES = {project: '.smflipbook', html: '-HTML.zip', apk: '.apk', exe: '-Windows.zip'};
   async function exportBook(target) {
     if (!sourcePdf || opening || exporting) return;
     if (target !== 'project') {
@@ -247,51 +257,71 @@
     exporting = true; exportState(); $('#pdf-file').disabled=true; $('#overlay-fields').disabled=true;
     error(''); $('#build-download').hidden=true;
     const status = message => { $('#export-status').textContent=message; };
+    // Map a step's own 0..1 into its slice of the whole bar.
+    const step = (from, to) => fraction => progress(from + (to - from) * Math.max(0, Math.min(1, fraction)));
     try {
       const data = model(), name = FlipbookExport.filename(data.title);
-      const outputName = target==='project' ? name+'.smflipbook' : name+'-HTML.zip';
-      const saveHandle = target==='project'||target==='html' ? await FlipbookExport.chooseSave(outputName) : null;
-      status('Menyiapkan ekspor…');
+      const outputName = name + EXPORT_NAMES[target];
+      // Every export asks where to save first (inside the click), then runs to the end on its own.
+      const saveHandle = await FlipbookExport.chooseSave(outputName);
+      status('Menyiapkan ekspor…'); progress(0);
       if (target === 'project') {
-        const saved=await FlipbookExport.saveBlob(await FlipbookExport.saveProject(data,sourcePdf),outputName,saveHandle);
+        const blob = await FlipbookExport.saveProject(data, sourcePdf, (message, fraction) => { status(message); step(0, .9)(fraction); });
+        status('Menyimpan proyek…');
+        const saved = await FlipbookExport.saveBlob(blob, outputName, saveHandle); progress(1);
         status(saved?'Proyek tersimpan di lokasi pilihanmu.':'Proyek dikirim ke download browser.');
-      } else {
-        const bundle = await FlipbookExport.packageBook(data,imageUrls,status);
-        if (target === 'html') { const saved=await FlipbookExport.saveBlob(bundle,outputName,saveHandle); status((saved?'HTML tersimpan di lokasi pilihanmu. ':'HTML dikirim ke download browser. ')+'Ekstrak seluruh ZIP lalu buka index.html.'); }
-        else {
-          const capabilities=await fetch('/api/capabilities',{cache:'no-store'});
-          if(!capabilities.ok)throw Error('Layanan build lokal tidak tersedia. Jalankan python server.py.');
-          buildConfig=await capabilities.json();
-          if(!buildConfig[target])throw Error('Build '+target.toUpperCase()+' belum tersedia di komputer ini.');
-          status('Mengirim buku ke layanan build lokal…');
-          const response=await fetch('/api/build/'+target,{method:'POST',headers:{'Content-Type':'application/zip','X-Build-Token':buildConfig.token},body:bundle});
-          const result=await response.json(); if(!response.ok)throw Error(result.error||'Build gagal dimulai.');
-          let complete=false;
-          while(!complete) {
-            await new Promise(resolve=>setTimeout(resolve,2000));
-            const check=await fetch('/api/jobs/'+result.id);if(!check.ok)throw Error('Status build tidak tersedia.');
-            const job=await check.json();status(job.message);
-            if(job.status==='failed') {
-              if(job.log) { const link=$('#build-download');link.onclick=null;link.href=job.log;link.textContent='Download log build';link.hidden=false; }
-              throw Error(job.message);
-            }
-            if(job.status==='done') {
-              complete=true; const link=$('#build-download');link.href=job.download;link.textContent=target==='apk'?'Simpan APK sebagai…':'Simpan EXE ZIP sebagai…';link.hidden=false;
-              let saving=false;
-              link.onclick=async event=>{
-                event.preventDefault();if(saving)return;saving=true;error('');
-                try {
-                  const saved=await FlipbookExport.saveRemote(job.download,name+(target==='apk'?'.apk':'-Windows.zip'));
-                  status(saved?'File tersimpan di lokasi pilihanmu.':'File dikirim ke download browser.');
-                } catch(cause) { if(cause.name==='AbortError')status('Penyimpanan dibatalkan. Hasil build tetap tersedia.');else error('Gagal menyimpan: '+cause.message); }
-                finally { saving=false; }
-              };
-              status('Build selesai. Klik Simpan sebagai untuk memilih lokasi.');
-            }
-          }
-        }
+        return;
       }
-    } catch(cause) { if(cause.name==='AbortError')status('Penyimpanan dibatalkan.');else { status('Ekspor gagal: '+cause.message); error(cause.message); } }
+      const native = target === 'apk' || target === 'exe';
+      const pack = native ? step(0, .12) : step(0, .92);
+      const bundle = await FlipbookExport.packageBook(data, imageUrls, (message, fraction) => { status(message); if (fraction !== undefined) pack(fraction); });
+      if (!native) {
+        status('Menyimpan HTML…');
+        const saved = await FlipbookExport.saveBlob(bundle, outputName, saveHandle); progress(1);
+        status((saved?'HTML tersimpan di lokasi pilihanmu. ':'HTML dikirim ke download browser. ')+'Ekstrak seluruh ZIP lalu buka index.html.');
+        return;
+      }
+      const capabilities=await fetch('/api/capabilities',{cache:'no-store'});
+      if(!capabilities.ok)throw Error('Layanan build lokal tidak tersedia. Jalankan python server.py.');
+      buildConfig=await capabilities.json();
+      if(!buildConfig[target])throw Error('Build '+target.toUpperCase()+' belum tersedia di komputer ini.');
+      status('Mengirim buku ke layanan build…');
+      const sent = await FlipbookExport.upload('/api/build/'+target, bundle, {'Content-Type':'application/zip','X-Build-Token':buildConfig.token}, step(.12, .2));
+      if(!sent.ok)throw Error(sent.data.error||'Build gagal dimulai.');
+      // Server reports its stage (0..1); while the compiler runs, creep
+      // toward the next stage so the bar keeps moving honestly.
+      const building = step(.2, .9), started = Date.now(), tau = target === 'apk' ? 45000 : 20000;
+      let job = {status: 'queued', progress: 0}, stageAt = Date.now(), stage = 0;
+      while (job.status !== 'done') {
+        await new Promise(resolve=>setTimeout(resolve,1000));
+        const check=await fetch('/api/jobs/'+sent.data.id);if(!check.ok)throw Error('Status build tidak tersedia.');
+        job=await check.json();status(job.message);
+        if(job.status==='failed') {
+          if(job.log) { const link=$('#build-download');link.onclick=null;link.href=job.log;link.textContent='Download log build';link.hidden=false; }
+          throw Error(job.message);
+        }
+        const reported = Number(job.progress) || 0;
+        if (reported !== stage) { stage = reported; stageAt = Date.now(); }
+        const next = reported >= .3 ? .97 : Math.min(.97, reported + .1);
+        building(reported + (next - reported) * (1 - Math.exp(-(Date.now() - stageAt) / (reported >= .3 ? tau : 8000))));
+      }
+      status('Menyimpan '+(target==='apk'?'APK':'EXE ZIP')+'…');
+      const saved = await FlipbookExport.saveRemote(job.download, outputName, saveHandle, step(.9, 1));
+      progress(1);
+      // Keep a link to fetch the result again (e.g. another copy for a phone).
+      const link=$('#build-download');link.href=job.download;link.textContent='Simpan salinan lagi…';link.hidden=false;
+      let saving=false;
+      link.onclick=async event=>{
+        event.preventDefault();if(saving)return;saving=true;error('');
+        try {
+          const again = await FlipbookExport.chooseSave(outputName);
+          const ok=await FlipbookExport.saveRemote(job.download,outputName,again);
+          status(ok?'Salinan tersimpan di lokasi pilihanmu.':'File dikirim ke download browser.');
+        } catch(cause) { if(cause.name==='AbortError')status('Penyimpanan dibatalkan.');else error('Gagal menyimpan: '+cause.message); }
+        finally { saving=false; }
+      };
+      status((saved?(target==='apk'?'APK':'EXE ZIP')+' tersimpan di lokasi pilihanmu':'Hasil build dikirim ke download browser')+' ('+Math.round((Date.now()-started)/1000)+' detik).');
+    } catch(cause) { progress(null); if(cause.name==='AbortError')status('Ekspor dibatalkan.');else { status('Ekspor gagal: '+cause.message); error(cause.message); } }
     finally { exporting=false;exportState();$('#pdf-file').disabled=false;$('#overlay-fields').disabled=!book; }
   }
   FlipbookSound.bindButton($('#sound'));

@@ -417,7 +417,7 @@ def build_job(job_id, target):
     job, folder = JOBS[job_id], BUILD / job_id
     log = folder / 'build.log'
     try:
-        job.update(status='running', message='Menyiapkan aplikasi buku…')
+        job.update(status='running', message='Menyiapkan aplikasi buku…', progress=0.05)
         workspace = BUILD / 'native-workspace'
         shutil.copytree(ROOT / 'native/reader', workspace, dirs_exist_ok=True,
                         ignore=shutil.ignore_patterns('build', '.dart_tool', '.gradle', '.idea', 'ephemeral', '.plugin_symlinks', 'local.properties', 'assets'))
@@ -434,7 +434,7 @@ def build_job(job_id, target):
         flutter = shutil.which('flutter')
         if not flutter:
             raise RuntimeError('Flutter belum terpasang.')
-        job['message'] = 'Menyiapkan dependensi Flutter…'
+        job.update(message='Menyiapkan dependensi Flutter…', progress=0.1)
         plugin_junctions(workspace)
         code = run_command([flutter, 'pub', 'get'], workspace, log)
         if code and 'symlink support' in log.read_text(errors='replace'):
@@ -442,16 +442,16 @@ def build_job(job_id, target):
             code = run_command([flutter, 'pub', 'get'], workspace, log)
         if code:
             raise RuntimeError('Dependensi Flutter gagal disiapkan. Unduh log build untuk rinciannya.')
-        job['message'] = 'Membangun APK Android…' if target == 'apk' else 'Membangun aplikasi Windows…'
+        job.update(message='Membangun APK Android…' if target == 'apk' else 'Membangun aplikasi Windows…', progress=0.2 if target == 'apk' else 0.3)
         signing = None
         if target == 'apk':
-            job['message'] = 'Menyiapkan tanda tangan aplikasi…'
+            job.update(message='Menyiapkan tanda tangan aplikasi…', progress=0.25)
             try:
                 signing = android_signing()
             except (OSError, subprocess.SubprocessError, ValueError, KeyError) as cause:
                 with log.open('a', encoding='utf-8') as stream:
                     stream.write(f'\nRelease key unavailable, using the debug key: {cause}\n')
-            job['message'] = 'Membangun APK Android…'
+            job.update(message='Membangun APK Android…', progress=0.3)
         # Newer build number every time, so installing a rebuilt book updates it.
         build = [flutter, 'build', 'apk' if target == 'apk' else 'windows', '--release', f'--build-number={int(time.time() // 60)}']
         if run_command(build, workspace, log, signing):
@@ -471,7 +471,7 @@ def build_job(job_id, target):
                         name = file.relative_to(release).as_posix()
                         package.write(file, exe if name == 'sarvamaya_book.exe' else name)
                 package.writestr('HOW-TO-OPEN.txt', WINDOWS_HOW_TO.format(exe=exe))
-        job.update(status='done', message='Build selesai.', artifact=output.name, download=f'/api/jobs/{job_id}/download')
+        job.update(status='done', message='Build selesai.', progress=1, artifact=output.name, download=f'/api/jobs/{job_id}/download')
     except Exception as cause:
         with log.open('a', encoding='utf-8') as stream:
             stream.write('\n' + str(cause) + '\n')
@@ -853,7 +853,7 @@ class Handler(SimpleHTTPRequestHandler):
                         raise ValueError('Upload tidak lengkap.')
                     output.write(chunk)
                     remaining -= len(chunk)
-            JOBS[job_id] = dict(id=job_id, status='queued', message='Build menunggu…')
+            JOBS[job_id] = dict(id=job_id, status='queued', message='Build menunggu…', progress=0)
             threading.Thread(target=build_job, args=(job_id, match[1]), daemon=True).start()
             started = True
             self.send_json(202, {'id': job_id})

@@ -26,4 +26,9 @@ button.primary.apply:hover,.primary:hover{transform:translate(-1px,-1px);box-sha
 .controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:3px 3px 0 var(--ink)}
 #empty-book h2{font-family:'Fraunces',serif!important;color:var(--pine)!important}
 .feedback{background:#EFF6EC;border:1.5px dashed var(--pine);border-radius:12px;padding:10px}
+.export-progress{display:flex;align-items:center;gap:10px;margin:10px 0 6px}
+.export-progress[hidden]{display:none}
+.export-progress-track{flex:1;height:10px;border-radius:999px;background:#E7E0D2;overflow:hidden}
+.export-progress-track span{display:block;height:100%;width:0;border-radius:inherit;background:linear-gradient(90deg,#D31D24,#F0642A);transition:width .35s ease}
+.export-progress small{min-width:38px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
 @media(max-width:720px){.topbar{margin:8px;border-radius:14px}}

@@ -480,3 +480,9 @@ Saat menutup sampul, bagian kiri tampak tergeser/terpotong. Perbaikan FlipbookCu
 - APK Android dikunci landscape (main.dart setPreferredOrientations landscapeLeft/Right + manifest `sensorLandscape`).
 - Aturan layout: 1 halaman hanya kalau lebar < 700 **dan** layar tegak (lebar <= tinggi); HP landscape tetap spread 2 halaman. Editor preview (compact) tetap pakai lebar saja.
 - Tombol ✕ (#close, pojok kanan atas) hanya muncul di aplikasi: Android lewat JavaScriptChannel `MyFlipbook` -> SystemNavigator.pop(); Windows lewat `chrome.webview.postMessage` -> webMessage -> exit(0). Tombol Fullscreen disembunyikan di Android (sudah immersive). Dicek: EXE benar-benar tertutup saat ✕ diklik; APK dibuild OK (belum dicek di HP).
+
+### 29 September 2026 - Save-as langsung + progress bar export
+
+- Semua export (project, HTML, APK, EXE) membuka dialog Simpan sebagai **saat tombol diklik** (FlipbookExport.chooseSave), lalu jalan sampai selesai dan menulis ke lokasi itu. Batal di dialog = export tidak jalan. Tanpa File System Access API -> download biasa. Setelah build ada link "Simpan salinan lagi…".
+- Progress bar (#export-progress) untuk semua export. Project: ZIP 0-90%, simpan. HTML: halaman 0-55%, ZIP 55-92%, simpan. APK/EXE: kemas 0-12%, upload (XHR, FlipbookExport.upload) 12-20%, build 20-90% dari `job.progress` server (0.05 siapkan, 0.1 pub get, 0.2/0.25 signing, 0.3 compile, 1 selesai) + perkiraan waktu saat compile (tau 45 dtk APK / 20 dtk EXE), unduh-simpan dengan progres Content-Length 90-100%.
+- saveRemote(url, name, handle, onProgress) tidak lagi membuka dialog sendiri.

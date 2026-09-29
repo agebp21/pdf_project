@@ -44,6 +44,7 @@
   async function asset(path) {
     const response = await fetch(path); if (!response.ok) throw Error('Aset ekspor tidak tersedia: '+path); return response.text();
   }
+  // onProgress(message, fraction 0..1) — fraction is optional.
   async function packageBook(model, imageUrls, onProgress = () => {}) {
     const data = validate(model);
     if(imageUrls.length!==data.pageCount)throw Error('Jumlah gambar dan halaman tidak cocok.');
@@ -55,15 +56,15 @@
     zip.file('book.json',JSON.stringify(data,null,2));zip.file('book-data.js',scriptData(data));
     zip.file('HOW-TO-OPEN.txt',HOW_TO_OPEN);
     for(let i=0;i<imageUrls.length;i++) {
-      onProgress(`Mengemas halaman ${i+1} / ${imageUrls.length}…`);
+      onProgress(`Mengemas halaman ${i+1} / ${imageUrls.length}…`, 0.6*i/imageUrls.length);
       const response=await fetch(imageUrls[i]);if(!response.ok)throw Error('Gambar halaman gagal dibaca.');
       zip.file(`pages/${i+1}.jpg`,await response.arrayBuffer());
     }
-    return zip.generateAsync({type:'blob',compression:'STORE'},meta=>onProgress(`Membuat ZIP ${Math.round(meta.percent)}%…`));
+    return zip.generateAsync({type:'blob',compression:'STORE'},meta=>onProgress('Membuat ZIP…',0.6+0.4*meta.percent/100));
   }
-  async function saveProject(model, sourcePdf) {
+  async function saveProject(model, sourcePdf, onProgress = () => {}) {
     const zip=new JSZip();zip.file('project.json',JSON.stringify(validate(model),null,2));zip.file('source.pdf',await sourcePdf.arrayBuffer());
-    return zip.generateAsync({type:'blob',compression:'STORE'});
+    return zip.generateAsync({type:'blob',compression:'STORE'},meta=>onProgress('Menyusun proyek…',meta.percent/100));
   }
   async function readProject(file) {
     const zip=await JSZip.loadAsync(await file.arrayBuffer());
@@ -100,20 +101,39 @@
     catch(cause) { await writable.abort().catch(()=>{}); throw cause; }
     return true;
   }
-  async function saveRemote(url,name) {
-    // Ask during the click gesture, before awaiting network or file processing.
-    const handle = await chooseSave(name);
+  // Writes a server file to a handle chosen earlier (in the click), with
+  // progress; without a handle the browser downloads it instead.
+  async function saveRemote(url,name,handle,onProgress = () => {}) {
     if (!handle) {
-      const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();return false;
+      const a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();onProgress(1);return false;
     }
     const response=await fetch(url);if(!response.ok)throw Error('File hasil build tidak tersedia.');
+    const total=Number(response.headers.get('Content-Length'))||0;
     const writable=await handle.createWritable();
     try {
-      if(response.body) await response.body.pipeTo(writable);
-      else { await writable.write(await response.blob());await writable.close(); }
+      if(response.body) {
+        const reader=response.body.getReader();let received=0;
+        for(;;) {
+          const {done,value}=await reader.read();if(done)break;
+          await writable.write(value);received+=value.length;if(total)onProgress(received/total);
+        }
+      } else await writable.write(await response.blob());
+      await writable.close();
     } catch(cause) { await writable.abort().catch(()=>{});throw cause; }
+    onProgress(1);
     return true;
   }
+  // POST with upload progress (fetch cannot report it).
+  function upload(url,body,headers,onProgress = () => {}) {
+    return new Promise((resolve,reject)=>{
+      const request=new XMLHttpRequest();request.open('POST',url);
+      for(const key of Object.keys(headers))request.setRequestHeader(key,headers[key]);
+      request.upload.onprogress=event=>{if(event.lengthComputable)onProgress(event.loaded/event.total);};
+      request.onload=()=>{let data={};try{data=JSON.parse(request.responseText||'{}');}catch(e){}resolve({ok:request.status>=200&&request.status<300,status:request.status,data});};
+      request.onerror=()=>reject(Error('Upload ke layanan build gagal.'));
+      request.send(body);
+    });
+  }
   const filename = title => (title.replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-|-$/g,'').slice(0,80)||'flipbook');
-  globalThis.FlipbookExport={validate,scriptData,packageBook,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,HOW_TO_OPEN};
+  globalThis.FlipbookExport={validate,scriptData,packageBook,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,upload,HOW_TO_OPEN};
 })();
