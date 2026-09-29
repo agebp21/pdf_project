@@ -129,7 +129,7 @@ const TOOLS = [
   {id:'page-numbers', title:'Page numbers', desc:'Number all pages or a selected range.', cat:'Edit PDF', icon:'1 2', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - choose position and starting number'},
   {id:'crop-pdf', title:'Crop PDF', desc:'Trim visible page margins while preserving PDF content.', cat:'Edit PDF', icon:'Crop', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - margins in millimeters'},
   {id:'jpg-to-pdf', title:'Image to PDF', desc:'Any image to PDF in seconds: JPG, PNG, WebP, GIF, BMP, SVG, AVIF, TIFF, HEIC. Set orientation & margins.', cat:'Convert PDF', icon:'IMG', color:'#b45309', bg:'#fef9c3', accept:'.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.avif,.ico,.tif,.tiff,.heic,.heif', multiple:true, hint:'All image types — TIFF decoded locally, HEIC converted in-browser, animated/multi-page uses first frame'},
-  {id:'pdf-to-jpg', title:'PDF to JPG', desc:'Convert tiap halaman PDF jadi JPG atau ambil semua gambar.', cat:'Convert PDF', icon:'🖼', color:'#a16207', bg:'#fef9c3', accept:'.pdf', hint:'File PDF — tiap halaman jadi 1 JPG (ZIP jika multi-halaman)'},
+  {id:'pdf-to-jpg', title:'PDF to JPG', desc:'Turn every PDF page into a JPG (or PNG) image.', cat:'Convert PDF', icon:'🖼', color:'#a16207', bg:'#fef9c3', accept:'.pdf', hint:'PDF file — one image per page (ZIP when there are several pages)'},
   {id:'word-to-pdf', title:'Word to PDF', desc:'Convert DOC/DOCX to PDF with document layout via local LibreOffice.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'DOCX/DOC file - requires the project server and LibreOffice'},
   {id:'pdf-to-word', title:'PDF to Word', desc:'Real .docx that looks like the PDF: text stays editable right on the page (OCR for scans). Or pick a flowing document with real tables.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'PDF file — layout kept, text editable in place (needs internet)'},
   {id:'excel-to-pdf', title:'Excel to PDF', desc:'Convert spreadsheets using their layout and print settings via local LibreOffice.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file - requires the project server and LibreOffice'},
@@ -205,7 +205,9 @@ function renderHeader(){
       <select id="opt-margin" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="10">Normal</option><option value="0">None</option><option value="20">Wide</option></select></label>`;
   }else if(t.id==='pdf-to-jpg'){
     html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Kualitas:
-      <select id="opt-quality" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="1.5">Standard</option><option value="2" selected>High (2x)</option><option value="3">Ultra (3x)</option></select></label>`;
+      <select id="opt-quality" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="1.5">Standard</option><option value="2" selected>High (2x)</option><option value="3">Ultra (3x)</option></select></label>
+      <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Format:
+      <select id="opt-format" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="jpg" selected>JPG (small)</option><option value="png">PNG (lossless)</option></select></label>`;
   }else if(t.id==='pdf-to-word'){
     html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm max-w-full min-w-0">Word layout:
       <select id="opt-word-mode" class="bg-white border-0 text-xs font-medium focus:ring-0 min-w-0 max-w-full py-1.5"><option value="layout" selected>Keep original look (editable text on page)</option><option value="flow">Flowing text + tables (easiest to edit, no pictures)</option></select></label>`;
@@ -725,36 +727,50 @@ async function convertJpgToPdf(){
 async function convertPdfToJpg(){
   if(!window.pdfjsLib) throw new Error('pdf.js not loaded');
   const scale=parseFloat($('#opt-quality')?.value||'2');
+  const format=$('#opt-format')?.value==='png'?'png':'jpg';
   const file=files[0];
-  log('PDFtoJPG scale='+scale+' file='+file.name+' size='+file.size);
+  log('PDFtoJPG scale='+scale+' format='+format+' file='+file.name+' size='+file.size);
   const buf=await file.arrayBuffer();
-  const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
+  let pdf;
+  try{ pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise; }
+  catch(e){ throw new Error(e.name==='PasswordException' ? 'This PDF is password-protected. Remove the password first, then try again.' : 'This PDF could not be read (damaged or not a PDF).'); }
   log('PDF pages='+pdf.numPages);
-  const zip=new JSZip();
-  let firstUrl='';
+  const zip=new JSZip(), digits=String(pdf.numPages).length;
+  const base=file.name.replace(/\.pdf$/i,'');
+  const MAX_SIDE=12000, MAX_PIXELS=60e6;   // browser canvas limits
+  let firstUrl='', firstBlob=null, reduced=0;
   for(let i=1;i<=pdf.numPages;i++){
-    $('#progress').textContent=`Render halaman ${i}/${pdf.numPages}...`;
+    $('#progress').textContent=`Rendering page ${i}/${pdf.numPages}...`;
     const page=await pdf.getPage(i);
-    const vp=page.getViewport({scale});
-    const canvas=document.createElement('canvas'); canvas.width=vp.width; canvas.height=vp.height;
+    let vp=page.getViewport({scale});
+    // Very large pages (posters) are rendered smaller instead of failing.
+    const fit=Math.min(1, MAX_SIDE/Math.max(vp.width,vp.height), Math.sqrt(MAX_PIXELS/(vp.width*vp.height)));
+    if(fit<1){ vp=page.getViewport({scale:scale*fit}); reduced++; }
+    const canvas=document.createElement('canvas'); canvas.width=Math.floor(vp.width); canvas.height=Math.floor(vp.height);
     const ctx=canvas.getContext('2d');
+    ctx.fillStyle='#ffffff'; ctx.fillRect(0,0,canvas.width,canvas.height);
     await page.render({canvasContext:ctx, viewport:vp}).promise;
-    const blob=await new Promise(r=>canvas.toBlob(r,'image/jpeg',0.92));
-    if(!blob) throw new Error('toBlob gagal halaman '+i);
-    zip.file(`page-${i}.jpg`, blob);
-    if(i===1) firstUrl=URL.createObjectURL(blob);
-    log(`Page ${i} rendered ${vp.width}x${vp.height} blob ${blob.size}`);
+    const blob=await new Promise(r=>canvas.toBlob(r, format==='png'?'image/png':'image/jpeg', 0.92));
+    canvas.width=canvas.height=0;
+    if(!blob) throw new Error('Page '+i+' could not be turned into an image (too large for this browser).');
+    zip.file(`${base}-page-${String(i).padStart(digits,'0')}.${format}`, blob);
+    if(i===1){ firstBlob=blob; firstUrl=URL.createObjectURL(blob); }
+    log(`Page ${i} rendered ${Math.floor(vp.width)}x${Math.floor(vp.height)} ${blob.size} bytes`);
+    page.cleanup();
   }
   if(pdf.numPages===1){
-    const blob=await zip.file('page-1.jpg').async('blob');
-    downloadBlob(blob, file.name.replace(/\.pdf$/i,'') + '.jpg');
-    $('#resultPreview').innerHTML=`<img src="${firstUrl}" class="max-w-full mx-auto rounded-lg border shadow"><p class="text-center mt-2 text-gray-500">1 halaman • klik Download</p>`;
+    downloadBlob(firstBlob, base + '.' + format);
   }else{
     const zipBlob=await zip.generateAsync({type:'blob'});
     log('ZIP size '+zipBlob.size);
-    downloadBlob(zipBlob, file.name.replace(/\.pdf$/i,'') + '-images.zip');
-    if(firstUrl) $('#resultPreview').innerHTML+=`<div class="mt-4"><p class="text-center text-gray-500 mb-2">Preview halaman 1:</p><img src="${firstUrl}" class="max-w-full mx-auto rounded-lg border"></div>`;
+    downloadBlob(zipBlob, base + '-' + format + '.zip');
   }
+  const box=document.createElement('div'); box.className='mt-4';
+  const note=document.createElement('p'); note.className='text-center text-gray-500 mb-2 text-xs';
+  note.textContent=(pdf.numPages===1?'1 page':`${pdf.numPages} pages in the ZIP (${base}-page-${'0'.repeat(digits-1)}1.${format} …)`)+(reduced?` · ${reduced} very large page${reduced===1?' was':'s were'} rendered smaller to fit browser limits`:'')+' · preview of page 1:';
+  const img=document.createElement('img'); img.src=firstUrl; img.className='max-w-full mx-auto rounded-lg border';
+  box.append(note, img); $('#resultPreview').append(box);
+  pdf.destroy();
 }
 async function mergePdf(){
   if(!window.PDFLib) throw new Error('pdf-lib not loaded — check internet');

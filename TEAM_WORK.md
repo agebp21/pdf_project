@@ -517,3 +517,7 @@ Jumlah halaman ganjil berakhir di halaman kanan tanpa lembar balik, jadi buku ti
 ### 29 September 2026 - Image to PDF dirapikan
 
 `loadDrawables(file)` mengembalikan semua halaman TIFF; foto (jpg/webp/heic/avif/tiff) JPEG 0.92, grafis (png/gif/bmp/ico/svg) lossless PNG. Opsi baru: orientasi Auto (default), ukuran "Same as image" benar-benar seukuran gambar (96 dpi, tanpa margin), margin Normal/None/Wide; gambar dipusatkan; nama file dari gambar pertama. Diuji 12 format di Chromium (termasuk HEIC via pillow-heif, AVIF, EXIF orientation 6).
+
+### 29 September 2026 - PDF to JPG dirapikan
+
+Nama file dipad nol (`<nama>-page-01.jpg`) supaya urut, opsi Format JPG/PNG, latar putih eksplisit, halaman sangat besar diperkecil ke batas 12000 px / 60 MP (dilaporkan), PDF berpassword/rusak diberi pesan jelas, deskripsi tidak lagi mengklaim "ambil semua gambar" (fitur itu tidak ada).
