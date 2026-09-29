@@ -15,12 +15,14 @@
       if(hard)page.classList.add('book-board');
     });
   },
-  geometry(width,height,ratio,index,count) {
+  geometry(width,height,ratio,index,count,compact) {
     // Same rule as the editor preview so exports look like what was
-    // previewed: a two-page spread from 700px wide, one page on phones.
+    // previewed: a two-page spread from 700px wide, one page on phones held
+    // upright. A landscape phone (wider than tall) keeps the spread; the
+    // compact editor preview sizes its height from this, so width decides.
     // Depends on the reading area only, never on the current page;
     // showCover keeps the cover alone without enlarging it.
-    const single=count===1 || width<700;
+    const single=count===1 || (width<700 && (compact || width<=height));
     return {single,minWidth:single?width+1:1,maxWidth:width,maxHeight:height};
   },
   // A closed book sits centred: the front cover alone would otherwise fill
@@ -66,7 +68,7 @@
       }
       const h=stage.clientHeight;
       if(!w||!h)return;
-      const layout=this.geometry(w,h,ratio,book.getCurrentPageIndex(),book.getPageCount());
+      const layout=this.geometry(w,h,ratio,book.getCurrentPageIndex(),book.getPageCount(),compact);
       const next=[w,h,layout.single].join(':');if(next===signature)return;signature=next;
       Object.assign(book.getSettings(),layout,{width:ratio*1000,height:1000});
       book.update();

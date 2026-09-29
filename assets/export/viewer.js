@@ -90,6 +90,14 @@
       catch(cause){$('#error').hidden=false;$('#error').textContent='Fullscreen is not available on this device.';}
     };
     if(!document.documentElement.requestFullscreen)$('#fullscreen').hidden=true;
+    // Inside the Android/Windows app: a close button (the app is already full screen on Android).
+    const android=window.MyFlipbook&&window.MyFlipbook.postMessage?window.MyFlipbook:null;
+    const webview=window.chrome&&window.chrome.webview&&window.chrome.webview.postMessage?window.chrome.webview:null;
+    if(android||webview){
+      $('#close').hidden=false;
+      $('#close').onclick=()=>(android||webview).postMessage('close');
+      if(android)$('#fullscreen').hidden=true;
+    }
     document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen'});
     FlipbookIdle.bind({
       active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0,

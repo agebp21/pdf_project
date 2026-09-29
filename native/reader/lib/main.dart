@@ -8,6 +8,8 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   if (Platform.isAndroid) {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
+    // Books read as two-page spreads: keep the app landscape (either way up).
+    SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
   }
   runApp(const BookApp());
 }
@@ -46,6 +48,8 @@ class _BookScreenState extends State<BookScreen> {
         desktop = controller;
         await controller.initialize();
         await controller.setBackgroundColor(const Color(0xffe8ece8));
+        // The reader's close button posts 'close' through WebView2.
+        controller.webMessage.listen((message) { if (message == 'close') exit(0); });
         final file = File('${File(Platform.resolvedExecutable).parent.path}/data/flutter_assets/assets/book/index.html');
         if (!await file.exists()) { throw Exception('Aset buku tidak ditemukan. Ekstrak seluruh ZIP bersama folder data.'); }
         await controller.loadUrl(file.uri.toString());
@@ -53,6 +57,10 @@ class _BookScreenState extends State<BookScreen> {
         final controller = WebViewController();
         android = controller;
         await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
+        // The reader's close button posts 'close' through this channel.
+        await controller.addJavaScriptChannel('MyFlipbook', onMessageReceived: (message) {
+          if (message.message == 'close') SystemNavigator.pop();
+        });
         await controller.setBackgroundColor(const Color(0xffe8ece8));
         await controller.setNavigationDelegate(NavigationDelegate(
           onNavigationRequest: (request) => request.url.startsWith('file:///android_asset/')

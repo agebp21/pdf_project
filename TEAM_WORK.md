@@ -474,3 +474,9 @@ Saat menutup sampul, bagian kiri tampak tergeser/terpotong. Perbaikan FlipbookCu
 - Paket Android: `id.myflipbook.<slug>_<hash6>` (stabil per judul), `--build-number` = menit epoch -> build ulang buku yang sama terpasang sebagai update.
 - EXE diberi nama judul buku (`<Judul>.exe`, karakter terlarang dibuang, CON/PRN dll -> MyFlipbook); Runner.rc: CompanyName MyFlipbook, ProductName/FileDescription = judul. HOW-TO-OPEN menyebut nama exe + langkah SmartScreen.
 - Belum: sertifikat code signing Windows (berbayar) & verifikasi developer Android (akun Google, dilakukan owner).
+
+### 29 September 2026 - APK landscape + tombol tutup
+
+- APK Android dikunci landscape (main.dart setPreferredOrientations landscapeLeft/Right + manifest `sensorLandscape`).
+- Aturan layout: 1 halaman hanya kalau lebar < 700 **dan** layar tegak (lebar <= tinggi); HP landscape tetap spread 2 halaman. Editor preview (compact) tetap pakai lebar saja.
+- Tombol ✕ (#close, pojok kanan atas) hanya muncul di aplikasi: Android lewat JavaScriptChannel `MyFlipbook` -> SystemNavigator.pop(); Windows lewat `chrome.webview.postMessage` -> webMessage -> exit(0). Tombol Fullscreen disembunyikan di Android (sudah immersive). Dicek: EXE benar-benar tertutup saat ✕ diklik; APK dibuild OK (belum dicek di HP).
