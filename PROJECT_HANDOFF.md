@@ -577,3 +577,7 @@ Jumlah halaman ganjil berakhir di halaman kanan tanpa lembar balik, jadi buku ti
 ### 29 September 2026 - Compress PDF beneran
 
 `assets/pdf-compress.js` (`PDFCompress.compress(bytes, level, {onProgress, recode})`): gambar DCTDecode dan FlateDecode 8-bit (RGB/Gray/ICC N=1|3, predictor PNG didekode) diperkecil ke sisi maks per level lalu JPEG ulang via canvas; SMask target dilewati & referensi SMask disalin; ganti hanya kalau <95% ukuran lama; hasil tidak pernah lebih besar dari asli. Dipakai converter (Compress PDF, label Light/Balanced/Strong + ringkasan jujur) dan langkah workflow "Compress" (opsi level). Fixture: tests/fixtures/photo.jpg, photo-small.png (alpha), tiny.jpg.
+
+### 29 September 2026 - Image to PDF dirapikan
+
+`loadDrawables(file)` mengembalikan semua halaman TIFF; foto (jpg/webp/heic/avif/tiff) JPEG 0.92, grafis (png/gif/bmp/ico/svg) lossless PNG. Opsi baru: orientasi Auto (default), ukuran "Same as image" benar-benar seukuran gambar (96 dpi, tanpa margin), margin Normal/None/Wide; gambar dipusatkan; nama file dari gambar pertama. Diuji 12 format di Chromium (termasuk HEIC via pillow-heif, AVIF, EXIF orientation 6).
