@@ -525,3 +525,7 @@ Nama file dipad nol (`<nama>-page-01.jpg`) supaya urut, opsi Format JPG/PNG, lat
 ### 29 September 2026 - HTML to PDF dengan layout asli
 
 `server.py`: `find_chromium()` (env MYFLIPBOOK_CHROME, PATH, Edge/Chrome default Windows), `prepare_html()` (sisip @page + print-color-adjust di awal head), `html_to_pdf()` (halaman disajikan server loopback sekali pakai dengan CSP ketat; headless Edge `--print-to-pdf`; hosting: CSP script-src none + `--proxy-server=http://127.0.0.1:9 --proxy-bypass-list=<-loopback>;127.0.0.1:PORT`). JANGAN pakai `--blink-settings=scriptEnabled=false`: bikin print-to-pdf gagal. Route `/api/convert/html-to-pdf` (text/html, .html/.htm, maks 20 MB, header X-Page-Size/X-Margin), capabilities `html`. Client: opsi Paper/Margin, fallback teks dengan pemberitahuan.
+
+### 29 September 2026 - OCR PDF searchable beneran
+
+`assets/pdf-ocr-layer.js` (`PDFOcrLayer.addWords(lib, doc, page, font, words, toPdf)`): teks Tr 3 + Tz + Tm per kata, koordinat via pdf.js `viewport.convertToPdfPoint` (ikut rotasi/offset MediaBox). `ocrSearchablePdf` sekarang pakai pdf-lib di atas PDF asli (dulu jsPDF: semua halaman jadi JPEG dan ukuran kertas 2x), Tesseract worker sekali untuk semua halaman, render ~290 dpi, lewati halaman yang sudah punya teks (>=20 karakter).

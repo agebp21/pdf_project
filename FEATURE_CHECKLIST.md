@@ -13,6 +13,8 @@ Diperbarui: 25 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 | [x] | PDF to JPG | 29 Sep, Chromium nyata: 12 halaman → ZIP `nama-page-01..12.jpg` (urut benar), halaman landscape & berotasi 90° benar, 1 halaman → file .jpg langsung, opsi PNG lossless, latar putih, poster A0 @3x otomatis diperkecil ke batas canvas (60 MP) dan diberi tahu, PDF berpassword → pesan jelas. |
 | [x] | HTML to PDF | 29 Sep: dicetak Edge/Chrome headless di server (tata letak, warna/gradien, flex, tabel, gambar data:, kertas A4/Letter/A3/Legal + margin; @page halaman tetap menang). Mode lokal: gambar online + JS jalan. Mode hosting: JS mati (CSP), semua jaringan lewat proxy mati → tidak bisa SSRF; file lokal tidak terbaca (halaman disajikan dari loopback + CSP). Diuji `HtmlToPdfTests` (4 tes, termasuk cetak asli) + UI Chromium. Tanpa Edge/Chrome → fallback teks saja, dengan pemberitahuan. Folder `_files` dari "Save page, complete" tidak ikut (satu file). |
 | [x] | PowerPoint to PDF | 29 Sep, UI Chromium + LibreOffice asli: PPTX 4 slide 16:9 (latar gelap, bullet, shape rounded, tabel, grafik batang, foto, notes) → PDF 4 halaman 720×405, visual cocok; PPT lama (hasil simpan LibreOffice) juga 4 halaman. ~3-4 detik. Karakter `·` bisa berubah karena substitusi font. |
+| [x] | OCR PDF (searchable) | 29 Sep: halaman asli TIDAK dirender ulang (ukuran, kualitas, ukuran file tetap); lapisan teks tak terlihat (Tr 3) per kata, direntang tepat ke kotak kata (Tz) dan ikut rotasi halaman; halaman yang sudah punya teks dilewati. Chromium + Tesseract nyata (ind): scan A4 ~200 dpi + halaman berotasi 90° terbaca benar ("Pendapatan … 24 persen", "3.414"), posisi kata cocok (±1 pt), tampilan identik. `pdf-ocr-layer.test.cjs`. Huruf di luar WinAnsi (mis. aksara non-Latin) tidak dimasukkan. Butuh internet pertama kali (engine + data bahasa). |
+| [x] | OCR ekstraksi (PDF→Word/Excel/PPT) | Tesseract Inggris/Indonesia + filter kualitas; scan bersih terbaca akurat (uji OCR PDF di atas). Scan buram/poster belum diuji. |
 | [x] | Merge PDF | PDF asli digabung; hasil dibuka ulang dan jumlah halaman diperiksa. |
 | [x] | Split / extract PDF | Rentang halaman dan ZIP per halaman lolos pemeriksaan isi. |
 | [x] | Rotate PDF | Rotasi output diverifikasi pada struktur PDF. |
@@ -40,7 +42,6 @@ Diperbarui: 25 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 | PDF to Word | Mode "keep look": background tanpa teks + frame teks editabel per baris, satu section per halaman seukuran PDF. Mode flowing: heading, paragraf, tabel Word asli. Scan: gambar + OCR. `office-export.test.cjs` (library asli) + render LibreOffice fixture 2 halaman: tampilan cocok, teks sekali (tidak dobel). | Uji di MS Word asli dan dokumen desain berat; Type3/outline text tetap gambar; lebar font pengganti bisa beda. |
 | PDF to Excel | Sheet Data (tabel Excel, kolom terpisah) di depan; angka ID/EN, Rp, %, negatif jadi angka asli; kode berawalan 0 / >15 digit tetap teks. Sheet gambar halaman kedua. | Akurasi tabel rumit, file besar, OCR nyata. "1.250" dibaca ribuan (format Indonesia). |
 | PDF to PowerPoint | Ukuran slide mengikuti PDF; background tanpa teks + tiap baris jadi text box editabel; notes berisi teks/OCR. Dirender LibreOffice: cocok dengan PDF. | Uji di PowerPoint asli; gambar/vektor belum jadi objek terpisah. |
-| OCR ekstraksi | Tesseract Inggris/Indonesia dan filter kualitas tersedia. | Akurasi scan/poster, waktu proses, file besar. Bukan OCR PDF searchable. |
 | Notebook PDF | Halaman dan fungsi ringkasan/chat ada, sebagian memakai Gemini. | QA menyeluruh, akurasi jawaban, koneksi API, penyimpanan kunci, serta kesiapan produksi. |
 | Editor animasi (`animation.html`) | Ekstraksi native teks/gambar/grup; OCR lokal otomatis untuk halaman raster; area gambar/logo manual; elemen editable dan HTML ZIP offline. OCR PSJ halaman 5 teruji, 54 baris. | OCR Inggris/Indonesia/Melayu dan perbaikan background bersifat perkiraan. Pemisahan semua grafis secara otomatis belum tersedia. APK/EXE editor belum terhubung; browser/device QA belum lengkap. |
 | Build APK / Windows EXE | 25 Sep: dibangun ulang lewat layanan build HTTP asli dan DIJALANKAN: EXE di Windows 11 (WebView2) dan APK di emulator Android (System WebView 66) — buku tampil, tombol, keyboard, swipe cepat, nama app = judul buku. `viewer-compat.test.cjs` menjaga reader tetap ES2018 + fallback CSS. | Belum di HP fisik; APK masih signing debug, EXE belum ditandatangani. |
@@ -54,7 +55,6 @@ Diperbarui: 25 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 - [ ] PDF/A.
 - [ ] Repair PDF.
 - [ ] Scan to PDF.
-- [ ] OCR menjadi PDF searchable.
 - [ ] Compare PDF.
 - [ ] Redact permanen.
 - [ ] PDF Forms.

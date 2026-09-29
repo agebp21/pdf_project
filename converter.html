@@ -7,6 +7,7 @@
 <script src="assets/flipbook-transfer.js"></script>
 <script src="assets/pdf-edit.js"></script>
 <script src="assets/pdf-compress.js"></script>
+<script src="assets/pdf-ocr-layer.js"></script>
 <script src="assets/pdf-layout.js"></script>
 <script src="assets/auth.js" defer></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -143,7 +144,7 @@ const TOOLS = [
   {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Real PPTX→PDF via local LibreOffice (needs the project server).', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'PPTX/PPT file — converted on your computer via the local server + LibreOffice'},
   {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'Real .pptx: slides look like the PDF pages and every text line is an editable text box.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'PDF file — design kept, text editable on the slide (needs internet)'},
   {id:'pdf-to-md', title:'PDF to Markdown', desc:'Headings, lists, and tables detected — perfect food for AI, notes, and blogs.', cat:'Convert PDF', icon:'{ }', color:'#4C1D95', bg:'#E9E4FF', accept:'.pdf', hint:'PDF file — structure detected from fonts and columns'},
-  {id:'ocr-pdf', title:'OCR PDF', desc:'Make scans searchable — original look, invisible selectable text.', cat:'Convert PDF', icon:'OCR', color:'#15803D', bg:'#DCFCE7', accept:'.pdf', hint:'PDF file — every page read with OCR (needs internet)'},
+  {id:'ocr-pdf', title:'OCR PDF', desc:'Make scans searchable: the original pages stay exactly as they are, with invisible text you can search, select and copy.', cat:'Convert PDF', icon:'OCR', color:'#15803D', bg:'#DCFCE7', accept:'.pdf', hint:'PDF file — scanned pages are read with OCR (needs internet the first time)'},
 ];
 let active = new URLSearchParams(location.search).get('tool') || 'jpg-to-pdf';
 // Honest fallback: 18 catalog cards link to tools not built yet. Instead of
@@ -1487,53 +1488,53 @@ async function pdfToMd(){
   log('Markdown chars='+md.length);
 }
 async function ocrSearchablePdf(){
-  if(!window.pdfjsLib || !window.jspdf) throw new Error('Libraries not loaded yet');
-  await ensureTesseract();
+  if(!window.pdfjsLib || !window.PDFLib || !window.PDFOcrLayer) throw new Error('Libraries not loaded yet — reload the page');
   const lang=$('#opt-ocr-lang')?.value||'eng+ind';
-  const buf=await files[0].arrayBuffer();
-  const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
+  const source=files[0], buf=await source.arrayBuffer();
+  let doc, pdf;
+  try{ doc=await PDFLib.PDFDocument.load(buf); pdf=await pdfjsLib.getDocument({data:buf.slice(0), disableWorker: location.protocol==='file:'}).promise; }
+  catch(e){ throw new Error(/encrypt|password/i.test(e.message||e.name)?'This PDF is password-protected. Remove the password first, then try again.':'This PDF could not be read (damaged or not a PDF).'); }
   log('OCRPDF pages='+pdf.numPages+' lang='+lang);
-  const {jsPDF, GState}=window.jspdf;
-  const out=new jsPDF({unit:'pt', compress:true});
-  out.deletePage(1);
-  const invisible=new GState({opacity:0});
-  const visible=new GState({opacity:1});
-  let ocrWords=0;
-  for(let i=1;i<=pdf.numPages;i++){
-    $('#progress').textContent=`Rendering page ${i}/${pdf.numPages}...`;
-    const page=await pdf.getPage(i);
-    const base=page.getViewport({scale:1});
-    const scale=Math.min(2, 1600/Math.max(base.width,base.height));
-    const viewport=page.getViewport({scale});
-    const canvas=document.createElement('canvas');
-    canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height);
-    await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
-    const W=canvas.width, H=canvas.height;
-    out.addPage([W,H]);
-    out.addImage(canvas.toDataURL('image/jpeg',0.85),'JPEG',0,0,W,H);
-    const result=await window.Tesseract.recognize(canvas, lang, {
-      logger:(m)=>{ if(m.status==='recognizing text'&&typeof m.progress==='number') $('#progress').textContent=`OCR page ${i}/${pdf.numPages}... ${Math.round(m.progress*100)}%`; }
-    });
-    // Invisible but selectable: same positions, zero opacity.
-    const words=(result.data.words||[]).filter(w=>w.text&&w.text.trim()&&/[A-Za-z0-9]/.test(w.text)&&(w.confidence||0)>=40);
-    out.setGState(invisible);
-    for(const w of words){
-      const bw=w.bbox.x1-w.bbox.x0, bh=w.bbox.y1-w.bbox.y0;
-      if(bw<=0||bh<=0) continue;
-      out.setFontSize(Math.max(4, bh*0.85));
-      out.text(w.text, w.bbox.x0, w.bbox.y1-bh*0.15);
+  $('#progress').textContent='Loading the OCR engine (first time: a few MB)...';
+  await ensureTesseract();
+  let current=0;
+  const worker=await window.Tesseract.createWorker(lang, 1, {logger:(m)=>{
+    if(m.status==='recognizing text'&&typeof m.progress==='number') $('#progress').textContent=`OCR page ${current}/${pdf.numPages}... ${Math.round(m.progress*100)}%`;
+  }});
+  const font=await doc.embedFont(PDFLib.StandardFonts.Helvetica);
+  let words=0, scanned=0, hadText=0;
+  try{
+    for(let i=1;i<=pdf.numPages;i++){
+      current=i;
+      const page=await pdf.getPage(i);
+      // Pages that already carry real text are left untouched.
+      const content=await page.getTextContent();
+      if(content.items.map(t=>t.str).join('').replace(/\s+/g,'').length>=20){ hadText++; page.cleanup(); continue; }
+      $('#progress').textContent=`Reading page ${i}/${pdf.numPages}...`;
+      const base=page.getViewport({scale:1});
+      // ~290 dpi on A4 for accurate OCR, capped for memory.
+      const viewport=page.getViewport({scale:Math.min(4, 2400/Math.max(base.width,base.height))});
+      const canvas=document.createElement('canvas');
+      canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height);
+      const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
+      await page.render({canvasContext:ctx, viewport}).promise;
+      const result=await worker.recognize(canvas);
+      const found=(result.data.words||[]).filter(w=>w.text&&w.text.trim()&&/[A-Za-z0-9]/.test(w.text)&&(w.confidence||0)>=40)
+        .map(w=>({text:w.text, x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1}));
+      const added=PDFOcrLayer.addWords(PDFLib, doc, doc.getPage(i-1), font, found, (x,y)=>viewport.convertToPdfPoint(x,y));
+      words+=added; scanned++;
+      log(`Page ${i}: ${added} searchable words`);
+      page.cleanup(); canvas.width=canvas.height=0;
     }
-    out.setGState(visible);
-    ocrWords+=words.length;
-    log(`Page ${i}: ${words.length} searchable words`);
-    page.cleanup(); canvas.width=canvas.height=0;
-  }
-  const blob=out.output('blob');
-  $('#progress').textContent='Done.';
-  downloadBlob(blob, files[0].name.replace(/\.pdf$/i,'')+'-searchable.pdf');
-  const note=document.createElement('p');
-  note.className='text-center py-2 text-xs text-gray-600';
-  note.textContent=`🔍 ${ocrWords} searchable words embedded invisibly — select and copy text straight from the PDF.`;
+  } finally { await worker.terminate(); }
+  $('#progress').textContent='Saving...';
+  const bytes=await doc.save({useObjectStreams:true});
+  downloadBlob(new Blob([bytes],{type:'application/pdf'}), source.name.replace(/\.pdf$/i,'')+'-searchable.pdf');
+  const note=document.createElement('p'); note.className='text-center py-2 text-xs text-gray-600';
+  note.textContent=!scanned ? '✓ Every page already has selectable text — nothing needed OCR, the PDF is unchanged.'
+    : `🔍 ${words} word${words===1?'':'s'} made searchable on ${scanned} scanned page${scanned===1?'':'s'}`
+      +(hadText?` · ${hadText} page${hadText===1?'':'s'} already had text (left as is)`:'')
+      +(scanned&&!words?' · no readable text was found in the scans':'')+'. The pages look exactly as before.';
   $('#resultPreview').prepend(note);
 }
 async function htmlToPdf(){
