@@ -498,3 +498,7 @@ Saat menutup sampul, bagian kiri tampak tergeser/terpotong. Perbaikan FlipbookCu
 ### 29 September 2026 - Pesan "masih di dalam ZIP"
 
 index.html reader punya kotak #extract-help (style inline) yang cuma tampil kalau viewer.css tidak termuat, yaitu saat index.html dibuka langsung dari dalam ZIP tanpa diekstrak (kasus laporan user: halaman polos tanpa buku). viewer.css menyembunyikannya.
+
+### 29 September 2026 - Buku halaman ganjil bisa ditutup
+
+Jumlah halaman ganjil berakhir di halaman kanan tanpa lembar balik, jadi buku tidak bisa ditutup. `FlipbookLayout.withBackCover(pages, className)` menambah sampul belakang kosong (`.book-back-blank`, krem) hanya untuk PageFlip (reader + preview); halaman dokumen, export, bookmark, link tidak berubah. Status menampilkan "Back cover"; tombol → berhenti di lembar terakhir PageFlip.

@@ -15,6 +15,15 @@
       if(hard)page.classList.add('book-board');
     });
   },
+  // An odd page count ends on a right-hand page with nothing to turn it
+  // over onto, so the book could never close. Like a real book, add a blank
+  // back cover (engine only; it is not a page of the document).
+  withBackCover(pages,className) {
+    if(pages.length<3||pages.length%2===0)return pages.slice();
+    const back=document.createElement('article');
+    back.className=className+' book-back-blank';back.setAttribute('aria-label','Back cover');
+    return pages.concat([back]);
+  },
   geometry(width,height,ratio,index,count,compact) {
     // Same rule as the editor preview so exports look like what was
     // previewed: a two-page spread from 700px wide, one page on phones held

@@ -46,6 +46,7 @@
 
 /* Curved cover turn (FlipbookCurl): strips chained in 3D, shaded by angle. */
 .book-shift{position:relative}
+.book-back-blank{background:linear-gradient(135deg,#f7f3ea,#ebe4d6)!important}
 .cover-curl{position:absolute;z-index:60;pointer-events:none;transform-style:preserve-3d;-webkit-transform-style:preserve-3d}
 .cover-curl-strip{position:absolute;top:0;transform-origin:0 50%;transform-style:preserve-3d;-webkit-transform-style:preserve-3d}
 .cover-curl-face{position:absolute;top:0;left:0;width:100%;height:100%;background-repeat:no-repeat;backface-visibility:hidden;-webkit-backface-visibility:hidden;background-color:#fff}

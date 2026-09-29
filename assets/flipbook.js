@@ -22,21 +22,24 @@
   }
   const model = () => ({version:1,title:$('#export-title').value.trim()||'Buku interaktif',pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks});
   const error = message => { $('#reader-error').textContent = message; $('#reader-error').hidden = !message; };
-  function visiblePages() {
+  // Sheets on screen (may include the blank back cover of an odd page count).
+  function sheetsOnScreen() {
     if (!book) return [];
     const first = book.getCurrentPageIndex();
     const isCover = first === 0;
-    return [first, ...(!isCover && book.getOrientation() === 'landscape' && first + 1 < pageElements.length ? [first + 1] : [])];
+    return [first, ...(!isCover && book.getOrientation() === 'landscape' && first + 1 < book.getPageCount() ? [first + 1] : [])];
   }
+  // Document pages on screen.
+  const visiblePages = () => sheetsOnScreen().filter(index => index < pageElements.length);
   function updatePage() {
-    const visible = visiblePages();
-    if (!visible.length) return;
-    const isCover = visible[0] === 0;
-    $('#page-status').textContent = isCover ? `Front cover · 1 / ${pageElements.length}` : `Pages ${visible.map(i => i + 1).join('–')} / ${pageElements.length}`;
+    const shown = sheetsOnScreen(), visible = visiblePages();
+    if (!shown.length) return;
+    const isCover = shown[0] === 0;
+    $('#page-status').textContent = isCover ? `Front cover · 1 / ${pageElements.length}` : !visible.length ? 'Back cover' : `Pages ${visible.map(i => i + 1).join('–')} / ${pageElements.length}`;
     $('#next').textContent = isCover ? 'Open cover →' : '→';
     $('#next').setAttribute('aria-label', isCover ? 'Open cover' : 'Next page');
-    $('#prev').disabled = $('#home').disabled = visible[0] === 0;
-    $('#next').disabled = visible.at(-1) === pageElements.length - 1;
+    $('#prev').disabled = $('#home').disabled = isCover;
+    $('#next').disabled = shown.at(-1) === book.getPageCount() - 1;
   }
   function stopAnimation() { cancelAnimationFrame(frame); frame = 0; }
   function animate(automatic = false) {
@@ -112,12 +115,14 @@
       if (pdf) await pdf.destroy();
       imageUrls.forEach(url => URL.revokeObjectURL(url));
       imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links;
-      const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...newElements);
+      // Odd page counts get a blank back cover so the book can close.
+      const sheets = FlipbookLayout.withBackCover(newElements, 'pdf-page');
+      const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...sheets);
       $('#reader-stage').replaceChildren(container);
       const ratio = natural.width / natural.height;
       bookRatio = ratio;
       const width = ratio > 1 ? 460 : 380;
-      FlipbookLayout.decorate(newElements);
+      FlipbookLayout.decorate(sheets);
       book = new St.PageFlip(container, {width, height:Math.round(width / ratio), size:'stretch', minWidth:230, maxWidth:500, minHeight:115, maxHeight:760, autoSize:true, usePortrait:true, startPage:0, showCover:true, ...FlipbookLayout.motion(reduced)});
       book.on('flip', updatePage); book.on('changeOrientation', () => { updatePage(); animate(true); });
       FlipbookSound.attach(book);
@@ -125,10 +130,10 @@
         if (event.data === 'read') { updatePage(); animate(true); }
         else { stopAnimation(); $('#home').disabled = $('#prev').disabled = $('#next').disabled = true; }
       });
-      book.loadFromHTML(newElements);
+      book.loadFromHTML(sheets);
       disposeLayout=FlipbookLayout.bind(book,$('#reader-stage'),ratio,{compact:true});
       FlipbookLayout.centerCover(book, container, reduced);
-      curl = FlipbookCurl.bind(book, container, newElements, {reduced, onTurn: () => FlipbookSound.play()});
+      curl = FlipbookCurl.bind(book, container, sheets, {reduced, onTurn: () => FlipbookSound.play()});
       sourcePdf = blob;
       $('#export-title').value = project ? project.title : name.replace(/\.pdf$/i,'');
       if (project) for (const [index,config] of Object.entries(project.overlays)) { overlays.set(Number(index),config); renderOverlay(Number(index),config); }

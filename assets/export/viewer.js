@@ -24,25 +24,29 @@
       }
       return page;
     });
-    $('#book').append(...elements);
+    // Odd page counts get a blank back cover so the book can close.
+    const sheets = FlipbookLayout.withBackCover(elements, 'page');
+    $('#book').append(...sheets);
     const players=elements.map((page,index)=>{
       if(data.version!==2)return null;
       const ratio=(data.pageRatios&&data.pageRatios[index])||data.ratio;
       const w=ratio<data.ratio?ratio/data.ratio*100:100,h=ratio>data.ratio?data.ratio/ratio*100:100;
       return AnimationPlayback.mount(page,pageElements(index),{count:data.pageCount,imageBox:{x:(100-w)/2,y:(100-h)/2,w,h},goPage:index=>{if(book.getState()==='read'){book.turnToPage(index);update();animate();}}});
     });
-    function visible() {
+    // Sheets on screen (may include the blank back cover) / document pages on screen.
+    function onScreen() {
       const first = book.getCurrentPageIndex();
-      return [first, ...(first > 0 && book.getOrientation() === 'landscape' && first + 1 < data.pageCount ? [first + 1] : [])];
+      return [first, ...(first > 0 && book.getOrientation() === 'landscape' && first + 1 < sheets.length ? [first + 1] : [])];
     }
+    const visible = () => onScreen().filter(index => index < data.pageCount);
     function update() {
-      const pages = visible(), cover = pages[0] === 0;
-      $('#status').textContent = cover ? `Cover · 1 / ${data.pageCount}` : `${pages.map(i=>i+1).join('–')} / ${data.pageCount}`;
+      const shown = onScreen(), pages = visible(), cover = shown[0] === 0;
+      $('#status').textContent = cover ? `Cover · 1 / ${data.pageCount}` : !pages.length ? 'Back cover' : `${pages.map(i=>i+1).join('–')} / ${data.pageCount}`;
       $('#prev').disabled = $('#home').disabled = cover;
-      $('#next').disabled = pages[pages.length-1] === data.pageCount-1;
+      $('#next').disabled = shown[shown.length-1] === sheets.length-1;
       $('#next').textContent = cover ? 'Open cover →' : '→';
       $('#next').setAttribute('aria-label', cover ? 'Open cover' : 'Next page');
-      elements.forEach((page,index) => { page.setAttribute('aria-hidden', String(!pages.includes(index))); });
+      sheets.forEach((page,index) => { page.setAttribute('aria-hidden', String(!shown.includes(index))); });
       $('#replay').disabled = !pages.some(index => data.overlays[String(index)]||pageElements(index).length);
       // Books without any animation don't need a Replay button at all.
       $('#replay').hidden = !Object.keys(data.overlays||{}).length && !Object.keys(data.pages||{}).some(key => pageElements(key).length);
@@ -64,7 +68,7 @@
       }
       draw(start);
     }
-    FlipbookLayout.decorate(elements);
+    FlipbookLayout.decorate(sheets);
     book = new St.PageFlip($('#book'),{width:380,height:Math.round(380/data.ratio),size:'stretch',minWidth:220,maxWidth:750,minHeight:50,maxHeight:1500,autoSize:true,usePortrait:true,showCover:true,startPage:0,...FlipbookLayout.motion(reduced),
       // After motion(), which allows click-to-flip: on touch a tap in the middle of a page
       // doesn't turn it (double-tap zooms); swipes and corner taps still do.
@@ -75,7 +79,7 @@
     const goPage = target => { if (['read', 'fold_corner'].indexOf(book.getState()) >= 0 && visible().indexOf(target) < 0) book.flip(target, 'top'); };
     Object.keys(data.links || {}).forEach(key => FlipbookLinks.mount(elements[Number(key)], data.links[key], goPage));
     book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});$('#home').disabled=$('#prev').disabled=$('#next').disabled=true}});
-    book.loadFromHTML(elements);update();animate();
+    book.loadFromHTML(sheets);update();animate();
     // After loadFromHTML: PageFlip has no current page before that.
     const marks = FlipbookBookmarks.bind({key: FlipbookBookmarks.key(data.title, data.pageCount, data.ratio), pages: elements,
       visible, goPage, toggle: $('#bookmark'), open: $('#bookmarks')});
@@ -87,7 +91,7 @@
     FlipbookSound.bindButton($('#sound'));
     FlipbookLayout.bind(book,$('#stage'),data.ratio);
     FlipbookLayout.centerCover(book, $('#book'), reduced);
-    const curl = FlipbookCurl.bind(book, $('#book'), elements, {reduced, onTurn: () => FlipbookSound.play()});
+    const curl = FlipbookCurl.bind(book, $('#book'), sheets, {reduced, onTurn: () => FlipbookSound.play()});
     $('#fullscreen').onclick=async()=>{
       try { if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen(); }
       catch(cause){$('#error').hidden=false;$('#error').textContent='Fullscreen is not available on this device.';}
