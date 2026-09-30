@@ -8,6 +8,7 @@ body.clay{background:#FBFAF7;color:#1C1917}
 .clay-nav{display:flex;align-items:center;justify-content:space-between;gap:12px;background:rgba(255,255,255,.86);backdrop-filter:blur(14px);border:1px solid #E8E2D4;border-radius:18px;padding:8px 12px;box-shadow:0 10px 28px rgba(28,25,23,.08),inset 0 1px 0 #fff}
 .clay-brand{display:flex;align-items:center;gap:10px;font-weight:800;text-decoration:none;color:#1C1917}
 .clay-brand-mark{width:36px;height:36px;border-radius:11px;background:linear-gradient(180deg,#2A5248,#1A3C34);color:#FFF7EA;display:grid;place-items:center;font-size:11px;font-weight:800;box-shadow:inset 0 1px 0 rgba(255,255,255,.35),0 6px 14px rgba(26,60,52,.3)}
+.clay-brand-logo{display:block;height:34px;width:auto}
 .clay-brand-name{font-family:'Fraunces',Georgia,serif;font-weight:900;font-size:17px;letter-spacing:-.02em}
 .clay-panel{background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,0) 38%),linear-gradient(180deg,#FFFFFF,#F8F4EA);border:1px solid #E9E2D4;border-radius:20px;box-shadow:0 14px 34px rgba(28,25,23,.10),inset 0 1px 0 #fff,inset 0 -3px 10px rgba(28,25,23,.05)}
 .clay-btn{display:inline-flex;align-items:center;justify-content:center;gap:8px;border-radius:999px;padding:10px 20px;font-size:13px;font-weight:800;text-decoration:none;cursor:pointer;transition:transform .15s,box-shadow .15s;border:1px solid transparent}

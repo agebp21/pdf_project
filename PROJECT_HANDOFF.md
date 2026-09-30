@@ -650,3 +650,7 @@ Catatan baru memanggil `options.bookmark(index, true)` (viewer/preview: `marks.s
 - Kuota `LIMITS`: free 3 buku/100 MB, pro 50/5 GB, business tanpa batas/50 GB (turun paket tidak menghapus, hanya menolak simpanan baru). Satu ekspor terbaru per jenis (html/apk/exe) per buku.
 - API (login): GET /api/library, GET /api/library/<id>/(cover|project), GET /api/library/<id>/exports/<eid>, POST /api/library/save (zip, X-Book-Id), POST /api/library/<id>/(cover|export|delete). Build APK/EXE: header X-Library-Book -> hasil disimpan server ke arsip.
 - Editor: simpan otomatis saat buku dibuka (+ sampul 480px) dan saat ekspor/simpan proyek; status `#archive-status`; `flipbook.html?library=<id>` membuka dari arsip. Halaman `library.html` (Arsipku) + link di Akun. Tes: tests/test_library.py.
+
+### 30 September 2026 - Logo baru MyFlipBook
+
+Sumber: `assets/img/logo-source.jpg` (= "flipbook logo.jpeg" dari owner). Diturunkan (latar putih -> transparan, color-to-alpha): `assets/img/logo.png` (nav, 120 px tinggi), `logo-icon.png` (512), `favicon.png` (64), `apple-touch-icon.png` (180, latar putih); ikon Android `mipmap-*/ic_launcher.png` (48-192, latar putih) dan Windows `app_icon.ico` (16-256, juga dipakai launcher EXE satu file). Semua halaman: `.clay-brand-logo` / `.brand img` menggantikan kotak "MF"; `<link rel="icon">` + apple-touch-icon. Logo berteks hitam: jangan dipakai di latar gelap.

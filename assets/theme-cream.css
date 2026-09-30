@@ -7,6 +7,7 @@ body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.45;z
 main,.workspace,.preview{position:relative;z-index:1}
 .topbar{background:rgba(250,244,232,.85)!important;backdrop-filter:blur(12px);border-bottom:1.5px solid var(--ink)!important;height:auto!important;padding:12px 4%!important;position:sticky;top:12px;z-index:50;margin:12px 12px 0;border:1.5px solid var(--ink);border-radius:18px;box-shadow:4px 4px 0 var(--ink)}
 .brand{font-family:'Fraunces',serif!important;font-weight:900!important;letter-spacing:-.02em}
+.brand img{display:block;height:34px;width:auto}
 .brand span{background:var(--pine)!important;border:1.5px solid var(--ink);transform:rotate(-3deg)}
 .badge{background:#FFFDF6!important;border:1.5px solid var(--ink);border-radius:999px;padding:7px 14px!important;box-shadow:3px 3px 0 var(--ink);font-weight:800}
 .heading h1{font-family:'Fraunces',serif!important;font-weight:900;letter-spacing:-.03em}
