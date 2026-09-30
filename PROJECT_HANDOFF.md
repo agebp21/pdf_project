@@ -737,3 +737,7 @@ Bug lama ditemukan saat tes & diperbaiki: di perangkat sentuh viewer memasang `d
 ### 30 September 2026 - Zoom cukup satu tombol 🔍; kaca pembesar dihapus
 
 Owner: tidak usah kaca pembesar; klik ikon di bawah -> zoom, klik lagi -> normal. Reader: kontrol − 100% + diganti satu tombol `#zoom` (🔍 -> "🔍 200%" hijau tua `.is-zoomed` -> klik lagi 🔍 100%), `FlipbookZoom` opsi `button` sekarang toggle lewat `up()`; `STEPS` dihapus (opsi zoomOut/level/zoomIn masih didukung modul tapi tidak dipakai). Kaca pembesar dihapus total: modul `FlipbookLoupe`, tombol `#loupe` (reader + editor), CSS `.book-loupe*`, `tests/loupe.test.cjs`. Double-tap/pinch/Ctrl+wheel tetap.
+
+### 30 September 2026 - APK ikut putar HP (tegak = 1 halaman, miring = 2 halaman)
+
+Owner: di HP tegak otomatis satu halaman, dimiringkan otomatis landscape. APK tidak lagi dikunci landscape: `AndroidManifest.xml` `screenOrientation="fullUser"` (ikut kunci rotasi pengguna) dan `main.dart` `setPreferredOrientations([portraitUp, landscapeLeft, landscapeRight])`. `configChanges` sudah berisi orientation|screenSize, jadi WebView tidak dimuat ulang; reader memilih tata letak dari bentuk layar (`FlipbookLayout.geometry`: lebar < 700 dan tegak -> satu halaman). Belum dites di HP sungguhan (perlu build APK baru).

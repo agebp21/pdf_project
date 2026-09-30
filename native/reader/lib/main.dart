@@ -8,8 +8,9 @@ void main() {
   WidgetsFlutterBinding.ensureInitialized();
   if (Platform.isAndroid) {
     SystemChrome.setEnabledSystemUIMode(SystemUiMode.immersiveSticky);
-    // Books read as two-page spreads: keep the app landscape (either way up).
-    SystemChrome.setPreferredOrientations([DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
+    // Turns with the phone: upright shows one page, sideways the two-page
+    // spread (the reader picks the layout from the screen shape).
+    SystemChrome.setPreferredOrientations([DeviceOrientation.portraitUp, DeviceOrientation.landscapeLeft, DeviceOrientation.landscapeRight]);
   }
   runApp(const BookApp());
 }
