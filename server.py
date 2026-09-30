@@ -62,6 +62,28 @@ ACCOUNTS = None
 ACCOUNTS_LOCK = threading.Lock()
 
 
+def load_env(path):
+    """KEY=VALUE lines from a local .env (never committed) into the
+    environment; variables already set by the system win."""
+    try:
+        lines = Path(path).read_text(encoding='utf-8-sig').splitlines()
+    except OSError:
+        return []
+    loaded = []
+    for line in lines:
+        line = line.strip()
+        if not line or line.startswith('#') or '=' not in line:
+            continue
+        name, value = line.split('=', 1)
+        name, value = name.strip(), value.strip()
+        if len(value) >= 2 and value[0] == value[-1] and value[0] in '"\'':
+            value = value[1:-1]
+        if re.fullmatch(r'[A-Za-z_][A-Za-z0-9_]*', name) and value and name not in os.environ:
+            os.environ[name] = value
+            loaded.append(name)
+    return loaded
+
+
 def hosted():
     return bool(CONFIG['public_hosts'])
 
@@ -73,10 +95,13 @@ def get_accounts():
         if ACCOUNTS is None:
             key = os.environ.get('MIDTRANS_SERVER_KEY', '').strip()
             tripay = [os.environ.get(n, '').strip() for n in ('TRIPAY_API_KEY', 'TRIPAY_PRIVATE_KEY', 'TRIPAY_MERCHANT_CODE')]
-            if all(tripay):
-                provider = accounts.TripayProvider(*tripay, production=os.environ.get('TRIPAY_PRODUCTION') == '1')
+            prefer = os.environ.get('MYFLIPBOOK_IDR_PROVIDER', '').strip().lower()
+            midtrans = lambda: accounts.MidtransProvider(key, os.environ.get('MIDTRANS_PRODUCTION') == '1')
+            tripay_provider = lambda: accounts.TripayProvider(*tripay, production=os.environ.get('TRIPAY_PRODUCTION') == '1')
+            if all(tripay) and (prefer == 'tripay' or not key):
+                provider = tripay_provider()
             elif key:
-                provider = accounts.MidtransProvider(key, os.environ.get('MIDTRANS_PRODUCTION') == '1')
+                provider = midtrans()   # Midtrans is the rupiah gateway by default
             elif hosted() and os.environ.get('MYFLIPBOOK_MOCK_PAYMENTS') != '1':
                 provider = accounts.DisabledProvider()  # public site without a gateway: no fake payments
             else:
@@ -950,6 +975,7 @@ class Handler(SimpleHTTPRequestHandler):
             user = self.current_user()
             if not user:
                 raise accounts.AccountError(401, 'Silakan masuk dulu.')
+            store.refresh_pending(user['id'])   # Midtrans: settle without waiting for the notification
             self.send_json(200, {'orders': store.orders(user['id'])})
         else:
             self.send_json(404, {'error': 'Tidak ditemukan.'})
@@ -1272,6 +1298,7 @@ class Handler(SimpleHTTPRequestHandler):
 
 
 if __name__ == '__main__':
+    load_env(ROOT / '.env')
     parser = argparse.ArgumentParser()
     parser.add_argument('--port', type=int, default=8080)
     parser.add_argument('--host', default='127.0.0.1',
@@ -1291,7 +1318,7 @@ if __name__ == '__main__':
     store = get_accounts()
     if hosted():
         print('Mode hosting: ' + ', '.join(sorted(CONFIG['public_hosts'])) +
-              f' | Rupiah: {store.provider.name if store.provider.name != "none" else "NONAKTIF (isi TRIPAY_*)"}'
+              f' | Rupiah: {store.provider.name if store.provider.name != "none" else "NONAKTIF (isi MIDTRANS_SERVER_KEY di .env)"}'
               f' | Dolar: {store.usd_provider.name if store.usd_provider.name != "none" else "NONAKTIF (isi LEMONSQUEEZY_*)"}',
               flush=True)
     # On Windows SO_REUSEADDR lets a second server silently share the port

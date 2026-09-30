@@ -30,6 +30,7 @@ import sqlite3
 import threading
 import time
 import urllib.error
+import urllib.parse
 import urllib.request
 from pathlib import Path
 from urllib.parse import urlencode
@@ -262,6 +263,7 @@ class MidtransProvider:
     def __init__(self, server_key, production=False, opener=None):
         self.server_key = server_key
         self.base = 'https://app.midtrans.com' if production else 'https://app.sandbox.midtrans.com'
+        self.api = 'https://api.midtrans.com' if production else 'https://api.sandbox.midtrans.com'
         self.opener = opener or urllib.request.urlopen
 
     def create(self, order, user, base_url, method=None):
@@ -286,23 +288,45 @@ class MidtransProvider:
             raise AccountError(502, 'Gateway pembayaran menolak transaksi.')
         return dict(redirect_url=data['redirect_url'], reference=data.get('token'))
 
+    @staticmethod
+    def _status(payload):
+        state, fraud = payload.get('transaction_status'), payload.get('fraud_status')
+        if state == 'settlement' or (state == 'capture' and fraud in (None, 'accept')):
+            return 'paid'
+        if state in ('deny', 'cancel', 'failure'):
+            return 'failed'
+        if state == 'expire':
+            return 'expired'
+        return 'pending'
+
+    def status(self, order_id):
+        """Ask Midtrans directly (server key, HTTPS): (status, gross_amount),
+        or None when Midtrans has no transaction for this order yet. Lets a
+        payment settle even where Midtrans can't reach the notification URL
+        (a local server) or a notification was lost."""
+        auth = base64.b64encode((self.server_key + ':').encode()).decode()
+        request = urllib.request.Request(f'{self.api}/v2/{urllib.parse.quote(order_id)}/status',
+                                         headers={'Authorization': 'Basic ' + auth, 'Accept': 'application/json'})
+        try:
+            with self.opener(request, timeout=15) as response:
+                data = json.loads(response.read())
+        except urllib.error.HTTPError as cause:
+            if cause.code == 404:
+                return None
+            raise AccountError(502, 'Status pembayaran tidak bisa dicek.') from cause
+        except (urllib.error.URLError, ValueError, OSError) as cause:
+            raise AccountError(502, 'Status pembayaran tidak bisa dicek.') from cause
+        if str(data.get('status_code')) == '404' or str(data.get('order_id', order_id)) != order_id:
+            return None
+        return self._status(data), data.get('gross_amount')
+
     def verify(self, payload):
         """Return (order_id, status, gross_amount) for a genuine notification."""
         fields = [str(payload.get(k, '')) for k in ('order_id', 'status_code', 'gross_amount')]
         expected = hashlib.sha512((''.join(fields) + self.server_key).encode()).hexdigest()
         if not hmac.compare_digest(expected, str(payload.get('signature_key', ''))):
             raise AccountError(403, 'Signature notifikasi tidak valid.')
-        state, fraud = payload.get('transaction_status'), payload.get('fraud_status')
-        if state == 'settlement' or (state == 'capture' and fraud in (None, 'accept')):
-            status = 'paid'
-        elif state in ('deny', 'cancel', 'failure'):
-            status = 'failed'
-        elif state == 'expire':
-            status = 'expired'
-        else:
-            status = 'pending'
-        return fields[0], status, fields[2]
-
+        return fields[0], self._status(payload), fields[2]
 
 class Accounts:
     def __init__(self, path, provider=None, usd_provider=None):
@@ -451,6 +475,32 @@ class Accounts:
         if not order or order['status'] != 'paid':
             raise AccountError(404, 'Invoice hanya tersedia untuk pembayaran yang sudah lunas.')
         return order, owner
+
+    def refresh_pending(self, user_id):
+        """Settle a user's recent pending orders by asking the gateway directly
+        (only gateways that support it, i.e. Midtrans). Quiet on errors: the
+        signed notification remains the main path."""
+        if not hasattr(self.provider, 'status'):
+            return
+        since = int(time.time()) - 2 * 86400
+        with self.connect() as db:
+            rows = db.execute("SELECT id FROM orders WHERE user_id=? AND status='pending' AND provider=? AND created_at>? "
+                              'ORDER BY created_at DESC LIMIT 3', (user_id, self.provider.name, since)).fetchall()
+        for row in rows:
+            try:
+                result = self.provider.status(row['id'])
+            except AccountError:
+                continue
+            if not result:
+                continue
+            status, amount = result
+            if status == 'paid':
+                try:
+                    self.mark_paid(row['id'], amount)
+                except AccountError:
+                    self.set_status(row['id'], 'failed')   # e.g. amount mismatch: never activate
+            elif status in ('failed', 'expired'):
+                self.set_status(row['id'], status)
 
     def payment_methods(self):
         return self.provider.methods() if hasattr(self.provider, 'methods') else []

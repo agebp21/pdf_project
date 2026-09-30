@@ -573,3 +573,9 @@ Catatan baru memanggil `options.bookmark(index, true)` (viewer/preview: `marks.s
 - Editor: export HTML = `<Judul>.html` (FlipbookExport.packageSingleHtml, titleFile). Nama file semua export mengikuti judul (titleFile). Build: server `unpack_book` menghasilkan satu index.html tersegel (tanpa folder pages; pubspec tanpa assets/book/pages/).
 - EXE: `native/launcher/Launcher.cs` (C# 5, dikompilasi per build dengan csc.exe .NET Framework 4 bawaan Windows, ikon app) + ZIP folder Release ditempel + trailer 120 byte (MFBOOK01, offset, panjang, id sha256[:32], nama exe pembaca). Jalan pertama mengekstrak ke `%LOCALAPPDATA%\MyFlipbook\Books\<id>` (atomic via folder sementara + .ready), lalu menjalankan sarvamaya_book.exe. ZIP unduhan berisi `<Judul>.exe` + HOW-TO-OPEN.txt. Header unduhan build pakai nama buku (filename*=UTF-8).
 - Diuji: single HTML dibuka via file:// (Chromium), APK hanya berisi assets/book/index.html terenkripsi, EXE satu file jalan (0,6 dtk pertama, 0,3 dtk berikutnya) dan menampilkan buku.
+
+### 30 September 2026 - Midtrans jadi gateway rupiah (Tripay maintenance)
+
+- Pilihan provider IDR: Midtrans bila MIDTRANS_SERVER_KEY ada (default); Tripay bila Midtrans kosong atau MYFLIPBOOK_IDR_PROVIDER=tripay.
+- `server.load_env(ROOT/.env)` saat server start (KEY=VALUE, tidak menimpa env sistem, nilai kosong dilewati). `.env` lokal sudah dibuat berisi kolom Midtrans kosong (gitignored).
+- `MidtransProvider.status(order_id)` (GET api[.sandbox].midtrans.com/v2/<id>/status, Basic server key) + `Accounts.refresh_pending(user_id)` dipanggil di GET /api/billing/orders: order pending <=48 jam (maks 3) disettle langsung dari status Midtrans -> bekerja walau notifikasi tidak bisa sampai (server lokal). Nominal tidak cocok -> order failed. Notifikasi bertanda tangan tetap jalur utama: set Payment Notification URL https://<domain>/api/billing/midtrans/notify di dashboard.

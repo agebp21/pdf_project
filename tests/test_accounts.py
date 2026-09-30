@@ -3,6 +3,8 @@ import hmac
 from urllib.parse import parse_qs
 import http.cookiejar
 import json
+from unittest import mock
+import os
 from pathlib import Path
 import sys
 import tempfile
@@ -252,6 +254,74 @@ class MidtransTests(AccountsBase):
         # A later "expire" for the same order must not undo the payment.
         self.notify(Client(self.base), order['orderId'], 149000, status='expire')
         self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
+
+
+class MidtransStatusTests(AccountsBase):
+    """Without a reachable notification URL (a local server), the account page
+    still settles: listing orders asks Midtrans for the status directly."""
+    gateway = {}
+
+    @staticmethod
+    def opener(request, timeout):
+        if request.full_url.endswith('/snap/v1/transactions'):
+            return FakeResponse({'token': 't', 'redirect_url': 'https://app.sandbox.midtrans.com/snap/v4/redirection/x'})
+        assert request.full_url.startswith('https://api.sandbox.midtrans.com/v2/'), request.full_url
+        assert request.get_header('Authorization').startswith('Basic ')
+        order_id = request.full_url.split('/v2/')[1].split('/status')[0]
+        state = MidtransStatusTests.gateway.get(order_id)
+        if state is None:
+            return FakeResponse({'status_code': '404', 'status_message': "Transaction doesn't exist."})
+        return FakeResponse(dict(state, order_id=order_id, status_code='200'))
+
+    provider = accounts.MidtransProvider('SB-server-key', opener=opener)
+
+    def test_orders_list_settles_from_gateway_status(self):
+        client = Client(self.base)
+        client.call('POST', '/api/auth/register', {'email': 'poll@b.co', 'password': 'rahasia-123', 'name': 'Poll'})
+        order = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[1]
+        # Buyer hasn't paid yet: Midtrans knows no transaction -> still pending.
+        self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'pending')
+        # Paid on the Snap page (no notification arrives locally).
+        self.gateway[order['orderId']] = {'transaction_status': 'settlement', 'gross_amount': '99000.00'}
+        self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
+        # An expired order is marked as such; a wrong amount never activates a plan.
+        second = client.call('POST', '/api/billing/checkout', {'plan': 'business', 'cycle': 'monthly'})[1]
+        self.gateway[second['orderId']] = {'transaction_status': 'expire', 'gross_amount': '149000.00'}
+        statuses = {o['id']: o['status'] for o in client.call('GET', '/api/billing/orders')[1]['orders']}
+        self.assertEqual(statuses[second['orderId']], 'expired')
+        third = client.call('POST', '/api/billing/checkout', {'plan': 'business', 'cycle': 'monthly'})[1]
+        self.gateway[third['orderId']] = {'transaction_status': 'settlement', 'gross_amount': '1000.00'}
+        status, body, _ = client.call('GET', '/api/billing/orders')
+        self.assertEqual(status, 200, 'the order list keeps working')
+        self.assertEqual({o['id']: o['status'] for o in body['orders']}[third['orderId']], 'failed', 'amount mismatch never activates')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
+
+
+class EnvFileTests(unittest.TestCase):
+    def test_env_file_loaded_without_overriding(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            env = Path(temporary) / '.env'
+            env.write_text('\n'.join(['# keys', 'MF_TEST_A=one', 'MF_TEST_B = "two words"', 'MF_TEST_C=', 'bad line',
+                                      'MF_TEST_D=from-file', '']), encoding='utf-8')
+            os.environ['MF_TEST_D'] = 'from-system'
+            try:
+                loaded = server.load_env(env)
+                self.assertEqual(sorted(loaded), ['MF_TEST_A', 'MF_TEST_B'])
+                self.assertEqual((os.environ['MF_TEST_A'], os.environ['MF_TEST_B'], os.environ['MF_TEST_D']), ('one', 'two words', 'from-system'))
+                self.assertNotIn('MF_TEST_C', os.environ)
+            finally:
+                for name in ('MF_TEST_A', 'MF_TEST_B', 'MF_TEST_D'):
+                    os.environ.pop(name, None)
+        self.assertEqual(server.load_env(Path('does-not-exist.env')), [])
+
+    def test_midtrans_is_the_default_rupiah_gateway(self):
+        keys = {'MIDTRANS_SERVER_KEY': 'SB-x', 'TRIPAY_API_KEY': 'a', 'TRIPAY_PRIVATE_KEY': 'b', 'TRIPAY_MERCHANT_CODE': 'c'}
+        for prefer, expected in (('', 'midtrans'), ('tripay', 'tripay')):
+            with self.subTest(prefer=prefer), tempfile.TemporaryDirectory() as temporary, \
+                    mock.patch.dict(os.environ, dict(keys, MYFLIPBOOK_IDR_PROVIDER=prefer, MYFLIPBOOK_DB=str(Path(temporary) / 'a.db'))), \
+                    mock.patch.object(server, 'ACCOUNTS', None):
+                self.assertEqual(server.get_accounts().provider.name, expected)
 
 
 class TripayTests(AccountsBase):
