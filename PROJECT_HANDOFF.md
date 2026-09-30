@@ -678,3 +678,7 @@ Owner: jangan kuas, pakai pulpen stabilo kecil; penghapus juga dikecilkan. Ikon 
 ### 30 September 2026 - Pilihan stabilo jadi popup di atas tombolnya
 
 Owner: pilihan warna stabilo di atas ikonnya, jangan di pinggir. Kalau `FlipbookHighlights.bind` diberi `button`, bar (`.book-hl-bar.is-popup`) sekarang popup horizontal tepat di atas tombol stabilo (pulpen/penghapus | titik warna | Delete | Done) dengan panah ke tombol (`--hl-arrow`); posisi dihitung `placeBar()` (ditempel ke tepi layar 8 px, pindah ke bawah tombol `.is-below` bila di atas tidak muat), ikut resize/scroll selama mode aktif. Tanpa tombol tetap rel kiri seperti dulu. Dicek Chromium 1000x640, HP 390x780, landscape 800x390.
+
+### 30 September 2026 - Dialog Add file: tombol "Link / site" dihapus
+
+Owner: tombol Link / site di-takeout, tombol sisanya (Upload file, Google Drive) di tengah (`.add-sources{justify-content:center}`). Menambah dari link tetap bisa lewat kolom "Paste a link" di atas (PDF, web page, Office, Drive) — tombol lama hanya memfokuskan kolom itu.

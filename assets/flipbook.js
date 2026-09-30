@@ -345,7 +345,7 @@
   $('#add-dialog').querySelectorAll('[data-source]').forEach(button => button.addEventListener('click', () => {
     const source = button.dataset.source;
     if (source === 'upload') { $('#pdf-file').click(); return; }
-    $('#add-url').placeholder = source === 'drive' ? 'Paste a Google Drive, Docs, Sheets or Slides share link' : 'Paste a link to a PDF, Office file or web page';
+    if (source === 'drive') $('#add-url').placeholder = 'Paste a Google Drive, Docs, Sheets or Slides share link';
     $('#add-url').focus();
   }));
   $('#add-link').addEventListener('submit', async event => {
