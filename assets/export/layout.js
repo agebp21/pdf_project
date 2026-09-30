@@ -1038,25 +1038,23 @@
 (typeof self!=='undefined'?self:global).FlipbookHighlights = {
   // Line icons (inline SVG: the same on every device, unlike emoji).
   ICONS: {
-    brush: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6 17.9 3.9 15"/><path d="M18.4 2.6a1 1 0 1 1 3 3l-4 4a.5.5 0 0 0 0 .7l.9.9a2.4 2.4 0 0 1 0 3.4l-.9.9a.5.5 0 0 1-.7 0L8.4 7.3a.5.5 0 0 1 0-.7l.9-.9a2.4 2.4 0 0 1 3.4 0l.9.9a.5.5 0 0 0 .7 0z"/><path d="M9 8c-1.8 2.7-4 3.5-6.6 3.9a.5.5 0 0 0-.3.8l7.3 8.9a1 1 0 0 0 1.2.2C12.7 20.4 16 16.8 16 15"/></svg>',
+    // Highlighter pen.
+    brush: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><g transform="rotate(45 12 12)"><path d="M10 1.5h4a1.5 1.5 0 0 1 1.5 1.5v11h-7V3A1.5 1.5 0 0 1 10 1.5z"/><path d="M8.5 14h7l-1.2 3h-4.6z" fill="currentColor"/><path d="M10.2 17h3.6l-.9 4.4-2.7-1.2z"/></g></svg>',
     eraser: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H8a2 2 0 0 1-1.4-.6l-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l6 6a2 2 0 0 1 0 2.8L12.8 21"/><path d="m5.1 11.1 8.8 8.8"/></svg>'
   },
-  // Mouse cursor while highlighting: the brush (bristles in the chosen
+  // Mouse cursor while highlighting: a small highlighter pen (tip in the chosen
   // colour) or the eraser, white-outlined so it shows on any page.
   // Hotspot = where the tool touches the page.
   cursor(kind, color) {
-    const brush = ['M14.6 17.9 3.9 15',
-      'M18.4 2.6a1 1 0 1 1 3 3l-4 4a.5.5 0 0 0 0 .7l.9.9a2.4 2.4 0 0 1 0 3.4l-.9.9a.5.5 0 0 1-.7 0L8.4 7.3a.5.5 0 0 1 0-.7l.9-.9a2.4 2.4 0 0 1 3.4 0l.9.9a.5.5 0 0 0 .7 0z',
-      'M9 8c-1.8 2.7-4 3.5-6.6 3.9a.5.5 0 0 0-.3.8l7.3 8.9a1 1 0 0 0 1.2.2C12.7 20.4 16 16.8 16 15'];
-    const eraser = ['M21 21H8a2 2 0 0 1-1.4-.6l-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l6 6a2 2 0 0 1 0 2.8L12.8 21', 'm5.1 11.1 8.8 8.8'];
-    const paths = kind === 'eraser' ? eraser : brush;
-    const fill = kind === 'eraser' ? '#fda4af' : (color || '#fde68a');
-    // The shape that gets the fill: bristles / eraser body.
-    const filled = kind === 'eraser' ? 0 : 2;
-    const draw = (stroke, width, withFill) => paths.map((d, i) => '<path d="' + d + '" fill="' + (withFill && i === filled ? fill : 'none') +
-      '" stroke="' + stroke + '" stroke-width="' + width + '" stroke-linecap="round" stroke-linejoin="round"/>').join('');
-    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="-1 -1 26 26">' + draw('#fff', 4.5, false) + draw('#1c1917', 1.8, true) + '</svg>';
-    const hotspot = kind === 'eraser' ? '5 20' : '4 22';
+    // [path, fill] parts; the pen (body + tip in the chosen colour) is tilted so its tip is bottom-left.
+    const parts = kind === 'eraser'
+      ? [['M21 21H8a2 2 0 0 1-1.4-.6l-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l6 6a2 2 0 0 1 0 2.8L12.8 21', '#fda4af'], ['m5.1 11.1 8.8 8.8', 'none']]
+      : [['M10 1.5h4a1.5 1.5 0 0 1 1.5 1.5v11h-7V3A1.5 1.5 0 0 1 10 1.5z', color || '#ffd43b'], ['M8.5 14h7l-1.2 3h-4.6z', '#57534e'], ['M10.2 17h3.6l-.9 4.4-2.7-1.2z', color || '#ffd43b']];
+    const turn = kind === 'eraser' ? '' : ' transform="rotate(45 12 12)"';
+    const draw = (stroke, width, filled) => '<g' + turn + '>' + parts.map(part => '<path d="' + part[0] + '" fill="' + (filled ? part[1] : 'none') +
+      '" stroke="' + stroke + '" stroke-width="' + width + '" stroke-linecap="round" stroke-linejoin="round"/>').join('') + '</g>';
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="20" height="20" viewBox="-1 -1 26 26">' + draw('#fff', 5, false) + draw('#1c1917', 1.8, true) + '</svg>';
+    const hotspot = kind === 'eraser' ? '3 14' : '5 15';
     return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + hotspot + ', ' + (kind === 'eraser' ? 'crosshair' : 'text');
   },
   COLORS: {y: '#ffd43b', g: '#69db7c', p: '#f783ac', b: '#4dabf7'},
@@ -1205,9 +1203,9 @@
       if (selected) { const page = selected.page; selected = null; render(page); }
       paintBar();
     };
-    // Brush: back to highlighting (the colour dots pick its colour).
+    // Highlighter pen: back to highlighting (the colour dots pick its colour).
     const brush = document.createElement('button'); brush.type = 'button'; brush.className = 'book-hl-brush';
-    brush.innerHTML = self.ICONS.brush; brush.title = 'Brush: drag over text to highlight'; brush.setAttribute('aria-label', 'Brush');
+    brush.innerHTML = self.ICONS.brush; brush.title = 'Highlighter: drag over text'; brush.setAttribute('aria-label', 'Highlighter');
     brush.onclick = () => { erasing = false; paintBar(); };
     const tools = document.createElement('div'); tools.className = 'book-hl-tools';
     tools.appendChild(brush); tools.appendChild(eraser);

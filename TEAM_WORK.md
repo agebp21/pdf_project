@@ -606,3 +606,7 @@ Rel stabilo sekarang diawali pasangan alat: **kuas** (`.book-hl-brush`, mewarnai
 ### 30 September 2026 - Kursor kuas / penghapus saat stabilo
 
 Di mode stabilo, kursor mouse di atas halaman = ikon kuas (bulu kuas berwarna sesuai warna stabilo terpilih), di mode hapus = ikon penghapus; dulu `text`/`crosshair`. SVG data-URI dibuat `FlipbookHighlights.cursor(kind, color)` (garis putih tebal di bawah supaya terlihat di halaman gelap; hotspot kuas `4 22`, penghapus `5 20`), dipasang lewat variabel `--hl-cursor` di `body` pada setiap `paintBar()`; CSS punya fallback `text`/`crosshair`. CSP reader sudah mengizinkan `data:` gambar. Layar sentuh tidak punya kursor (tidak berubah).
+
+### 30 September 2026 - Kursor + ikon: pulpen stabilo kecil (bukan kuas)
+
+Owner: jangan kuas, pakai pulpen stabilo kecil; penghapus juga dikecilkan. Ikon tombol stabilo (toolbar + rel) dan kursor sekarang pulpen stabilo (badan + leher + ujung, digambar tegak lalu `rotate(45 12 12)` sehingga ujung di kiri bawah). Kursor 20x20 px (dulu 32): badan + ujung berwarna stabilo terpilih, leher abu gelap, garis luar putih; hotspot pulpen `5 15`, penghapus `3 14`. Nama internal (`ICONS.brush`, `.book-hl-brush`) tetap supaya selector/tes tidak berubah; label/tooltip sekarang "Highlighter".
