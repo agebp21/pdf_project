@@ -1045,7 +1045,7 @@
         const row = document.createElement('div'); row.className = 'book-mark';
         const go = document.createElement('button'); go.type = 'button'; go.className = 'book-mark-go book-note-row';
         const name = document.createElement('b'); name.textContent = label(index) + (notes[index].items.length > 1 ? ' · ' + (n + 1) : '');
-        const snippet = document.createElement('span'); snippet.textContent = note.text.replace(/\s+/g, ' ').slice(0, 90);
+        const snippet = document.createElement('span'); snippet.textContent = note.text;
         go.appendChild(name); go.appendChild(snippet);
         go.onclick = () => { closeList(); options.goPage(index); };
         row.appendChild(go);

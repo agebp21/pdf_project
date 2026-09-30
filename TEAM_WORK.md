@@ -656,3 +656,7 @@ Bug lama ikut diperbaiki: teks yang juga link (daftar isi) tidak bisa di-stabilo
 ### 30 September 2026 - Tombol Google Drive: buka Drive + panduan 3 langkah
 
 Owner: tombol Google Drive belum terasa jalan (dulu hanya ganti placeholder + fokus kolom). Sekarang klik -> `drive.google.com/drive/my-drive` terbuka di tab baru dan dialog menampilkan `#add-drive-help` (1. cari file, 2. Share -> Anyone with the link, 3. Copy link -> paste -> →); ditutup/direset saat dialog dibuka lagi. Pengambilan file tetap lewat `/api/fetch-source` (link publik; file privat -> pesan error yang sudah ada). Pilihan owner: TIDAK memakai Google Picker (butuh Google Cloud API key + OAuth client + domain https). Belum diverifikasi dengan file Drive publik sungguhan.
+
+### 30 September 2026 - Daftar "My notes": teks penuh + word wrap, scroll ke bawah
+
+Owner: daftar catatan dirapikan. Sebelumnya cuplikan 90 karakter satu baris (`nowrap`) sehingga panel scroll ke samping dan tombol ✎ keluar layar. Sekarang daftar menampilkan teks catatan penuh, dibungkus (`white-space:pre-wrap; overflow-wrap:anywhere`), `.book-note-list{overflow-x:hidden}`, tombol ✎ tetap di kanan atas tiap catatan; panel hanya scroll ke bawah (max-height 60vh). Dicek Chromium 1000x640 dan 390x780: scrollWidth = clientWidth.

@@ -59,8 +59,12 @@
 .book-note-actions button{padding:8px 16px;border-radius:999px;font:600 13px system-ui,sans-serif;cursor:pointer}
 .book-note-done{border:1px solid #1a3c34;background:#1a3c34;color:#fff}
 .book-note-delete{border:1px solid #efe9dc;background:#fff;color:#b3121a}
+/* Notes list: the whole note, wrapped; the list scrolls down, never sideways. */
+.book-note-list{overflow-x:hidden}
+.book-note-list .book-mark{align-items:flex-start}
+.book-note-list .book-mark-go{min-width:0}
 .book-note-row{flex-direction:column;align-items:flex-start;gap:2px}
-.book-note-row span{color:#57534e;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;max-width:100%}
+.book-note-row span{color:#57534e;font-size:12.5px;line-height:1.45;white-space:pre-wrap;overflow-wrap:anywhere;word-break:break-word;max-width:100%}
 @media (max-height:520px){.book-note-editor,.book-note-list{top:8px;bottom:auto;max-height:calc(100vh - 70px);max-height:calc(100dvh - 70px)}.book-note-editor textarea{min-height:64px;height:64px;resize:none}.book-note-actions{margin-top:6px}.book-note-actions button{padding:6px 14px}}
 .book-highlights{position:absolute;top:0;right:0;bottom:0;left:0;z-index:3;pointer-events:none}
 .book-hl{position:absolute;border-radius:2px;opacity:.5;mix-blend-mode:multiply}
