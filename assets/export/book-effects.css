@@ -35,10 +35,22 @@
 .book-mark-go img{width:34px;height:46px;object-fit:cover;border-radius:3px;box-shadow:0 1px 4px rgba(0,0,0,.2);background:#fff}
 .book-mark-remove{width:32px;height:32px;border:1px solid #efe9dc;border-radius:999px;background:#fff;cursor:pointer;font-size:18px;line-height:1;color:#78716c}
 .book-mark-remove:hover{color:#b3121a;border-color:#e5252a}
-.book-note-tab{position:absolute;top:14%;right:0;z-index:5;width:28px;height:34px;padding:0;border:1px solid rgba(0,0,0,.14);border-right:0;border-radius:9px 0 0 9px;background:rgba(255,255,255,.82);color:#57534e;font:15px/1 system-ui,sans-serif;cursor:pointer;opacity:.6;box-shadow:-1px 1px 4px rgba(0,0,0,.12);pointer-events:auto;transition:opacity .15s,width .15s}
-[class~="--left"] .book-note-tab{right:auto;left:0;border:1px solid rgba(0,0,0,.14);border-left:0;border-radius:0 9px 9px 0;box-shadow:1px 1px 4px rgba(0,0,0,.12)}
-.book-note-tab:hover,.book-note-tab:focus-visible{opacity:1;width:34px;outline:none}
-.book-note-tab.has-note{opacity:1;background:#fde68a;border-color:#d4a514;color:#1c1917}
+.book-note-stack{position:absolute;top:10%;right:0;z-index:5;display:flex;flex-direction:column;align-items:flex-end;gap:10px;pointer-events:none}
+[class~="--left"] .book-note-stack{right:auto;left:0;align-items:flex-start}
+.book-note-tab{--tab:#fde68a;position:relative;width:30px;height:36px;padding:0;border:0;border-radius:12px 0 0 12px;background:var(--tab);color:#1c1917;font:700 13px/1 system-ui,sans-serif;cursor:pointer;pointer-events:auto;box-shadow:-2px 2px 5px rgba(0,0,0,.18);transition:width .15s}
+.book-note-tab::before,.book-note-tab::after{content:"";position:absolute;right:0;width:10px;height:10px;pointer-events:none}
+.book-note-tab::before{top:-10px;background:radial-gradient(circle at 0 0,transparent 9.5px,var(--tab) 10px)}
+.book-note-tab::after{bottom:-10px;background:radial-gradient(circle at 0 100%,transparent 9.5px,var(--tab) 10px)}
+[class~="--left"] .book-note-tab{border-radius:0 12px 12px 0;box-shadow:2px 2px 5px rgba(0,0,0,.18)}
+[class~="--left"] .book-note-tab::before,[class~="--left"] .book-note-tab::after{right:auto;left:0}
+[class~="--left"] .book-note-tab::before{background:radial-gradient(circle at 100% 0,transparent 9.5px,var(--tab) 10px)}
+[class~="--left"] .book-note-tab::after{background:radial-gradient(circle at 100% 100%,transparent 9.5px,var(--tab) 10px)}
+.book-note-tab:hover,.book-note-tab:focus-visible,.book-note-tab.is-open{width:38px;outline:none}
+.book-note-add{--tab:rgba(255,255,255,.88);color:#78716c;font-size:15px;opacity:.75}
+.book-note-add:hover{opacity:1}
+.book-note-card{position:fixed;z-index:2100;max-height:70vh;overflow:auto;padding:12px 14px;border-radius:14px;border-left:8px solid var(--tab,#fde68a);background:#fffdf8;color:#1c1917;box-shadow:0 18px 50px rgba(0,0,0,.28);font:14px/1.45 system-ui,sans-serif;box-sizing:border-box}
+.book-note-card-title{margin:0 0 6px;font-size:11px;font-weight:800;letter-spacing:.05em;text-transform:uppercase;color:#78716c}
+.book-note-card-text{white-space:pre-wrap;overflow-wrap:anywhere;max-height:45vh;overflow:auto}
 .book-note-editor{width:400px}
 .book-note-editor textarea{display:block;width:100%;min-height:130px;margin:0;padding:10px;border:1px solid #d6cfbf;border-radius:10px;background:#fffbeb;color:#1c1917;font:14px/1.5 system-ui,sans-serif;resize:vertical;box-sizing:border-box}
 .book-note-editor textarea:focus{outline:2px solid #e5252a;outline-offset:1px}
@@ -55,7 +67,7 @@
 .book-hl.is-preview{opacity:.35}
 .book-hl.is-selected{opacity:.7;outline:2px solid #1c1917;outline-offset:1px}
 body.is-highlighting .page,body.is-highlighting .pdf-page{cursor:text}
-body.is-highlighting .book-note-tab{pointer-events:none;opacity:.25}
+body.is-highlighting .book-note-stack{pointer-events:none;opacity:.25}
 .book-hl-bar{position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:2100;display:flex;flex-direction:column;align-items:center;gap:8px;max-height:calc(100vh - 20px);padding:10px 8px;border-radius:18px;background:#fffdf8;border:1px solid #e4ded0;box-shadow:0 12px 34px rgba(0,0,0,.28);font:13px/1.2 system-ui,sans-serif;color:#1c1917}
 .book-hl-bar[hidden]{display:none}
 .book-hl-swatch{width:30px;height:30px;padding:0;border:2px solid #fff;border-radius:999px;box-shadow:0 0 0 1px rgba(0,0,0,.22);cursor:pointer}

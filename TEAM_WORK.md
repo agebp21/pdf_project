@@ -555,3 +555,7 @@ Catatan baru memanggil `options.bookmark(index, true)` (viewer/preview: `marks.s
 ### 30 September 2026 - Stabilo tidak menumpuk + penghapus
 
 `FlipbookHighlights.add(list, rects, color)`: highlight baru yang tumpang tindih (>25% luas persegi terkecil, `overlap`) dengan yang lama digabung jadi satu (`merge`, warna baru). `erase(list, region)`: tombol 🧽 di rel warna; seret/tap menghapus highlight yang tersentuh (pratinjau kotak putus-putus merah, body.is-erasing). Memilih warna mematikan penghapus.
+
+### 30 September 2026 - Catatan gaya tab agenda
+
+`FlipbookNotes` ditulis ulang: data `{page: {items: [{text, updated}], marked}}` (maks 8 per halaman; format lama 1 catatan/halaman dimigrasi jadi item 1). Tiap catatan = tab bernomor berwarna di `.book-note-stack` tepi luar halaman (lekukan via ::before/::after radial-gradient, var --tab); tab ＋ / ✎ menambah. Tap tab -> `.book-note-card` fixed di samping tab (Delete / Edit); editor lama dipakai untuk tulis/edit (autosave; catatan baru dapat nomor saat simpan pertama). Bookmark otomatis saat catatan pertama, dilepas saat catatan terakhir dihapus (bila catatan yang menambahkan). Daftar & .txt per catatan.
