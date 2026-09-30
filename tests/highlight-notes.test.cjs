@@ -20,7 +20,8 @@ assert.equal(H.quote(lines, H.select(lines, { x: 0.25, y: 0.11 }, { x: 0.27, y: 
 assert.equal(H.quote(H.lines(raw), [[0, 0, 1, 1]]), '', 'no words known → no quote');
 
 const pages = [0, 1].map(() => { const p = w.document.createElement('article'); w.document.body.appendChild(p); p.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 1000 }); return p; });
-const notes = N.bind({ key: N.key('Buku', 2, 0.7), title: 'Buku', pages, goPage: () => {}, open: w.document.getElementById('notes') });
+const notes = N.bind({ key: N.key('Buku', 2, 0.7), title: 'Buku', pages, goPage: () => {}, open: w.document.getElementById('notes'), blank: false });
+assert.equal(pages[0].querySelectorAll('.book-note-tab').length, 0, 'blank: false → no ✎ tab on a page without notes');
 const hl = H.bind({ key: H.key('Buku', 2, 0.7), pages, words: { '0': raw }, text: { '0': text }, button: w.document.getElementById('hl'),
   onQuote: (i, s) => notes.quote(i, s), onUnquote: (i, s) => notes.unquote(i, s) });
 const fire = (target, type, x, y) => target.dispatchEvent(new w.MouseEvent(type, { clientX: x, clientY: y, bubbles: true, cancelable: true }));
@@ -32,6 +33,7 @@ w.document.getElementById('hl').click();
 drag(0, 250, 110, 390, 115);
 assert.deepEqual(texts(0), ['“langkah seribu”']);
 assert.equal(pages[0].querySelectorAll('.book-note-tab.has-note').length, 1, 'tab on the page edge');
+assert.ok(pages[0].querySelector('.book-note-add'), '＋ adds more on a page that has a note');
 assert.ok(pages[0].querySelector('.book-note-tab.is-new'), 'the new tab is pointed out');
 // Highlighting a word already quoted adds nothing.
 drag(0, 330, 110, 380, 112);

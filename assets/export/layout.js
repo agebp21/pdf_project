@@ -827,7 +827,9 @@
   },
   save(key, notes) { try { localStorage.setItem(key, JSON.stringify(notes)); return true; } catch (e) { return false; } },
   /* options: {key, title, pages (elements), goPage(i), open (button),
-     bookmark(index, on) → true when it changed the page's bookmark} */
+     bookmark(index, on) → true when it changed the page's bookmark,
+     blank: false → no ✎ tab on pages without notes (notes come from
+     highlights; ＋ still adds more on pages that have one)} */
   bind(options) {
     const self = this, pages = options.pages;
     let notes = self.load(options.key), editor = null, reader = null, list = null, editing = null, timer = 0, saved = true;
@@ -854,7 +856,7 @@
         if (reader && reader.page === index && reader.item === n) tab.classList.add('is-open');
         stack.appendChild(tab);
       });
-      if (items.length < self.PER_PAGE) {
+      if (items.length < self.PER_PAGE && (items.length || options.blank !== false)) {
         const add = button(items.length ? '＋' : '✎', 'book-note-tab book-note-add', event => { event.preventDefault(); event.stopPropagation(); edit(index, -1); });
         add.title = items.length ? 'Add another note on ' + label(index) : 'Write a note on ' + label(index);
         add.setAttribute('aria-label', add.title);
@@ -999,7 +1001,7 @@
       const keys = Object.keys(notes).map(Number).sort((a, b) => a - b);
       if (!keys.length) {
         const empty = document.createElement('p'); empty.className = 'book-marks-empty';
-        empty.textContent = 'No notes yet. Tap ✎ on the edge of a page to write one.';
+        empty.textContent = options.blank === false ? 'No notes yet. Highlight text 🖍 and it becomes a note on the page edge.' : 'No notes yet. Tap ✎ on the edge of a page to write one.';
         list.appendChild(empty); return;
       }
       keys.forEach(index => notes[index].items.forEach((note, n) => {

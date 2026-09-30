@@ -695,3 +695,7 @@ Owner: teks yang di-stabilo langsung dibuat catatan di tab pinggir halaman. Alur
 - `FlipbookNotes`: `quote(index, said)` membuat tab catatan `“…”` (auto-bookmark seperti catatan biasa, tab berdenyut `.is-new` walau mode stabilo meredupkan tab); teks yang sudah ada di catatan tidak ditambah; stabilo yang diperpanjang mengganti kutipan lamanya (tidak dobel). `unquote` menghapus kutipan saat stabilonya dihapus, kecuali pembaca sudah mengedit catatannya. Maks 8 catatan/halaman tetap berlaku.
 - Halaman scan tanpa lapisan teks: stabilo kotak bebas, tanpa catatan (pakai OCR dulu).
 Tes: `tests/highlight-notes.test.cjs`, export/test_build/qa-runtime diperbarui. E2E Chromium: editor (toc-text.pdf, "Daftar Isi" -> tab catatan + bookmark) dan HTML satu-file tersegel (catatan terbentuk; teks tidak terbaca polos di file).
+
+### 30 September 2026 - Tab ✎ kosong di pinggir halaman dihapus
+
+Owner: ikon ✎ di pinggir halaman di-takeout (catatan sekarang lahir dari stabilo). `FlipbookNotes.bind` opsi baru `blank: false` (dipakai reader ekspor + pratinjau editor): halaman tanpa catatan tidak punya tab sama sekali; halaman yang sudah punya catatan tetap punya ＋ untuk menambah catatan sendiri. Pesan daftar catatan kosong: "Highlight text 🖍 and it becomes a note on the page edge." Default modul (tanpa opsi) tidak berubah. Catatan: halaman scan tanpa teks sekarang tidak bisa diberi catatan dari pinggir halaman (stabilo kotak di sana tidak membuat catatan).
