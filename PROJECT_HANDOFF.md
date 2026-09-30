@@ -803,3 +803,7 @@ Owner: podcast novel "Perahu Kertas" hanya membahas bab 1. Sebab: `podcast_scrip
 ### 1 Oktober 2026 - Tata letak tombol AI di editor dirapikan
 
 Owner: baris Terjemahkan/Ringkasan berantakan di panel sempit. Sekarang pilihan bahasa di atas (`label.ai-lang`: "Terjemahkan ke" / "Bahasa ringkasan" + select tinggi 34px), tombol lebar penuh di bawahnya (sama seperti tombol podcast). Opsi "Bahasa buku" -> "Ikut buku". Bug lama: `.podcast-tools{display:flex}` mengalahkan atribut hidden sehingga "▶ Dengar / Hapus podcast" tampil tanpa podcast; ditambah `.podcast-tools[hidden]{display:none}`. Dicek Chromium 1280 dan 390 px.
+
+### 1 Oktober 2026 - Kartu catatan: posisi di samping tab + bisa diperbesar
+
+Owner: kartu catatan muncul di pojok kiri atas layar, dan minta bisa dilebarkan/ditarik ke bawah. Bug: `read()` mengukur tab yang diklik setelah `closeReader()`/`tabs()` menggambar ulang tumpukan tab (elemen lama terlepas -> rect 0,0). Sekarang tab diukur setelah digambar ulang (`querySelectorAll('.book-note-tab.has-note')[item]`), fallback ke kanan layar bila tak terukur. Kartu kini flex kolom (min 220×130, maks layar), teks scroll di dalam; gagang ◢ `.book-note-grip` di pojok kanan bawah (pointer events + setPointerCapture: mouse dan jari) mengubah lebar/tinggi; ukuran terakhir disimpan di localStorage `mf-note-card` dan dipakai saat kartu dibuka lagi (default lebar 320). E2E Chromium: klik tab 1 lalu tab 2 -> kartu di samping tab 2; tarik gagang 320×130 -> 440×310, dibuka lagi tetap 440×310.

@@ -955,15 +955,42 @@
       row.appendChild(button('✎ Edit', 'book-note-done', () => { closeReader(); edit(index, item); }));
       box.appendChild(head); box.appendChild(body); box.appendChild(row);
       document.body.appendChild(box);
-      // Beside the tab, on the page side, kept on screen.
-      const t = tab.getBoundingClientRect(), width = Math.min(300, window.innerWidth - 24);
-      const onRight = t.left + t.width / 2 > window.innerWidth / 2;
-      let left = onRight ? t.left - width - 8 : t.right + 8;
-      left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
-      box.style.width = width + 'px'; box.style.left = left + 'px';
-      box.style.top = Math.max(12, Math.min(t.top, window.innerHeight - box.offsetHeight - 12)) + 'px';
       reader = {page: index, item, box};
       tabs(index);
+      // Beside its tab, on the page side, kept on screen. The tab is measured
+      // after the stack is redrawn (the clicked one may have been replaced).
+      const current = pages[index].querySelectorAll('.book-note-stack .book-note-tab.has-note')[item] || tab;
+      const t = current.getBoundingClientRect();
+      // The reader may resize the card (corner handle); its last size is kept.
+      let size = null;
+      try { size = JSON.parse(localStorage.getItem('mf-note-card') || 'null'); } catch (e) {}
+      const width = Math.min(size && size.w > 200 ? size.w : 320, window.innerWidth - 24);
+      box.style.width = width + 'px';
+      if (size && size.h > 120) box.style.height = Math.min(size.h, window.innerHeight - 24) + 'px';
+      const onRight = t.width ? t.left + t.width / 2 > window.innerWidth / 2 : true;
+      let left = t.width ? (onRight ? t.left - width - 8 : t.right + 8) : window.innerWidth - width - 24;
+      left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
+      box.style.left = left + 'px';
+      box.style.top = Math.max(12, Math.min(t.height ? t.top : 80, window.innerHeight - box.offsetHeight - 12)) + 'px';
+      // ◢ grip: drag (mouse or finger) to make the card wider / longer.
+      const grip = document.createElement('span');
+      grip.className = 'book-note-grip'; grip.title = 'Drag to resize'; grip.setAttribute('aria-hidden', 'true');
+      box.appendChild(grip);
+      grip.addEventListener('pointerdown', event => {
+        event.preventDefault(); event.stopPropagation();
+        const from = {x: event.clientX, y: event.clientY, w: box.offsetWidth, h: box.offsetHeight};
+        try { grip.setPointerCapture(event.pointerId); } catch (e) {}
+        const move = e => {
+          const r = box.getBoundingClientRect();
+          box.style.width = Math.max(220, Math.min(window.innerWidth - r.left - 8, from.w + e.clientX - from.x)) + 'px';
+          box.style.height = Math.max(130, Math.min(window.innerHeight - r.top - 8, from.h + e.clientY - from.y)) + 'px';
+        };
+        const up = () => {
+          grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
+          try { localStorage.setItem('mf-note-card', JSON.stringify({w: box.offsetWidth, h: box.offsetHeight})); } catch (e) {}
+        };
+        grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
+      });
       document.addEventListener('pointerdown', outsideReader, true);
     }
     // Writing a note (item -1 = new).
