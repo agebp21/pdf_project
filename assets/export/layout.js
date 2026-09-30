@@ -1018,6 +1018,42 @@
     }
     return rects;
   },
+  // How much of the smaller rectangle two rectangles share (0..1).
+  overlap(p, q) {
+    const w = Math.min(p[0] + p[2], q[0] + q[2]) - Math.max(p[0], q[0]);
+    const h = Math.min(p[1] + p[3], q[1] + q[3]) - Math.max(p[1], q[1]);
+    if (w <= 0 || h <= 0) return 0;
+    return (w * h) / Math.max(1e-9, Math.min(p[2] * p[3], q[2] * q[3]));
+  },
+  // Join rectangles that overlap (same line pieces, boxes) into one each.
+  merge(rects) {
+    const out = rects.map(q => q.slice());
+    for (let changed = true; changed;) {
+      changed = false;
+      for (let i = 0; i < out.length && !changed; i++) {
+        for (let j = i + 1; j < out.length; j++) {
+          if (this.overlap(out[i], out[j]) > 0.25) {
+            const a = out[i], b = out[j], x = Math.min(a[0], b[0]), y = Math.min(a[1], b[1]);
+            out[i] = [x, y, Math.max(a[0] + a[2], b[0] + b[2]) - x, Math.max(a[1] + a[3], b[1] + b[3]) - y].map(v => Math.round(v * 10000) / 10000);
+            out.splice(j, 1); changed = true; break;
+          }
+        }
+      }
+    }
+    return out;
+  },
+  // A new highlight never stacks on an old one: overlapping highlights are
+  // merged into it and take its colour.
+  add(list, rects, color) {
+    const touching = h => h.r.some(q => rects.some(n => this.overlap(q, n) > 0.25));
+    const joined = list.filter(touching).reduce((all, h) => all.concat(h.r), rects.slice());
+    return list.filter(h => !touching(h)).concat([{c: color, r: this.merge(joined)}]);
+  },
+  // Remove every highlight that touches the region (a box or a point).
+  erase(list, region) {
+    const hits = h => h.r.some(q => region[0] <= q[0] + q[2] && region[0] + region[2] >= q[0] && region[1] <= q[1] + q[3] && region[1] + region[3] >= q[1]);
+    return list.filter(h => !hits(h));
+  },
   box(a, b) {
     const x = Math.min(a.x, b.x), y = Math.min(a.y, b.y), w = Math.abs(a.x - b.x), h = Math.abs(a.y - b.y);
     const r = v => Math.round(Math.max(0, Math.min(1, v)) * 10000) / 10000;
@@ -1039,7 +1075,7 @@
   /* options: {key, pages (elements), words ({page: lines}), button} */
   bind(options) {
     const self = this, pages = options.pages, words = options.words || {};
-    let store = self.load(options.key), mode = false, selected = null, drag = null;
+    let store = self.load(options.key), mode = false, selected = null, drag = null, erasing = false;
     let color = 'y';
     try { const saved = localStorage.getItem('mf-highlight-color'); if (self.COLORS[saved]) color = saved; } catch (e) {}
     const lineCache = {};
@@ -1053,7 +1089,7 @@
       const b = document.createElement('button'); b.type = 'button'; b.className = 'book-hl-swatch';
       b.style.background = self.COLORS[c]; b.title = self.NAMES[c]; b.setAttribute('aria-label', self.NAMES[c]);
       b.onclick = () => {
-        color = c;
+        color = c; erasing = false;
         try { localStorage.setItem('mf-highlight-color', c); } catch (e) {}
         if (selected) { store[selected.page][selected.index].c = c; persist(selected.page); }
         paintBar();
@@ -1069,14 +1105,25 @@
       if (!store[page].length) delete store[page];
       selected = null; persist(page); paintBar();
     };
+    // Eraser: drag over (or tap) highlights to remove them.
+    const eraser = document.createElement('button'); eraser.type = 'button'; eraser.className = 'book-hl-eraser';
+    eraser.textContent = '🧽'; eraser.title = 'Eraser: drag over highlights to remove them'; eraser.setAttribute('aria-label', 'Eraser');
+    eraser.onclick = () => {
+      erasing = !erasing;
+      if (selected) { const page = selected.page; selected = null; render(page); }
+      paintBar();
+    };
+    bar.appendChild(eraser);
     const done = document.createElement('button'); done.type = 'button'; done.className = 'book-hl-done'; done.textContent = 'Done';
     done.onclick = () => setMode(false);
     bar.appendChild(hint); bar.appendChild(remove); bar.appendChild(done);
     document.body.appendChild(bar);
     function paintBar() {
-      Object.keys(swatches).forEach(c => swatches[c].setAttribute('aria-pressed', String(selected ? store[selected.page][selected.index].c === c : c === color)));
+      Object.keys(swatches).forEach(c => swatches[c].setAttribute('aria-pressed', String(!erasing && (selected ? store[selected.page][selected.index].c === c : c === color))));
+      eraser.setAttribute('aria-pressed', String(erasing));
+      document.body.classList.toggle('is-erasing', mode && erasing);
       remove.hidden = !selected;
-      hint.textContent = selected ? 'Pick a colour or delete' : 'Drag over text to highlight';
+      hint.textContent = erasing ? 'Drag over highlights to erase them' : selected ? 'Pick a colour or delete' : 'Drag over text to highlight';
       bar.title = hint.textContent;
     }
     function render(index) {
@@ -1101,9 +1148,9 @@
       if (!layer) { layer = document.createElement('div'); layer.className = 'book-highlights book-hl-preview'; page.appendChild(layer); }
       while (layer.firstChild) layer.removeChild(layer.firstChild);
       (rects || []).forEach(q => {
-        const mark = document.createElement('div'); mark.className = 'book-hl is-preview';
+        const mark = document.createElement('div'); mark.className = erasing ? 'book-hl is-eraser' : 'book-hl is-preview';
         mark.style.left = q[0] * 100 + '%'; mark.style.top = q[1] * 100 + '%'; mark.style.width = q[2] * 100 + '%'; mark.style.height = q[3] * 100 + '%';
-        mark.style.background = self.COLORS[color];
+        if (!erasing) mark.style.background = self.COLORS[color];
         layer.appendChild(mark);
       });
     }
@@ -1118,7 +1165,7 @@
       if (event.cancelable) event.preventDefault();
       drag.b = point(event, pages[drag.page]);
       if (Math.abs(drag.b.x - drag.a.x) + Math.abs(drag.b.y - drag.a.y) > 0.008) drag.moved = true;
-      if (drag.moved) preview(drag.page, rectsFor(drag.page, drag.a, drag.b));
+      if (drag.moved) preview(drag.page, erasing ? self.box(drag.a, drag.b) : rectsFor(drag.page, drag.a, drag.b));
     }
     function up(event) {
       if (!drag) return;
@@ -1127,7 +1174,14 @@
       const index = drag.page, a = drag.a, b = drag.moved ? drag.b : a;
       preview(index, null);
       if (event && event.cancelable) event.preventDefault();
-      if (!drag.moved) {
+      if (erasing) {
+        const region = (drag.moved && self.box(a, b)) ? self.box(a, b)[0] : [a.x, a.y, 0, 0];
+        const before = (store[index] || []).length, left = self.erase(store[index] || [], region);
+        if (left.length !== before) {
+          if (left.length) store[index] = left; else delete store[index];
+          persist(index);
+        }
+      } else if (!drag.moved) {
         // Tap: select the highlight under the finger (or clear the selection).
         const hit = (store[index] || []).findIndex(h => h.r.some(q => a.x >= q[0] && a.x <= q[0] + q[2] && a.y >= q[1] && a.y <= q[1] + q[3]));
         const previous = selected;
@@ -1137,8 +1191,7 @@
       } else {
         const rects = rectsFor(index, a, b);
         if (rects && rects.length) {
-          if (!store[index]) store[index] = [];
-          store[index].push({c: color, r: rects});
+          store[index] = self.add(store[index] || [], rects, color);
           const previous = selected; selected = null;
           if (previous) render(previous.page);
           persist(index);
@@ -1174,6 +1227,7 @@
       else {
         document.removeEventListener('keydown', escape);
         if (selected) { const page = selected.page; selected = null; render(page); }
+        erasing = false;
       }
       paintBar();
     }

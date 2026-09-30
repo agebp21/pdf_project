@@ -65,6 +65,33 @@ assert.ok(!hl.active()); assert.ok(!w.document.body.classList.contains('is-highl
 hl.close(); hl = H.bind({ key, pages, words: { '0': raw }, button });
 assert.equal(w.document.querySelectorAll('.book-hl-bar').length, 1);
 assert.equal(pages[1].querySelectorAll('.book-hl').length, 1, 'the box is drawn again after reopening');
+// Highlighting over an existing highlight merges instead of stacking (and recolours it).
+const line = [0.1, 0.1, 0.3, 0.03];
+let list = H.add([], [line], 'y');
+list = H.add(list, [[0.3, 0.1, 0.3, 0.03]], 'g');
+assert.equal(list.length, 1, 'one highlight, not two on top of each other');
+assert.deepEqual(list[0], { c: 'g', r: [[0.1, 0.1, 0.5, 0.03]] }, 'joined into one strip in the new colour');
+list = H.add(list, [[0.1, 0.2, 0.2, 0.03]], 'p');
+assert.equal(list.length, 2, 'a separate line stays a separate highlight');
+assert.equal(H.overlap([0, 0.1, 0.5, 0.03], [0, 0.128, 0.5, 0.03]) < 0.25, true, 'neighbouring lines that barely touch are not merged');
+// The eraser removes what it touches; a tap removes one highlight.
+assert.deepEqual(H.erase(list, [0.15, 0.09, 0.05, 0.02]).map(h => h.c), ['p']);
+assert.deepEqual(H.erase(list, [0.15, 0.21, 0, 0]).map(h => h.c), ['g']);
+assert.equal(H.erase(list, [0.9, 0.9, 0, 0]).length, 2);
+
+// Through the UI: drag twice over the same words → still one highlight; eraser removes it.
+hl.setMode(true);
+const dragOn = (x1, y1, x2, y2) => { fire(pages[0], 'mousedown', x1, y1); fire(w, 'mousemove', x2, y2); w.dispatchEvent(new w.MouseEvent('mouseup', { clientX: x2, clientY: y2 })); };
+dragOn(110, 115, 390, 115); dragOn(110, 115, 390, 115);
+assert.equal(hl.store()['0'].length, 1, 'no double highlight');
+w.document.querySelector('.book-hl-eraser').click();
+assert.ok(w.document.body.classList.contains('is-erasing'));
+dragOn(150, 100, 200, 130);
+assert.equal(hl.store()['0'], undefined, 'erased');
+w.document.querySelector('.book-hl-swatch[title="Yellow"]').click();
+assert.ok(!w.document.body.classList.contains('is-erasing'), 'picking a colour leaves the eraser');
+hl.setMode(false);
+
 localStorage.setItem(key, JSON.stringify({ '0': [{ c: 'zz', r: [[0, 0, 1, 1]] }], '1': [{ c: 'y', r: [[0, 0, 2, 1]] }], x: [] }));
 assert.deepEqual(H.load(key), {}, 'bad colours, out-of-page boxes and keys are dropped');
-console.log('PASS highlights: word snapping, column gaps, free boxes, drag/tap/recolour/delete, PageFlip untouched, storage, rebind');
+console.log('PASS highlights: word snapping, column gaps, free boxes, drag/tap/recolour/delete, no stacking, eraser, PageFlip untouched, storage, rebind');

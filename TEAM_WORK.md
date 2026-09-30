@@ -551,3 +551,7 @@ Catatan baru memanggil `options.bookmark(index, true)` (viewer/preview: `marks.s
 ### 29 September 2026 - Tanpa lipatan pojok saat hover
 
 `FlipbookLayout.motion`: `showPageCorners:false` (dulu `!reduced`). Permintaan user: lipatan pojok muncul saat hover dan mengganggu stabilo. Halaman tetap bisa dibalik lewat tombol, swipe, seret dari pojok, klik pojok.
+
+### 30 September 2026 - Stabilo tidak menumpuk + penghapus
+
+`FlipbookHighlights.add(list, rects, color)`: highlight baru yang tumpang tindih (>25% luas persegi terkecil, `overlap`) dengan yang lama digabung jadi satu (`merge`, warna baru). `erase(list, region)`: tombol 🧽 di rel warna; seret/tap menghapus highlight yang tersentuh (pratinjau kotak putus-putus merah, body.is-erasing). Memilih warna mematikan penghapus.
