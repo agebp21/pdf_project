@@ -1652,6 +1652,7 @@
         u.onend = () => end(true);
         u.onerror = event => end(event && (event.error === 'interrupted' || event.error === 'canceled'));
         current = u;                                     // keep a reference: Chrome drops events of collected utterances
+        if (synth.speaking || synth.pending) synth.cancel();   // never two pieces at once
         synth.speak(u);
       },
       stop() { current = null; synth.cancel(); },
@@ -1670,14 +1671,14 @@
     const engine = options.engine || self.engine();
     const all = Object.keys(text).map(k => (text[k] || []).join(' ')).join(' ');
     const lang = self.lang(all.slice(0, 20000));
-    let on = false, run = 0, shown = '', wait = 0, marked = null;
+    let on = false, speaking = false, run = 0, shown = '', wait = 0, marked = null;
     const button = options.button, cache = {};
     const wordsOf = index => cache[index] || (cache[index] = self.words(positions[String(index)], text[String(index)]));
     function paint() {
       if (typeof document !== 'undefined' && document.body) document.body.classList.toggle('is-reading', on);
       if (!button) return;
       button.textContent = on ? '⏹ Stop' : '🎧 Listen';
-      button.title = on ? 'Stop reading aloud · click a word on the page to read from there' : 'Read the book aloud (turns the pages for you)';
+      button.title = on ? 'Stop reading aloud · click a word on the page to read from there' : 'Read aloud: click a word to start there (turns the pages for you)';
       button.setAttribute('aria-pressed', String(on));
       button.classList.toggle('is-on', on);
     }
@@ -1697,7 +1698,7 @@
       page.appendChild(marked);
     }
     function stop() {
-      on = false; run++; clearTimeout(wait);
+      on = false; speaking = false; run++; clearTimeout(wait);
       if (engine) engine.stop();
       mark(-1, null);
       paint();
@@ -1736,11 +1737,19 @@
       };
       step();
     }
+    // Listen: ready, but silent until the reader clicks a word (no voice
+    // starting on its own on top of anything else).
+    function arm() {
+      if (!engine) return;
+      if (options.onStart) options.onStart();
+      on = true; speaking = false; run++; engine.stop(); mark(-1, null); paint();
+      if (options.notice) options.notice('Click (or tap) a word on the page: reading starts there.');
+    }
     function start(from) {
       if (!engine) return;
       if (options.onStart) options.onStart();
-      const first = !on;
-      on = true; paint(); read(from);
+      const first = !speaking;
+      on = true; speaking = true; paint(); read(from);
       if (first && engine.has && !engine.has(lang) && options.notice) {
         options.notice('No ' + (self.NAMES[lang.slice(0, 2)] || lang) + ' voice on this device: reading with the default voice.' +
           ' Windows: Settings \u203a Time & language \u203a Speech \u203a Add voices.');
@@ -1782,14 +1791,14 @@
     if (button) {
       // Books without any text (scans) have nothing to read.
       button.hidden = !engine || !all.trim();
-      button.onclick = () => { if (on) stop(); else start(null); };
+      button.onclick = () => { if (on) stop(); else arm(); };
     }
     paint();
     return {
-      active: () => on, start: () => start(null), stop, lang: () => lang,
+      active: () => on, speaking: () => speaking, arm, start: () => start(null), stop, lang: () => lang,
       readFrom: (index, line, word) => start({page: index, line, word}),
       // The viewer calls this after every page turn (by the reader or by us).
-      pageChanged() { if (on && options.visible().join(',') !== shown) read(null); },
+      pageChanged() { if (on && speaking && options.visible().join(',') !== shown) read(null); },
       close() { stop(); handlers.forEach(off => off()); }
     };
   },

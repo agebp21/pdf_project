@@ -48,6 +48,9 @@ assert.equal(S.lang('Buku ini adalah untuk semua orang karena pemerintah bisa me
   assert.equal(button.hidden, false); assert.equal(button.textContent, '🎧 Listen'); assert.equal(speech.lang(), 'id-ID');
   button.click();
   assert.equal(speech.active(), true); assert.equal(button.textContent, '⏹ Stop');
+  await sleep(30);
+  assert.deepEqual(spoken, [], 'Listen alone says nothing until a word is clicked');
+  speech.start();                                           // e.g. a click on the first word
   await sleep(60);
   // Spread 2–3, then the page turns by itself to 4–5 (index 3 has no text, 4 has).
   assert.deepEqual(spoken, ['Halaman dua.', 'Halaman tiga.', 'Halaman lima.'], 'both pages of the spread in order, then the next spread');
@@ -84,6 +87,10 @@ assert.equal(S.lang('Buku ini adalah untuk semua orang karena pemerintah bisa me
     const down = (x, y) => page.dispatchEvent(new w.MouseEvent('mousedown', { clientX: x, clientY: y, bubbles: true, cancelable: true }));
     // Not reading: a click does nothing (the page turns as usual).
     down(250, 110); assert.deepEqual(heard, []);
+    // Listen: silent, and a manual page turn doesn't start it either.
+    s3.arm(); assert.deepEqual(heard, []); s3.pageChanged(); assert.deepEqual(heard, []);
+    // The first word click starts reading there.
+    down(110, 110); assert.deepEqual(heard, ['Satu langkah seribu. Makna untuk semua.']); heard.length = 0;
     s3.start();
     assert.deepEqual(heard, ['Satu langkah seribu. Makna untuk semua.']);
     assert.ok(w.document.body.classList.contains('is-reading'), 'speaker cursor on');
@@ -138,5 +145,5 @@ assert.equal(S.lang('Buku ini adalah untuk semua orang karena pemerintah bisa me
   assert.equal(pickFor('ms-MY', [v('Microsoft Osman Online (Natural) - Malay (Malaysia)', 'ms-MY'), v('Microsoft Yasmin Online (Natural) - Malay (Malaysia)', 'ms-MY')]), 'Microsoft Yasmin Online (Natural) - Malay (Malaysia) ms-MY', 'Edge Malay: Yasmin');
   assert.equal(pickFor('ms-MY', chrome), 'Google Bahasa Indonesia id-ID', 'no Malay voice (Chrome): the Indonesian one');
   delete w.speechSynthesis; delete w.SpeechSynthesisUtterance;
-  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there, capitals read as words, Malay and English voices');
+  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there, capitals read as words, Malay and English voices, Listen waits for a word');
 })().catch(e => { console.error(e); process.exit(1); });
