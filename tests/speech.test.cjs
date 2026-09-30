@@ -17,6 +17,15 @@ const long = S.chunks([Array.from({ length: 80 }, (_, i) => 'kata' + i).join(' '
 assert.ok(long.length > 1 && long.every(c => c.length <= S.MAX), 'long text split under MAX');
 assert.equal(long.join(' ').split(' ').length, 81, 'no word lost (80 words + Akhir.)');
 assert.deepEqual(S.chunks([]), []); assert.deepEqual(S.chunks(undefined), []);
+// Capitals: pronounceable words are read as words, acronyms stay spelled.
+assert.equal(S.say('Selamat datang di NUSANTARA MAHAYATRA.'), 'Selamat datang di Nusantara Mahayatra.');
+assert.equal(S.say('Laporan UMKM dan BUMN dalam PDF oleh DPRD.'), 'Laporan UMKM dan BUMN dalam PDF oleh DPRD.');
+assert.equal(S.say('Program AI untuk JKT2A.'), 'Program AI untuk JKT2A.');
+assert.equal(S.say('STRATEGI PROGRAM KERJA'), 'Strategi Program Kerja');
+assert.equal(S.say('VISI DAN MISI YANG BARU'), 'Visi Dan Misi Yang Baru', 'a heading in capitals reads as words');
+assert.equal(S.say('(PENTING) catatan'), '(Penting) catatan', 'punctuation kept');
+assert.equal(S.say('Teks FILM dan TEKS'), 'Teks Film dan Teks');
+assert.deepEqual(S.chunks(['KATA PENGANTAR', 'Buku ini tentang NUSANTARA.']), ['Kata Pengantar Buku ini tentang Nusantara.']);
 // Language.
 assert.equal(S.lang('Ini adalah buku yang dibuat untuk anak dan keluarga'), 'id-ID');
 assert.equal(S.lang('This is the book that we made for the family'), 'en-US');
@@ -113,5 +122,5 @@ assert.equal(S.lang('This is the book that we made for the family'), 'en-US');
   assert.equal(pick(windows), 'Microsoft Andika - Indonesian (Indonesia)', 'Windows only has Andika: still Indonesian');
   assert.equal(pick([v('Some voice', 'in_ID')]), 'Some voice', 'old Android code "in"');
   delete w.speechSynthesis; delete w.SpeechSynthesisUtterance;
-  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there');
+  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there, capitals read as words');
 })().catch(e => { console.error(e); process.exit(1); });

@@ -1536,7 +1536,7 @@
         if (!l) lines[w.line] = b.slice();
         else { const right = Math.max(l[0] + l[2], b[0] + b[2]); l[0] = Math.min(l[0], b[0]); l[2] = right - l[0]; }
       });
-      out.push({text: cur.map(w => w.t).join(' '), boxes: Object.keys(lines).map(k => lines[k]), first: cur[0]});
+      out.push({text: this.say(cur.map(w => w.t).join(' ')), boxes: Object.keys(lines).map(k => lines[k]), first: cur[0]});
       cur = []; length = 0;
     };
     words.forEach(w => {
@@ -1548,6 +1548,28 @@
     });
     flush();
     return out;
+  },
+  // Text as it should be spoken. Voices spell out words in capitals
+  // ("NUSANTARA" → N-U-S-…): capitals that can be pronounced become normal
+  // words; acronyms (PDF, UMKM, DPRD, BUMN, JKT2A, and AI in a sentence)
+  // stay spelled. A heading in capitals reads like a sentence.
+  say(text) {
+    const tokens = String(text || '').split(' ');
+    const letters = tokens.join('').replace(/[^A-Za-z]/g, '');
+    const shouting = letters.length >= 8 && letters.replace(/[^A-Z]/g, '').length / letters.length > 0.8;
+    return tokens.map(token => this.sayWord(token, shouting)).join(' ');
+  },
+  sayWord(token, shouting) {
+    const core = token.replace(/^[^A-Za-z0-9]+|[^A-Za-z0-9]+$/g, '');
+    if (!/^[A-Z]{2,}$/.test(core)) return token;             // not all capitals (or has digits: JKT2A)
+    // Common consonant clusters count as one sound (STRATEGI, BANGKIT, EKSPOR).
+    const sounds = core.replace(/STR|SPR|NTR|MPR|MBR|NGK|NGG|KSP|KST|NG|NY|KH|SY/g, 'C');
+    const acronym = !/[AEIOU]/.test(core) ||                   // PDF, DPR, MPR
+      /[^AEIOUC]{3}/.test(sounds.replace(/C/g, 'B')) ||       // UMKM
+      (core.length <= 4 && /[^AEIOU]{2}$/.test(core) && !/(NG|KS|LM|ST|RT|NT|NK|RS|RK)$/.test(core));   // BUMN (not TEKS, FILM, YANG)
+    if (acronym) return token;
+    if (core.length <= 3 && !shouting) return token;          // AI, DKI inside a normal sentence
+    return token.replace(core, core.charAt(0) + core.slice(1).toLowerCase());
   },
   // A page's text lines → the text of its pieces.
   chunks(lines) {
