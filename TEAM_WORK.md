@@ -598,3 +598,7 @@ Owner: logo harus hijau, bukan biru. Sumber baru `assets/img/logo-source.png` (=
 ### 30 September 2026 - Kaca pembesar (loupe) di reader
 
 Tombol 🔎 (`#loupe`) di reader ekspor (`assets/export/index.html` -> HTML/APK/EXE) dan pratinjau editor (`flipbook.html`). Modul `FlipbookLoupe` di `assets/export/layout.js` (ES2018): lensa bulat + gagang, `position:fixed`, digeser mouse/sentuh (pointer events + setPointerCapture, tidak membalik halaman). Isi lensa = gambar halaman di bawahnya (resolusi asli, dihitung dari `object-fit:contain` via `fit()`), sebagai background CSS berlapis (+ lembar putih per halaman), digambar ulang tiap frame selama aktif (ikut flip/zoom). Tap kaca: 2x -> 3x -> 4x; scroll di atas kaca: 1.5x-6x; ✕ / Esc menutup. Idle-home tidak jalan selama lensa aktif. Stabilo/catatan tidak ikut terbesar (hanya gambar halaman). CSS di `book-effects.css`. Tes: `tests/loupe.test.cjs`; dicek Chromium desktop + mobile (drag mouse, drag sentuh via CDP: lensa pindah, halaman tetap).
+
+### 30 September 2026 - Ikon kuas + penghapus di stabilo
+
+Rel stabilo sekarang diawali pasangan alat: **kuas** (`.book-hl-brush`, mewarnai; latar tombol = warna stabilo terpilih lewat `--hl-color`) dan **penghapus** (`.book-hl-eraser`, merah saat aktif), dipisah garis dari titik-titik warna. Tombol toolbar `#highlight` juga ikon kuas. Ikon = SVG inline (`FlipbookHighlights.ICONS`, gaya garis Lucide, lisensi ISC) — bukan emoji, supaya sama di semua perangkat. Emoji 🖍/🧽 dihapus.

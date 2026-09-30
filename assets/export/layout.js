@@ -1036,6 +1036,11 @@
 // highlight to recolour or delete it. Kept per book on this device.
 // ES2018 for old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookHighlights = {
+  // Line icons (inline SVG: the same on every device, unlike emoji).
+  ICONS: {
+    brush: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6 17.9 3.9 15"/><path d="M18.4 2.6a1 1 0 1 1 3 3l-4 4a.5.5 0 0 0 0 .7l.9.9a2.4 2.4 0 0 1 0 3.4l-.9.9a.5.5 0 0 1-.7 0L8.4 7.3a.5.5 0 0 1 0-.7l.9-.9a2.4 2.4 0 0 1 3.4 0l.9.9a.5.5 0 0 0 .7 0z"/><path d="M9 8c-1.8 2.7-4 3.5-6.6 3.9a.5.5 0 0 0-.3.8l7.3 8.9a1 1 0 0 0 1.2.2C12.7 20.4 16 16.8 16 15"/></svg>',
+    eraser: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H8a2 2 0 0 1-1.4-.6l-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l6 6a2 2 0 0 1 0 2.8L12.8 21"/><path d="m5.1 11.1 8.8 8.8"/></svg>'
+  },
   COLORS: {y: '#ffd43b', g: '#69db7c', p: '#f783ac', b: '#4dabf7'},
   NAMES: {y: 'Yellow', g: 'Green', p: 'Pink', b: 'Blue'},
   key(title, pageCount, ratio) {
@@ -1176,13 +1181,19 @@
     };
     // Eraser: drag over (or tap) highlights to remove them.
     const eraser = document.createElement('button'); eraser.type = 'button'; eraser.className = 'book-hl-eraser';
-    eraser.textContent = '🧽'; eraser.title = 'Eraser: drag over highlights to remove them'; eraser.setAttribute('aria-label', 'Eraser');
+    eraser.innerHTML = self.ICONS.eraser; eraser.title = 'Eraser: drag over highlights to remove them'; eraser.setAttribute('aria-label', 'Eraser');
     eraser.onclick = () => {
       erasing = !erasing;
       if (selected) { const page = selected.page; selected = null; render(page); }
       paintBar();
     };
-    bar.appendChild(eraser);
+    // Brush: back to highlighting (the colour dots pick its colour).
+    const brush = document.createElement('button'); brush.type = 'button'; brush.className = 'book-hl-brush';
+    brush.innerHTML = self.ICONS.brush; brush.title = 'Brush: drag over text to highlight'; brush.setAttribute('aria-label', 'Brush');
+    brush.onclick = () => { erasing = false; paintBar(); };
+    const tools = document.createElement('div'); tools.className = 'book-hl-tools';
+    tools.appendChild(brush); tools.appendChild(eraser);
+    bar.insertBefore(tools, bar.firstChild);
     const done = document.createElement('button'); done.type = 'button'; done.className = 'book-hl-done'; done.textContent = 'Done';
     done.onclick = () => setMode(false);
     bar.appendChild(hint); bar.appendChild(remove); bar.appendChild(done);
@@ -1190,6 +1201,8 @@
     function paintBar() {
       Object.keys(swatches).forEach(c => swatches[c].setAttribute('aria-pressed', String(!erasing && (selected ? store[selected.page][selected.index].c === c : c === color))));
       eraser.setAttribute('aria-pressed', String(erasing));
+      brush.setAttribute('aria-pressed', String(!erasing));
+      brush.style.setProperty('--hl-color', self.COLORS[selected ? store[selected.page][selected.index].c : color]);
       document.body.classList.toggle('is-erasing', mode && erasing);
       remove.hidden = !selected;
       hint.textContent = erasing ? 'Drag over highlights to erase them' : selected ? 'Pick a colour or delete' : 'Drag over text to highlight';
@@ -1301,7 +1314,7 @@
       paintBar();
     }
     if (options.button) {
-      options.button.textContent = '🖍';
+      options.button.innerHTML = self.ICONS.brush;
       options.button.title = 'Highlighter';
       options.button.setAttribute('aria-label', 'Highlighter');
       options.button.onclick = () => setMode(!mode);

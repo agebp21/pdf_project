@@ -77,8 +77,12 @@ body.is-highlighting .book-note-stack{pointer-events:none;opacity:.25}
 .book-hl-delete{border:1px solid #efe9dc;background:#fff;color:#b3121a}
 .book-hl-delete[hidden]{display:none}
 .book-hl-done{border:1px solid #1a3c34;background:#1a3c34;color:#fff}
-.book-hl-eraser{width:34px;height:34px;padding:0;border:1px solid #d6cfbf;border-radius:999px;background:#fff;font-size:17px;cursor:pointer}
-.book-hl-eraser[aria-pressed="true"]{background:#fde2e2;box-shadow:0 0 0 3px #b3121a}
+.book-hl-tools{display:flex;flex-direction:column;gap:6px;padding-bottom:8px;border-bottom:1px solid #efe9dc}
+.book-hl-brush,.book-hl-eraser{display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:1px solid #d6cfbf;border-radius:12px;background:#fff;color:#57534e;cursor:pointer}
+.book-hl-icon{display:block;width:20px;height:20px;pointer-events:none}
+.book-hl-brush[aria-pressed="true"]{color:#1c1917;background:var(--hl-color,#ffd43b);border-color:#1c1917;box-shadow:0 0 0 2px #1c1917}
+.book-hl-eraser[aria-pressed="true"]{color:#b3121a;background:#fde2e2;border-color:#b3121a;box-shadow:0 0 0 2px #b3121a}
+#highlight .book-hl-icon{width:16px;height:16px;margin:-2px 0}
 .book-hl.is-eraser{background:rgba(179,18,26,.08);border:2px dashed #b3121a;opacity:1;mix-blend-mode:normal}
 body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair}
 #highlight.is-on{background:#ffd43b;border-color:#e0b100}
