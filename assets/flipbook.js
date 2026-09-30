@@ -221,7 +221,7 @@
     if (all.split(/\s+/).length < 40) { podcastStatus('Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR di Converter dulu.', true); return; }
     const button = $('#podcast-make');
     button.classList.add('is-busy'); button.disabled = true;
-    podcastStatus('Menulis naskah podcast… biasanya 20-60 detik.');
+    podcastStatus('Menulis naskah podcast… 20-60 detik; buku tebal dibaca dulu per bagian, bisa 1-3 menit.');
     try {
       const caps = await serverCaps();
       const response = await fetch('/api/podcast/script', {method:'POST', credentials:'same-origin',

@@ -3,6 +3,7 @@
 text, no key) — with a fake AI, so no network or cost."""
 import io
 import json
+import re
 import os
 from pathlib import Path
 import sys
@@ -60,6 +61,32 @@ class PodcastTests(unittest.TestCase):
         with mock.patch.dict(os.environ, env), mock.patch('urllib.request.urlopen', side_effect=[reply('maaf'), reply('')]):
             with self.assertRaisesRegex(RuntimeError, 'tidak menghasilkan'):
                 server.podcast_script('Buku', 'teks')
+
+    def test_long_book_covers_every_part(self):
+        # A novel: chapter markers spread over ~300.000 characters.
+        chapters = [f'BAB {n}. ' + (f'Kejadian penting bab {n}. ' * 1500) for n in range(1, 11)]
+        text = '\n'.join(chapters)
+        self.assertGreater(len(text), server.PODCAST_MAX_SOURCE)
+        seen = []
+        def fake(request, timeout=None):
+            body = json.loads(request.data)
+            user = body['messages'][1]['content']
+            if 'Catatan per bagian' in user:           # the final script
+                seen.append(('script', body['messages'][0]['content'], user))
+                return reply('RINA: Halo, selamat datang di podcast Novel!\nBIMA: Hai.\nRINA: Bab awal.\nBIMA: Bab akhir.')
+            chapter = sorted(set(re.findall(r'BAB (\d+)', user)), key=int)
+            seen.append(('note', chapter))
+            return reply('Catatan: bab ' + ', '.join(chapter))
+        env = {'SUMOPOD_API_KEY': 'sk-test', 'PODCAST_MODEL': 'claude-sonnet-5', 'SUMMARY_MODEL': 'gemini/cheap'}
+        with mock.patch.dict(os.environ, env), mock.patch('urllib.request.urlopen', side_effect=fake):
+            result = server.podcast_script('Novel', text, 'id-ID')
+        notes = [x[1] for x in seen if x[0] == 'note']
+        covered = sorted({int(c) for chapter in notes for c in chapter})
+        self.assertEqual(covered, list(range(1, 11)), 'every chapter reaches the AI, not only the first')
+        [(_, system, user)] = [x for x in seen if x[0] == 'script']
+        self.assertIn('SELURUH buku', system); self.assertIn('1000-1200 kata', system)
+        self.assertIn('bab 10', user, 'the last chapter is in the notes the script is written from')
+        self.assertEqual(len(result['lines']), 4)
 
     def test_route(self):
         httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)

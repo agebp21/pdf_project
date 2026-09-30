@@ -26,6 +26,7 @@ import time
 import unicodedata
 import uuid
 import zipfile
+from concurrent.futures import ThreadPoolExecutor
 from http.cookies import CookieError, SimpleCookie
 from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler, ThreadingHTTPServer
 import urllib.error
@@ -251,7 +252,22 @@ def validate_summary(summary):
     return dict(lang=lang, text=text)
 
 
-SUMMARY_CHUNK = 60_000            # characters per partial summary for long books
+SUMMARY_CHUNK = 60_000            # characters per part of a long book
+BOOK_PARTS = 24                   # at most this many parts (bigger parts for huge books)
+
+
+def book_notes(title, text, language, model):
+    """A long book as faithful notes, part by part from the first page to the
+    last (parts run in parallel). Returns one text with [Bagian n/N] headers."""
+    size = max(SUMMARY_CHUNK, -(-len(text) // BOOK_PARTS))
+    pieces = [text[i:i + size] for i in range(0, len(text), size)]
+    system = (f'Buat catatan ringkas yang setia dari bagian buku ini dalam {language}: alur atau pokok bahasan, tokoh dan nama, '
+              'peristiwa atau argumen penting, istilah, sesuai urutan dalam teks. Maksimal 300 kata. Hanya isi dari teks, tanpa pendapat.')
+    def note(n):
+        return f'[Bagian {n + 1}/{len(pieces)}]\n' + ai_chat(system, f'Judul buku: {title}\n\n{pieces[n]}', model, max_tokens=3000).strip()
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        notes = list(pool.map(note, range(len(pieces))))
+    return 'Catatan per bagian, dari awal sampai akhir buku:\n\n' + '\n\n'.join(notes)
 
 
 def summarize_book(title, text, lang='id-ID'):
@@ -260,22 +276,13 @@ def summarize_book(title, text, lang='id-ID'):
     model = os.environ.get('SUMMARY_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
     language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
     heads = {'en-US': ('Overview', 'Key points'), 'ms-MY': ('Intisari', 'Perkara penting')}.get(lang, ('Intisari', 'Poin penting'))
-    source = text
-    if len(text) > SUMMARY_CHUNK * 1.2:
-        notes = []
-        pieces = [text[i:i + SUMMARY_CHUNK] for i in range(0, len(text), SUMMARY_CHUNK)][:12]
-        for n, piece in enumerate(pieces, 1):
-            notes.append(f'[Bagian {n}/{len(pieces)}]\n' + ai_chat(
-                f'Buat catatan ringkas yang setia dari bagian buku ini dalam {language}: poin-poin utama, nama, istilah, dan urutan '
-                'peristiwa atau argumen. Maksimal 250 kata. Hanya isi dari teks, tanpa pendapat.',
-                f'Judul buku: {title}\n\n{piece}', model, max_tokens=3000))
-        source = 'Catatan per bagian buku:\n\n' + '\n\n'.join(notes)
+    source = book_notes(title, text, language, model) if len(text) > SUMMARY_CHUNK * 1.2 else text
     system = (f'Kamu editor buku. Tulis ringkasan buku dalam {language}, setia pada isi (jangan menambah fakta, angka, atau pendapat). Format persis:\n'
               f'Baris pertama: judul bagian "{heads[0]}", lalu 2-4 kalimat inti buku.\n'
               f'Lalu baris "{heads[1]}" diikuti 5-8 butir, tiap butir satu baris diawali "- ".\n'
               'Tanpa markdown lain (tanpa #, **, atau tabel).')
     for _ in range(2):
-        reply = ai_chat(system, f'Judul buku: {title}\n\n{source[:SUMMARY_CHUNK * 2]}', model, max_tokens=4000)
+        reply = ai_chat(system, f'Judul buku: {title}\n\n{source}', model, max_tokens=4000)
         reply = reply.replace('**', '').replace('##', '').strip()
         if len(reply.split()) >= 30:
             return dict(lang=lang, text=reply[:20000], model=model)
@@ -334,11 +341,15 @@ PODCAST_LANGUAGES = {
     'ms-MY': 'Bahasa Melayu Malaysia yang santai tapi sopan',
     'en-US': 'casual but polite English',
 }
-PODCAST_MAX_SOURCE = 120_000      # characters of book text sent (cost cap)
+PODCAST_MAX_SOURCE = 120_000      # longer books are first turned into notes of all their parts
 
 
-def podcast_prompt(lang, hosts, title='Buku'):
+def podcast_prompt(lang, hosts, title='Buku', notes=False):
     a, b = hosts
+    length = ('Panjang sekitar 1000-1200 kata (kira-kira 8 menit bicara).' if notes
+              else 'Panjang sekitar 650-750 kata (kira-kira 5 menit bicara).')
+    whole = ('\n- Dokumen berupa catatan per bagian dari SELURUH buku. Bahas isinya dari awal sampai akhir secara seimbang '
+             '(awal, tengah, dan akhir cerita atau pembahasan), jangan hanya bagian awal.' if notes else '')
     title = ' '.join(str(title).split())[:200] or 'Buku'
     return f"""Kamu penulis naskah podcast untuk buku berjudul "{title}".
 Nama podcast ini sama dengan judul bukunya: "{title}".
@@ -347,7 +358,7 @@ Tulis naskah obrolan dua penyiar yang membahas dokumen yang diberikan:
 - {b.upper()} (laki-laki): penasaran, suka bertanya dan memberi contoh sehari-hari.
 Aturan:
 - Bahasa: {PODCAST_LANGUAGES.get(lang, PODCAST_LANGUAGES['id-ID'])}, seperti dua teman ngobrol, bukan membaca slide.
-- Panjang sekitar 650-750 kata (kira-kira 5 menit bicara).
+- {length}{whole}
 - Kalimat pertama {a.upper()} menyambut pendengar dengan menyebut judul buku persis, misalnya: "Halo, selamat datang di podcast {title}!". Jangan menyebut nama acara lain, "Ngobrol Buku", atau "MyFlipbook".
 - Lalu isi (poin-poin penting dengan urutan yang enak diikuti), dan penutup singkat dengan satu kalimat inti; kedua penyiar berpamitan dan menyebut judul buku sekali lagi.
 - HANYA gunakan fakta dari dokumen. Jangan mengarang angka, nama, tanggal, atau klaim yang tidak ada, dan jangan menambah tafsiran di luar dokumen.
@@ -358,10 +369,16 @@ Aturan:
 def podcast_script(title, text, lang='id-ID', hosts=('Rina', 'Bima')):
     """Ask the AI for a two-host script; returns dict(lines, hosts, lang, model)."""
     model = os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
-    source = f'Judul: {title}\n\n{text}'[:PODCAST_MAX_SOURCE]
+    # A long book is read as notes of all its parts (the notes may use the cheaper summary model).
+    long = len(text) > PODCAST_MAX_SOURCE
+    if long:
+        notes_model = os.environ.get('SUMMARY_MODEL', '').strip() or model
+        source = f'Judul: {title}\n\n' + book_notes(title, text, PODCAST_LANGUAGES.get(lang, 'Bahasa Indonesia'), notes_model)
+    else:
+        source = f'Judul: {title}\n\n{text}'
     last = 'Naskah kosong.'
     for _ in range(2):          # some models now and then answer with nothing but reasoning
-        content = ai_chat(podcast_prompt(lang, hosts, title), 'Dokumen (teks per halaman):\n\n' + source, model, temperature=0.8)
+        content = ai_chat(podcast_prompt(lang, hosts, title, notes=long), 'Dokumen:\n\n' + source, model, temperature=0.8)
         lines = []
         names = [h.upper() for h in hosts]
         for raw in content.splitlines():
