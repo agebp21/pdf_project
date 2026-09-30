@@ -682,3 +682,7 @@ Owner: pilihan warna stabilo di atas ikonnya, jangan di pinggir. Kalau `Flipbook
 ### 30 September 2026 - Dialog Add file: tombol "Link / site" dihapus
 
 Owner: tombol Link / site di-takeout, tombol sisanya (Upload file, Google Drive) di tengah (`.add-sources{justify-content:center}`). Menambah dari link tetap bisa lewat kolom "Paste a link" di atas (PDF, web page, Office, Drive) — tombol lama hanya memfokuskan kolom itu.
+
+### 30 September 2026 - Dialog Add file dikecilkan
+
+Owner: ukuran dialog lebih kecil. `.add-card` lebar maks 520 px (dulu 700), padding/judul (19 px)/kolom link (tombol → 32 px)/tombol sumber (13 px)/kotak drop (12 px) diperkecil sekitar seperempat; versi HP (≤520 px) ikut. Hanya CSS `assets/theme-cream.css`.
