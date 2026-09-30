@@ -148,3 +148,16 @@ body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl
 .book-podcast-line.is-now{background:#eef6ec;border-color:#1a3c34;box-shadow:inset 3px 0 0 #1a3c34}
 #podcast.is-on{background:#1a3c34;border-color:#1a3c34;color:#fff}
 #podcast[hidden]{display:none}
+
+/* Translation panel (FlipbookTranslate): beside the book, bottom sheet on phones. */
+.book-translate{position:fixed;right:12px;top:64px;bottom:96px;z-index:2100;width:360px;max-width:calc(100vw - 24px);display:flex;flex-direction:column;padding:10px 12px;border-radius:14px;background:#fffdf8;color:#1c1917;border:1px solid #e4ded0;box-shadow:0 18px 50px rgba(0,0,0,.28);font:14px/1.6 system-ui,sans-serif}
+.book-translate-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.book-translate-head .book-marks-title{flex:1;margin:0}
+.book-translate-head select{padding:5px 8px;border:1px solid #d6cfbf;border-radius:8px;background:#fff;font:600 12px system-ui,sans-serif}
+.book-translate-head select[hidden]{display:none}
+.book-translate-body{overflow:auto;padding-right:4px}
+.book-translate-body p{margin:0 0 10px;overflow-wrap:anywhere}
+.book-translate-body .book-translate-page{margin:4px 0 6px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#78716c}
+#translate.is-on{background:#1a3c34;border-color:#1a3c34;color:#fff}
+#translate[hidden]{display:none}
+@media (max-width:640px){.book-translate{left:12px;right:12px;top:auto;bottom:86px;width:auto;max-height:50vh}}

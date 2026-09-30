@@ -111,6 +111,9 @@
     book.on('changeState', event => { if (event.data === 'read') speech.pageChanged(); });
     // Podcast: two hosts talk the book through (script made in the editor).
     const podcast = FlipbookPodcast.bind({podcast: data.podcast, button: $('#podcast'), onStart: () => speech.stop()});
+    // Translation (made in the editor): the pages on screen, beside the book.
+    const translation = FlipbookTranslate.bind({translations: data.translations, visible, button: $('#translate')});
+    book.on('flip', () => translation.pageChanged());
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };

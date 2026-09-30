@@ -72,6 +72,22 @@
     const lang = ['id-ID', 'ms-MY', 'en-US'].includes(podcast.lang) ? podcast.lang : 'id-ID';
     return {lines, hosts, lang};
   }
+  // Translations: {lang: {page: text}} for id-ID / en-US / ms-MY.
+  function validTranslations(translations, pageCount) {
+    if (translations === undefined || translations === null) return null;
+    if (typeof translations !== 'object' || Array.isArray(translations)) throw Error('Data terjemahan tidak valid.');
+    const out = {};
+    for (const [lang, pages] of Object.entries(translations)) {
+      if (!['id-ID', 'en-US', 'ms-MY'].includes(lang) || !pages || typeof pages !== 'object' || Array.isArray(pages)) throw Error('Bahasa terjemahan tidak valid.');
+      const clean = {};
+      for (const [key, text] of Object.entries(pages)) {
+        if (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= pageCount || typeof text !== 'string') throw Error('Halaman terjemahan tidak valid.');
+        if (text.trim()) clean[key] = text.slice(0, 20000);
+      }
+      if (Object.keys(clean).length) out[lang] = clean;
+    }
+    return Object.keys(out).length ? out : null;
+  }
   function validate(data) {
     if (!data || data.version !== 1 || typeof data.title !== 'string' || !Number.isInteger(data.pageCount) || data.pageCount < 1 || !Number.isFinite(data.ratio) || data.ratio <= 0) throw Error('Format proyek tidak valid atau belum didukung.');
     if (!data.overlays || typeof data.overlays !== 'object' || Array.isArray(data.overlays)) throw Error('Data animasi tidak valid.');
@@ -81,8 +97,8 @@
       overlays[key] = {label:config.label.slice(0,40),value:config.value,position:config.position};
     }
     const words=validWords(data.words,data.pageCount);
-    const podcast=validPodcast(data.podcast);
-    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words),...(podcast?{podcast}:{})};
+    const podcast=validPodcast(data.podcast), translations=validTranslations(data.translations,data.pageCount);
+    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words),...(podcast?{podcast}:{}),...(translations?{translations}:{})};
   }
   const scriptData = data => 'window.FLIPBOOK_DATA = ' + JSON.stringify(validate(data)).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029') + ';\n';
   async function asset(path) {

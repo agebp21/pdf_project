@@ -1910,3 +1910,79 @@
     return {active: () => on, stop, close, refresh() { if (panel && !usable()) close(); paint(); }, open, playFrom: speakFrom};
   },
 };
+
+// Translation: the book's text translated with AI in the editor (stored as
+// translations {lang: {page: text}}), shown beside the book for the pages on
+// screen and following the page turns. ES2018.
+(typeof self!=='undefined'?self:global).FlipbookTranslate = {
+  NAMES: {'id-ID': 'Bahasa Indonesia', 'en-US': 'English', 'ms-MY': 'Bahasa Melayu'},
+  /* options: {translations (object, or a function returning it),
+     visible(): page indices on screen, button} */
+  bind(options) {
+    const self = this;
+    const get = () => (typeof options.translations === 'function' ? options.translations() : options.translations) || {};
+    const langs = () => Object.keys(get()).filter(l => self.NAMES[l] && Object.keys(get()[l] || {}).length);
+    let panel = null, body = null, pick = null, lang = null;
+    const button = options.button;
+    function paint() {
+      if (!button) return;
+      button.hidden = !langs().length;
+      button.textContent = '🌐 Translate';
+      button.title = 'Translation of the pages on screen';
+      button.classList.toggle('is-on', !!panel);
+      button.setAttribute('aria-expanded', String(!!panel));
+    }
+    function fill() {
+      if (!panel) return;
+      const all = langs();
+      if (!all.length) { close(); return; }
+      if (all.indexOf(lang) < 0) lang = all[0];
+      if (pick) {
+        while (pick.firstChild) pick.removeChild(pick.firstChild);
+        all.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = self.NAMES[l]; pick.appendChild(o); });
+        pick.value = lang; pick.hidden = all.length < 2;
+      }
+      while (body.firstChild) body.removeChild(body.firstChild);
+      const pages = get()[lang] || {};
+      let any = false;
+      options.visible().forEach(index => {
+        const text = pages[String(index)];
+        if (!text) return;
+        any = true;
+        const head = document.createElement('p'); head.className = 'book-translate-page';
+        head.textContent = index === 0 ? 'Cover' : 'Page ' + (index + 1);
+        body.appendChild(head);
+        text.split(/\n+/).forEach(para => {
+          if (!para.trim()) return;
+          const p = document.createElement('p'); p.textContent = para.trim(); body.appendChild(p);
+        });
+      });
+      if (!any) { const none = document.createElement('p'); none.className = 'book-marks-empty'; none.textContent = 'No translation for the pages on screen.'; body.appendChild(none); }
+      body.scrollTop = 0;
+    }
+    function close() { if (panel) { panel.remove(); panel = body = pick = null; } paint(); }
+    function open() {
+      panel = document.createElement('div');
+      panel.className = 'book-translate'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Translation');
+      ['pointerdown', 'mousedown', 'touchstart', 'wheel'].forEach(name => panel.addEventListener(name, event => event.stopPropagation()));
+      const head = document.createElement('div'); head.className = 'book-translate-head';
+      const title = document.createElement('p'); title.className = 'book-marks-title'; title.textContent = '🌐 Translation';
+      pick = document.createElement('select'); pick.setAttribute('aria-label', 'Language');
+      pick.onchange = () => { lang = pick.value; fill(); };
+      const shut = document.createElement('button'); shut.type = 'button'; shut.className = 'book-podcast-close'; shut.textContent = '✕';
+      shut.setAttribute('aria-label', 'Close translation'); shut.onclick = close;
+      head.appendChild(title); head.appendChild(pick); head.appendChild(shut);
+      body = document.createElement('div'); body.className = 'book-translate-body';
+      panel.appendChild(head); panel.appendChild(body);
+      document.body.appendChild(panel);
+      fill(); paint();
+    }
+    if (button) button.onclick = () => { if (panel) close(); else open(); };
+    paint();
+    return {
+      open, close, active: () => !!panel,
+      pageChanged() { fill(); },
+      refresh() { if (panel) fill(); paint(); }
+    };
+  },
+};

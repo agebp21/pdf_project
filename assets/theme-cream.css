@@ -41,6 +41,12 @@ button.primary.apply:hover,.primary:hover{transform:translate(-1px,-1px);box-sha
 .podcast-tools button{flex:1}
 .podcast-box .is-busy{opacity:.6;pointer-events:none}
 
+.translate-row{display:flex;gap:8px}
+.translate-row button{flex:1}
+.translate-row{align-items:stretch}
+.translate-row select{flex:0 0 auto;width:auto!important;min-width:0!important;max-width:130px;margin:0!important;padding:0 8px!important;border:1px solid #d6cfbf;border-radius:12px;background:#fff;font:600 12.5px 'Plus Jakarta Sans',system-ui,sans-serif}
+.translate-row button{flex:1 1 auto;min-width:0;white-space:nowrap}
+
 /* Arsipku status in the editor */
 .archive-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 2px 0;font-size:12.5px}
 .archive-status{color:var(--pine);font-weight:600}

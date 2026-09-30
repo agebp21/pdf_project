@@ -155,7 +155,8 @@ def validate_manifest(data):
     return dict(version=1, title=data['title'][:200], pageCount=count, ratio=ratio, overlays=overlays,
                 links=validate_links(data.get('links', {}), count), words=(words := validate_words(data.get('words', {}), count)),
                 text=validate_text(data.get('text', {}), words),
-                **({'podcast': podcast} if (podcast := validate_podcast(data.get('podcast'))) else {}))
+                **({'podcast': podcast} if (podcast := validate_podcast(data.get('podcast'))) else {}),
+                **({'translations': tr} if (tr := validate_translations(data.get('translations'), count)) else {}))
 
 
 def validate_words(words, count):
@@ -211,6 +212,76 @@ def validate_podcast(podcast):
     return dict(lines=lines, hosts=[h.strip()[:30] for h in hosts], lang=lang)
 
 
+TRANSLATE_LANGUAGES = {'id-ID': 'Bahasa Indonesia', 'en-US': 'English', 'ms-MY': 'Bahasa Melayu (Malaysia)'}
+TRANSLATE_MAX_CHARS = 30_000      # per request (the editor sends a book in pieces)
+
+
+def validate_translations(translations, count):
+    """{lang: {page: text}} for id-ID / en-US / ms-MY; None when absent."""
+    if translations is None:
+        return None
+    if not isinstance(translations, dict):
+        raise ValueError('Data terjemahan tidak valid.')
+    out = {}
+    for lang, pages in translations.items():
+        if lang not in TRANSLATE_LANGUAGES or not isinstance(pages, dict):
+            raise ValueError('Bahasa terjemahan tidak valid.')
+        clean = {}
+        for key, text in pages.items():
+            if not re.fullmatch(r'0|[1-9][0-9]*', str(key)) or int(key) >= count or not isinstance(text, str):
+                raise ValueError('Halaman terjemahan tidak valid.')
+            if text.strip():
+                clean[str(key)] = text[:20000]
+        if clean:
+            out[lang] = clean
+    return out or None
+
+
+def ai_chat(system, user, model, max_tokens=8000, temperature=0.3):
+    """One chat completion through Sumopod; returns the reply text."""
+    key = os.environ.get('SUMOPOD_API_KEY', '').strip()
+    base = os.environ.get('SUMOPOD_BASE_URL', 'https://ai.sumopod.com/v1').strip().rstrip('/')
+    if not key:
+        raise RuntimeError('AI belum diatur di server (SUMOPOD_API_KEY di .env).')
+    body = json.dumps({'model': model, 'max_tokens': max_tokens, 'temperature': temperature, 'messages': [
+        {'role': 'system', 'content': system}, {'role': 'user', 'content': user}]}).encode('utf-8')
+    request = urllib.request.Request(base + '/chat/completions', data=body, method='POST',
+                                     headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
+    try:
+        with urllib.request.urlopen(request, timeout=300) as response:
+            data = json.loads(response.read().decode('utf-8'))
+    except urllib.error.HTTPError as cause:
+        detail = cause.read().decode('utf-8', 'replace')[:300]
+        raise RuntimeError(f'Layanan AI menolak permintaan ({cause.code}). {detail}') from cause
+    except (urllib.error.URLError, TimeoutError, OSError) as cause:
+        raise RuntimeError('Layanan AI tidak bisa dihubungi. Cek koneksi internet server.') from cause
+    return ((data.get('choices') or [{}])[0].get('message') or {}).get('content') or ''
+
+
+def translate_pages(pages, target, title='Buku'):
+    """{page: text} -> {page: translation} in the target language (one AI call)."""
+    model = os.environ.get('TRANSLATE_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
+    system = (f'Kamu penerjemah buku profesional. Terjemahkan setiap halaman ke {TRANSLATE_LANGUAGES[target]} '
+              'secara setia dan enak dibaca. Pertahankan nama orang, nama tempat, merek, istilah teknis yang lazim, angka, '
+              'dan pemisah paragraf (baris baru). Jangan menambah, meringkas, atau menjelaskan. '
+              'Bila sebuah halaman sudah dalam bahasa tujuan, kembalikan apa adanya. '
+              'Jawab HANYA dengan satu objek JSON: kunci = nomor halaman (string, sama dengan masukan), nilai = terjemahannya.')
+    user = f'Judul buku: {title}\n\nHalaman (JSON):\n' + json.dumps({str(k): v for k, v in pages.items()}, ensure_ascii=False)
+    wanted = {str(k) for k in pages}
+    for _ in range(2):
+        reply = ai_chat(system, user, model, max_tokens=16000)
+        start, end = reply.find('{'), reply.rfind('}')
+        try:
+            data = json.loads(reply[start:end + 1]) if 0 <= start < end else None
+        except json.JSONDecodeError:
+            data = None
+        if isinstance(data, dict):
+            out = {str(k): str(v).strip() for k, v in data.items() if str(k) in wanted and isinstance(v, str) and v.strip()}
+            if out:
+                return out
+    raise RuntimeError('AI tidak mengembalikan terjemahan yang valid. Coba lagi.')
+
+
 # ---------- Podcast script (AI through Sumopod, an OpenAI-compatible gateway).
 # .env: SUMOPOD_API_KEY, SUMOPOD_BASE_URL, PODCAST_MODEL. The key stays here.
 PODCAST_LANGUAGES = {
@@ -241,28 +312,11 @@ Aturan:
 
 def podcast_script(title, text, lang='id-ID', hosts=('Rina', 'Bima')):
     """Ask the AI for a two-host script; returns dict(lines, hosts, lang, model)."""
-    key = os.environ.get('SUMOPOD_API_KEY', '').strip()
-    base = os.environ.get('SUMOPOD_BASE_URL', 'https://ai.sumopod.com/v1').strip().rstrip('/')
     model = os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
-    if not key:
-        raise RuntimeError('Podcast AI belum diatur di server (SUMOPOD_API_KEY di .env).')
     source = f'Judul: {title}\n\n{text}'[:PODCAST_MAX_SOURCE]
-    body = json.dumps({'model': model, 'max_tokens': 8000, 'temperature': 0.8, 'messages': [
-        {'role': 'system', 'content': podcast_prompt(lang, hosts, title)},
-        {'role': 'user', 'content': 'Dokumen (teks per halaman):\n\n' + source}]}).encode('utf-8')
     last = 'Naskah kosong.'
     for _ in range(2):          # some models now and then answer with nothing but reasoning
-        request = urllib.request.Request(base + '/chat/completions', data=body, method='POST',
-                                         headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
-        try:
-            with urllib.request.urlopen(request, timeout=240) as response:
-                data = json.loads(response.read().decode('utf-8'))
-        except urllib.error.HTTPError as cause:
-            detail = cause.read().decode('utf-8', 'replace')[:300]
-            raise RuntimeError(f'Layanan AI menolak permintaan ({cause.code}). {detail}') from cause
-        except (urllib.error.URLError, TimeoutError, OSError) as cause:
-            raise RuntimeError('Layanan AI tidak bisa dihubungi. Cek koneksi internet server.') from cause
-        content = ((data.get('choices') or [{}])[0].get('message') or {}).get('content') or ''
+        content = ai_chat(podcast_prompt(lang, hosts, title), 'Dokumen (teks per halaman):\n\n' + source, model, temperature=0.8)
         lines = []
         names = [h.upper() for h in hosts]
         for raw in content.splitlines():
@@ -1221,6 +1275,38 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             self.send_json(404, {'error': 'Tidak ditemukan.'})
 
+    def translate_route(self):
+        """POST {pages: {page: text}, target, title} -> {pages: {page: translation}}."""
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 2 * 1024 * 1024:
+                raise ValueError('Teks kosong atau terlalu besar.')
+            data = json.loads(self.rfile.read(size).decode('utf-8'))
+            target = data.get('target')
+            if target not in TRANSLATE_LANGUAGES:
+                raise ValueError('Bahasa tujuan tidak didukung.')
+            pages = data.get('pages')
+            if not isinstance(pages, dict) or not pages or len(pages) > 40:
+                raise ValueError('Halaman tidak valid (maks 40 per permintaan).')
+            clean = {}
+            for key, text in pages.items():
+                if not re.fullmatch(r'0|[1-9][0-9]*', str(key)) or not isinstance(text, str):
+                    raise ValueError('Halaman tidak valid.')
+                if text.strip():
+                    clean[str(key)] = text
+            if not clean:
+                raise ValueError('Halaman ini tidak punya teks.')
+            if sum(len(t) for t in clean.values()) > TRANSLATE_MAX_CHARS:
+                raise ValueError('Terlalu banyak teks dalam satu permintaan.')
+            title = str(data.get('title') or 'Buku')[:200]
+        except (ValueError, UnicodeDecodeError) as cause:
+            self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
+            return
+        try:
+            self.send_json(200, {'pages': translate_pages(clean, target, title), 'target': target})
+        except RuntimeError as cause:
+            self.send_json(502, {'error': str(cause)})
+
     def podcast_route(self):
         """POST {title, text: {page: [lines]}, lang, hosts} -> two-host podcast script."""
         try:
@@ -1482,7 +1568,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(cause.status, {'error': str(cause)})
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
-        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'export' if self.path == '/api/podcast/script' else match[1] if match else None
+        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'export' if self.path in ('/api/podcast/script', '/api/translate') else match[1] if match else None
         denied = feature and self.entitlement_error(feature)
         if denied:
             self.send_json(denied[0], {'error': denied[1]})
@@ -1498,6 +1584,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == '/api/podcast/script':
             self.podcast_route()
+            return
+        if self.path == '/api/translate':
+            self.translate_route()
             return
         if self.path in OFFICE_ROUTES:
             self.convert_office()

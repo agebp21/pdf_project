@@ -93,5 +93,56 @@ class PodcastTests(unittest.TestCase):
             httpd.shutdown(); httpd.server_close(); thread.join()
 
 
+class TranslateTests(unittest.TestCase):
+    def test_manifest(self):
+        base = dict(version=1, title='Buku', pageCount=3, ratio=0.7, overlays={})
+        self.assertNotIn('translations', server.validate_manifest(base))
+        ok = server.validate_manifest(dict(base, translations={'id-ID': {'0': 'Halo', '2': '  '}}))
+        self.assertEqual(ok['translations'], {'id-ID': {'0': 'Halo'}})
+        for bad in ('x', {'fr': {'0': 'a'}}, {'id-ID': {'5': 'a'}}, {'id-ID': {'0': 3}}, {'id-ID': 'x'}):
+            with self.assertRaises(ValueError):
+                server.validate_manifest(dict(base, translations=bad))
+
+    def test_translate_pages_parses_json_and_retries(self):
+        env = {'SUMOPOD_API_KEY': 'sk-test', 'SUMOPOD_BASE_URL': 'https://ai.example/v1', 'PODCAST_MODEL': 'claude-sonnet-5'}
+        answer = 'Here you go:\n```json\n{"0": "Halo dunia.", "1": "Paragraf.\\nKedua.", "7": "bukan diminta"}\n```'
+        with mock.patch.dict(os.environ, env), mock.patch('urllib.request.urlopen', side_effect=[reply('maaf, tidak bisa'), reply(answer)]) as call:
+            out = server.translate_pages({0: 'Hello world.', 1: 'Paragraph.\nSecond.'}, 'id-ID', 'Book')
+        self.assertEqual(out, {'0': 'Halo dunia.', '1': 'Paragraf.\nKedua.'}, 'only the pages asked for')
+        self.assertEqual(call.call_count, 2)
+        sent = json.loads(call.call_args[0][0].data)
+        self.assertIn('Bahasa Indonesia', sent['messages'][0]['content'])
+        self.assertIn('"0": "Hello world."', sent['messages'][1]['content'])
+        with mock.patch.dict(os.environ, dict(env, TRANSLATE_MODEL='gemini/x')), mock.patch('urllib.request.urlopen', side_effect=[reply('{"0": "Hola"}')]) as call:
+            server.translate_pages({0: 'Hi'}, 'en-US')
+        self.assertEqual(json.loads(call.call_args[0][0].data)['model'], 'gemini/x', 'TRANSLATE_MODEL wins')
+
+    def test_route(self):
+        httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True); thread.start()
+        url = f'http://127.0.0.1:{httpd.server_port}/api/translate'
+        def post(body, token=server.TOKEN):
+            request = urllib.request.Request(url, data=json.dumps(body).encode(), method='POST',
+                                             headers={'Content-Type': 'application/json', 'X-Build-Token': token})
+            try:
+                with urllib.request.urlopen(request) as response:
+                    return response.status, json.loads(response.read())
+            except urllib.error.HTTPError as error:
+                with error:
+                    return error.code, json.loads(error.read())
+        try:
+            with mock.patch.object(server, 'translate_pages', return_value={'0': 'Halo'}) as make:
+                self.assertEqual(post({'pages': {'0': 'Hi'}, 'target': 'id-ID'}, token='x')[0], 403)
+                self.assertEqual(post({'pages': {'0': 'Hi', '1': '  '}, 'target': 'id-ID', 'title': 'B'}), (200, {'pages': {'0': 'Halo'}, 'target': 'id-ID'}))
+                self.assertEqual(make.call_args[0], ({'0': 'Hi'}, 'id-ID', 'B'), 'empty pages not sent')
+                self.assertEqual(post({'pages': {'0': 'Hi'}, 'target': 'fr'})[0], 400)
+                self.assertEqual(post({'pages': {str(i): 'x' for i in range(41)}, 'target': 'id-ID'})[0], 400, 'max 40 pages')
+                self.assertEqual(post({'pages': {'0': 'x' * 30001}, 'target': 'id-ID'})[0], 400, 'max characters')
+                self.assertEqual(post({'pages': {'0': '   '}, 'target': 'id-ID'})[0], 400)
+            with mock.patch.object(server, 'translate_pages', side_effect=RuntimeError('AI belum diatur')):
+                self.assertEqual(post({'pages': {'0': 'Hi'}, 'target': 'en-US'})[0], 502)
+        finally:
+            httpd.shutdown(); httpd.server_close(); thread.join()
+
 if __name__ == '__main__':
     unittest.main()
