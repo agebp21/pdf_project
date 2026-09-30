@@ -88,6 +88,13 @@
     }
     return Object.keys(out).length ? out : null;
   }
+  // Summary: {lang, text} (an overview and key points written with AI).
+  function validSummary(summary) {
+    if (summary === undefined || summary === null) return null;
+    if (typeof summary !== 'object' || typeof summary.text !== 'string') throw Error('Data ringkasan tidak valid.');
+    const text = summary.text.trim().slice(0, 20000);
+    return text ? {lang: ['id-ID', 'en-US', 'ms-MY'].includes(summary.lang) ? summary.lang : 'id-ID', text} : null;
+  }
   function validate(data) {
     if (!data || data.version !== 1 || typeof data.title !== 'string' || !Number.isInteger(data.pageCount) || data.pageCount < 1 || !Number.isFinite(data.ratio) || data.ratio <= 0) throw Error('Format proyek tidak valid atau belum didukung.');
     if (!data.overlays || typeof data.overlays !== 'object' || Array.isArray(data.overlays)) throw Error('Data animasi tidak valid.');
@@ -97,8 +104,8 @@
       overlays[key] = {label:config.label.slice(0,40),value:config.value,position:config.position};
     }
     const words=validWords(data.words,data.pageCount);
-    const podcast=validPodcast(data.podcast), translations=validTranslations(data.translations,data.pageCount);
-    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words),...(podcast?{podcast}:{}),...(translations?{translations}:{})};
+    const podcast=validPodcast(data.podcast), translations=validTranslations(data.translations,data.pageCount), summary=validSummary(data.summary);
+    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words),...(podcast?{podcast}:{}),...(translations?{translations}:{}),...(summary?{summary}:{})};
   }
   const scriptData = data => 'window.FLIPBOOK_DATA = ' + JSON.stringify(validate(data)).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029') + ';\n';
   async function asset(path) {

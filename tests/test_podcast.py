@@ -144,5 +144,59 @@ class TranslateTests(unittest.TestCase):
         finally:
             httpd.shutdown(); httpd.server_close(); thread.join()
 
+class SummaryTests(unittest.TestCase):
+    ENV = {'SUMOPOD_API_KEY': 'sk-test', 'SUMOPOD_BASE_URL': 'https://ai.example/v1', 'PODCAST_MODEL': 'claude-sonnet-5'}
+    GOOD = 'Intisari\n**Buku** ini membahas ' + 'filsafat Jawa dan laku hidup ' * 6 + '.\nPoin penting\n- Satu\n- Dua'
+
+    def test_manifest(self):
+        base = dict(version=1, title='Buku', pageCount=2, ratio=0.7, overlays={})
+        self.assertNotIn('summary', server.validate_manifest(base))
+        self.assertEqual(server.validate_manifest(dict(base, summary=dict(lang='en-US', text=' Hi '))) ['summary'], dict(lang='en-US', text='Hi'))
+        self.assertNotIn('summary', server.validate_manifest(dict(base, summary=dict(text='  '))))
+        with self.assertRaises(ValueError):
+            server.validate_manifest(dict(base, summary='x'))
+
+    def test_short_book_one_call(self):
+        with mock.patch.dict(os.environ, self.ENV), mock.patch('urllib.request.urlopen', side_effect=[reply('pendek'), reply(self.GOOD)]) as call:
+            out = server.summarize_book('Filsafat Jawa', 'teks buku', 'en-US')
+        self.assertEqual(call.call_count, 2, 'a too-short answer is tried again')
+        self.assertNotIn('**', out['text']); self.assertEqual(out['lang'], 'en-US')
+        system = json.loads(call.call_args[0][0].data)['messages'][0]['content']
+        self.assertIn('English', system); self.assertIn('"Overview"', system); self.assertIn('"Key points"', system)
+
+    def test_long_book_in_parts(self):
+        text = 'x' * (server.SUMMARY_CHUNK * 2 + 10)
+        with mock.patch.dict(os.environ, self.ENV), mock.patch('urllib.request.urlopen', side_effect=[reply('catatan 1'), reply('catatan 2'), reply('catatan 3'), reply(self.GOOD)]) as call:
+            out = server.summarize_book('Tebal', text, 'id-ID')
+        self.assertEqual(call.call_count, 4, 'three parts, then the combined summary')
+        final = json.loads(call.call_args[0][0].data)['messages'][1]['content']
+        self.assertIn('[Bagian 3/3]', final); self.assertIn('catatan 2', final)
+        self.assertTrue(out['text'].startswith('Intisari'))
+
+    def test_route(self):
+        httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True); thread.start()
+        url = f'http://127.0.0.1:{httpd.server_port}/api/summary'
+        def post(body, token=server.TOKEN):
+            request = urllib.request.Request(url, data=json.dumps(body).encode(), method='POST',
+                                             headers={'Content-Type': 'application/json', 'X-Build-Token': token})
+            try:
+                with urllib.request.urlopen(request) as response:
+                    return response.status, json.loads(response.read())
+            except urllib.error.HTTPError as error:
+                with error:
+                    return error.code, json.loads(error.read())
+        try:
+            words = ' '.join(['kata'] * 60)
+            with mock.patch.object(server, 'summarize_book', return_value=dict(lang='id-ID', text='Intisari', model='m')) as make:
+                self.assertEqual(post({'text': {'0': [words]}}, token='x')[0], 403)
+                self.assertEqual(post({'title': 'B', 'text': {'0': [words]}, 'lang': 'ms-MY'})[0], 200)
+                self.assertEqual((make.call_args[0][0], make.call_args[0][2]), ('B', 'ms-MY'))
+                self.assertEqual(post({'text': {'0': ['sedikit']}})[0], 400)
+            with mock.patch.object(server, 'summarize_book', side_effect=RuntimeError('AI belum diatur')):
+                self.assertEqual(post({'text': {'0': [words]}})[0], 502)
+        finally:
+            httpd.shutdown(); httpd.server_close(); thread.join()
+
 if __name__ == '__main__':
     unittest.main()

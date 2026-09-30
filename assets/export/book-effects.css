@@ -161,3 +161,9 @@ body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl
 #translate.is-on{background:#1a3c34;border-color:#1a3c34;color:#fff}
 #translate[hidden]{display:none}
 @media (max-width:640px){.book-translate{left:12px;right:12px;top:auto;bottom:86px;width:auto;max-height:50vh}}
+
+/* Summary panel (FlipbookSummary): shares the translation panel's look. */
+.book-summary .book-translate-body ul{margin:0 0 12px;padding-left:20px}
+.book-summary .book-translate-body li{margin:0 0 6px}
+#summary.is-on{background:#1a3c34;border-color:#1a3c34;color:#fff}
+#summary[hidden]{display:none}

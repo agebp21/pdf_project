@@ -65,6 +65,12 @@
             <button id="translate-clear" class="secondary" type="button" hidden>Hapus terjemahan</button>
             <p id="translate-status" class="muted">Terjemahan tiap halaman (AI), tampil di tombol 🌐 Translate pada buku. Ikut tersimpan di proyek dan semua ekspor.</p>
           </div>
+          <div class="podcast-box summary-box">
+            <div class="translate-row"><button id="summary-make" class="secondary" type="button">📝 Buat ringkasan (AI)</button><select id="summary-lang" aria-label="Bahasa ringkasan"><option value="">Bahasa buku</option><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></div>
+            <textarea id="summary-text" rows="9" hidden aria-label="Ringkasan" spellcheck="false"></textarea>
+            <button id="summary-clear" class="secondary" type="button" hidden>Hapus ringkasan</button>
+            <p id="summary-status" class="muted">Intisari + poin penting buku ini (AI), tampil di tombol 📋 Summary pada buku. Bisa diedit; ikut tersimpan di proyek dan semua ekspor.</p>
+          </div>
         </fieldset>
         <button id="open-project" class="secondary" type="button" onclick="document.getElementById('project-file').click()">Open project… (.smflipbook)</button>
         <input id="project-file" type="file" accept=".smflipbook,.sm-flipbook" hidden>
@@ -78,7 +84,7 @@
       <section class="preview" aria-label="Book from PDF">
         <div class="preview-top"><span id="document-name">FLIPBOOK PREVIEW</span><span id="page-status" aria-live="polite">—</span></div>
         <div id="reader-stage" class="stage"><div id="empty-book"><span>▤</span><h2>Open your first PDF</h2><p>PDF pages will appear here as a flippable book.</p><a href="converter.html?tool=word-to-pdf">Have a Word file? Convert it first →</a></div></div>
-        <div class="controls"><div class="navigation"><button id="prev" disabled aria-label="Previous page">←</button><button id="home" disabled aria-label="Back to cover" title="Back to cover">Home</button><button id="next" disabled aria-label="Next page">→</button><button id="bookmark" type="button"></button><button id="bookmarks" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="notes" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="highlight" type="button" aria-pressed="false"></button><button id="speak" type="button" aria-pressed="false" hidden></button><button id="podcast" type="button" aria-expanded="false" hidden></button><button id="translate" type="button" aria-expanded="false" hidden></button><button id="sound" type="button"></button></div><div class="playback" hidden style="display:none"><button id="replay" disabled>↻ Putar animasi</button><button id="fullscreen">Layar penuh</button></div></div>
+        <div class="controls"><div class="navigation"><button id="prev" disabled aria-label="Previous page">←</button><button id="home" disabled aria-label="Back to cover" title="Back to cover">Home</button><button id="next" disabled aria-label="Next page">→</button><button id="bookmark" type="button"></button><button id="bookmarks" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="notes" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="highlight" type="button" aria-pressed="false"></button><button id="speak" type="button" aria-pressed="false" hidden></button><button id="podcast" type="button" aria-expanded="false" hidden></button><button id="translate" type="button" aria-expanded="false" hidden></button><button id="summary" type="button" aria-expanded="false" hidden></button><button id="sound" type="button"></button></div><div class="playback" hidden style="display:none"><button id="replay" disabled>↻ Putar animasi</button><button id="fullscreen">Layar penuh</button></div></div>
         <p id="reader-error" role="alert" hidden></p>
       </section>
     </div>

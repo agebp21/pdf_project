@@ -156,7 +156,8 @@ def validate_manifest(data):
                 links=validate_links(data.get('links', {}), count), words=(words := validate_words(data.get('words', {}), count)),
                 text=validate_text(data.get('text', {}), words),
                 **({'podcast': podcast} if (podcast := validate_podcast(data.get('podcast'))) else {}),
-                **({'translations': tr} if (tr := validate_translations(data.get('translations'), count)) else {}))
+                **({'translations': tr} if (tr := validate_translations(data.get('translations'), count)) else {}),
+                **({'summary': sm} if (sm := validate_summary(data.get('summary'))) else {}))
 
 
 def validate_words(words, count):
@@ -235,6 +236,50 @@ def validate_translations(translations, count):
         if clean:
             out[lang] = clean
     return out or None
+
+
+def validate_summary(summary):
+    """{lang, text}; None when absent or empty."""
+    if summary is None:
+        return None
+    if not isinstance(summary, dict) or not isinstance(summary.get('text'), str):
+        raise ValueError('Data ringkasan tidak valid.')
+    text = summary['text'].strip()[:20000]
+    if not text:
+        return None
+    lang = summary.get('lang') if summary.get('lang') in TRANSLATE_LANGUAGES else 'id-ID'
+    return dict(lang=lang, text=text)
+
+
+SUMMARY_CHUNK = 60_000            # characters per partial summary for long books
+
+
+def summarize_book(title, text, lang='id-ID'):
+    """A faithful summary: an overview paragraph and 5-8 key points (long books
+    are first summarised in parts, then combined)."""
+    model = os.environ.get('SUMMARY_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
+    language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
+    heads = {'en-US': ('Overview', 'Key points'), 'ms-MY': ('Intisari', 'Perkara penting')}.get(lang, ('Intisari', 'Poin penting'))
+    source = text
+    if len(text) > SUMMARY_CHUNK * 1.2:
+        notes = []
+        pieces = [text[i:i + SUMMARY_CHUNK] for i in range(0, len(text), SUMMARY_CHUNK)][:12]
+        for n, piece in enumerate(pieces, 1):
+            notes.append(f'[Bagian {n}/{len(pieces)}]\n' + ai_chat(
+                f'Buat catatan ringkas yang setia dari bagian buku ini dalam {language}: poin-poin utama, nama, istilah, dan urutan '
+                'peristiwa atau argumen. Maksimal 250 kata. Hanya isi dari teks, tanpa pendapat.',
+                f'Judul buku: {title}\n\n{piece}', model, max_tokens=3000))
+        source = 'Catatan per bagian buku:\n\n' + '\n\n'.join(notes)
+    system = (f'Kamu editor buku. Tulis ringkasan buku dalam {language}, setia pada isi (jangan menambah fakta, angka, atau pendapat). Format persis:\n'
+              f'Baris pertama: judul bagian "{heads[0]}", lalu 2-4 kalimat inti buku.\n'
+              f'Lalu baris "{heads[1]}" diikuti 5-8 butir, tiap butir satu baris diawali "- ".\n'
+              'Tanpa markdown lain (tanpa #, **, atau tabel).')
+    for _ in range(2):
+        reply = ai_chat(system, f'Judul buku: {title}\n\n{source[:SUMMARY_CHUNK * 2]}', model, max_tokens=4000)
+        reply = reply.replace('**', '').replace('##', '').strip()
+        if len(reply.split()) >= 30:
+            return dict(lang=lang, text=reply[:20000], model=model)
+    raise RuntimeError('AI tidak menghasilkan ringkasan. Coba lagi.')
 
 
 def ai_chat(system, user, model, max_tokens=8000, temperature=0.3):
@@ -1275,6 +1320,35 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             self.send_json(404, {'error': 'Tidak ditemukan.'})
 
+    def book_text(self, data):
+        """The {page: [lines]} of a request as one text, pages in order."""
+        pages = data.get('text')
+        if not isinstance(pages, dict):
+            raise ValueError('Teks buku tidak valid.')
+        ordered = sorted((int(k), v) for k, v in pages.items() if re.fullmatch(r'0|[1-9][0-9]*', str(k)) and isinstance(v, list))
+        text = '\n\n'.join(f'[Halaman {k + 1}]\n' + '\n'.join(str(line) for line in lines if isinstance(line, str)) for k, lines in ordered)
+        if len(text.split()) < 40:
+            raise ValueError('Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR dulu.')
+        return text
+
+    def summary_route(self):
+        """POST {title, text: {page: [lines]}, lang} -> {lang, text}."""
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 16 * 1024 * 1024:
+                raise ValueError('Teks buku kosong atau terlalu besar.')
+            data = json.loads(self.rfile.read(size).decode('utf-8'))
+            text = self.book_text(data)
+            lang = data.get('lang') if data.get('lang') in TRANSLATE_LANGUAGES else 'id-ID'
+            title = str(data.get('title') or 'Buku')[:200]
+        except (ValueError, UnicodeDecodeError) as cause:
+            self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
+            return
+        try:
+            self.send_json(200, summarize_book(title, text, lang))
+        except RuntimeError as cause:
+            self.send_json(502, {'error': str(cause)})
+
     def translate_route(self):
         """POST {pages: {page: text}, target, title} -> {pages: {page: translation}}."""
         try:
@@ -1314,13 +1388,7 @@ class Handler(SimpleHTTPRequestHandler):
             if not 0 < size <= 8 * 1024 * 1024:
                 raise ValueError('Teks buku kosong atau terlalu besar.')
             data = json.loads(self.rfile.read(size).decode('utf-8'))
-            pages = data.get('text')
-            if not isinstance(pages, dict):
-                raise ValueError('Teks buku tidak valid.')
-            ordered = sorted((int(k), v) for k, v in pages.items() if re.fullmatch(r'0|[1-9][0-9]*', str(k)) and isinstance(v, list))
-            text = '\n\n'.join(f'[Halaman {k + 1}]\n' + '\n'.join(str(line) for line in lines if isinstance(line, str)) for k, lines in ordered)
-            if len(text.split()) < 40:
-                raise ValueError('Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR dulu.')
+            text = self.book_text(data)
             lang = data.get('lang') if data.get('lang') in PODCAST_LANGUAGES else 'id-ID'
             hosts = data.get('hosts')
             if not (isinstance(hosts, list) and len(hosts) == 2 and all(isinstance(h, str) and re.fullmatch(r'[A-Za-z]{2,20}', h) for h in hosts)):
@@ -1568,7 +1636,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(cause.status, {'error': str(cause)})
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
-        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'export' if self.path in ('/api/podcast/script', '/api/translate') else match[1] if match else None
+        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'export' if self.path in ('/api/podcast/script', '/api/translate', '/api/summary') else match[1] if match else None
         denied = feature and self.entitlement_error(feature)
         if denied:
             self.send_json(denied[0], {'error': denied[1]})
@@ -1587,6 +1655,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == '/api/translate':
             self.translate_route()
+            return
+        if self.path == '/api/summary':
+            self.summary_route()
             return
         if self.path in OFFICE_ROUTES:
             self.convert_office()

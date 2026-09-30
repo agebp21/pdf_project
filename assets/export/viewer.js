@@ -114,6 +114,8 @@
     // Translation (made in the editor): the pages on screen, beside the book.
     const translation = FlipbookTranslate.bind({translations: data.translations, visible, button: $('#translate')});
     book.on('flip', () => translation.pageChanged());
+    // Summary of the book (made in the editor).
+    FlipbookSummary.bind({summary: data.summary, button: $('#summary')});
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };

@@ -1986,3 +1986,72 @@
     };
   },
 };
+
+// Summary: an overview and key points of the book (written with AI in the
+// editor, stored as summary {lang, text}), in a panel beside the book. ES2018.
+(typeof self!=='undefined'?self:global).FlipbookSummary = {
+  // Text → blocks: {kind: 'head' | 'para' | 'list', text | items}.
+  blocks(text) {
+    const out = [];
+    String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(line => {
+      const item = /^[-•*]\s+(.+)$/.exec(line);
+      if (item) {
+        const last = out[out.length - 1];
+        if (last && last.kind === 'list') last.items.push(item[1]); else out.push({kind: 'list', items: [item[1]]});
+      } else if (line.length <= 40 && !/[.!?]$/.test(line)) out.push({kind: 'head', text: line.replace(/:$/, '')});
+      else out.push({kind: 'para', text: line});
+    });
+    return out;
+  },
+  /* options: {summary (object, or a function returning it), button} */
+  bind(options) {
+    const self = this;
+    const get = () => (typeof options.summary === 'function' ? options.summary() : options.summary) || null;
+    let panel = null, body = null;
+    const button = options.button;
+    function paint() {
+      if (!button) return;
+      const s = get();
+      button.hidden = !(s && s.text && s.text.trim());
+      button.textContent = '📋 Summary';
+      button.title = 'Summary of this book';
+      button.classList.toggle('is-on', !!panel);
+      button.setAttribute('aria-expanded', String(!!panel));
+    }
+    function fill() {
+      const s = get();
+      if (!panel) return;
+      if (!s) { close(); return; }
+      while (body.firstChild) body.removeChild(body.firstChild);
+      self.blocks(s.text).forEach(block => {
+        if (block.kind === 'list') {
+          const ul = document.createElement('ul');
+          block.items.forEach(t => { const li = document.createElement('li'); li.textContent = t; ul.appendChild(li); });
+          body.appendChild(ul);
+        } else {
+          const el = document.createElement('p');
+          if (block.kind === 'head') el.className = 'book-translate-page';
+          el.textContent = block.text; body.appendChild(el);
+        }
+      });
+    }
+    function close() { if (panel) { panel.remove(); panel = body = null; } paint(); }
+    function open() {
+      panel = document.createElement('div');
+      panel.className = 'book-translate book-summary'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Summary');
+      ['pointerdown', 'mousedown', 'touchstart', 'wheel'].forEach(name => panel.addEventListener(name, event => event.stopPropagation()));
+      const head = document.createElement('div'); head.className = 'book-translate-head';
+      const title = document.createElement('p'); title.className = 'book-marks-title'; title.textContent = '📋 Summary';
+      const shut = document.createElement('button'); shut.type = 'button'; shut.className = 'book-podcast-close'; shut.textContent = '✕';
+      shut.setAttribute('aria-label', 'Close summary'); shut.onclick = close;
+      head.appendChild(title); head.appendChild(shut);
+      body = document.createElement('div'); body.className = 'book-translate-body';
+      panel.appendChild(head); panel.appendChild(body);
+      document.body.appendChild(panel);
+      fill(); paint();
+    }
+    if (button) button.onclick = () => { if (panel) close(); else open(); };
+    paint();
+    return {open, close, active: () => !!panel, refresh() { if (panel) fill(); paint(); }};
+  },
+};

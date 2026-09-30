@@ -13,7 +13,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, translating = false, marks = null, notes = null, highlights = null, speech = null, curl = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, translating = false, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null;
   // Arsipku: the archived copy of the open book (members only).
   let libraryId = null, openingLibraryId = null, archiveUser;
   function exportState() {
@@ -22,7 +22,7 @@
     $('#export-exe').disabled = !buildConfig?.exe;
     $('#project-file').disabled = opening || exporting;
   }
-  const model = () => ({version:1,title:$('#export-title').value.trim()||'Buku interaktif',pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{}),...(Object.keys(bookTranslations).length?{translations:bookTranslations}:{})});
+  const model = () => ({version:1,title:$('#export-title').value.trim()||'Buku interaktif',pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{}),...(Object.keys(bookTranslations).length?{translations:bookTranslations}:{}),...(bookSummary?{summary:bookSummary}:{})});
   const error = message => { $('#reader-error').textContent = message; $('#reader-error').hidden = !message; };
   // Sheets on screen (may include the blank back cover of an odd page count).
   function sheetsOnScreen() {
@@ -121,7 +121,7 @@
       if (book) { disposeLayout?.(); book.destroy(); book = null; }
       if (pdf) await pdf.destroy();
       imageUrls.forEach(url => URL.revokeObjectURL(url));
-      imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links; bookWords = words; bookText = text; bookPodcast = (project && project.podcast) || null; bookTranslations = (project && project.translations) || {};
+      imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links; bookWords = words; bookText = text; bookPodcast = (project && project.podcast) || null; bookTranslations = (project && project.translations) || {}; bookSummary = (project && project.summary) || null;
       // Odd page counts get a blank back cover so the book can close.
       const sheets = FlipbookLayout.withBackCover(newElements, 'pdf-page');
       const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...sheets);
@@ -172,6 +172,9 @@
       translateView = FlipbookTranslate.bind({translations: () => bookTranslations, visible: visiblePages, button: $('#translate')});
       book.on('flip', () => translateView.pageChanged());
       showTranslation(true);
+      summaryView?.close();
+      summaryView = FlipbookSummary.bind({summary: () => bookSummary, button: $('#summary')});
+      showSummary();
       speech?.close();
       speech = FlipbookSpeech.bind({text: bookText, words: bookWords, pages: newElements, visible: visiblePages, button: $('#speak'),
         busy: () => highlights.active(), onStart: () => podcastView?.stop(), notice: message => { $('#load-status').textContent = message; },
@@ -338,6 +341,54 @@
     if (!confirm(`Hapus terjemahan ${LANG_NAMES[target]}?`)) return;
     delete bookTranslations[target];
     showTranslation(false); translateStatus(`Terjemahan ${LANG_NAMES[target]} dihapus.`);
+  });
+
+  // ---------- Summary: overview + key points written with AI (/api/summary); editable.
+  function summaryStatus(text, bad = false) { $('#summary-status').textContent = text; $('#summary-status').classList.toggle('error', bad); }
+  function showSummary() {
+    const has = !!(bookSummary && bookSummary.text);
+    $('#summary-text').hidden = !has; $('#summary-clear').hidden = !has;
+    if (has && document.activeElement !== $('#summary-text')) $('#summary-text').value = bookSummary.text;
+    $('#summary-make').textContent = has ? '📝 Buat ulang ringkasan' : '📝 Buat ringkasan (AI)';
+    summaryView?.refresh();
+  }
+  $('#summary-make').addEventListener('click', async () => {
+    if (!pageElements.length) return;
+    if (bookSummary && !confirm('Buat ulang? Ringkasan sekarang (termasuk editanmu) akan diganti.')) return;
+    const all = Object.keys(bookText).map(k => bookText[k].join(' ')).join(' ');
+    if (all.split(/\s+/).length < 40) { summaryStatus('Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR di Converter dulu.', true); return; }
+    const lang = $('#summary-lang').value || FlipbookSpeech.lang(all.slice(0, 20000));
+    const button = $('#summary-make');
+    button.classList.add('is-busy'); button.disabled = true;
+    summaryStatus('Membuat ringkasan… 15-60 detik (buku tebal bisa lebih lama).');
+    try {
+      const caps = await serverCaps();
+      const response = await fetch('/api/summary', {method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json', 'X-Build-Token': caps.token},
+        body: JSON.stringify({title: $('#export-title').value.trim() || 'Buku', text: bookText, lang})});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw Error(result.error || 'Ringkasan gagal dibuat.');
+      bookSummary = {lang: result.lang, text: result.text};
+      showSummary();
+      summaryStatus('Ringkasan siap. Lihat dengan 📋 Summary di pratinjau, edit bila perlu.');
+      archiveBook();
+    } catch (cause) { summaryStatus(cause.message, true); }
+    finally { button.classList.remove('is-busy'); button.disabled = false; }
+  });
+  let summaryTimer = 0;
+  $('#summary-text').addEventListener('input', () => {
+    clearTimeout(summaryTimer);
+    summaryTimer = setTimeout(() => {
+      const text = $('#summary-text').value.trim();
+      bookSummary = text ? {lang: (bookSummary && bookSummary.lang) || 'id-ID', text} : null;
+      summaryView?.refresh();
+      summaryStatus(text ? 'Editan ringkasan tersimpan.' : 'Ringkasan kosong: tidak ikut ke buku.');
+    }, 500);
+  });
+  $('#summary-clear').addEventListener('click', () => {
+    if (!confirm('Hapus ringkasan dari buku ini?')) return;
+    summaryView?.close(); bookSummary = null; $('#summary-text').value = ''; showSummary();
+    summaryStatus('Ringkasan dihapus.');
   });
 
   // ---------- Arsipku: every book a member opens or exports is kept in their
