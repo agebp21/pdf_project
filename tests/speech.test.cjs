@@ -59,5 +59,21 @@ assert.equal(S.lang('This is the book that we made for the family'), 'en-US');
   S.bind({ text: {}, visible, engine, next: () => false, button: b2 }); assert.equal(b2.hidden, true);
   const b3 = w.document.createElement('button');
   S.bind({ text: pages, visible, engine: null, next: () => false, button: b3 }); assert.equal(b3.hidden, true, 'no voices here (jsdom)');
-  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end');
+  // Voice choice (Web Speech): an Indonesian woman's voice.
+  const pick = voices => {
+    let used = null;
+    w.SpeechSynthesisUtterance = function (text) { this.text = text; };
+    w.speechSynthesis = { getVoices: () => voices, speak: u => { used = u; }, cancel() {} };
+    S.engine().speak('Halo', 'id-ID', () => {});
+    return used.voice ? used.voice.name : null;
+  };
+  const v = (name, lang) => ({ name, lang });
+  const windows = [v('Microsoft Andika - Indonesian (Indonesia)', 'id-ID'), v('Microsoft Zira - English (United States)', 'en-US')];
+  assert.equal(pick(windows.concat([v('Google Bahasa Indonesia', 'id-ID'), v('Google US English', 'en-US')])), 'Google Bahasa Indonesia', 'Chrome: Google');
+  assert.equal(pick(windows.concat([v('Microsoft Ardi Online (Natural) - Indonesian (Indonesia)', 'id-ID'), v('Microsoft Gadis Online (Natural) - Indonesian (Indonesia)', 'id-ID')])),
+    'Microsoft Gadis Online (Natural) - Indonesian (Indonesia)', 'Edge: Gadis, not Ardi');
+  assert.equal(pick(windows), 'Microsoft Andika - Indonesian (Indonesia)', 'Windows only has Andika: still Indonesian');
+  assert.equal(pick([v('Some voice', 'in_ID')]), 'Some voice', 'old Android code "in"');
+  delete w.speechSynthesis; delete w.SpeechSynthesisUtterance;
+  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice');
 })().catch(e => { console.error(e); process.exit(1); });

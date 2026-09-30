@@ -1561,10 +1561,17 @@
     const synth = root.speechSynthesis, Utterance = root.SpeechSynthesisUtterance;
     if (!synth || !Utterance) return null;
     let current = null;
+    // A woman's voice in the book's language: Google's (Chrome: "Google Bahasa
+    // Indonesia" is a woman's voice), then Edge's natural ones (Gadis), then
+    // any not known to be a man's (Windows' Indonesian "Andika" is last).
     const voice = lang => {
       const all = synth.getVoices() || [], code = lang.slice(0, 2).toLowerCase();
-      const fits = all.filter(v => String(v.lang || '').replace('_', '-').toLowerCase().indexOf(code) === 0);
-      return fits.filter(v => /google/i.test(v.name))[0] || fits.filter(v => /natural|online/i.test(v.name))[0] || fits[0] || null;
+      const fits = all.filter(v => { const l = String(v.lang || '').replace('_', '-').toLowerCase(); return l.indexOf(code) === 0 || (code === 'id' && l.indexOf('in-') === 0); });
+      const male = v => /\b(ardi|andika|male|pria|laki)\b/i.test(v.name) && !/female/i.test(v.name);
+      return fits.filter(v => /google/i.test(v.name))[0] ||
+        fits.filter(v => /gadis|female|wanita|perempuan/i.test(v.name))[0] ||
+        fits.filter(v => /natural|online/i.test(v.name) && !male(v))[0] ||
+        fits.filter(v => !male(v))[0] || fits[0] || null;
     };
     return {
       speak(text, lang, done) {
