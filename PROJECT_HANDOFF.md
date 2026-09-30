@@ -643,3 +643,10 @@ Catatan baru memanggil `options.bookmark(index, true)` (viewer/preview: `marks.s
 - Pilihan provider IDR: Midtrans bila MIDTRANS_SERVER_KEY ada (default); Tripay bila Midtrans kosong atau MYFLIPBOOK_IDR_PROVIDER=tripay.
 - `server.load_env(ROOT/.env)` saat server start (KEY=VALUE, tidak menimpa env sistem, nilai kosong dilewati). `.env` lokal sudah dibuat berisi kolom Midtrans kosong (gitignored).
 - `MidtransProvider.status(order_id)` (GET api[.sandbox].midtrans.com/v2/<id>/status, Basic server key) + `Accounts.refresh_pending(user_id)` dipanggil di GET /api/billing/orders: order pending <=48 jam (maks 3) disettle langsung dari status Midtrans -> bekerja walau notifikasi tidak bisa sampai (server lokal). Nominal tidak cocok -> order failed. Notifikasi bertanda tangan tetap jalur utama: set Payment Notification URL https://<domain>/api/billing/midtrans/notify di dashboard.
+
+### 30 September 2026 - Arsipku (arsip pribadi member)
+
+- `library.py`: tabel `library_books` + `library_exports` di SQLite akun; file di `.data/library/<user_id>/<book_id>/` (project.bin, cover.bin, exports/<id>.bin) terenkripsi: SHAKE-256 keystream per 1 MB + HMAC-SHA256 (encrypt-then-MAC), kunci master `MYFLIPBOOK_LIBRARY_KEY` atau `.data/library.key` (dibuat sekali). **BACKUP library.key bersama database** — hilang = arsip tidak bisa dibuka. 50 MB ~0,3 dtk.
+- Kuota `LIMITS`: free 3 buku/100 MB, pro 50/5 GB, business tanpa batas/50 GB (turun paket tidak menghapus, hanya menolak simpanan baru). Satu ekspor terbaru per jenis (html/apk/exe) per buku.
+- API (login): GET /api/library, GET /api/library/<id>/(cover|project), GET /api/library/<id>/exports/<eid>, POST /api/library/save (zip, X-Book-Id), POST /api/library/<id>/(cover|export|delete). Build APK/EXE: header X-Library-Book -> hasil disimpan server ke arsip.
+- Editor: simpan otomatis saat buku dibuka (+ sampul 480px) dan saat ekspor/simpan proyek; status `#archive-status`; `flipbook.html?library=<id>` membuka dari arsip. Halaman `library.html` (Arsipku) + link di Akun. Tes: tests/test_library.py.

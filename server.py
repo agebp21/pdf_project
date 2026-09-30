@@ -33,6 +33,7 @@ import urllib.request
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 import accounts
+import library
 import book_seal
 import invoice
 
@@ -45,7 +46,7 @@ JOBS = {}
 BUILD_LOCK = threading.Lock()
 POSITIONS = {'top-left', 'top-right', 'bottom-left', 'bottom-right'}
 SESSION_COOKIE = 'mf_session'
-PAGES = {'index.html', 'converter.html', 'workflow.html', 'flipbook.html', 'animation.html', 'notebook.html',
+PAGES = {'index.html', 'converter.html', 'workflow.html', 'library.html', 'flipbook.html', 'animation.html', 'notebook.html',
          'login.html', 'account.html', 'coming-soon.html'}
 # Unreleased features: on a normal run (paywall on) these pages show the
 # coming-soon page; --no-paywall keeps them usable internally.
@@ -60,6 +61,7 @@ CONFIG = dict(public_hosts=set(), secure=False, base_url='', paywall=False)
 EXPORT_TEMPLATES = {'assets/export/index.html', 'assets/export/viewer.js', 'assets/export/viewer.css'}
 ACCOUNTS = None
 ACCOUNTS_LOCK = threading.Lock()
+LIBRARY = None
 
 
 def load_env(path):
@@ -119,6 +121,16 @@ def get_accounts():
             db = os.environ.get('MYFLIPBOOK_DB') or str(ROOT / '.data' / 'myflipbook.sqlite3')
             ACCOUNTS = accounts.Accounts(db, provider, usd_provider)
         return ACCOUNTS
+
+
+def get_library():
+    """The member archive, next to the account database (same SQLite file)."""
+    global LIBRARY
+    store = get_accounts()
+    with ACCOUNTS_LOCK:
+        if LIBRARY is None or LIBRARY.store is not store:
+            LIBRARY = library.Library(store, store.path.parent)
+        return LIBRARY
 
 
 def validate_manifest(data):
@@ -829,9 +841,16 @@ def build_job(job_id, target):
             single.unlink(); launcher.unlink()
         # Download named after the book (the browser takes the server's name).
         label = exe_name(data['title'])
+        download_name = label + ('.apk' if target == 'apk' else ' - Windows.zip')
+        if job.get('library_user') and job.get('library_book'):
+            # Keep the result in the member's archive too (quota permitting).
+            try:
+                get_library().save_export(job['library_user'], job['library_book'], target, download_name, source=output)
+                job['library'] = 'saved'
+            except accounts.AccountError as cause:
+                job['library'] = str(cause)
         job.update(status='done', message='Build selesai.', progress=1, artifact=output.name,
-                   download_name=label + ('.apk' if target == 'apk' else ' - Windows.zip'),
-                   download=f'/api/jobs/{job_id}/download')
+                   download_name=download_name, download=f'/api/jobs/{job_id}/download')
     except Exception as cause:
         with log.open('a', encoding='utf-8') as stream:
             stream.write('\n' + str(cause) + '\n')
@@ -946,6 +965,83 @@ class Handler(SimpleHTTPRequestHandler):
         scheme = 'https' if CONFIG['secure'] else 'http'
         return f'{scheme}://{self.headers.get("Host", "")}'
 
+    # ---- member archive (Arsipku) -------------------------------------------
+    def member(self):
+        user = self.current_user()
+        if not user:
+            raise accounts.AccountError(401, 'Silakan masuk dulu untuk memakai Arsipku.')
+        return user
+
+    def read_raw(self, limit):
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+        except ValueError:
+            size = -1
+        if not 0 < size <= limit:
+            raise accounts.AccountError(413, 'Ukuran file tidak valid atau terlalu besar.')
+        self.connection.settimeout(300)
+        data, remaining = bytearray(), size
+        while remaining:
+            chunk = self.rfile.read(min(1024 * 1024, remaining))
+            if not chunk:
+                raise accounts.AccountError(400, 'Upload tidak lengkap.')
+            data += chunk
+            remaining -= len(chunk)
+        return bytes(data)
+
+    def send_file_bytes(self, data, content_type, filename=None):
+        self.send_response(200)
+        self.send_header('Content-Type', content_type)
+        self.send_header('Cache-Control', 'private, no-store')
+        if filename:
+            ascii_name = re.sub(r'[^A-Za-z0-9._ -]+', '_', filename)
+            self.send_header('Content-Disposition', f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{quote(filename)}')
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
+    def library_get(self, path):
+        user, store = self.member(), get_library()
+        if path == '/api/library':
+            self.send_json(200, {'books': store.books(user), 'usage': store.usage(user)})
+            return
+        match = re.fullmatch(r'/api/library/([0-9a-f]{32})/(cover|project)', path)
+        if match:
+            book_id, what = match.groups()
+            if what == 'cover':
+                self.send_file_bytes(store.cover(user, book_id), 'image/jpeg')
+            else:
+                data, title = store.project(user, book_id)
+                self.send_file_bytes(data, 'application/octet-stream', exe_name(title) + '.smflipbook')
+            return
+        match = re.fullmatch(r'/api/library/([0-9a-f]{32})/exports/([0-9a-f]{32})', path)
+        if match:
+            data, filename = store.export(user, *match.groups())
+            self.send_file_bytes(data, 'application/octet-stream', filename)
+            return
+        self.send_json(404, {'error': 'Tidak ditemukan.'})
+
+    def library_post(self, path):
+        user, store = self.member(), get_library()
+        if path == '/api/library/save':
+            data = self.read_raw(library.MAX_PROJECT)
+            book_id = store.save_project(user, data, self.headers.get('X-Book-Id') or None)
+            self.send_json(200, {'id': book_id, 'usage': store.usage(user)})
+            return
+        match = re.fullmatch(r'/api/library/([0-9a-f]{32})/(cover|export|delete)', path)
+        if not match:
+            self.send_json(404, {'error': 'Tidak ditemukan.'})
+            return
+        book_id, action = match.groups()
+        if action == 'cover':
+            store.save_cover(user, book_id, self.read_raw(library.MAX_COVER))
+        elif action == 'export':
+            store.save_export(user, book_id, self.headers.get('X-Kind', ''), unquote(self.headers.get('X-Filename', '')),
+                              self.read_raw(library.MAX_EXPORT))
+        else:
+            store.delete(user, book_id)
+        self.send_json(200, {'ok': True, 'usage': store.usage(user)})
+
     def account_get(self, path):
         store = get_accounts()
         if path == '/api/auth/me':
@@ -1052,6 +1148,12 @@ class Handler(SimpleHTTPRequestHandler):
         if path.startswith(('/api/auth/', '/api/billing/')):
             try:
                 self.account_get(path)
+            except accounts.AccountError as cause:
+                self.send_json(cause.status, {'error': str(cause)})
+            return
+        if path == '/api/library' or path.startswith('/api/library/'):
+            try:
+                self.library_get(path)
             except accounts.AccountError as cause:
                 self.send_json(cause.status, {'error': str(cause)})
             return
@@ -1243,6 +1345,12 @@ class Handler(SimpleHTTPRequestHandler):
             except accounts.AccountError as cause:
                 self.send_json(cause.status, {'error': str(cause), 'success': False})
             return
+        if self.path.startswith('/api/library/'):
+            try:
+                self.library_post(self.path)
+            except accounts.AccountError as cause:
+                self.send_json(cause.status, {'error': str(cause)})
+            return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
         feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else match[1] if match else None
         denied = feature and self.entitlement_error(feature)
@@ -1288,6 +1396,10 @@ class Handler(SimpleHTTPRequestHandler):
                     output.write(chunk)
                     remaining -= len(chunk)
             JOBS[job_id] = dict(id=job_id, status='queued', message='Build menunggu…', progress=0)
+            archived = self.headers.get('X-Library-Book', '')
+            member = self.current_user() if archived else None
+            if member and re.fullmatch(r'[0-9a-f]{32}', archived):
+                JOBS[job_id].update(library_user=member, library_book=archived)
             threading.Thread(target=build_job, args=(job_id, match[1]), daemon=True).start()
             started = True
             self.send_json(202, {'id': job_id})

@@ -14,6 +14,8 @@
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
   let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, marks = null, notes = null, highlights = null, curl = null;
+  // Arsipku: the archived copy of the open book (members only).
+  let libraryId = null, openingLibraryId = null, archiveUser;
   function exportState() {
     $('#export-fields').disabled = !sourcePdf || opening || exporting;
     $('#export-apk').disabled = !buildConfig?.apk;
@@ -164,6 +166,8 @@
       $('#load-status').textContent = `${newElements.length} page${newElements.length === 1 ? '' : 's'} ready. The first page is the front cover.` +
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');
       updatePage();
+      libraryId = openingLibraryId; openingLibraryId = null;
+      if (libraryId) archiveNote('☁ Dibuka dari Arsipku'); else archiveBook();
       return true;
     } catch (cause) {
       if (installed) sourcePdf = null;
@@ -181,6 +185,63 @@
       exportState();
     }
   }
+  // ---------- Arsipku: every book a member opens or exports is kept in their
+  // personal archive on the server (project, cover, latest exports).
+  async function archiveMember() {
+    if (archiveUser === undefined) {
+      try { const r = await fetch('/api/auth/me', {credentials:'same-origin', cache:'no-store'}); archiveUser = r.ok ? (await r.json()).user : null; }
+      catch (e) { archiveUser = null; }
+    }
+    return archiveUser;
+  }
+  function archiveNote(text, bad = false) {
+    $('#archive-status').textContent = text || '';
+    $('#archive-status').classList.toggle('is-error', bad);
+  }
+  async function coverJpeg() {
+    const img = pageElements[0]?.querySelector('img');
+    if (!img || !img.src) return null;
+    try {
+      const bitmap = await createImageBitmap(await (await fetch(img.src)).blob());
+      const scale = Math.min(1, 480 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
+      canvas.getContext('2d').drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+      return await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+    } catch (e) { return null; }
+  }
+  // Save (or update) the open book in the member's archive. Never blocks the editor.
+  async function archiveBook() {
+    if (!sourcePdf || !(await archiveMember())) { if (archiveUser === null) archiveNote('Masuk untuk menyimpan otomatis ke Arsipku.'); return null; }
+    try {
+      archiveNote('☁ Menyimpan ke Arsipku…');
+      const project = await FlipbookExport.saveProject(model(), sourcePdf);
+      const headers = {'Content-Type':'application/zip'};
+      if (libraryId) headers['X-Book-Id'] = libraryId;
+      const response = await fetch('/api/library/save', {method:'POST', credentials:'same-origin', headers, body: project});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw Error(result.error || 'Gagal menyimpan.');
+      const first = !libraryId;
+      libraryId = result.id;
+      if (first) {
+        const cover = await coverJpeg();
+        if (cover) await fetch(`/api/library/${libraryId}/cover`, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'image/jpeg'}, body: cover});
+      }
+      archiveNote('☁ Tersimpan di Arsipku');
+      return libraryId;
+    } catch (cause) { archiveNote('Arsipku: ' + cause.message, true); return null; }
+  }
+  async function archiveExport(kind, blob, filename) {
+    if (!(await archiveBook())) return;
+    try {
+      const response = await fetch(`/api/library/${libraryId}/export`, {method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/octet-stream', 'X-Kind': kind, 'X-Filename': encodeURIComponent(filename)}, body: blob});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw Error(result.error || 'Gagal menyimpan hasil ekspor.');
+      archiveNote('☁ Buku + hasil ' + kind.toUpperCase() + ' tersimpan di Arsipku');
+    } catch (cause) { archiveNote('Arsipku: ' + cause.message, true); }
+  }
+
   // ---------- Add file: upload (PDF, Office, images), a link or Google Drive.
   const OFFICE_ROUTE = {docx:'word', doc:'word', xlsx:'excel', xls:'excel', csv:'excel', pptx:'pptx', ppt:'pptx'};
   const OFFICE_TYPE = {docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', doc:'application/msword',
@@ -406,6 +467,7 @@
         status('Menyimpan proyek…');
         const saved = await FlipbookExport.saveBlob(blob, outputName, saveHandle); progress(1);
         status(saved?'Proyek tersimpan di lokasi pilihanmu.':'Proyek dikirim ke download browser.');
+        archiveBook();
         return;
       }
       const native = target === 'apk' || target === 'exe';
@@ -414,6 +476,7 @@
         const single = await FlipbookExport.packageSingleHtml(data, imageUrls, (message, fraction) => { status(message); if (fraction !== undefined) step(0, .95)(fraction); });
         status('Menyimpan HTML…');
         const saved = await FlipbookExport.saveBlob(single, outputName, saveHandle); progress(1);
+        archiveExport('html', single, outputName);
         status((saved?'HTML tersimpan di lokasi pilihanmu. ':'HTML dikirim ke download browser. ')+'Klik 2x file '+outputName+' untuk membaca bukunya.');
         return;
       }
@@ -424,7 +487,11 @@
       buildConfig=await capabilities.json();
       if(!buildConfig[target])throw Error('Build '+target.toUpperCase()+' belum tersedia di komputer ini.');
       status('Mengirim buku ke layanan build…');
-      const sent = await FlipbookExport.upload('/api/build/'+target, bundle, {'Content-Type':'application/zip','X-Build-Token':buildConfig.token}, step(.12, .2));
+      // The server keeps the build in the member's archive too.
+      const archived = await archiveBook();
+      const buildHeaders = {'Content-Type':'application/zip','X-Build-Token':buildConfig.token};
+      if (archived) buildHeaders['X-Library-Book'] = archived;
+      const sent = await FlipbookExport.upload('/api/build/'+target, bundle, buildHeaders, step(.12, .2));
       if(!sent.ok)throw Error(sent.data.error||'Build gagal dimulai.');
       // Server reports its stage (0..1); while the compiler runs, creep
       // toward the next stage so the bar keeps moving honestly.
@@ -470,6 +537,20 @@
     buildConfig=await response.json();exportState();markLocked();
     $('#build-availability').textContent=buildConfig.apk||buildConfig.exe?'Build APK/EXE memakai komputer ini. Build pertama dapat memerlukan beberapa menit dan internet untuk dependensi.':'Flutter belum tersedia. Ekspor HTML dan simpan proyek tetap bisa digunakan.';
   }).catch(()=>{ $('#build-availability').textContent='Untuk build APK/EXE, jalankan server proyek dengan python server.py. Ekspor HTML tetap tersedia.'; });
+  const fromLibrary = new URLSearchParams(location.search).get('library');
+  if (/^[0-9a-f]{32}$/.test(fromLibrary || '')) {
+    (async () => {
+      try {
+        archiveNote('☁ Membuka dari Arsipku…');
+        const response = await fetch(`/api/library/${fromLibrary}/project`, {credentials:'same-origin'});
+        if (!response.ok) throw Error(((await response.json().catch(() => ({}))).error) || 'Buku tidak bisa dibuka dari Arsipku.');
+        const project = await FlipbookExport.readProject(await response.blob());
+        openingLibraryId = fromLibrary;
+        await openPdf(project.pdf, project.data.title + '.pdf', project.data);
+        history.replaceState(null, '', location.pathname);
+      } catch (cause) { openingLibraryId = null; archiveNote(cause.message, true); error(cause.message); }
+    })();
+  }
   const source = new URLSearchParams(location.search).get('source');
   if (source) {
     (async () => {
