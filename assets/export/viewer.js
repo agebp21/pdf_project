@@ -102,8 +102,6 @@
       // Highlighted text becomes a note on the page edge (and goes when erased).
       onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
       onRecolor: (index, said, color) => notes.tint(index, said, color)});
-    // Magnifier: a lens dragged over the page.
-    const loupe = FlipbookLoupe.bind({pages: elements, button: $('#loupe')});
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };
@@ -127,10 +125,10 @@
     }
     document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen'});
     FlipbookIdle.bind({
-      active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !notes.editing() && !highlights.active() && !loupe.active(),
+      active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !notes.editing() && !highlights.active(),
       home: () => { book.turnToPage(0); update(); animate(); }
     });
-    const zoom = FlipbookZoom.bind($('main'), $('#stage'), {zoomOut: $('#zoom-out'), level: $('#zoom-level'), zoomIn: $('#zoom-in'), hint: $('#zoom-hint'),
+    const zoom = FlipbookZoom.bind($('main'), $('#stage'), {button: $('#zoom'), hint: $('#zoom-hint'),
       // The pages on screen (PageFlip's bounds inside its block): pan no further than the book.
       content: () => {
         const bounds = book.getBoundsRect(), block = document.querySelector('#book .stf__block');

@@ -615,7 +615,6 @@
 // ES2018 for old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookZoom = {
   MAX: 4,
-  STEPS: [1, 2, 3],
   // One zoom step: + (or a double-tap) zooms to 200%, the next press goes
   // back to 100%. Pinch / Ctrl+wheel still zoom freely up to MAX.
   ZOOMED: 2,
@@ -636,8 +635,8 @@
     return { x: px - (px - x) / from * to, y: py - (py - y) / from * to };
   },
   /* surface: element receiving gestures; target: element that scales;
-     options: {zoomOut, level, zoomIn (the − 100% + toolbar control; the
-     percentage resets to 100%), button (older single 🔍), chip, hint,
+     options: {button (🔍: 200% / back to 100%), zoomOut, level, zoomIn
+     (optional − 100% + control), chip, hint,
      onChange(scale), content(): the book's on-screen rect (client
      coordinates) so panning stops at its edges} */
   bind(surface, target, options) {
@@ -654,7 +653,8 @@
       const percent = Math.round(scale * 100) + '%';
       if (opts.button) {
         opts.button.textContent = scale > 1 ? '🔍 ' + percent : '🔍';
-        opts.button.setAttribute('aria-label', scale > 1 ? 'Zoom ' + percent + ', press to zoom more or reset' : 'Zoom in');
+        opts.button.setAttribute('aria-label', scale > 1 ? 'Zoom ' + percent + ', press to go back to 100%' : 'Zoom in to ' + Math.round(self.ZOOMED * 100) + '%');
+        opts.button.classList.toggle('is-zoomed', scale > 1);
       }
       if (opts.chip) { opts.chip.hidden = scale <= 1; const label = opts.chip.querySelector('span'); if (label) label.textContent = percent; }
       if (opts.level) {
@@ -787,11 +787,8 @@
     surface.addEventListener('click', event => { if (dragged) { dragged = false; block(event); } }, true);
     surface.addEventListener('dblclick', event => { if (scale > 1) { block(event); reset(); } }, true);
     function reset() { if (scale > 1) { scale = 1; apply(true); } }
-    function step() {
-      const next = self.STEPS.filter(value => value > scale + 0.01)[0];
-      const c = center();
-      if (next) zoomTo(next, c.x, c.y, true); else reset();
-    }
+    // 🔍: zoom to 200%, press again for 100%.
+    function step() { const c = center(); zoomTo(self.up(scale), c.x, c.y, true); }
     if (opts.button) opts.button.onclick = step;
     const toward = next => { const c = center(); zoomTo(next, c.x, c.y, true); };
     if (opts.zoomIn) opts.zoomIn.onclick = () => toward(self.up(scale));
@@ -1501,140 +1498,3 @@
   },
 };
 
-// Magnifier ("kaca pembesar"): a round lens with a handle, dragged over the
-// book. It shows the page images under it, magnified from their full
-// resolution. Tap the glass: 2x -> 3x -> 4x; wheel over it: any level.
-(typeof self!=='undefined'?self:global).FlipbookLoupe = {
-  LEVELS: [2, 3, 4],
-  MIN: 1.5,
-  MAX: 6,
-  // Where an object-fit:contain image actually sits inside its box.
-  fit(naturalWidth, naturalHeight, box) {
-    if (!naturalWidth || !naturalHeight || !box.width || !box.height) return null;
-    const scale = Math.min(box.width / naturalWidth, box.height / naturalHeight);
-    const width = naturalWidth * scale, height = naturalHeight * scale;
-    return { left: box.left + (box.width - width) / 2, top: box.top + (box.height - height) / 2, width: width, height: height };
-  },
-  // One CSS background layer showing `rect` (client coords) magnified by
-  // `zoom` inside a lens of radius r centred on (x, y).
-  layer(rect, x, y, r, zoom) {
-    return {
-      size: (rect.width * zoom).toFixed(1) + 'px ' + (rect.height * zoom).toFixed(1) + 'px',
-      position: (r - (x - rect.left) * zoom).toFixed(1) + 'px ' + (r - (y - rect.top) * zoom).toFixed(1) + 'px'
-    };
-  },
-  touches(rect, x, y, r) {
-    return rect.width > 0 && rect.left < x + r && rect.left + rect.width > x - r && rect.top < y + r && rect.top + rect.height > y - r;
-  },
-  next(zoom) {
-    const levels = this.LEVELS;
-    for (let i = 0; i < levels.length; i++) if (levels[i] > zoom + 0.05) return levels[i];
-    return levels[0];
-  },
-  /* options: {pages: page elements (each holding an <img>), button} */
-  bind(options) {
-    const self = this, pages = options.pages || [];
-    let on = false, zoom = self.LEVELS[0], x = 0, y = 0, r = 90, frame = 0, drag = null;
-    const make = (tag, className, parent) => { const n = document.createElement(tag); n.className = className; if (parent) parent.appendChild(n); return n; };
-    const lens = make('div', 'book-loupe');
-    lens.hidden = true;
-    lens.setAttribute('role', 'img'); lens.setAttribute('aria-label', 'Magnifier');
-    const handle = make('div', 'book-loupe-handle', lens);
-    const glass = make('div', 'book-loupe-glass', lens);
-    const level = make('span', 'book-loupe-level', lens);
-    const close = make('button', 'book-loupe-close', lens);
-    close.type = 'button'; close.textContent = '✕'; close.title = 'Close magnifier'; close.setAttribute('aria-label', 'Close magnifier');
-    document.body.appendChild(lens);
-    function place() {
-      const width = window.innerWidth, height = window.innerHeight;
-      r = Math.round(Math.max(60, Math.min(110, Math.min(width, height) * 0.2)));
-      x = Math.max(8, Math.min(width - 8, x)); y = Math.max(8, Math.min(height - 8, y));
-      lens.style.width = lens.style.height = 2 * r + 'px';
-      lens.style.left = (x - r) + 'px'; lens.style.top = (y - r) + 'px';
-      handle.style.height = Math.round(r * 0.95) + 'px';
-      handle.style.transform = 'rotate(-45deg) translateY(' + (r - 2) + 'px)';
-      level.textContent = (Math.round(zoom * 10) / 10) + '×';
-    }
-    function paint() {
-      const images = [], sizes = [], positions = [];
-      for (let i = pages.length - 1; i >= 0; i--) {
-        const page = pages[i], box = page.getBoundingClientRect();
-        if (!self.touches(box, x, y, r)) continue;
-        const img = page.querySelector('img');
-        const shown = img && img.complete && img.naturalWidth ? self.fit(img.naturalWidth, img.naturalHeight, img.getBoundingClientRect()) : null;
-        if (shown && self.touches(shown, x, y, r)) {
-          const part = self.layer(shown, x, y, r, zoom);
-          images.push('url("' + (img.currentSrc || img.src).replace(/"/g, '%22') + '")'); sizes.push(part.size); positions.push(part.position);
-        }
-        // The white sheet behind the image.
-        const sheet = self.layer(box, x, y, r, zoom);
-        images.push('linear-gradient(#fff,#fff)'); sizes.push(sheet.size); positions.push(sheet.position);
-      }
-      glass.style.backgroundImage = images.join(',') || 'none';
-      glass.style.backgroundSize = sizes.join(',');
-      glass.style.backgroundPosition = positions.join(',');
-    }
-    // Pages turn and zoom under the lens: repaint every frame while it is out.
-    function loop() { paint(); frame = requestAnimationFrame(loop); }
-    function escape(event) { if (event.key === 'Escape') set(false); }
-    function set(next) {
-      on = next;
-      lens.hidden = !on;
-      document.body.classList.toggle('is-magnifying', on);
-      if (options.button) { options.button.setAttribute('aria-pressed', String(on)); options.button.classList.toggle('is-on', on); }
-      cancelAnimationFrame(frame);
-      if (on) {
-        // Start over the middle of the book (or the screen).
-        const shown = pages.map(p => p.getBoundingClientRect()).filter(b => b.width > 0);
-        if (shown.length) {
-          const left = Math.min.apply(null, shown.map(b => b.left)), right = Math.max.apply(null, shown.map(b => b.left + b.width));
-          const top = Math.min.apply(null, shown.map(b => b.top)), bottom = Math.max.apply(null, shown.map(b => b.top + b.height));
-          x = (left + right) / 2; y = (top + bottom) / 2;
-        } else { x = window.innerWidth / 2; y = window.innerHeight / 2; }
-        place(); loop();
-        document.addEventListener('keydown', escape);
-      } else document.removeEventListener('keydown', escape);
-    }
-    // Nothing on the lens reaches the book underneath (no page turns).
-    ['mousedown', 'touchstart', 'click', 'dblclick'].forEach(name => lens.addEventListener(name, event => event.stopPropagation()));
-    lens.addEventListener('pointerdown', event => {
-      if (event.target === close || (event.button !== undefined && event.button > 0)) return;
-      event.stopPropagation(); if (event.cancelable) event.preventDefault();
-      drag = { id: event.pointerId, dx: event.clientX - x, dy: event.clientY - y, sx: event.clientX, sy: event.clientY, moved: false, glass: event.target === glass || event.target === level };
-      try { lens.setPointerCapture(event.pointerId); } catch (e) {}
-    });
-    lens.addEventListener('pointermove', event => {
-      if (!drag || event.pointerId !== drag.id) return;
-      event.stopPropagation(); if (event.cancelable) event.preventDefault();
-      if (Math.abs(event.clientX - drag.sx) + Math.abs(event.clientY - drag.sy) > 6) drag.moved = true;
-      x = event.clientX - drag.dx; y = event.clientY - drag.dy; place();
-    });
-    function release(event) {
-      if (!drag || event.pointerId !== drag.id) return;
-      event.stopPropagation();
-      if (!drag.moved && drag.glass && event.type === 'pointerup') { zoom = self.next(zoom); place(); }
-      drag = null;
-    }
-    lens.addEventListener('pointerup', release);
-    lens.addEventListener('pointercancel', release);
-    lens.addEventListener('wheel', event => {
-      event.stopPropagation(); if (event.cancelable) event.preventDefault();
-      zoom = Math.max(self.MIN, Math.min(self.MAX, zoom * Math.exp(-event.deltaY * 0.002))); place();
-    }, { passive: false });
-    close.onclick = event => { event.stopPropagation(); set(false); };
-    function resize() { if (on) place(); }
-    window.addEventListener('resize', resize);
-    if (options.button) {
-      options.button.textContent = '🔎';
-      options.button.title = 'Magnifier (drag it over the page)';
-      options.button.setAttribute('aria-label', 'Magnifier');
-      options.button.setAttribute('aria-pressed', 'false');
-      options.button.onclick = () => set(!on);
-    }
-    return {
-      active: () => on, set,
-      zoom: () => zoom,
-      close() { set(false); window.removeEventListener('resize', resize); lens.remove(); }
-    };
-  },
-};

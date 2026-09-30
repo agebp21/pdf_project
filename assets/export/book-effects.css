@@ -126,12 +126,3 @@ body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl
 .cover-curl-shade{position:absolute;top:0;right:0;bottom:0;left:0}
 .curl-hidden{visibility:hidden!important}
 
-/* Magnifier (FlipbookLoupe): round lens + handle, dragged over the book. */
-.book-loupe{position:fixed;z-index:45;touch-action:none;cursor:grab;-webkit-user-select:none;user-select:none}
-.book-loupe[hidden]{display:none}
-.book-loupe:active{cursor:grabbing}
-.book-loupe-glass{position:absolute;top:0;right:0;bottom:0;left:0;border-radius:50%;background-color:#e8ece8;background-repeat:no-repeat;box-shadow:0 0 0 5px #1a3c34,0 0 0 7px #d9c690,0 10px 28px rgba(0,0,0,.35),inset 0 0 18px rgba(0,0,0,.18)}
-.book-loupe-handle{position:absolute;left:50%;top:50%;width:18px;margin-left:-9px;transform-origin:50% 0;border-radius:4px 4px 9px 9px;background:linear-gradient(90deg,#0f2a23,#2d6a52 45%,#123329);box-shadow:0 6px 14px rgba(0,0,0,.3)}
-.book-loupe-level{position:absolute;left:50%;bottom:8px;transform:translateX(-50%);padding:2px 8px;border-radius:999px;background:rgba(26,60,52,.85);color:#fff;font:700 11px system-ui,sans-serif;pointer-events:none}
-.book-loupe-close{position:absolute;top:2px;right:2px;width:26px;height:26px;padding:0;border-radius:999px;border:0;background:#1a3c34;color:#fff;font:700 12px/26px system-ui,sans-serif;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.3)}
-#loupe.is-on{background:#1a3c34;border-color:#1a3c34;color:#fff}
