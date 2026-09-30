@@ -611,10 +611,11 @@
 (typeof self!=='undefined'?self:global).FlipbookZoom = {
   MAX: 4,
   STEPS: [1, 2, 3],
-  // − / + in the toolbar walk these levels (shown as percentages).
-  LEVELS: [1, 1.25, 1.5, 2, 2.5, 3, 4],
-  up(scale) { const next = this.LEVELS.filter(v => v > scale + 0.01)[0]; return next || this.MAX; },
-  down(scale) { const below = this.LEVELS.filter(v => v < scale - 0.01); return below.length ? below[below.length - 1] : 1; },
+  // One zoom step: + (or a double-tap) zooms to 200%, the next press goes
+  // back to 100%. Pinch / Ctrl+wheel still zoom freely up to MAX.
+  ZOOMED: 2,
+  up(scale) { return scale > 1.01 ? 1 : this.ZOOMED; },
+  down() { return 1; },
   // Keep the zoomed book covering the view: no panning past its edges into
   // the background; an axis where it is smaller than the view is centred.
   // box = the book inside the stage at 100% ({x, y, w, h}); default: the whole stage.
@@ -657,7 +658,10 @@
         opts.level.classList.toggle('is-zoomed', scale > 1);
       }
       if (opts.zoomOut) opts.zoomOut.disabled = scale <= 1;
-      if (opts.zoomIn) opts.zoomIn.disabled = scale >= self.MAX - 0.01;
+      if (opts.zoomIn) {
+        opts.zoomIn.textContent = scale > 1 ? '↺' : '+';
+        opts.zoomIn.setAttribute('aria-label', scale > 1 ? 'Back to 100%' : 'Zoom in to ' + Math.round(self.ZOOMED * 100) + '%');
+      }
       if (opts.onChange) opts.onChange(scale);
     }
     function zoomTo(next, px, py, smooth) {
@@ -742,7 +746,7 @@
       if (kind === 'double') {
         block(event);
         const at = gesture; gesture = null; lastTap = null;
-        if (scale > 1) { scale = 1; apply(true); } else zoomTo(2.5, at.x, at.y, true);
+        if (scale > 1) { scale = 1; apply(true); } else zoomTo(self.ZOOMED, at.x, at.y, true);
         return;
       }
       // A still tap while zoomed may be a link: let its click happen.

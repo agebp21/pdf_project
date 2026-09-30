@@ -56,9 +56,9 @@ assert.equal(FlipbookLayout.geometry(699,900,.7,1,8).single,true);
   assert.deepEqual(a,{x:-150,y:-90},'the tapped point stays under the finger');
   const b=Z.anchor(2.5,1,a.x,a.y,100,60);
   assert.ok(Math.abs(b.x)<1e-9&&Math.abs(b.y)<1e-9,'zooming back returns to the start');
-  // − 100% + toolbar: level steps (percentages), capped at 100% and 400%.
-  assert.deepEqual([1,1.25,2,2.5,3,4].map(v=>Z.up(v)),[1.25,1.5,2.5,3,4,4]);
-  assert.deepEqual([4,3,2.2,1.25,1].map(v=>Z.down(v)),[3,2.5,2,1,1]);
+  // − 100% + toolbar: one step — + zooms to 200%, pressed again back to 100%; − always 100%.
+  assert.deepEqual([1,2,3.4,1.2].map(v=>Z.up(v)),[2,1,1,1]);
+  assert.deepEqual([4,2,1].map(v=>Z.down(v)),[1,1,1]);
 }
 assert.equal(FlipbookLayout.geometry(640,330,.7,1,8).single,false,'landscape phone keeps the two-page spread');
 assert.equal(FlipbookLayout.geometry(640,330,.7,1,8,true).single,true,'compact editor preview: width decides');

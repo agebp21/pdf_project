@@ -707,3 +707,7 @@ Owner: stabilo dihapus -> catatan hilang (sudah ada), dan tombol Delete catatan 
 ### 30 September 2026 - Zoom reader: kontrol − 100% + di toolbar
 
 Owner: zoom pakai persentase. Tombol 🔍 tunggal + chip "200% Reset" di atas diganti kontrol toolbar `#zoom-ctl`: `#zoom-out` (−) | `#zoom-level` (persentase, klik = kembali 100%, hijau tua saat > 100%) | `#zoom-in` (+). Level: `FlipbookZoom.LEVELS` 100/125/150/200/250/300/400% (`up()`/`down()`), − nonaktif di 100%, + nonaktif di 400%; tombol keyboard +/−/0 ikut level yang sama. Double-tap/pinch/Ctrl+wheel/geser tetap, persentasenya ikut tampil. Opsi lama `button`/`chip` di `FlipbookZoom.bind` masih didukung (tidak dipakai reader). CSS di `viewer.css`. Catatan: di lebar ~1000 px toolbar reader jadi 2 baris (Fullscreen turun).
+
+### 30 September 2026 - Zoom cuma satu langkah (200%), kedua kali balik 100%
+
+Owner: zoom sekali saja, yang kedua balik ke 100%. `FlipbookZoom.ZOOMED = 2`; `up(scale)` = 200% dari 100%, selain itu balik 100% (tombol + berubah jadi ↺ saat zoom); `down()` selalu 100%; double-tap juga ke 200% (dulu 250%) dan double-tap kedua balik 100%; tombol keyboard +/− sama. `LEVELS` bertingkat dihapus. Pinch / Ctrl+wheel masih bebas sampai 400% (persentase tetap tampil).
