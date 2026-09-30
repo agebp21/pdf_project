@@ -24,7 +24,8 @@ const notes = N.bind({ key: N.key('Buku', 2, 0.7), title: 'Buku', pages, goPage:
   onRemove: (i, s) => hl.forget(i, s) });
 assert.equal(pages[0].querySelectorAll('.book-note-tab').length, 0, 'blank: false → no ✎ tab on a page without notes');
 const hl = H.bind({ key: H.key('Buku', 2, 0.7), pages, words: { '0': raw }, text: { '0': text }, button: w.document.getElementById('hl'),
-  onQuote: (i, s) => notes.quote(i, s), onUnquote: (i, s) => notes.unquote(i, s) });
+  onQuote: (i, s, c) => notes.quote(i, s, c), onUnquote: (i, s) => notes.unquote(i, s),
+  onRecolor: (i, s, c) => notes.tint(i, s, c) });
 const fire = (target, type, x, y) => target.dispatchEvent(new w.MouseEvent(type, { clientX: x, clientY: y, bubbles: true, cancelable: true }));
 const drag = (page, x0, y0, x1, y1) => { fire(pages[page], 'mousedown', x0, y0); fire(w, 'mousemove', x1, y1); w.dispatchEvent(new w.MouseEvent('mouseup', { clientX: x1, clientY: y1 })); };
 const texts = i => (notes.notes()[i] || { items: [] }).items.map(n => n.text);
@@ -78,4 +79,23 @@ w.document.querySelector('.book-note-editor .book-note-delete').click();
 assert.deepEqual(texts(0), []); assert.equal(quoted(), 0);
 // Other highlights on the page are left alone; a plain note deleted touches nothing.
 assert.equal(hl.forget(0, 'tidak ada'), 0);
-console.log('PASS highlight-notes: highlighted text becomes a quoted note, replaced when extended, none without text, removed with its highlight unless edited; deleting the note removes its highlight');
+// The note takes its highlight's colour; recolouring the highlight recolours the note.
+const colorOf = i => notes.notes()['0'].items[i].color;
+w.document.querySelector('.book-hl-swatch[title="Green"]').click();
+drag(0, 110, 110, 180, 112);   // "Satu" in green
+assert.deepEqual(texts(0), ['“Satu”']); assert.equal(colorOf(0), H.COLORS.g);
+assert.equal(pages[0].querySelector('.book-note-tab.has-note').style.getPropertyValue('--tab'), H.COLORS.g, 'tab in the highlight colour');
+w.document.querySelector('.book-hl-swatch[title="Pink"]').click();
+drag(0, 250, 150, 400, 152);   // "untuk semua" in pink → the next note is pink
+assert.equal(colorOf(1), H.COLORS.p);
+fire(pages[0], 'mousedown', 150, 115); w.dispatchEvent(new w.MouseEvent('mouseup'));   // select "Satu"
+w.document.querySelector('.book-hl-swatch[title="Blue"]').click();
+assert.equal(colorOf(0), H.COLORS.b, 'recoloured with its highlight');
+// Editing the note keeps its colour.
+w.document.getElementById('hl').click();
+pages[0].querySelectorAll('.book-note-tab.has-note')[0].click();
+w.document.querySelector('.book-note-card .book-note-done').click();
+w.document.querySelector('.book-note-editor textarea').value = '“Satu” ok';
+w.document.querySelector('.book-note-editor .book-note-done').click();
+assert.equal(colorOf(0), H.COLORS.b);
+console.log('PASS highlight-notes: highlighted text becomes a quoted note, replaced when extended, none without text, removed with its highlight unless edited; deleting the note removes its highlight; notes take the highlight colour');

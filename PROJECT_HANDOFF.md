@@ -711,3 +711,8 @@ Owner: zoom pakai persentase. Tombol 🔍 tunggal + chip "200% Reset" di atas di
 ### 30 September 2026 - Zoom cuma satu langkah (200%), kedua kali balik 100%
 
 Owner: zoom sekali saja, yang kedua balik ke 100%. `FlipbookZoom.ZOOMED = 2`; `up(scale)` = 200% dari 100%, selain itu balik 100% (tombol + berubah jadi ↺ saat zoom); `down()` selalu 100%; double-tap juga ke 200% (dulu 250%) dan double-tap kedua balik 100%; tombol keyboard +/− sama. `LEVELS` bertingkat dihapus. Pinch / Ctrl+wheel masih bebas sampai 400% (persentase tetap tampil).
+
+### 30 September 2026 - Tab catatan berwarna sesuai stabilonya + link bisa di-stabilo
+
+Owner: warna catatan di pinggir = warna stabilonya (stabilo hijau -> catatan hijau, ganti pink -> catatan berikutnya pink, dst.). Catatan menyimpan `color` opsional (hex, divalidasi di `FlipbookNotes.load`); `quote(index, said, color)` memberi warna, `tint(index, said, color)` mengikuti saat warna stabilo diganti (pilih stabilo -> klik warna, atau stabilo ulang dengan warna lain). Edit catatan mempertahankan warnanya. Catatan lama tanpa `color` tetap warna urut nomor. Highlights bind: `onQuote(index, said, color)`, `onRecolor(index, said, color)`.
+Bug lama ikut diperbaiki: teks yang juga link (daftar isi) tidak bisa di-stabilo karena `.book-link` menahan mousedown; sekarang `body.is-highlighting .book-link{pointer-events:none}`. Tes: `tests/highlight-notes.test.cjs`; E2E editor toc-text.pdf: 4 baris daftar isi dengan kuning/hijau/pink/biru -> tab 1-4 berwarna sama.

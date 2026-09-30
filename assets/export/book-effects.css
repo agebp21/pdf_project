@@ -68,6 +68,8 @@
 .book-hl.is-selected{opacity:.7;outline:2px solid #1c1917;outline-offset:1px}
 body.is-highlighting .page,body.is-highlighting .pdf-page{cursor:text;cursor:var(--hl-cursor,text)}
 body.is-highlighting .book-note-stack{pointer-events:none;opacity:.25}
+/* Links (e.g. a table of contents) can be highlighted too: inert while highlighting. */
+body.is-highlighting .book-link{pointer-events:none}
 /* A note just made from a highlight: shown in full and pulsing. */
 .book-note-stack.has-new{opacity:1!important}
 .book-note-tab.is-new{animation:book-note-new .6s ease-in-out 3}

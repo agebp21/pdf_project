@@ -163,7 +163,8 @@
       highlights?.close();
       highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(name, newElements.length, ratio),
         pages: newElements, words: bookWords, text: bookText, button: $('#highlight'),
-        onQuote: (index, said) => notes.quote(index, said), onUnquote: (index, said) => notes.unquote(index, said)});
+        onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
+        onRecolor: (index, said, color) => notes.tint(index, said, color)});
       loupe?.close();
       loupe = FlipbookLoupe.bind({pages: newElements, button: $('#loupe')});
       const linkCount = found.stats.internal + found.stats.toc + found.stats.external;

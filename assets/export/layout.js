@@ -836,7 +836,12 @@
   load(key) {
     try {
       const raw = JSON.parse(localStorage.getItem(key) || '{}'), out = {}, max = this.MAX;
-      const clean = n => (n && typeof n.text === 'string' && n.text.trim() ? {text: n.text.slice(0, max), updated: Number(n.updated) || 0} : null);
+      const clean = n => {
+        if (!n || typeof n.text !== 'string' || !n.text.trim()) return null;
+        const note = {text: n.text.slice(0, max), updated: Number(n.updated) || 0};
+        if (typeof n.color === 'string' && /^#[0-9a-f]{6}$/i.test(n.color)) note.color = n.color;
+        return note;
+      };
       Object.keys(raw || {}).forEach(k => {
         if (!/^\d+$/.test(k) || !raw[k]) return;
         const entry = raw[k];
@@ -873,7 +878,7 @@
       const items = notes[index] ? notes[index].items : [];
       items.forEach((note, n) => {
         const tab = button(String(n + 1), 'book-note-tab has-note', event => { event.preventDefault(); event.stopPropagation(); read(index, n, tab); });
-        tab.style.setProperty('--tab', self.COLORS[n % self.COLORS.length]);
+        tab.style.setProperty('--tab', note.color || self.COLORS[n % self.COLORS.length]);
         tab.title = label(index) + ' · note ' + (n + 1) + ': ' + note.text.replace(/\s+/g, ' ').slice(0, 80);
         tab.setAttribute('aria-label', 'Note ' + (n + 1) + ' on ' + label(index));
         if (reader && reader.page === index && reader.item === n) tab.classList.add('is-open');
@@ -896,11 +901,14 @@
       if (list) renderList();
     }
     // Save one note (item -1 = a new note). Empty text removes it.
-    function store(index, item, text) {
+    // color: set a note's colour (a quote takes its highlight's); editing keeps it.
+    function store(index, item, text, color) {
       const entry = notes[index] || {items: [], marked: false};
       const had = entry.items.length;
       if (text.trim()) {
         const note = {text: text.slice(0, self.MAX), updated: Date.now()};
+        const before = item >= 0 && item < entry.items.length ? entry.items[item].color : undefined;
+        if (color || before) note.color = color || before;
         if (item >= 0 && item < entry.items.length) entry.items[item] = note;
         else { entry.items.push(note); item = entry.items.length - 1; }
       } else if (item >= 0 && item < entry.items.length) entry.items.splice(item, 1);
@@ -937,7 +945,7 @@
       if (!note) return;
       const box = document.createElement('div');
       box.className = 'book-note-card'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-label', label(index) + ' note ' + (item + 1));
-      box.style.setProperty('--tab', self.COLORS[item % self.COLORS.length]);
+      box.style.setProperty('--tab', note.color || self.COLORS[item % self.COLORS.length]);
       guard(box);
       const head = document.createElement('p'); head.className = 'book-note-card-title'; head.textContent = label(index) + ' · note ' + (item + 1);
       const body = document.createElement('div'); body.className = 'book-note-card-text'; body.textContent = note.text;
@@ -1079,20 +1087,21 @@
       stack.classList.add('has-new'); tab.classList.add('is-new');
       setTimeout(() => { stack.classList.remove('has-new'); tab.classList.remove('is-new'); }, 1800);
     }
-    function quote(index, said) {
+    function quote(index, said, color) {
       said = String(said || '').replace(/\s+/g, ' ').trim();
       if (!said) return -1;
       const items = notes[index] ? notes[index].items : [];
-      if (items.some(note => note.text.indexOf(said) >= 0)) return -1;
+      // Already noted (re-highlighting in another colour recolours the quote).
+      if (items.some(note => note.text.indexOf(said) >= 0)) { if (color) tint(index, said, color); return -1; }
       const older = [];
       items.forEach((note, i) => { const m = QUOTE.exec(note.text); if (m && said.indexOf(m[1]) >= 0) older.push(i); });
       let item;
       if (older.length) {
         for (let k = older.length - 1; k > 0; k--) store(index, older[k], '');
-        item = store(index, older[0], '\u201c' + said + '\u201d');
+        item = store(index, older[0], '\u201c' + said + '\u201d', color);
       } else {
         if (items.length >= self.PER_PAGE) return -1;
-        item = store(index, -1, '\u201c' + said + '\u201d');
+        item = store(index, -1, '\u201c' + said + '\u201d', color);
       }
       flash(index, item);
       return item;
@@ -1104,7 +1113,17 @@
       const i = items.findIndex(note => note.text === '\u201c' + said + '\u201d');
       if (said && i >= 0) store(index, i, '');
     }
-    return {refresh, text, quote, unquote, editing: () => !!editing, close() { closeEditor(); closeReader(); closeList(); }, notes: () => JSON.parse(JSON.stringify(notes))};
+    // A highlight changed colour: its quote note follows.
+    function tint(index, said, color) {
+      said = String(said || '').replace(/\s+/g, ' ').trim();
+      const items = notes[index] ? notes[index].items : [];
+      const i = items.findIndex(note => note.text.indexOf('\u201c' + said + '\u201d') === 0);
+      if (!said || i < 0 || items[i].color === color) return;
+      items[i].color = color;
+      saved = self.save(options.key, notes);
+      refresh();
+    }
+    return {refresh, text, quote, unquote, tint, editing: () => !!editing, close() { closeEditor(); closeReader(); closeList(); }, notes: () => JSON.parse(JSON.stringify(notes))};
   },
 };
 
@@ -1277,7 +1296,11 @@
       b.onclick = () => {
         color = c; erasing = false;
         try { localStorage.setItem('mf-highlight-color', c); } catch (e) {}
-        if (selected) { store[selected.page][selected.index].c = c; persist(selected.page); }
+        if (selected) {
+          const h = store[selected.page][selected.index];
+          h.c = c; persist(selected.page);
+          if (options.onRecolor) options.onRecolor(selected.page, said(selected.page, h), self.COLORS[c]);
+        }
         paintBar();
       };
       swatches[c] = b; bar.appendChild(b);
@@ -1407,7 +1430,8 @@
           if (previous) render(previous.page);
           persist(index);
           // The highlighted text goes straight into a note on the page edge.
-          if (options.onQuote) options.onQuote(index, said(index, store[index][store[index].length - 1]));
+          const made = store[index][store[index].length - 1];
+          if (options.onQuote) options.onQuote(index, said(index, made), self.COLORS[made.c]);
         }
       }
       drag = null; paintBar();
