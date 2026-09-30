@@ -61,12 +61,14 @@
             <p id="podcast-status" class="muted">Dua penyiar (Rina &amp; Bima) membahas isi buku ini. Nama podcast = <b>Book title</b> di atas, jadi isi judulnya dulu. Naskah bisa diedit; ikut tersimpan di proyek dan semua ekspor.</p>
           </div>
           <div class="podcast-box translate-box">
-            <div class="translate-row"><button id="translate-make" class="secondary" type="button">🌐 Terjemahkan (AI)</button><select id="translate-target" aria-label="Bahasa tujuan"><option value="id-ID">→ Indonesia</option><option value="en-US">→ English</option><option value="ms-MY">→ Melayu</option></select></div>
+            <label class="ai-lang" for="translate-target"><span>Terjemahkan ke</span><select id="translate-target"><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
+            <button id="translate-make" class="secondary" type="button">🌐 Terjemahkan (AI)</button>
             <button id="translate-clear" class="secondary" type="button" hidden>Hapus terjemahan</button>
             <p id="translate-status" class="muted">Terjemahan tiap halaman (AI), tampil di tombol 🌐 Translate pada buku. Ikut tersimpan di proyek dan semua ekspor.</p>
           </div>
           <div class="podcast-box summary-box">
-            <div class="translate-row"><button id="summary-make" class="secondary" type="button">📝 Buat ringkasan (AI)</button><select id="summary-lang" aria-label="Bahasa ringkasan"><option value="">Bahasa buku</option><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></div>
+            <label class="ai-lang" for="summary-lang"><span>Bahasa ringkasan</span><select id="summary-lang"><option value="">Ikut buku</option><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
+            <button id="summary-make" class="secondary" type="button">📝 Buat ringkasan (AI)</button>
             <textarea id="summary-text" rows="9" hidden aria-label="Ringkasan" spellcheck="false"></textarea>
             <button id="summary-clear" class="secondary" type="button" hidden>Hapus ringkasan</button>
             <p id="summary-status" class="muted">Intisari + poin penting buku ini (AI), tampil di tombol 📋 Summary pada buku. Bisa diedit; ikut tersimpan di proyek dan semua ekspor.</p>
