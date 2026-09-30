@@ -72,7 +72,7 @@
   }
   async function openPdf(blob, name, project = null) {
     if (opening || exporting) return false;
-    opening = true; $('#pdf-file').disabled = true; $('#overlay-fields').disabled = true;
+    opening = true; $('#pdf-file').disabled = true; $('#add-file').disabled = true; $('#overlay-fields').disabled = true;
     $('#home').disabled = $('#prev').disabled = $('#next').disabled = $('#replay').disabled = true;
     stopAnimation(); error('');
     exportState();
@@ -161,7 +161,7 @@
       highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(name, newElements.length, ratio),
         pages: newElements, words: bookWords, button: $('#highlight')});
       const linkCount = found.stats.internal + found.stats.toc + found.stats.external;
-      $('#load-status').textContent = `${newElements.length} pages ready. The first page is the front cover.` +
+      $('#load-status').textContent = `${newElements.length} page${newElements.length === 1 ? '' : 's'} ready. The first page is the front cover.` +
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');
       updatePage();
       return true;
@@ -175,17 +175,137 @@
       $('#load-status').textContent = 'Failed to load the PDF. Pick another file to try again.';
       return false;
     } finally {
-      opening = false; $('#pdf-file').disabled = false;
+      opening = false; $('#pdf-file').disabled = false; $('#add-file').disabled = false;
       $('#overlay-fields').disabled = !book; $('#replay').disabled = !book;
       if (book) updatePage();
       exportState();
     }
   }
+  // ---------- Add file: upload (PDF, Office, images), a link or Google Drive.
+  const OFFICE_ROUTE = {docx:'word', doc:'word', xlsx:'excel', xls:'excel', csv:'excel', pptx:'pptx', ppt:'pptx'};
+  const OFFICE_TYPE = {docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', doc:'application/msword',
+    xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', xls:'application/vnd.ms-excel', csv:'text/csv',
+    pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation', ppt:'application/vnd.ms-powerpoint'};
+  const isImage = file => /^image\//.test(file.type) || /\.(jpe?g|png|webp|gif|bmp|avif)$/i.test(file.name);
+  const extOf = name => (String(name).split('.').pop() || '').toLowerCase();
+  let adding = false;
+  function addStatus(text, bad = false) { $('#add-status').textContent = text; $('#add-status').classList.toggle('is-error', bad); }
+  function showAdd(open) {
+    $('#add-dialog').hidden = !open;
+    $('#add-file').setAttribute('aria-expanded', String(open));
+    if (open) { addStatus(''); setTimeout(() => $('#add-url').focus(), 0); }
+  }
+  async function serverCaps() {
+    let caps = null;
+    try { const r = await fetch('/api/capabilities', {cache:'no-store'}); if (r.ok) caps = await r.json(); } catch (e) {}
+    if (!caps) throw Error('This needs the MyFlipbook server (python server.py).');
+    if (caps.loginRequired && !caps.token) throw Error('Please log in first to add Office files or links.');
+    return caps;
+  }
+  let pdfLibLoading = null;
+  function ensurePdfLib() {
+    if (window.PDFLib) return Promise.resolve();
+    if (!pdfLibLoading) pdfLibLoading = new Promise((resolve, reject) => {
+      const s = document.createElement('script'); s.src = 'assets/vendor/pdf-lib.min.js';
+      s.onload = resolve; s.onerror = () => reject(Error('Could not load the PDF engine.'));
+      document.head.appendChild(s);
+    });
+    return pdfLibLoading;
+  }
+  // Images become pages of one PDF, each page the image's own shape
+  // (phone photos upright, transparency on white, very large ones scaled).
+  async function imagesToPdf(images) {
+    await ensurePdfLib();
+    const doc = await PDFLib.PDFDocument.create();
+    for (let i = 0; i < images.length; i++) {
+      addStatus(`Turning image ${i + 1} / ${images.length} into a page…`);
+      let bitmap;
+      try { bitmap = await createImageBitmap(images[i]); }
+      catch (e) {
+        // SVG (and a few others) only decode through an <img>.
+        bitmap = await new Promise((resolve, reject) => {
+          const url = URL.createObjectURL(images[i]), img = new Image();
+          img.onload = () => { URL.revokeObjectURL(url); img.naturalWidth ? resolve(img) : reject(); };
+          img.onerror = () => { URL.revokeObjectURL(url); reject(); };
+          img.src = url;
+        }).catch(() => { throw Error(images[i].name + ' could not be read as an image.'); });
+        if (!bitmap.width) { bitmap.width = bitmap.naturalWidth; bitmap.height = bitmap.naturalHeight; }
+      }
+      const scale = Math.min(1, 3000 / Math.max(bitmap.width, bitmap.height));
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.round(bitmap.width * scale); canvas.height = Math.round(bitmap.height * scale);
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      ctx.drawImage(bitmap, 0, 0, canvas.width, canvas.height); bitmap.close?.();
+      const blob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.92));
+      const image = await doc.embedJpg(new Uint8Array(await blob.arrayBuffer()));
+      const w = canvas.width * 0.75, h = canvas.height * 0.75;
+      doc.addPage([w, h]).drawImage(image, {x:0, y:0, width:w, height:h});
+      canvas.width = canvas.height = 0;
+    }
+    return new Blob([await doc.save()], {type:'application/pdf'});
+  }
+  async function officeToPdf(file) {
+    const ext = extOf(file.name), caps = await serverCaps();
+    if (!caps.office) throw Error('LibreOffice was not found on the server, so Office files cannot be converted.');
+    addStatus('Converting ' + file.name + ' to PDF…');
+    const response = await fetch('/api/convert/' + OFFICE_ROUTE[ext] + '-to-pdf', {method:'POST', headers:{
+      'Content-Type': OFFICE_TYPE[ext], 'X-Build-Token': caps.token, 'X-Filename': encodeURIComponent(file.name)}, body: file});
+    if (!response.ok) { let m = 'Conversion failed.'; try { m = (await response.json()).error || m; } catch (e) {} throw Error(m); }
+    return response.blob();
+  }
+  async function openSources(list) {
+    const files = [...list];
+    if (!files.length || opening || exporting || adding) return;
+    adding = true; $('#add-dialog').classList.add('is-busy');
+    try {
+      const first = files[0], ext = extOf(first.name), base = first.name.replace(/\.[^.]+$/, '') || 'document';
+      let pdf;
+      if (files.every(isImage)) pdf = await imagesToPdf(files);
+      else if (ext === 'pdf' || first.type === 'application/pdf') pdf = first;
+      else if (OFFICE_ROUTE[ext]) pdf = await officeToPdf(first);
+      else throw Error(first.name + ': this file type is not supported. Use PDF, Word, Excel, PowerPoint or an image.');
+      if (files.length > 1 && !files.every(isImage)) addStatus('Only the first file was used: ' + first.name);
+      showAdd(false);
+      await openPdf(pdf, ext === 'pdf' ? first.name : base + '.pdf');
+    } catch (cause) { showAdd(true); addStatus(cause.message, true); }
+    finally { adding = false; $('#add-dialog').classList.remove('is-busy'); }
+  }
   $('#pdf-file').addEventListener('change', event => {
-    const file = event.target.files[0];
-    if (file) openPdf(file, file.name);
+    const files = [...event.target.files];
     event.target.value = '';
+    openSources(files);
   });
+  $('#add-file').addEventListener('click', () => showAdd(true));
+  $('#add-close').addEventListener('click', () => showAdd(false));
+  $('#add-dialog').addEventListener('click', event => { if (event.target === $('#add-dialog')) showAdd(false); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('#add-dialog').hidden) showAdd(false); });
+  $('#add-dialog').querySelectorAll('[data-source]').forEach(button => button.addEventListener('click', () => {
+    const source = button.dataset.source;
+    if (source === 'upload') { $('#pdf-file').click(); return; }
+    $('#add-url').placeholder = source === 'drive' ? 'Paste a Google Drive, Docs, Sheets or Slides share link' : 'Paste a link to a PDF, Office file or web page';
+    $('#add-url').focus();
+  }));
+  $('#add-link').addEventListener('submit', async event => {
+    event.preventDefault();
+    const url = $('#add-url').value.trim();
+    if (!url || adding || opening) return;
+    adding = true; $('#add-dialog').classList.add('is-busy');
+    try {
+      const caps = await serverCaps();
+      addStatus(/google\.com/.test(url) ? 'Downloading from Google Drive…' : 'Fetching the link…');
+      const response = await fetch('/api/fetch-source', {method:'POST', headers:{'Content-Type':'application/json', 'X-Build-Token': caps.token}, body: JSON.stringify({url})});
+      if (!response.ok) { let m = 'The link could not be opened.'; try { m = (await response.json()).error || m; } catch (e) {} throw Error(m); }
+      const blob = await response.blob(), name = decodeURIComponent(response.headers.get('X-Filename') || 'document.pdf');
+      adding = false;
+      await openSources([new File([blob], name, {type: blob.type})]);
+      $('#add-url').value = '';
+    } catch (cause) { addStatus(cause.message, true); }
+    finally { adding = false; $('#add-dialog').classList.remove('is-busy'); }
+  });
+  const drop = $('#add-drop');
+  ['dragenter', 'dragover'].forEach(type => $('#add-dialog').addEventListener(type, e => { e.preventDefault(); drop.classList.add('is-over'); }));
+  ['dragleave', 'drop'].forEach(type => $('#add-dialog').addEventListener(type, e => { e.preventDefault(); if (type === 'drop' || e.target === $('#add-dialog')) drop.classList.remove('is-over'); }));
+  $('#add-dialog').addEventListener('drop', e => openSources(e.dataTransfer.files));
   // The cover opens/closes with the curved turn; other pages use PageFlip.
   // Ignore clicks while a cover turn is still animating.
   const goPrev = () => { if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; book.flipPrev(); };

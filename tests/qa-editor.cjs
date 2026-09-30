@@ -39,9 +39,9 @@ async function main(){
  assert.equal(w.document.querySelector('#reader-error').hidden,true,w.document.querySelector('#reader-error').textContent);
  assert.equal(w.document.querySelector('#overlay-form').hidden,true);assert.equal(w.document.querySelector('.playback').hidden,true);
  const height=w.document.querySelector('#reader-stage').style.height;
- w.document.querySelector('#next').click();test.pump(1400);
+ w.document.querySelector('#next').click();test.pump(1800); // curved cover turn + fade
  assert.equal(w.engine.getCurrentPageIndex(),1);assert.equal(w.document.querySelector('#reader-stage').style.height,height);
- w.document.querySelector('#home').click();test.pump();
+ w.document.querySelector('#home').click();test.pump(1800); // the cover closes with the curved turn (~1.4 s)
  assert.equal(w.engine.getCurrentPageIndex(),0);assert.equal(w.document.querySelector('#home').disabled,true);
  w.document.querySelector('#save-project').click();await until(test,()=>files.size===1,'save project');
  const saved=[...files.values()][0];assert.ok(saved.size>0);
@@ -56,20 +56,25 @@ async function main(){
  const parsed=await w.JSZip.loadAsync(await zip.arrayBuffer());assert.ok(parsed.file('book-effects.css'));assert.ok(parsed.file('pages/8.jpg'));
  fs.writeFileSync(path.join(root,'.build/qa/qa-from-editor-HTML.zip'),Buffer.from(await zip.arrayBuffer()));
  // Simulate a server restart after page load: build must fetch a fresh token.
- const normalFetch=w.fetch;let submitted=[];
+ const normalFetch=w.fetch,normalUpload=w.FlipbookExport.upload;let submitted=[];
  w.fetch=async(url,options)=>{
    if(url==='/api/capabilities')return new Response(JSON.stringify({apk:true,exe:true,token:'fresh-session'}));
-   if(String(url).startsWith('/api/build/')){assert.equal(options.headers['X-Build-Token'],'fresh-session');assert.ok(options.body.size>0);submitted.push(url);return new Response(JSON.stringify({id:'test'}));}
-   if(url==='/api/jobs/test')return new Response(JSON.stringify({status:'done',message:'Complete',download:'/api/jobs/test/download'}));
-   if(url==='/api/jobs/test/download')return {ok:true,body:null,blob:async()=>new Blob(['native artifact'])};
+   if(url==='/api/jobs/test')return new Response(JSON.stringify({status:'done',progress:1,message:'Complete',download:'/api/jobs/test/download'}));
+   if(url==='/api/jobs/test/download')return new Response(new Blob(['native artifact']));
    return normalFetch(url,options);
  };
+ // Builds upload with progress (XMLHttpRequest): answer that step here too.
+ w.FlipbookExport.upload=async(url,body,headers,onProgress)=>{
+   assert.equal(headers['X-Build-Token'],'fresh-session');assert.ok(body.size>0);submitted.push(url);onProgress(1);
+   return {ok:true,status:202,data:{id:'test'}};
+ };
  for(const target of ['apk','exe']){
-   w.document.querySelector('#export-'+target).click();
-   await until(test,()=>!w.document.querySelector('#build-download').hidden&&!w.document.querySelector('#export-fields').disabled,'native '+target);
-   const count=files.size;w.document.querySelector('#build-download').click();await until(test,()=>files.size===count+1,'save native '+target);
+   // Save-as is chosen in the click; the result is written there when the build ends.
+   const count=files.size;w.document.querySelector('#export-'+target).click();
+   await until(test,()=>files.size===count+1&&!w.document.querySelector('#export-fields').disabled,'native '+target);
+   assert.ok(!w.document.querySelector('#build-download').hidden,'"save another copy" link');
  }
- assert.deepEqual(submitted,['/api/build/apk','/api/build/exe']);w.fetch=normalFetch;
+ assert.deepEqual(submitted,['/api/build/apk','/api/build/exe']);w.fetch=normalFetch;w.FlipbookExport.upload=normalUpload;
  const bad=new Blob(['invalid']);bad.name='invalid.pdf';Object.defineProperty(input,'files',{configurable:true,value:[bad]});input.dispatchEvent(new w.Event('change'));
  await until(test,()=>!input.disabled,'invalid PDF recovery');assert.equal(w.document.querySelector('#reader-error').hidden,false);
  assert.equal(w.document.querySelector('#export-fields').disabled,false,'existing valid book lost on invalid input');

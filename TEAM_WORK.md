@@ -559,3 +559,9 @@ Catatan baru memanggil `options.bookmark(index, true)` (viewer/preview: `marks.s
 ### 30 September 2026 - Catatan gaya tab agenda
 
 `FlipbookNotes` ditulis ulang: data `{page: {items: [{text, updated}], marked}}` (maks 8 per halaman; format lama 1 catatan/halaman dimigrasi jadi item 1). Tiap catatan = tab bernomor berwarna di `.book-note-stack` tepi luar halaman (lekukan via ::before/::after radial-gradient, var --tab); tab ＋ / ✎ menambah. Tap tab -> `.book-note-card` fixed di samping tab (Delete / Edit); editor lama dipakai untuk tulis/edit (autosave; catatan baru dapat nomor saat simpan pertama). Bookmark otomatis saat catatan pertama, dilepas saat catatan terakhir dihapus (bila catatan yang menambahkan). Daftar & .txt per catatan.
+
+### 30 September 2026 - Add file (upload / link / Google Drive)
+
+- Editor: tombol "＋ Add file" (id `#add-file`) membuka `#add-dialog`: kotak link, tombol Upload file / Link-site / Google Drive, area drop. `#pdf-file` tetap ada (hidden, multiple, accept PDF/Office/gambar). `openSources(files)`: semua gambar -> satu PDF (pdf-lib dimuat lazy dari assets/vendor, canvas JPEG 0.92, maks 3000 px, SVG lewat <img>); PDF langsung; Office -> /api/convert/*-to-pdf.
+- Server: `POST /api/fetch-source {url}` (token; butuh login di hosting seperti office) -> `fetch_source`: Google Drive/Docs/Sheets/Slides -> link unduh/ekspor PDF (`google_drive_url`); PDF/Office/gambar apa adanya (X-Filename); halaman web -> `print_url_to_pdf` (Edge/Chrome headless); maks 60 MB; mode hosting: `check_public_host` untuk host & setiap redirect (tolak loopback/privat/link-local). Drive tidak publik -> pesan jelas. Belum diuji dengan file Drive publik asli.
+- Juga: fade kurva sampul pakai requestAnimationFrame (bukan setTimeout). qa-editor/qa-runtime/qa-converter diperbarui (sempat gagal sejak curl/progress/compress; sekarang ikut dijalankan).

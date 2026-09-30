@@ -26,9 +26,10 @@
     <div class="workspace">
       <aside>
         <div class="panel-heading"><span class="step">01</span><h2>Choose document</h2></div>
-        <label for="pdf-file">PDF file</label><input id="pdf-file" type="file" accept="application/pdf,.pdf">
-        <p class="muted">Pick a PDF to turn into a flipbook. Files are processed on your device.</p>
-        <p id="load-status" class="feedback" role="status">No PDF selected yet.</p>
+        <button id="add-file" class="primary add-file" type="button" aria-haspopup="dialog">＋ Add file</button>
+        <input id="pdf-file" type="file" accept="application/pdf,.pdf,.docx,.doc,.xlsx,.xls,.csv,.pptx,.ppt,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,image/*" multiple hidden>
+        <p class="muted">PDF, Word, Excel, PowerPoint or images — or a link / Google Drive.</p>
+        <p id="load-status" class="feedback" role="status">No document yet.</p>
         <!-- Editor animasi disembunyikan sementara atas permintaan pengguna. -->
         <form id="overlay-form" hidden style="display:none">
           <fieldset id="overlay-fields" disabled>
@@ -67,5 +68,22 @@
       </section>
     </div>
   </main>
+  <div id="add-dialog" class="add-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="add-title">
+    <div class="add-card">
+      <button id="add-close" class="add-close" type="button" aria-label="Close">×</button>
+      <h2 id="add-title">Make a flipbook from<br><span>your document</span></h2>
+      <form id="add-link" class="add-link">
+        <input id="add-url" type="url" inputmode="url" autocomplete="off" placeholder="Paste a link: PDF, web page or Google Drive" aria-label="Link">
+        <button id="add-go" type="submit" aria-label="Add from link">→</button>
+      </form>
+      <div class="add-sources">
+        <button type="button" data-source="upload"><span aria-hidden="true">⤒</span> Upload file</button>
+        <button type="button" data-source="link"><span aria-hidden="true">🔗</span> Link / site</button>
+        <button type="button" data-source="drive"><span class="add-drive" aria-hidden="true"></span> Google Drive</button>
+      </div>
+      <div id="add-drop" class="add-drop">Drop files here · PDF, Word, Excel, PowerPoint, JPG, PNG</div>
+      <p id="add-status" class="add-status" role="status"></p>
+    </div>
+  </div>
 </body>
 </html>

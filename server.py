@@ -10,6 +10,7 @@ enforced (see accounts.py). Local mode keeps working without an account.
 import argparse
 import csv
 import hashlib
+import ipaddress
 import json
 import math
 import os
@@ -27,7 +28,9 @@ import uuid
 import zipfile
 from http.cookies import CookieError, SimpleCookie
 from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler, ThreadingHTTPServer
-from urllib.parse import unquote, urlsplit
+import urllib.error
+import urllib.request
+from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 import accounts
 import invoice
@@ -463,6 +466,144 @@ def html_to_pdf(raw, page_size='a4', margin_mm=12, allow_network=True, timeout=9
         shutil.rmtree(workdir, ignore_errors=True)
 
 
+def print_url_to_pdf(url, timeout=90):
+    """Print a web page (already checked by fetch_source) with headless
+    Edge/Chrome, like Print -> Save as PDF."""
+    browser = find_chromium()
+    if not browser:
+        raise RuntimeError('Microsoft Edge / Google Chrome tidak ditemukan di komputer ini.')
+    workdir = Path(tempfile.mkdtemp(prefix='url-pdf-'))
+    output = workdir / 'out.pdf'
+    args = [browser, '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+            '--disable-extensions', '--disable-sync', '--mute-audio', f'--user-data-dir={workdir / "profile"}',
+            '--no-pdf-header-footer', '--virtual-time-budget=10000', f'--print-to-pdf={output}', url]
+    process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    try:
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            raise RuntimeError('Halaman web terlalu lama dimuat (lebih dari 90 detik).')
+        data = output.read_bytes() if output.is_file() else b''
+        if not data.startswith(b'%PDF-'):
+            raise RuntimeError('Halaman web ini gagal dicetak ke PDF.')
+        return data
+    finally:
+        if process.poll() is None:
+            if os.name == 'nt':
+                subprocess.run(['taskkill', '/F', '/T', '/PID', str(process.pid)], capture_output=True,
+                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+            else:
+                process.kill()
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+FETCH_MAX_BYTES = 60 * 1024 * 1024
+FETCH_TYPES = {'application/pdf': '.pdf', 'image/jpeg': '.jpg', 'image/png': '.png', 'image/webp': '.webp',
+               'image/gif': '.gif', 'text/csv': '.csv'}
+FETCH_TYPES.update(OFFICE_MIMES)
+
+
+def google_drive_url(url):
+    """Direct download link for a Google Drive / Docs / Sheets / Slides share
+    link (Docs formats export as PDF), or None for other links."""
+    parts = urlsplit(url)
+    host = (parts.hostname or '').lower()
+    match = re.search(r'/d/([A-Za-z0-9_-]{10,})', parts.path)
+    file_id = match[1] if match else (parse_qs(parts.query).get('id') or [None])[0]
+    if not file_id or not re.fullmatch(r'[A-Za-z0-9_-]{10,}', file_id):
+        return None
+    if host == 'docs.google.com':
+        if parts.path.startswith('/document/'):
+            return f'https://docs.google.com/document/d/{file_id}/export?format=pdf'
+        if parts.path.startswith('/spreadsheets/'):
+            return f'https://docs.google.com/spreadsheets/d/{file_id}/export?format=pdf'
+        if parts.path.startswith('/presentation/'):
+            return f'https://docs.google.com/presentation/d/{file_id}/export/pdf'
+        return None
+    if host in ('drive.google.com', 'drive.usercontent.google.com'):
+        return f'https://drive.usercontent.google.com/download?id={file_id}&export=download&confirm=t'
+    return None
+
+
+def check_public_host(host):
+    """Hosting mode: only addresses on the public internet (no loopback,
+    private network, link-local or metadata addresses)."""
+    try:
+        addresses = {info[4][0] for info in socket.getaddrinfo(host, None)}
+    except OSError:
+        raise ValueError('Alamat link tidak ditemukan.')
+    for address in addresses:
+        if not ipaddress.ip_address(address.split('%')[0]).is_global:
+            raise ValueError('Link ke alamat jaringan internal tidak diizinkan.')
+
+
+def page_name(url):
+    parts = urlsplit(url)
+    stem = Path(unquote(parts.path)).stem or parts.hostname or 'page'
+    return re.sub(r'[^A-Za-z0-9._ -]+', '-', stem).strip(' .-')[:80] or 'page'
+
+
+def fetch_source(url, public_only=False):
+    """Download a document from a link for the flipbook: a PDF, Office file
+    or image as it is, a Google Drive/Docs share link through its download
+    link, and an ordinary web page printed to PDF.
+    Returns (bytes, filename, content_type)."""
+    url = (url or '').strip()
+    parts = urlsplit(url)
+    if parts.scheme not in ('http', 'https') or not parts.hostname or len(url) > 2000:
+        raise ValueError('Tempel link yang diawali http:// atau https://.')
+    drive = google_drive_url(url)
+    target = drive or url
+
+    class Checked(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            nxt = urlsplit(newurl)
+            if nxt.scheme not in ('http', 'https'):
+                raise ValueError('Link mengarah ke alamat yang tidak didukung.')
+            if public_only:
+                check_public_host(nxt.hostname or '')
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+
+    if public_only:
+        check_public_host(urlsplit(target).hostname)
+    opener = urllib.request.build_opener(Checked)
+    request = urllib.request.Request(target, headers={'User-Agent': 'Mozilla/5.0 (MyFlipbook)'})
+    private = 'File Google Drive ini belum dibagikan publik. Ubah aksesnya menjadi "Siapa saja yang memiliki link".'
+    try:
+        with opener.open(request, timeout=30) as response:
+            ctype = response.headers.get_content_type()
+            data = response.read(FETCH_MAX_BYTES + 1)
+            disposition = response.headers.get('Content-Disposition', '')
+            final = response.geturl()
+    except urllib.error.HTTPError as cause:
+        if drive and cause.code in (401, 403, 404):
+            raise ValueError(private)
+        raise ValueError(f'Link tidak bisa dibuka (HTTP {cause.code}).')
+    except (urllib.error.URLError, OSError) as cause:
+        raise ValueError('Link tidak bisa dibuka: ' + str(getattr(cause, 'reason', cause)))
+    if len(data) > FETCH_MAX_BYTES:
+        raise ValueError('File dari link terlalu besar (maksimal 60 MB).')
+    if data.startswith(b'%PDF-'):
+        ctype = 'application/pdf'
+    if ctype in ('text/html', 'application/xhtml+xml'):
+        if drive:
+            raise ValueError(private)
+        # An ordinary web page: print it the way a browser would.
+        return print_url_to_pdf(url), page_name(url) + '.pdf', 'application/pdf'
+    name = ''
+    match = re.search(r"filename\*=UTF-8''([^;]+)", disposition, re.I) or re.search(r'filename="?([^";]+)"?', disposition, re.I)
+    if match:
+        name = unquote(match[1])
+    if not name:
+        name = unquote(Path(urlsplit(final).path).name) or page_name(url)
+    name = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', '_', name).strip(' .')[:120] or 'document'
+    ext = FETCH_TYPES.get(ctype)
+    if ext and not name.lower().endswith(ext):
+        name = Path(name).stem + ext
+    return data, name, ctype
+
+
 OFFICE_INSTALL_HINT = ('LibreOffice (soffice) tidak ditemukan di komputer ini. '
                        'Pasang dari https://libreoffice.org/download, lalu restart server.')
 
@@ -879,6 +1020,28 @@ class Handler(SimpleHTTPRequestHandler):
                 return
         super().do_GET()
 
+    def fetch_source_route(self):
+        """Add file -> link: download a document (or print a web page) for the flipbook."""
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            payload = json.loads(self.rfile.read(size) if 0 < size <= 8192 else b'{}')
+            url = payload.get('url') if isinstance(payload, dict) else None
+            if not isinstance(url, str):
+                raise ValueError('Tempel link dulu.')
+            data, name, ctype = fetch_source(url, public_only=hosted())
+        except (ValueError, json.JSONDecodeError) as cause:
+            self.send_json(400, {'error': str(cause)})
+            return
+        except RuntimeError as cause:
+            self.send_json(503 if 'tidak ditemukan' in str(cause) else 400, {'error': str(cause)})
+            return
+        self.send_response(200)
+        self.send_header('Content-Type', ctype)
+        self.send_header('X-Filename', quote(name))
+        self.send_header('Content-Length', str(len(data)))
+        self.end_headers()
+        self.wfile.write(data)
+
     def convert_html(self):
         """HTML upload -> PDF printed by headless Edge/Chrome."""
         if self.headers.get_content_type() != 'text/html':
@@ -988,7 +1151,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(cause.status, {'error': str(cause), 'success': False})
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
-        feature = 'office' if self.path in OFFICE_ROUTES else match[1] if match else None
+        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else match[1] if match else None
         denied = feature and self.entitlement_error(feature)
         if denied:
             self.send_json(denied[0], {'error': denied[1]})
@@ -998,6 +1161,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == '/api/convert/html-to-pdf':
             self.convert_html()
+            return
+        if self.path == '/api/fetch-source':
+            self.fetch_source_route()
             return
         if self.path in OFFICE_ROUTES:
             self.convert_office()

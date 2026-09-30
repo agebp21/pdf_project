@@ -11,6 +11,7 @@ async function main(){
  const dom=new JSDOM(html,{url:'http://localhost:8080/converter.html',runScripts:'outside-only'}),w=dom.window;
  w.scrollTo=()=>{};w.console.log=()=>{};w.Blob=Blob;w.ArrayBuffer=ArrayBuffer;w.Uint8Array=Uint8Array;w.PDFLib=PDFLib;w.JSZip=require('../assets/vendor/jszip.min.js');
  const outputs=[];w.URL.createObjectURL=blob=>{outputs.push(blob);return 'blob:test'};w.URL.revokeObjectURL=()=>{};
+ w.eval(fs.readFileSync('assets/pdf-compress.js','utf8'));   // Compress PDF engine
  const script=[...w.document.querySelectorAll('script')].find(s=>s.textContent.includes('let active =')).textContent;
  w.eval(script+'\nwindow.qaSetFiles=value=>{files=value}; window.qaOrganize=()=>{organizeOrder=[2,0];organizeRotations={2:90}};');
  const pdf=fixture(3,960,540);pdf.name='input.pdf';

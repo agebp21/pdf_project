@@ -9,6 +9,7 @@ import zipfile
 import threading
 import time
 import urllib.request
+import urllib.parse
 import urllib.error
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -351,6 +352,74 @@ class HtmlToPdfTests(unittest.TestCase):
         self.assertLess(time.time() - started, 30, 'blocked addresses fail fast instead of timing out')
         self.assertNotIn(b'fonts]', pdf, 'win.ini content never reaches the PDF')
         self.assertRegex(pdf, rb'/MediaBox\s*\[\s*0 0 59[45]\.\d+ 84[12]\.\d+', 'A4 paper')
+
+
+class FetchSourceTests(unittest.TestCase):
+    """Add file -> link: Google Drive links, internal addresses refused on a
+    public host, and the /api/fetch-source route."""
+
+    @classmethod
+    def setUpClass(cls):
+        cls.httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        cls.thread = threading.Thread(target=cls.httpd.serve_forever, daemon=True)
+        cls.thread.start()
+        cls.base = 'http://127.0.0.1:' + str(cls.httpd.server_port)
+        with urllib.request.urlopen(cls.base + '/api/capabilities') as response:
+            cls.token = json.load(response)['token']
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.httpd.shutdown()
+        cls.httpd.server_close()
+        cls.thread.join()
+
+    def post(self, payload, token=True):
+        headers = {'Content-Type': 'application/json'}
+        if token:
+            headers['X-Build-Token'] = self.token
+        request = urllib.request.Request(self.base + '/api/fetch-source', data=json.dumps(payload).encode(), headers=headers)
+        try:
+            with urllib.request.urlopen(request) as response:
+                return response.status, response.headers, response.read()
+        except urllib.error.HTTPError as error:
+            with error:
+                return error.code, error.headers, error.read()
+
+    def test_google_drive_links(self):
+        fid = '1AbCdEfGhIjKlMnOp'
+        self.assertEqual(server.google_drive_url(f'https://drive.google.com/file/d/{fid}/view?usp=sharing'),
+                         f'https://drive.usercontent.google.com/download?id={fid}&export=download&confirm=t')
+        self.assertEqual(server.google_drive_url(f'https://drive.google.com/open?id={fid}'),
+                         f'https://drive.usercontent.google.com/download?id={fid}&export=download&confirm=t')
+        self.assertEqual(server.google_drive_url(f'https://docs.google.com/document/d/{fid}/edit'),
+                         f'https://docs.google.com/document/d/{fid}/export?format=pdf')
+        self.assertEqual(server.google_drive_url(f'https://docs.google.com/presentation/d/{fid}/edit'),
+                         f'https://docs.google.com/presentation/d/{fid}/export/pdf')
+        self.assertIsNone(server.google_drive_url('https://example.com/file/d/abc'))
+
+    def test_internal_addresses_refused_on_public_host(self):
+        for host in ('127.0.0.1', 'localhost', '10.0.0.5', '192.168.1.10', '169.254.169.254'):
+            with self.subTest(host=host), self.assertRaises(ValueError):
+                server.check_public_host(host)
+        with self.assertRaises(ValueError):
+            server.fetch_source('http://127.0.0.1:1/x.pdf', public_only=True)
+        with self.assertRaises(ValueError):
+            server.fetch_source('file:///C:/Windows/win.ini')
+
+    def test_route(self):
+        self.assertEqual(self.post({'url': 'https://example.com/a.pdf'}, token=False)[0], 403)
+        self.assertEqual(self.post({'url': 'ftp://example.com/a.pdf'})[0], 400)
+        seen = {}
+
+        def fake(url, public_only):
+            seen.update(url=url, public_only=public_only)
+            return b'%PDF-1.7 fake', 'Laporan Ta hun.pdf', 'application/pdf'
+        with mock.patch.object(server, 'fetch_source', side_effect=fake):
+            status, headers, body = self.post({'url': 'https://example.com/a.pdf'})
+        self.assertEqual(status, 200)
+        self.assertTrue(body.startswith(b'%PDF'))
+        self.assertEqual(urllib.parse.unquote(headers['X-Filename']), 'Laporan Ta hun.pdf')
+        self.assertEqual(seen, {'url': 'https://example.com/a.pdf', 'public_only': False}, 'local server: intranet links allowed')
 
 
 class LanHostTests(unittest.TestCase):

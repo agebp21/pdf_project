@@ -557,7 +557,13 @@
         // swap to the real page (with its spine shading) doesn't blink.
         requestAnimationFrame(() => {
           view.stage.style.transition = 'opacity .18s ease-out'; view.stage.style.opacity = '0';
-          setTimeout(() => { view.stage.remove(); busy = false; if (after) after(); }, 200);
+          // Timed by animation frames, like the turn itself.
+          const fadeStart = performance.now();
+          const fade = now => {
+            if (now - fadeStart < 200) { requestAnimationFrame(fade); return; }
+            view.stage.remove(); busy = false; if (after) after();
+          };
+          requestAnimationFrame(fade);
         });
       };
       requestAnimationFrame(frame);
