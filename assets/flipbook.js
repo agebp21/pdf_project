@@ -259,7 +259,11 @@
   function showAdd(open) {
     $('#add-dialog').hidden = !open;
     $('#add-file').setAttribute('aria-expanded', String(open));
-    if (open) { addStatus(''); setTimeout(() => $('#add-url').focus(), 0); }
+    if (open) {
+      addStatus(''); $('#add-drive-help').hidden = true;
+      $('#add-url').placeholder = 'Paste a link: PDF, web page or Google Drive';
+      setTimeout(() => $('#add-url').focus(), 0);
+    }
   }
   async function serverCaps() {
     let caps = null;
@@ -348,7 +352,12 @@
   $('#add-dialog').querySelectorAll('[data-source]').forEach(button => button.addEventListener('click', () => {
     const source = button.dataset.source;
     if (source === 'upload') { $('#pdf-file').click(); return; }
-    if (source === 'drive') $('#add-url').placeholder = 'Paste a Google Drive, Docs, Sheets or Slides share link';
+    if (source === 'drive') {
+      // No Drive login here: open Drive, the reader shares the file publicly and pastes its link.
+      window.open('https://drive.google.com/drive/my-drive', '_blank', 'noopener');
+      $('#add-url').placeholder = 'Paste the Google Drive share link here';
+      $('#add-drive-help').hidden = false;
+    }
     $('#add-url').focus();
   }));
   $('#add-link').addEventListener('submit', async event => {
