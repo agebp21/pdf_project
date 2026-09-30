@@ -29,6 +29,8 @@ assert.deepEqual(S.chunks(['KATA PENGANTAR', 'Buku ini tentang NUSANTARA.']), ['
 // Language.
 assert.equal(S.lang('Ini adalah buku yang dibuat untuk anak dan keluarga'), 'id-ID');
 assert.equal(S.lang('This is the book that we made for the family'), 'en-US');
+assert.equal(S.lang('Buku ini ialah untuk semua rakyat kerana kerajaan boleh membantu anda sahaja'), 'ms-MY', 'Malay');
+assert.equal(S.lang('Buku ini adalah untuk semua orang karena pemerintah bisa membantu'), 'id-ID', 'Indonesian');
 
 (async () => {
   // A fake engine: records what is spoken, finishes each piece a moment later.
@@ -121,6 +123,19 @@ assert.equal(S.lang('This is the book that we made for the family'), 'en-US');
     'Microsoft Gadis Online (Natural) - Indonesian (Indonesia)', 'Edge: Gadis, not Ardi');
   assert.equal(pick(windows), 'Microsoft Andika - Indonesian (Indonesia)', 'Windows only has Andika: still Indonesian');
   assert.equal(pick([v('Some voice', 'in_ID')]), 'Some voice', 'old Android code "in"');
+  const pickFor = (lang, voices) => {
+    let used = null;
+    w.SpeechSynthesisUtterance = function (text) { this.text = text; };
+    w.speechSynthesis = { getVoices: () => voices, speak: u => { used = u; }, cancel() {} };
+    S.engine().speak('Hello', lang, () => {});
+    return used.voice ? used.voice.name + ' ' + used.lang : 'default ' + used.lang;
+  };
+  const chrome = [v('Google US English', 'en-US'), v('Google UK English Male', 'en-GB'), v('Google Bahasa Indonesia', 'id-ID')];
+  assert.equal(pickFor('en-US', [v('Google UK English Male', 'en-GB')].concat(chrome)), 'Google US English en-US', 'Chrome English: a woman, not UK Male');
+  assert.equal(pickFor('en-US', [v('Microsoft David - English (United States)', 'en-US'), v('Microsoft Zira - English (United States)', 'en-US')]), 'Microsoft Zira - English (United States) en-US', 'Windows: Zira, not David');
+  assert.equal(pickFor('en-US', [v('Microsoft Guy Online (Natural) - English (United States)', 'en-US'), v('Microsoft Aria Online (Natural) - English (United States)', 'en-US')]), 'Microsoft Aria Online (Natural) - English (United States) en-US', 'Edge: Aria');
+  assert.equal(pickFor('ms-MY', [v('Microsoft Osman Online (Natural) - Malay (Malaysia)', 'ms-MY'), v('Microsoft Yasmin Online (Natural) - Malay (Malaysia)', 'ms-MY')]), 'Microsoft Yasmin Online (Natural) - Malay (Malaysia) ms-MY', 'Edge Malay: Yasmin');
+  assert.equal(pickFor('ms-MY', chrome), 'Google Bahasa Indonesia id-ID', 'no Malay voice (Chrome): the Indonesian one');
   delete w.speechSynthesis; delete w.SpeechSynthesisUtterance;
-  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there, capitals read as words');
+  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there, capitals read as words, Malay and English voices');
 })().catch(e => { console.error(e); process.exit(1); });

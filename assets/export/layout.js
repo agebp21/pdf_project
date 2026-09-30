@@ -1576,14 +1576,20 @@
     return this.pieces(this.words(null, Array.isArray(lines) ? lines : [String(lines || '')])).map(piece => piece.text);
   },
   // Indonesian or English, from common short words.
+  // Indonesian, Malay or English, from common short words; Malay and
+  // Indonesian share most of them, so words used by only one decide.
   lang(text) {
     const words = String(text || '').toLowerCase().match(/[a-z]+/g) || [];
-    const id = {yang: 1, dan: 1, di: 1, ke: 1, dari: 1, untuk: 1, dengan: 1, ini: 1, itu: 1, adalah: 1, pada: 1, dalam: 1, tidak: 1, akan: 1, sebagai: 1, kami: 1};
+    const malayic = {yang: 1, dan: 1, di: 1, ke: 1, dari: 1, untuk: 1, dengan: 1, ini: 1, itu: 1, pada: 1, dalam: 1, tidak: 1, akan: 1, sebagai: 1, kami: 1, juga: 1, atau: 1, oleh: 1};
     const en = {the: 1, and: 1, of: 1, to: 1, is: 1, in: 1, for: 1, with: 1, that: 1, this: 1, are: 1, on: 1, be: 1, it: 1, as: 1, we: 1};
-    let a = 0, b = 0;
-    words.forEach(w => { if (id[w]) a++; if (en[w]) b++; });
-    return b > a ? 'en-US' : 'id-ID';
+    const id = {adalah: 1, karena: 1, saja: 1, bisa: 1, yaitu: 1, pemerintah: 1, kalian: 1, sudah: 1, belum: 1, sangat: 1, sekolah: 1, uang: 1, mobil: 1, kantor: 1};
+    const ms = {ialah: 1, iaitu: 1, kerana: 1, sahaja: 1, boleh: 1, kerajaan: 1, anda: 1, telah: 1, sebab: 1, wang: 1, kereta: 1, pejabat: 1, negeri: 1, bagi: 1, supaya: 1};
+    let a = 0, b = 0, i = 0, m = 0;
+    words.forEach(w => { if (malayic[w] || id[w] || ms[w]) a++; if (en[w]) b++; if (id[w]) i++; if (ms[w]) m++; });
+    if (b > a) return 'en-US';
+    return m > i ? 'ms-MY' : 'id-ID';
   },
+  NAMES: {id: 'Indonesian', ms: 'Malay', en: 'English'},
   // The voice engine here: {speak(text, lang, done(ok)), stop()} or null.
   engine() {
     const root = typeof window !== 'undefined' ? window : {};
@@ -1609,19 +1615,29 @@
     // A woman's voice in the book's language: Google's (Chrome: "Google Bahasa
     // Indonesia" is a woman's voice), then Edge's natural ones (Gadis), then
     // any not known to be a man's (Windows' Indonesian "Andika" is last).
-    const voice = lang => {
-      const all = synth.getVoices() || [], code = lang.slice(0, 2).toLowerCase();
+    // English: Google US English / UK English Female (Chrome), Aria/Jenny
+    // (Edge), Zira/Hazel/Susan (Windows). Malay: Yasmin (Edge), else an
+    // Indonesian voice (close enough, far better than an English one).
+    const male = v => /\b(ardi|andika|osman|male|pria|laki|david|mark|george|guy|ryan|christopher|eric|james|daniel)\b/i.test(v.name) && !/female/i.test(v.name);
+    const woman = /gadis|yasmin|female|wanita|perempuan|zira|aria|jenny|hazel|susan|libby|sonia|samantha|karen|natasha|michelle/i;
+    const pick = code => {
+      const all = synth.getVoices() || [];
       const fits = all.filter(v => { const l = String(v.lang || '').replace('_', '-').toLowerCase(); return l.indexOf(code) === 0 || (code === 'id' && l.indexOf('in-') === 0); });
-      const male = v => /\b(ardi|andika|male|pria|laki)\b/i.test(v.name) && !/female/i.test(v.name);
-      return fits.filter(v => /google/i.test(v.name))[0] ||
-        fits.filter(v => /gadis|female|wanita|perempuan/i.test(v.name))[0] ||
+      return fits.filter(v => /google/i.test(v.name) && !male(v))[0] ||
+        fits.filter(v => woman.test(v.name))[0] ||
         fits.filter(v => /natural|online/i.test(v.name) && !male(v))[0] ||
         fits.filter(v => !male(v))[0] || fits[0] || null;
+    };
+    const voice = lang => {
+      const code = lang.slice(0, 2).toLowerCase();
+      return pick(code) || (code === 'ms' ? pick('id') : null);
     };
     return {
       speak(text, lang, done) {
         const u = new Utterance(text);
-        u.lang = lang; const v = voice(lang); if (v) u.voice = v;
+        const v = voice(lang);
+        u.lang = v && v.lang ? String(v.lang).replace('_', '-') : lang;
+        if (v) u.voice = v;
         let finished = false;
         const end = ok => { if (!finished) { finished = true; done(ok); } };
         u.onend = () => end(true);
@@ -1716,9 +1732,8 @@
       const first = !on;
       on = true; paint(); read(from);
       if (first && engine.has && !engine.has(lang) && options.notice) {
-        options.notice(lang === 'id-ID'
-          ? 'No Indonesian voice on this device: reading with the default voice. Windows: Settings \u203a Time & language \u203a Speech \u203a Add voices.'
-          : 'No English voice on this device: reading with the default voice.');
+        options.notice('No ' + (self.NAMES[lang.slice(0, 2)] || lang) + ' voice on this device: reading with the default voice.' +
+          ' Windows: Settings \u203a Time & language \u203a Speech \u203a Add voices.');
       }
     }
     // While reading, a click (or tap) on a word reads on from that word.

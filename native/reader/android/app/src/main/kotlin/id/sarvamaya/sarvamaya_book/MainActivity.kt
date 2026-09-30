@@ -57,26 +57,40 @@ class MainActivity : FlutterActivity() {
 
     private fun speak(id: Int, text: String, lang: String) {
         val engine = tts ?: return
-        // Keep the device's default voice when that language isn't installed.
-        val result = engine.setLanguage(Locale.forLanguageTag(lang))
-        if (result == TextToSpeech.LANG_MISSING_DATA || result == TextToSpeech.LANG_NOT_SUPPORTED) engine.language = Locale.getDefault()
-        else woman(engine, lang)?.let { engine.voice = it }
+        // Malay falls back to Indonesian (close), then the device's default voice.
+        val missing = { code: Int -> code == TextToSpeech.LANG_MISSING_DATA || code == TextToSpeech.LANG_NOT_SUPPORTED }
+        var spoken = lang
+        if (missing(engine.setLanguage(Locale.forLanguageTag(lang)))) {
+            spoken = if (lang.startsWith("ms")) "id-ID" else ""
+            if (spoken.isEmpty() || missing(engine.setLanguage(Locale.forLanguageTag(spoken)))) { engine.language = Locale.getDefault(); spoken = "" }
+        }
+        if (spoken.isNotEmpty()) woman(engine, spoken)?.let { engine.voice = it }
         if (engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, id.toString()) != TextToSpeech.SUCCESS) report(id.toString(), false)
     }
 
-    // Google's Indonesian voices dfz and idc are women's voices (idd, ide are
-    // men's); an installed (offline) one first. Other languages keep the default.
+    // Women's voices of Google's text-to-speech, installed (offline) ones first:
+    // Indonesian dfz / idc (idd, ide are men's), US English tpc / iob / iog /
+    // tpf (iol, iom, tpd are men's); the Malay names are a best guess (not
+    // checked on a phone). No match: the language's default voice.
+    private val women = mapOf(
+        "id" to listOf("dfz", "idc"),
+        "ms" to listOf("mfc", "msa", "msb"),
+        "en" to listOf("tpc", "iob", "iog", "tpf", "sfg")
+    )
+
     private fun woman(engine: TextToSpeech, lang: String): android.speech.tts.Voice? {
         val code = lang.substringBefore('-').lowercase()
-        if (code != "id") return null
+        val names = women[code] ?: return null
         val all = try { engine.voices } catch (e: Exception) { null } ?: return null
-        val indonesian = all.filter { (it.locale.language == "id" || it.locale.language == "in") &&
+        val country = lang.substringAfter('-', "").uppercase()
+        val fits = all.filter { val l = if (it.locale.language == "in") "id" else it.locale.language
+            l == code && (country.isEmpty() || code != "en" || it.locale.country == country) &&
             !it.features.contains(TextToSpeech.Engine.KEY_FEATURE_NOT_INSTALLED) }
-        for (name in listOf("dfz", "idc")) {
-            indonesian.firstOrNull { it.name.contains(name) && !it.isNetworkConnectionRequired }?.let { return it }
+        for (name in names) {
+            fits.firstOrNull { it.name.contains(name) && !it.isNetworkConnectionRequired }?.let { return it }
         }
-        for (name in listOf("dfz", "idc")) {
-            indonesian.firstOrNull { it.name.contains(name) }?.let { return it }
+        for (name in names) {
+            fits.firstOrNull { it.name.contains(name) }?.let { return it }
         }
         return null
     }
