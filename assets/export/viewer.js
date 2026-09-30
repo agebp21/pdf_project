@@ -125,7 +125,7 @@
       active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !notes.editing() && !highlights.active() && !loupe.active(),
       home: () => { book.turnToPage(0); update(); animate(); }
     });
-    const zoom = FlipbookZoom.bind($('main'), $('#stage'), {button: $('#zoom'), chip: $('#zoom-chip'), hint: $('#zoom-hint'),
+    const zoom = FlipbookZoom.bind($('main'), $('#stage'), {zoomOut: $('#zoom-out'), level: $('#zoom-level'), zoomIn: $('#zoom-in'), hint: $('#zoom-hint'),
       // The pages on screen (PageFlip's bounds inside its block): pan no further than the book.
       content: () => {
         const bounds = book.getBoundsRect(), block = document.querySelector('#book .stf__block');

@@ -611,6 +611,10 @@
 (typeof self!=='undefined'?self:global).FlipbookZoom = {
   MAX: 4,
   STEPS: [1, 2, 3],
+  // − / + in the toolbar walk these levels (shown as percentages).
+  LEVELS: [1, 1.25, 1.5, 2, 2.5, 3, 4],
+  up(scale) { const next = this.LEVELS.filter(v => v > scale + 0.01)[0]; return next || this.MAX; },
+  down(scale) { const below = this.LEVELS.filter(v => v < scale - 0.01); return below.length ? below[below.length - 1] : 1; },
   // Keep the zoomed book covering the view: no panning past its edges into
   // the background; an axis where it is smaller than the view is centred.
   // box = the book inside the stage at 100% ({x, y, w, h}); default: the whole stage.
@@ -626,8 +630,10 @@
     return { x: px - (px - x) / from * to, y: py - (py - y) / from * to };
   },
   /* surface: element receiving gestures; target: element that scales;
-     options: {button, chip, hint, onChange(scale), content(): the book's
-     on-screen rect (client coordinates) so panning stops at its edges} */
+     options: {zoomOut, level, zoomIn (the − 100% + toolbar control; the
+     percentage resets to 100%), button (older single 🔍), chip, hint,
+     onChange(scale), content(): the book's on-screen rect (client
+     coordinates) so panning stops at its edges} */
   bind(surface, target, options) {
     const self = this, opts = options || {};
     let scale = 1, x = 0, y = 0, gesture = null, lastTap = null, drag = null;
@@ -645,6 +651,13 @@
         opts.button.setAttribute('aria-label', scale > 1 ? 'Zoom ' + percent + ', press to zoom more or reset' : 'Zoom in');
       }
       if (opts.chip) { opts.chip.hidden = scale <= 1; const label = opts.chip.querySelector('span'); if (label) label.textContent = percent; }
+      if (opts.level) {
+        opts.level.textContent = percent;
+        opts.level.setAttribute('aria-label', 'Zoom ' + percent + (scale > 1 ? ', press to go back to 100%' : ''));
+        opts.level.classList.toggle('is-zoomed', scale > 1);
+      }
+      if (opts.zoomOut) opts.zoomOut.disabled = scale <= 1;
+      if (opts.zoomIn) opts.zoomIn.disabled = scale >= self.MAX - 0.01;
       if (opts.onChange) opts.onChange(scale);
     }
     function zoomTo(next, px, py, smooth) {
@@ -771,13 +784,17 @@
       if (next) zoomTo(next, c.x, c.y, true); else reset();
     }
     if (opts.button) opts.button.onclick = step;
+    const toward = next => { const c = center(); zoomTo(next, c.x, c.y, true); };
+    if (opts.zoomIn) opts.zoomIn.onclick = () => toward(self.up(scale));
+    if (opts.zoomOut) opts.zoomOut.onclick = () => toward(self.down(scale));
+    if (opts.level) opts.level.onclick = reset;
     if (opts.chip) { const button = opts.chip.querySelector('button'); if (button) button.onclick = reset; }
     document.addEventListener('keydown', event => {
       if (event.ctrlKey || event.metaKey || event.altKey) return;
       if (/^(INPUT|TEXTAREA|SELECT)$/.test((event.target && event.target.tagName) || '')) return;   // typing a note
       const c = center();
-      if (event.key === '+' || event.key === '=') zoomTo(scale * 1.5, c.x, c.y, true);
-      else if (event.key === '-') zoomTo(scale / 1.5, c.x, c.y, true);
+      if (event.key === '+' || event.key === '=') zoomTo(self.up(scale), c.x, c.y, true);
+      else if (event.key === '-') zoomTo(self.down(scale), c.x, c.y, true);
       else if (event.key === '0') reset();
     });
     addEventListener('resize', reset);
