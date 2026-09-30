@@ -1,3 +1,4 @@
+import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
@@ -58,9 +59,25 @@ class _BookScreenState extends State<BookScreen> {
         final controller = WebViewController();
         android = controller;
         await controller.setJavaScriptMode(JavaScriptMode.unrestricted);
-        // The reader's close button posts 'close' through this channel.
+        // Read aloud: Android's text-to-speech (MainActivity), since the WebView has none.
+        const speech = MethodChannel('myflipbook/tts');
+        speech.setMethodCallHandler((call) async {
+          if (call.method != 'done') return;
+          final args = Map<String, dynamic>.from(call.arguments as Map);
+          final reply = jsonEncode({'id': args['id'], 'event': args['ok'] == true ? 'end' : 'error'});
+          await controller.runJavaScript('window.FlipbookSpeechNative&&window.FlipbookSpeechNative($reply)');
+        });
+        // The reader posts 'close' (✕ button) and 'tts:{...}' (speak / stop) through this channel.
         await controller.addJavaScriptChannel('MyFlipbook', onMessageReceived: (message) {
-          if (message.message == 'close') SystemNavigator.pop();
+          if (message.message == 'close') { SystemNavigator.pop(); return; }
+          if (message.message.startsWith('tts:')) {
+            final data = jsonDecode(message.message.substring(4)) as Map<String, dynamic>;
+            if (data['op'] == 'speak') {
+              speech.invokeMethod('speak', {'id': data['id'], 'text': data['text'], 'lang': data['lang']});
+            } else {
+              speech.invokeMethod('stop');
+            }
+          }
         });
         await controller.setBackgroundColor(const Color(0xffe8ece8));
         await controller.setNavigationDelegate(NavigationDelegate(

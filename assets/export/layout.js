@@ -1498,3 +1498,156 @@
   },
 };
 
+
+// Read aloud: speaks the text of the pages on screen, then turns the page
+// and goes on until the end of the book. Voices come from the browser /
+// Windows (Web Speech API) or, in the Android app, from Android's
+// text-to-speech through the MyFlipbook channel (WebView has no voices).
+// ES2018 for old Android WebViews.
+(typeof self!=='undefined'?self:global).FlipbookSpeech = {
+  MAX: 220,
+  // A page's text lines → pieces of whole sentences, each at most MAX
+  // characters (browsers cut very long utterances short).
+  chunks(lines) {
+    const text = (Array.isArray(lines) ? lines.join(' ') : String(lines || ''))
+      .replace(/\.{3,}|…{2,}|_{3,}/g, ' ')          // table-of-contents dot leaders
+      .replace(/\s+/g, ' ').trim();
+    if (!text) return [];
+    const sentences = text.match(/[^.!?]+[.!?]*["'”)]*\s*/g) || [text], out = [], max = this.MAX;
+    let current = '';
+    const push = piece => {
+      if (!piece) return;
+      if ((current + ' ' + piece).trim().length <= max) { current = (current + ' ' + piece).trim(); return; }
+      if (current) out.push(current);
+      current = '';
+      if (piece.length <= max) { current = piece; return; }
+      piece.split(' ').forEach(word => {                 // a very long sentence: split between words
+        if ((current + ' ' + word).trim().length > max && current) { out.push(current); current = ''; }
+        current = (current + ' ' + word).trim();
+      });
+    };
+    sentences.forEach(s => push(s.trim()));
+    if (current) out.push(current);
+    return out;
+  },
+  // Indonesian or English, from common short words.
+  lang(text) {
+    const words = String(text || '').toLowerCase().match(/[a-z]+/g) || [];
+    const id = {yang: 1, dan: 1, di: 1, ke: 1, dari: 1, untuk: 1, dengan: 1, ini: 1, itu: 1, adalah: 1, pada: 1, dalam: 1, tidak: 1, akan: 1, sebagai: 1, kami: 1};
+    const en = {the: 1, and: 1, of: 1, to: 1, is: 1, in: 1, for: 1, with: 1, that: 1, this: 1, are: 1, on: 1, be: 1, it: 1, as: 1, we: 1};
+    let a = 0, b = 0;
+    words.forEach(w => { if (id[w]) a++; if (en[w]) b++; });
+    return b > a ? 'en-US' : 'id-ID';
+  },
+  // The voice engine here: {speak(text, lang, done(ok)), stop()} or null.
+  engine() {
+    const root = typeof window !== 'undefined' ? window : {};
+    const app = root.MyFlipbook && root.MyFlipbook.postMessage ? root.MyFlipbook : null;
+    if (app) {
+      // Android app: the Flutter side speaks and calls back FlipbookSpeechNative({id, event}).
+      const pending = {};
+      let seq = 0;
+      root.FlipbookSpeechNative = message => {
+        const done = message && pending[message.id];
+        if (!done) return;
+        delete pending[message.id];
+        done(message.event === 'end');
+      };
+      return {
+        speak(text, lang, done) { const id = ++seq; pending[id] = done; app.postMessage('tts:' + JSON.stringify({op: 'speak', id, text, lang})); },
+        stop() { Object.keys(pending).forEach(k => { delete pending[k]; }); app.postMessage('tts:' + JSON.stringify({op: 'stop'})); }
+      };
+    }
+    const synth = root.speechSynthesis, Utterance = root.SpeechSynthesisUtterance;
+    if (!synth || !Utterance) return null;
+    let current = null;
+    const voice = lang => {
+      const all = synth.getVoices() || [], code = lang.slice(0, 2).toLowerCase();
+      const fits = all.filter(v => String(v.lang || '').replace('_', '-').toLowerCase().indexOf(code) === 0);
+      return fits.filter(v => /google/i.test(v.name))[0] || fits.filter(v => /natural|online/i.test(v.name))[0] || fits[0] || null;
+    };
+    return {
+      speak(text, lang, done) {
+        const u = new Utterance(text);
+        u.lang = lang; const v = voice(lang); if (v) u.voice = v;
+        let finished = false;
+        const end = ok => { if (!finished) { finished = true; done(ok); } };
+        u.onend = () => end(true);
+        u.onerror = event => end(event && (event.error === 'interrupted' || event.error === 'canceled'));
+        current = u;                                     // keep a reference: Chrome drops events of collected utterances
+        synth.speak(u);
+      },
+      stop() { current = null; synth.cancel(); },
+      // false when this device lists voices but none in that language.
+      has(lang) { const all = synth.getVoices() || []; return !all.length || !!voice(lang); }
+    };
+  },
+  /* options: {text: {page: [lines]}, visible(): page indices on screen,
+     next(): turns the page, false at the end of the book, button,
+     notice(message) (no voice in the book's language), engine (tests)} */
+  bind(options) {
+    const self = this, text = options.text || {}, engine = options.engine || self.engine();
+    const all = Object.keys(text).map(k => (text[k] || []).join(' ')).join(' ');
+    const lang = self.lang(all.slice(0, 20000));
+    let on = false, run = 0, shown = '', wait = 0;
+    const button = options.button;
+    function paint() {
+      if (!button) return;
+      button.textContent = on ? '⏹ Stop' : '🎧 Listen';
+      button.title = on ? 'Stop reading aloud' : 'Read the book aloud (turns the pages for you)';
+      button.setAttribute('aria-pressed', String(on));
+      button.classList.toggle('is-on', on);
+    }
+    function stop() {
+      on = false; run++; clearTimeout(wait);
+      if (engine) engine.stop();
+      paint();
+    }
+    function turn(mine) {
+      if (!on || mine !== run) return;
+      if (!options.next()) stop();                       // the end of the book
+      // the new pages are read when the viewer calls pageChanged()
+    }
+    function read() {
+      const mine = ++run;
+      clearTimeout(wait);
+      engine.stop();
+      const pages = options.visible();
+      shown = pages.join(',');
+      const queue = [];
+      pages.forEach(index => self.chunks(text[String(index)]).forEach(piece => queue.push(piece)));
+      // A page without text (a picture): a short pause, then on.
+      if (!queue.length) { wait = setTimeout(() => turn(mine), 1500); return; }
+      const step = () => {
+        if (!on || mine !== run) return;
+        if (!queue.length) { turn(mine); return; }
+        engine.speak(queue.shift(), lang, ok => {
+          if (!on || mine !== run) return;
+          if (ok) step(); else stop();
+        });
+      };
+      step();
+    }
+    function start() {
+      if (!engine) return;
+      on = true; paint(); read();
+      if (engine.has && !engine.has(lang) && options.notice) {
+        options.notice(lang === 'id-ID'
+          ? 'No Indonesian voice on this device: reading with the default voice. Windows: Settings › Time & language › Speech › Add voices.'
+          : 'No English voice on this device: reading with the default voice.');
+      }
+    }
+    if (button) {
+      // Books without any text (scans) have nothing to read.
+      button.hidden = !engine || !all.trim();
+      button.onclick = () => { if (on) stop(); else start(); };
+    }
+    paint();
+    return {
+      active: () => on, start, stop, lang: () => lang,
+      // The viewer calls this after every page turn (by the reader or by us).
+      pageChanged() { if (on && options.visible().join(',') !== shown) read(); },
+      close() { stop(); }
+    };
+  },
+};

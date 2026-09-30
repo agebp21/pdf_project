@@ -97,6 +97,8 @@ body.is-highlighting .book-link{pointer-events:none}
 .book-hl.is-eraser{background:rgba(179,18,26,.08);border:2px dashed #b3121a;opacity:1;mix-blend-mode:normal}
 body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl-cursor,crosshair)}
 #highlight.is-on{background:#ffd43b;border-color:#e0b100}
+#speak.is-on{background:#1a3c34;border-color:#1a3c34;color:#fff}
+#speak[hidden]{display:none}
 @media (max-height:360px){.book-hl-bar{gap:5px;padding:6px}.book-hl-swatch{width:24px;height:24px}}
 /* Popup above the highlighter button (placed by JS). */
 .book-hl-bar.is-popup{flex-direction:row;flex-wrap:wrap;justify-content:center;right:auto;bottom:auto;transform:none;max-width:calc(100vw - 16px);max-height:none;padding:8px 10px;gap:8px;border-radius:16px}

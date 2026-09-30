@@ -13,7 +13,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, marks = null, notes = null, highlights = null, curl = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, marks = null, notes = null, highlights = null, speech = null, curl = null;
   // Arsipku: the archived copy of the open book (members only).
   let libraryId = null, openingLibraryId = null, archiveUser;
   function exportState() {
@@ -165,6 +165,11 @@
         pages: newElements, words: bookWords, text: bookText, button: $('#highlight'),
         onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
         onRecolor: (index, said, color) => notes.tint(index, said, color)});
+      speech?.close();
+      speech = FlipbookSpeech.bind({text: bookText, visible: visiblePages, button: $('#speak'), notice: message => { $('#load-status').textContent = message; },
+        next: () => { if ($('#next').disabled) return false; goNext(); return true; }});
+      book.on('flip', () => speech.pageChanged());
+      book.on('changeState', event => { if (event.data === 'read') speech.pageChanged(); });
       const linkCount = found.stats.internal + found.stats.toc + found.stats.external;
       $('#load-status').textContent = `${newElements.length} page${newElements.length === 1 ? '' : 's'} ready. The first page is the front cover.` +
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');
@@ -393,7 +398,7 @@
   });
   FlipbookIdle.bind({
     host: $('.preview'),
-    active: () => !!book && !opening && !exporting && book.getState() === 'read' && book.getCurrentPageIndex() > 0,
+    active: () => !!book && !opening && !exporting && book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !speech?.active(),
     home: () => { book.turnToPage(0); updatePage(); animate(true); }
   });
   $('#replay').addEventListener('click', () => animate());
