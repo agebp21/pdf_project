@@ -660,3 +660,7 @@ Owner: tombol Google Drive belum terasa jalan (dulu hanya ganti placeholder + fo
 ### 30 September 2026 - Daftar "My notes": teks penuh + word wrap, scroll ke bawah
 
 Owner: daftar catatan dirapikan. Sebelumnya cuplikan 90 karakter satu baris (`nowrap`) sehingga panel scroll ke samping dan tombol ✎ keluar layar. Sekarang daftar menampilkan teks catatan penuh, dibungkus (`white-space:pre-wrap; overflow-wrap:anywhere`), `.book-note-list{overflow-x:hidden}`, tombol ✎ tetap di kanan atas tiap catatan; panel hanya scroll ke bawah (max-height 60vh). Dicek Chromium 1000x640 dan 390x780: scrollWidth = clientWidth.
+
+### 30 September 2026 - Tab ＋ di pinggir halaman juga dihapus
+
+Owner: tanda ＋ tidak usah. Dengan `blank: false` (reader + editor) sekarang tidak ada tab tambah sama sekali (✎ maupun ＋); catatan hanya lahir dari stabilo dan bisa diedit/dihapus dari tabnya atau daftar My notes. Konsekuensi: menulis catatan bebas tanpa stabilo tidak bisa lagi dari pinggir halaman (edit kutipan tetap bisa untuk menambah komentar).

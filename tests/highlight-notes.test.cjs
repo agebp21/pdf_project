@@ -35,7 +35,7 @@ w.document.getElementById('hl').click();
 drag(0, 250, 110, 390, 115);
 assert.deepEqual(texts(0), ['“langkah seribu”']);
 assert.equal(pages[0].querySelectorAll('.book-note-tab.has-note').length, 1, 'tab on the page edge');
-assert.ok(pages[0].querySelector('.book-note-add'), '＋ adds more on a page that has a note');
+assert.equal(pages[0].querySelector('.book-note-add'), null, 'no ＋ tab either: notes come from highlights');
 assert.ok(pages[0].querySelector('.book-note-tab.is-new'), 'the new tab is pointed out');
 // Highlighting a word already quoted adds nothing.
 drag(0, 330, 110, 380, 112);

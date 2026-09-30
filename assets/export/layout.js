@@ -854,8 +854,7 @@
   save(key, notes) { try { localStorage.setItem(key, JSON.stringify(notes)); return true; } catch (e) { return false; } },
   /* options: {key, title, pages (elements), goPage(i), open (button),
      bookmark(index, on) → true when it changed the page's bookmark,
-     blank: false → no ✎ tab on pages without notes (notes come from
-     highlights; ＋ still adds more on pages that have one),
+     blank: false → no ✎ / ＋ tab at all (notes come from highlights),
      onRemove(index, said): the reader deleted a quote note ("said" = the
      quoted text) → its highlight goes too} */
   bind(options) {
@@ -884,7 +883,7 @@
         if (reader && reader.page === index && reader.item === n) tab.classList.add('is-open');
         stack.appendChild(tab);
       });
-      if (items.length < self.PER_PAGE && (items.length || options.blank !== false)) {
+      if (items.length < self.PER_PAGE && options.blank !== false) {
         const add = button(items.length ? '＋' : '✎', 'book-note-tab book-note-add', event => { event.preventDefault(); event.stopPropagation(); edit(index, -1); });
         add.title = items.length ? 'Add another note on ' + label(index) : 'Write a note on ' + label(index);
         add.setAttribute('aria-label', add.title);
