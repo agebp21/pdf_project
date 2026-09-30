@@ -48,6 +48,8 @@ class PodcastTests(unittest.TestCase):
         sent = json.loads(request.data)
         self.assertEqual(sent['model'], 'claude-sonnet-5')
         self.assertIn('RINA (perempuan)', sent['messages'][0]['content'])
+        self.assertIn('selamat datang di podcast Buku', sent['messages'][0]['content'], 'the podcast is named after the book')
+        self.assertNotIn('MyFlipbook"', sent['messages'][0]['content'].split('Jangan')[0])
         self.assertIn('Judul: Buku', sent['messages'][1]['content'])
         self.assertEqual(result['lines'], [dict(s='A', t='Halo semua!'), dict(s='B', t='Halo Rina. lanjutan.'),
                                            dict(s='A', t='Mari mulai.'), dict(s='B', t='Siap. Catatan panggung')])

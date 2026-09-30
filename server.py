@@ -221,16 +221,19 @@ PODCAST_LANGUAGES = {
 PODCAST_MAX_SOURCE = 120_000      # characters of book text sent (cost cap)
 
 
-def podcast_prompt(lang, hosts):
+def podcast_prompt(lang, hosts, title='Buku'):
     a, b = hosts
-    return f"""Kamu penulis naskah podcast "Ngobrol Buku" dari MyFlipbook.
+    title = ' '.join(str(title).split())[:200] or 'Buku'
+    return f"""Kamu penulis naskah podcast untuk buku berjudul "{title}".
+Nama podcast ini sama dengan judul bukunya: "{title}".
 Tulis naskah obrolan dua penyiar yang membahas dokumen yang diberikan:
 - {a.upper()} (perempuan): pemandu, rapi, suka merangkum.
 - {b.upper()} (laki-laki): penasaran, suka bertanya dan memberi contoh sehari-hari.
 Aturan:
 - Bahasa: {PODCAST_LANGUAGES.get(lang, PODCAST_LANGUAGES['id-ID'])}, seperti dua teman ngobrol, bukan membaca slide.
 - Panjang sekitar 650-750 kata (kira-kira 5 menit bicara).
-- Pembuka singkat (sebut judul dokumen), isi (poin-poin penting dengan urutan yang enak diikuti), penutup singkat dengan satu kalimat inti; kedua penyiar berpamitan.
+- Kalimat pertama {a.upper()} menyambut pendengar dengan menyebut judul buku persis, misalnya: "Halo, selamat datang di podcast {title}!". Jangan menyebut nama acara lain, "Ngobrol Buku", atau "MyFlipbook".
+- Lalu isi (poin-poin penting dengan urutan yang enak diikuti), dan penutup singkat dengan satu kalimat inti; kedua penyiar berpamitan dan menyebut judul buku sekali lagi.
 - HANYA gunakan fakta dari dokumen. Jangan mengarang angka, nama, tanggal, atau klaim yang tidak ada, dan jangan menambah tafsiran di luar dokumen.
 - Tulis angka, rentang, dan simbol sebagai kata agar enak dibacakan mesin suara (mis. "5-8 detik" -> "lima sampai delapan detik", "&" -> "dan").
 - Format keluaran: setiap giliran satu baris, diawali "{a.upper()}:" atau "{b.upper()}:". Tanpa judul, tanpa catatan panggung, tanpa markdown."""
@@ -245,7 +248,7 @@ def podcast_script(title, text, lang='id-ID', hosts=('Rina', 'Bima')):
         raise RuntimeError('Podcast AI belum diatur di server (SUMOPOD_API_KEY di .env).')
     source = f'Judul: {title}\n\n{text}'[:PODCAST_MAX_SOURCE]
     body = json.dumps({'model': model, 'max_tokens': 8000, 'temperature': 0.8, 'messages': [
-        {'role': 'system', 'content': podcast_prompt(lang, hosts)},
+        {'role': 'system', 'content': podcast_prompt(lang, hosts, title)},
         {'role': 'user', 'content': 'Dokumen (teks per halaman):\n\n' + source}]}).encode('utf-8')
     last = 'Naskah kosong.'
     for _ in range(2):          # some models now and then answer with nothing but reasoning

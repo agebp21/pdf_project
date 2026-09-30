@@ -777,3 +777,7 @@ Tes: tests/podcast.test.cjs, tests/test_podcast.py (AI palsu, tanpa biaya); APK 
 
 Key Sumopod aktif lagi. E2E (Edge, server --no-paywall): storyline NTT -> "Buat podcast" 30 dtk, 35 giliran bahasa Indonesia; diputar di pratinjau editor dan di HTML satu-file tersegel (teks naskah tidak terbaca polos di file); Bima memakai pitch 0.7 karena PC ini tak punya suara laki-laki. Naskah contoh disalin ke Downloads ("Naskah Podcast NTT - dari editor.txt").
 Bug diperbaiki: dokumen NTT terdeteksi Melayu sehingga naskah berbahasa Melayu. `FlipbookSpeech.lang` kini memakai penanda Melayu yang hampir tak dipakai bahasa Indonesia (iaitu, kerana, sahaja, berbeza, kakitangan, mesyuarat, percuma, sila, wang, sebarang) dan memilih ms-MY hanya bila ≥ 3 penanda dan > 2× penanda Indonesia. Server 8080 direstart agar /api/podcast/script aktif.
+
+### 1 Oktober 2026 - Podcast dinamai judul buku
+
+Owner: salam pembuka harus menyebut judul buku, bukan "Ngobrol Buku dari MyFlipbook". `podcast_prompt(lang, hosts, title)`: nama podcast = judul buku (kolom Book title); kalimat pertama Rina "Halo, selamat datang di podcast <judul>!", dilarang menyebut "Ngobrol Buku"/"MyFlipbook"; penutup menyebut judul lagi. Petunjuk di editor: isi Book title dulu. Dicek dengan AI sungguhan (NTT, 28 giliran). Suara natural + Bima laki-laki: suara perangkat tidak cukup (PC/Chrome tanpa suara laki-laki Indonesia) -> perlu TTS neural (MP3 di buku); key Sumopod hanya melihat 2 model yang dicentang, jadi belum diketahui apakah Sumopod punya model TTS.
