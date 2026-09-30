@@ -93,6 +93,8 @@
     // Highlighter ("stabilo"): snaps to the words read from the PDF.
     const highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(data.title, data.pageCount, data.ratio),
       pages: elements, words: data.words || {}, button: $('#highlight')});
+    // Magnifier: a lens dragged over the page.
+    const loupe = FlipbookLoupe.bind({pages: elements, button: $('#loupe')});
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };
@@ -116,7 +118,7 @@
     }
     document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen'});
     FlipbookIdle.bind({
-      active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !notes.editing() && !highlights.active(),
+      active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !notes.editing() && !highlights.active() && !loupe.active(),
       home: () => { book.turnToPage(0); update(); animate(); }
     });
     const zoom = FlipbookZoom.bind($('main'), $('#stage'), {button: $('#zoom'), chip: $('#zoom-chip'), hint: $('#zoom-hint'),
