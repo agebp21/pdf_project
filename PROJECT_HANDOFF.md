@@ -666,3 +666,7 @@ Tombol 🔎 (`#loupe`) di reader ekspor (`assets/export/index.html` -> HTML/APK/
 ### 30 September 2026 - Ikon kuas + penghapus di stabilo
 
 Rel stabilo sekarang diawali pasangan alat: **kuas** (`.book-hl-brush`, mewarnai; latar tombol = warna stabilo terpilih lewat `--hl-color`) dan **penghapus** (`.book-hl-eraser`, merah saat aktif), dipisah garis dari titik-titik warna. Tombol toolbar `#highlight` juga ikon kuas. Ikon = SVG inline (`FlipbookHighlights.ICONS`, gaya garis Lucide, lisensi ISC) — bukan emoji, supaya sama di semua perangkat. Emoji 🖍/🧽 dihapus.
+
+### 30 September 2026 - Kursor kuas / penghapus saat stabilo
+
+Di mode stabilo, kursor mouse di atas halaman = ikon kuas (bulu kuas berwarna sesuai warna stabilo terpilih), di mode hapus = ikon penghapus; dulu `text`/`crosshair`. SVG data-URI dibuat `FlipbookHighlights.cursor(kind, color)` (garis putih tebal di bawah supaya terlihat di halaman gelap; hotspot kuas `4 22`, penghapus `5 20`), dipasang lewat variabel `--hl-cursor` di `body` pada setiap `paintBar()`; CSS punya fallback `text`/`crosshair`. CSP reader sudah mengizinkan `data:` gambar. Layar sentuh tidak punya kursor (tidak berubah).

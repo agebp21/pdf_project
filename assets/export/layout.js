@@ -1041,6 +1041,24 @@
     brush: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M14.6 17.9 3.9 15"/><path d="M18.4 2.6a1 1 0 1 1 3 3l-4 4a.5.5 0 0 0 0 .7l.9.9a2.4 2.4 0 0 1 0 3.4l-.9.9a.5.5 0 0 1-.7 0L8.4 7.3a.5.5 0 0 1 0-.7l.9-.9a2.4 2.4 0 0 1 3.4 0l.9.9a.5.5 0 0 0 .7 0z"/><path d="M9 8c-1.8 2.7-4 3.5-6.6 3.9a.5.5 0 0 0-.3.8l7.3 8.9a1 1 0 0 0 1.2.2C12.7 20.4 16 16.8 16 15"/></svg>',
     eraser: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H8a2 2 0 0 1-1.4-.6l-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l6 6a2 2 0 0 1 0 2.8L12.8 21"/><path d="m5.1 11.1 8.8 8.8"/></svg>'
   },
+  // Mouse cursor while highlighting: the brush (bristles in the chosen
+  // colour) or the eraser, white-outlined so it shows on any page.
+  // Hotspot = where the tool touches the page.
+  cursor(kind, color) {
+    const brush = ['M14.6 17.9 3.9 15',
+      'M18.4 2.6a1 1 0 1 1 3 3l-4 4a.5.5 0 0 0 0 .7l.9.9a2.4 2.4 0 0 1 0 3.4l-.9.9a.5.5 0 0 1-.7 0L8.4 7.3a.5.5 0 0 1 0-.7l.9-.9a2.4 2.4 0 0 1 3.4 0l.9.9a.5.5 0 0 0 .7 0z',
+      'M9 8c-1.8 2.7-4 3.5-6.6 3.9a.5.5 0 0 0-.3.8l7.3 8.9a1 1 0 0 0 1.2.2C12.7 20.4 16 16.8 16 15'];
+    const eraser = ['M21 21H8a2 2 0 0 1-1.4-.6l-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l6 6a2 2 0 0 1 0 2.8L12.8 21', 'm5.1 11.1 8.8 8.8'];
+    const paths = kind === 'eraser' ? eraser : brush;
+    const fill = kind === 'eraser' ? '#fda4af' : (color || '#fde68a');
+    // The shape that gets the fill: bristles / eraser body.
+    const filled = kind === 'eraser' ? 0 : 2;
+    const draw = (stroke, width, withFill) => paths.map((d, i) => '<path d="' + d + '" fill="' + (withFill && i === filled ? fill : 'none') +
+      '" stroke="' + stroke + '" stroke-width="' + width + '" stroke-linecap="round" stroke-linejoin="round"/>').join('');
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg" width="32" height="32" viewBox="-1 -1 26 26">' + draw('#fff', 4.5, false) + draw('#1c1917', 1.8, true) + '</svg>';
+    const hotspot = kind === 'eraser' ? '5 20' : '4 22';
+    return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + hotspot + ', ' + (kind === 'eraser' ? 'crosshair' : 'text');
+  },
   COLORS: {y: '#ffd43b', g: '#69db7c', p: '#f783ac', b: '#4dabf7'},
   NAMES: {y: 'Yellow', g: 'Green', p: 'Pink', b: 'Blue'},
   key(title, pageCount, ratio) {
@@ -1203,6 +1221,7 @@
       eraser.setAttribute('aria-pressed', String(erasing));
       brush.setAttribute('aria-pressed', String(!erasing));
       brush.style.setProperty('--hl-color', self.COLORS[selected ? store[selected.page][selected.index].c : color]);
+      document.body.style.setProperty('--hl-cursor', self.cursor(erasing ? 'eraser' : 'brush', self.COLORS[color]));
       document.body.classList.toggle('is-erasing', mode && erasing);
       remove.hidden = !selected;
       hint.textContent = erasing ? 'Drag over highlights to erase them' : selected ? 'Pick a colour or delete' : 'Drag over text to highlight';

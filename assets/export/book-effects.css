@@ -66,7 +66,7 @@
 .book-hl{position:absolute;border-radius:2px;opacity:.5;mix-blend-mode:multiply}
 .book-hl.is-preview{opacity:.35}
 .book-hl.is-selected{opacity:.7;outline:2px solid #1c1917;outline-offset:1px}
-body.is-highlighting .page,body.is-highlighting .pdf-page{cursor:text}
+body.is-highlighting .page,body.is-highlighting .pdf-page{cursor:text;cursor:var(--hl-cursor,text)}
 body.is-highlighting .book-note-stack{pointer-events:none;opacity:.25}
 .book-hl-bar{position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:2100;display:flex;flex-direction:column;align-items:center;gap:8px;max-height:calc(100vh - 20px);padding:10px 8px;border-radius:18px;background:#fffdf8;border:1px solid #e4ded0;box-shadow:0 12px 34px rgba(0,0,0,.28);font:13px/1.2 system-ui,sans-serif;color:#1c1917}
 .book-hl-bar[hidden]{display:none}
@@ -84,7 +84,7 @@ body.is-highlighting .book-note-stack{pointer-events:none;opacity:.25}
 .book-hl-eraser[aria-pressed="true"]{color:#b3121a;background:#fde2e2;border-color:#b3121a;box-shadow:0 0 0 2px #b3121a}
 #highlight .book-hl-icon{width:16px;height:16px;margin:-2px 0}
 .book-hl.is-eraser{background:rgba(179,18,26,.08);border:2px dashed #b3121a;opacity:1;mix-blend-mode:normal}
-body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair}
+body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl-cursor,crosshair)}
 #highlight.is-on{background:#ffd43b;border-color:#e0b100}
 @media (max-height:360px){.book-hl-bar{gap:5px;padding:6px}.book-hl-swatch{width:24px;height:24px}}
 .book-note-download{display:block;width:100%;margin-top:10px;padding:9px;border:1px dashed #d6cfbf;border-radius:10px;background:#fff;font:600 13px system-ui,sans-serif;color:#1a3c34;cursor:pointer}
