@@ -58,6 +58,20 @@
     }
     return out;
   }
+  // Podcast script: {lines: [{s: 'A'|'B', t}], hosts: [a, b], lang}.
+  function validPodcast(podcast) {
+    if (podcast === undefined || podcast === null) return null;
+    if (typeof podcast !== 'object' || !Array.isArray(podcast.lines) || podcast.lines.length > 400) throw Error('Data podcast tidak valid.');
+    const lines = podcast.lines.map(line => {
+      if (!line || (line.s !== 'A' && line.s !== 'B') || typeof line.t !== 'string' || !line.t.trim()) throw Error('Baris podcast tidak valid.');
+      return {s: line.s, t: line.t.trim().slice(0, 2000)};
+    });
+    if (!lines.length) return null;
+    const hosts = Array.isArray(podcast.hosts) && podcast.hosts.length === 2 && podcast.hosts.every(h => typeof h === 'string' && h.trim())
+      ? podcast.hosts.map(h => h.trim().slice(0, 30)) : ['Rina', 'Bima'];
+    const lang = ['id-ID', 'ms-MY', 'en-US'].includes(podcast.lang) ? podcast.lang : 'id-ID';
+    return {lines, hosts, lang};
+  }
   function validate(data) {
     if (!data || data.version !== 1 || typeof data.title !== 'string' || !Number.isInteger(data.pageCount) || data.pageCount < 1 || !Number.isFinite(data.ratio) || data.ratio <= 0) throw Error('Format proyek tidak valid atau belum didukung.');
     if (!data.overlays || typeof data.overlays !== 'object' || Array.isArray(data.overlays)) throw Error('Data animasi tidak valid.');
@@ -67,7 +81,8 @@
       overlays[key] = {label:config.label.slice(0,40),value:config.value,position:config.position};
     }
     const words=validWords(data.words,data.pageCount);
-    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words)};
+    const podcast=validPodcast(data.podcast);
+    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words),...(podcast?{podcast}:{})};
   }
   const scriptData = data => 'window.FLIPBOOK_DATA = ' + JSON.stringify(validate(data)).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029') + ';\n';
   async function asset(path) {

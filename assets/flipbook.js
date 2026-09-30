@@ -13,7 +13,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, marks = null, notes = null, highlights = null, speech = null, curl = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, marks = null, notes = null, highlights = null, speech = null, curl = null;
   // Arsipku: the archived copy of the open book (members only).
   let libraryId = null, openingLibraryId = null, archiveUser;
   function exportState() {
@@ -22,7 +22,7 @@
     $('#export-exe').disabled = !buildConfig?.exe;
     $('#project-file').disabled = opening || exporting;
   }
-  const model = () => ({version:1,title:$('#export-title').value.trim()||'Buku interaktif',pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText});
+  const model = () => ({version:1,title:$('#export-title').value.trim()||'Buku interaktif',pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{})});
   const error = message => { $('#reader-error').textContent = message; $('#reader-error').hidden = !message; };
   // Sheets on screen (may include the blank back cover of an odd page count).
   function sheetsOnScreen() {
@@ -121,7 +121,7 @@
       if (book) { disposeLayout?.(); book.destroy(); book = null; }
       if (pdf) await pdf.destroy();
       imageUrls.forEach(url => URL.revokeObjectURL(url));
-      imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links; bookWords = words; bookText = text;
+      imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links; bookWords = words; bookText = text; bookPodcast = (project && project.podcast) || null;
       // Odd page counts get a blank back cover so the book can close.
       const sheets = FlipbookLayout.withBackCover(newElements, 'pdf-page');
       const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...sheets);
@@ -165,9 +165,12 @@
         pages: newElements, words: bookWords, text: bookText, button: $('#highlight'),
         onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
         onRecolor: (index, said, color) => notes.tint(index, said, color)});
+      podcastView?.close();
+      podcastView = FlipbookPodcast.bind({podcast: () => bookPodcast, button: $('#podcast'), onStart: () => speech?.stop()});
+      showPodcast();
       speech?.close();
       speech = FlipbookSpeech.bind({text: bookText, words: bookWords, pages: newElements, visible: visiblePages, button: $('#speak'),
-        busy: () => highlights.active(), notice: message => { $('#load-status').textContent = message; },
+        busy: () => highlights.active(), onStart: () => podcastView?.stop(), notice: message => { $('#load-status').textContent = message; },
         next: () => { if ($('#next').disabled) return false; goNext(); return true; }});
       book.on('flip', () => speech.pageChanged());
       book.on('changeState', event => { if (event.data === 'read') speech.pageChanged(); });
@@ -194,6 +197,57 @@
       exportState();
     }
   }
+  // ---------- Podcast: an AI-written talk between two hosts about the book
+  // (server: /api/podcast/script via Sumopod). Editable; saved with the project.
+  function podcastStatus(text, bad = false) { $('#podcast-status').textContent = text; $('#podcast-status').classList.toggle('error', bad); }
+  function showPodcast() {
+    const has = !!(bookPodcast && bookPodcast.lines && bookPodcast.lines.length);
+    $('#podcast-script').hidden = !has; $('#podcast-tools').hidden = !has;
+    if (has && document.activeElement !== $('#podcast-script')) $('#podcast-script').value = FlipbookPodcast.format(bookPodcast);
+    $('#podcast-make').textContent = has ? '🎙 Buat ulang naskah (AI)' : '🎙 Buat podcast (AI)';
+    podcastView?.refresh();
+  }
+  $('#podcast-make').addEventListener('click', async () => {
+    if (!pageElements.length) return;
+    if (bookPodcast && !confirm('Buat ulang? Naskah sekarang (termasuk editanmu) akan diganti.')) return;
+    const all = Object.keys(bookText).map(k => bookText[k].join(' ')).join(' ');
+    if (all.split(/\s+/).length < 40) { podcastStatus('Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR di Converter dulu.', true); return; }
+    const button = $('#podcast-make');
+    button.classList.add('is-busy'); button.disabled = true;
+    podcastStatus('Menulis naskah podcast… biasanya 20-60 detik.');
+    try {
+      const caps = await serverCaps();
+      const response = await fetch('/api/podcast/script', {method:'POST', credentials:'same-origin',
+        headers:{'Content-Type':'application/json', 'X-Build-Token': caps.token},
+        body: JSON.stringify({title: $('#export-title').value.trim() || 'Buku', text: bookText, lang: FlipbookSpeech.lang(all.slice(0, 20000))})});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw Error(result.error || 'Naskah gagal dibuat.');
+      bookPodcast = {lines: result.lines, hosts: result.hosts, lang: result.lang};
+      showPodcast();
+      podcastStatus(`Naskah siap: ${result.lines.length} giliran bicara. Dengarkan dengan 🎙 Podcast di pratinjau, edit bila perlu.`);
+      archiveBook();
+    } catch (cause) { podcastStatus(cause.message, true); }
+    finally { button.classList.remove('is-busy'); button.disabled = false; }
+  });
+  let podcastTimer = 0;
+  $('#podcast-script').addEventListener('input', () => {
+    clearTimeout(podcastTimer);
+    podcastTimer = setTimeout(() => {
+      const parsed = FlipbookPodcast.parse($('#podcast-script').value, bookPodcast && bookPodcast.hosts);
+      if (!parsed.lines.length) { podcastStatus('Naskah kosong: tiap baris diawali nama penyiar, mis. "RINA: …".', true); return; }
+      podcastView?.stop();
+      bookPodcast = {lines: parsed.lines, hosts: parsed.hosts, lang: (bookPodcast && bookPodcast.lang) || 'id-ID'};
+      podcastView?.refresh();
+      podcastStatus(`Editan tersimpan: ${parsed.lines.length} giliran bicara.`);
+    }, 500);
+  });
+  $('#podcast-listen').addEventListener('click', () => { if (!$('#podcast').hidden) { if ($('.book-podcast')) podcastView.playFrom(0); else $('#podcast').click(); } });
+  $('#podcast-clear').addEventListener('click', () => {
+    if (!confirm('Hapus podcast dari buku ini?')) return;
+    podcastView?.close(); bookPodcast = null; $('#podcast-script').value = ''; showPodcast();
+    podcastStatus('Podcast dihapus.');
+  });
+
   // ---------- Arsipku: every book a member opens or exports is kept in their
   // personal archive on the server (project, cover, latest exports).
   async function archiveMember() {
@@ -399,7 +453,7 @@
   });
   FlipbookIdle.bind({
     host: $('.preview'),
-    active: () => !!book && !opening && !exporting && book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !speech?.active(),
+    active: () => !!book && !opening && !exporting && book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !speech?.active() && !podcastView?.active(),
     home: () => { book.turnToPage(0); updatePage(); animate(true); }
   });
   $('#replay').addEventListener('click', () => animate());

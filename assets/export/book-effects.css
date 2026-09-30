@@ -132,3 +132,19 @@ body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl
 .cover-curl-shade{position:absolute;top:0;right:0;bottom:0;left:0}
 .curl-hidden{visibility:hidden!important}
 
+
+/* Podcast player (FlipbookPodcast): transcript with the line being spoken. */
+.book-podcast{width:380px;max-height:62vh;display:flex;flex-direction:column;padding:10px 12px}
+.book-podcast-head{display:flex;align-items:center;gap:8px;margin-bottom:6px}
+.book-podcast-head .book-marks-title{flex:1;margin:0}
+.book-podcast-play{padding:7px 14px;border:0;border-radius:999px;background:#1a3c34;color:#fff;font:700 12.5px system-ui,sans-serif;cursor:pointer}
+.book-podcast-close{width:30px;height:30px;padding:0;border:1px solid #e4ded0;border-radius:999px;background:#fff;color:#57534e;cursor:pointer}
+.book-podcast-lines{list-style:none;margin:0;padding:0;overflow:auto;display:flex;flex-direction:column;gap:6px}
+.book-podcast-line{padding:8px 10px;border-radius:12px;background:#fff;border:1px solid #efe9dc;font-size:13px;line-height:1.5;cursor:pointer;overflow-wrap:anywhere}
+.book-podcast-line b{display:block;font-size:11px;letter-spacing:.04em;text-transform:uppercase;margin-bottom:2px}
+.book-podcast-line.is-a b{color:#c2255c}
+.book-podcast-line.is-b b{color:#1864ab}
+.book-podcast-line:hover{border-color:#d6cfbf;background:#fffaf2}
+.book-podcast-line.is-now{background:#eef6ec;border-color:#1a3c34;box-shadow:inset 3px 0 0 #1a3c34}
+#podcast.is-on{background:#1a3c34;border-color:#1a3c34;color:#fff}
+#podcast[hidden]{display:none}

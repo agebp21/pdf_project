@@ -34,6 +34,13 @@ button.primary.apply:hover,.primary:hover{transform:translate(-1px,-1px);box-sha
 .export-progress small{min-width:38px;text-align:right;font-weight:700;font-variant-numeric:tabular-nums}
 @media(max-width:720px){.topbar{margin:8px;border-radius:14px}}
 
+/* Podcast (AI script) in the export panel */
+.podcast-box{display:flex;flex-direction:column;gap:8px;margin-top:6px;padding-top:10px;border-top:1px dashed #d6cfbf}
+.podcast-box textarea{width:100%;min-height:160px;padding:10px 12px;border:1px solid #d6cfbf;border-radius:12px;font:12.5px/1.5 ui-monospace,Consolas,monospace;resize:vertical;background:#fff}
+.podcast-tools{display:flex;gap:8px}
+.podcast-tools button{flex:1}
+.podcast-box .is-busy{opacity:.6;pointer-events:none}
+
 /* Arsipku status in the editor */
 .archive-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 2px 0;font-size:12.5px}
 .archive-status{color:var(--pine);font-weight:600}

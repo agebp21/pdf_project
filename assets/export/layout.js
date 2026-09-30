@@ -1605,7 +1605,7 @@
         done(message.event === 'end');
       };
       return {
-        speak(text, lang, done) { const id = ++seq; pending[id] = done; app.postMessage('tts:' + JSON.stringify({op: 'speak', id, text, lang})); },
+        speak(text, lang, done, gender) { const id = ++seq; pending[id] = done; app.postMessage('tts:' + JSON.stringify({op: 'speak', id, text, lang, gender: gender || 'female'})); },
         stop() { Object.keys(pending).forEach(k => { delete pending[k]; }); app.postMessage('tts:' + JSON.stringify({op: 'stop'})); }
       };
     }
@@ -1620,22 +1620,30 @@
     // Indonesian voice (close enough, far better than an English one).
     const male = v => /\b(ardi|andika|osman|male|pria|laki|david|mark|george|guy|ryan|christopher|eric|james|daniel)\b/i.test(v.name) && !/female/i.test(v.name);
     const woman = /gadis|yasmin|female|wanita|perempuan|zira|aria|jenny|hazel|susan|libby|sonia|samantha|karen|natasha|michelle/i;
-    const pick = code => {
+    const pick = (code, gender) => {
       const all = synth.getVoices() || [];
       const fits = all.filter(v => { const l = String(v.lang || '').replace('_', '-').toLowerCase(); return l.indexOf(code) === 0 || (code === 'id' && l.indexOf('in-') === 0); });
+      if (gender === 'male') {
+        // A man's voice if there is one (Edge: Ardi; Windows: Andika; Chrome: Google UK English Male).
+        const men = fits.filter(male);
+        return men.filter(v => /natural|online/i.test(v.name))[0] || men.filter(v => /google/i.test(v.name))[0] || men[0] || null;
+      }
       return fits.filter(v => /google/i.test(v.name) && !male(v))[0] ||
         fits.filter(v => woman.test(v.name))[0] ||
         fits.filter(v => /natural|online/i.test(v.name) && !male(v))[0] ||
         fits.filter(v => !male(v))[0] || fits[0] || null;
     };
-    const voice = lang => {
+    const voice = (lang, gender) => {
       const code = lang.slice(0, 2).toLowerCase();
-      return pick(code) || (code === 'ms' ? pick('id') : null);
+      return pick(code, gender) || (code === 'ms' ? pick('id', gender) : null);
     };
     return {
-      speak(text, lang, done) {
+      speak(text, lang, done, gender) {
         const u = new Utterance(text);
-        const v = voice(lang);
+        // No man's voice here: the woman's voice, lower (two hosts still sound apart).
+        let v = gender === 'male' ? voice(lang, 'male') : null;
+        if (gender === 'male' && !v) u.pitch = 0.7;
+        v = v || voice(lang);
         u.lang = v && v.lang ? String(v.lang).replace('_', '-') : lang;
         if (v) u.voice = v;
         let finished = false;
@@ -1729,6 +1737,7 @@
     }
     function start(from) {
       if (!engine) return;
+      if (options.onStart) options.onStart();
       const first = !on;
       on = true; paint(); read(from);
       if (first && engine.has && !engine.has(lang) && options.notice) {
@@ -1782,5 +1791,112 @@
       pageChanged() { if (on && options.visible().join(',') !== shown) read(null); },
       close() { stop(); handlers.forEach(off => off()); }
     };
+  },
+};
+
+// Podcast: two hosts talk the book through (a script written with AI in the
+// editor, stored in the book as podcast.lines [{s: 'A'|'B', t}]). Played
+// with the device's voices — host A a woman, host B a man — with the
+// transcript on screen; tap a line to play from there. ES2018.
+(typeof self!=='undefined'?self:global).FlipbookPodcast = {
+  HOSTS: ['Rina', 'Bima'],
+  // "RINA: text" lines → [{s, t}]; the first name found is host A, the second host B.
+  parse(text, hosts) {
+    const names = [], lines = [];
+    String(text || '').split(/\r?\n/).forEach(raw => {
+      const m = /^\s*([A-Za-z][A-Za-z .'-]{0,30}?)\s*:\s*(.+)$/.exec(raw);
+      if (m) {
+        const who = m[1].trim().toLowerCase();
+        if (names.indexOf(who) < 0 && names.length < 2) names.push(who);
+        const index = names.indexOf(who);
+        if (index >= 0) { lines.push({s: index ? 'B' : 'A', t: m[2].trim()}); return; }
+      }
+      if (lines.length && raw.trim()) lines[lines.length - 1].t += ' ' + raw.trim();   // a wrapped line
+    });
+    return {lines: lines.filter(l => l.t).slice(0, 400), hosts: names.length ? names.map((n, i) => n.replace(/\b\w/g, c => c.toUpperCase())).concat(this.HOSTS.slice(names.length)).slice(0, 2) : (hosts || this.HOSTS).slice()};
+  },
+  format(podcast) {
+    const hosts = (podcast && podcast.hosts) || this.HOSTS;
+    return ((podcast && podcast.lines) || []).map(l => hosts[l.s === 'B' ? 1 : 0].toUpperCase() + ': ' + l.t).join('\n');
+  },
+  /* options: {podcast (object, or a function returning it), button,
+     engine (tests), onStart() (stop other reading), title} */
+  bind(options) {
+    const self = this, engine = options.engine || FlipbookSpeech.engine();
+    const get = () => (typeof options.podcast === 'function' ? options.podcast() : options.podcast) || null;
+    let panel = null, list = null, play = null, on = false, run = 0, at = 0;
+    const button = options.button;
+    function usable() { const p = get(); return !!(engine && p && p.lines && p.lines.length); }
+    function paint() {
+      if (button) {
+        button.hidden = !usable();
+        button.textContent = '🎙 Podcast';
+        button.title = 'Listen to two hosts talk about this book';
+        button.classList.toggle('is-on', !!panel);
+        button.setAttribute('aria-expanded', String(!!panel));
+      }
+      if (play) { play.textContent = on ? '⏸ Pause' : '▶ Play'; play.setAttribute('aria-label', on ? 'Pause' : 'Play'); }
+      if (typeof document !== 'undefined' && document.body) document.body.classList.toggle('is-podcast', on);
+      if (list) Array.prototype.forEach.call(list.children, (row, i) => row.classList.toggle('is-now', i === at && (on || at > 0)));
+    }
+    function stop() { on = false; run++; if (engine) engine.stop(); paint(); }
+    function speakFrom(index) {
+      const p = get();
+      if (!p || !engine) return;
+      if (options.onStart) options.onStart();
+      const mine = ++run, lang = p.lang || 'id-ID';
+      on = true; at = index;
+      const step = () => {
+        if (!on || mine !== run) return;
+        if (at >= p.lines.length) { on = false; at = 0; paint(); return; }
+        paint();
+        const row = list && list.children[at];
+        if (row && row.scrollIntoView) row.scrollIntoView({block: 'nearest', behavior: 'smooth'});
+        const line = p.lines[at];
+        engine.speak(FlipbookSpeech.say(line.t), lang, ok => {
+          if (!on || mine !== run) return;
+          if (!ok) { stop(); return; }
+          at++; step();
+        }, line.s === 'B' ? 'male' : 'female');
+      };
+      engine.stop();
+      step();
+    }
+    function close() {
+      stop(); at = 0;
+      if (panel) { panel.remove(); panel = null; list = null; play = null; }
+      paint();
+    }
+    function open() {
+      const p = get();
+      if (!p) return;
+      const hosts = p.hosts || self.HOSTS;
+      panel = document.createElement('div');
+      panel.className = 'book-marks book-podcast'; panel.setAttribute('role', 'dialog'); panel.setAttribute('aria-label', 'Podcast');
+      ['pointerdown', 'mousedown', 'touchstart'].forEach(name => panel.addEventListener(name, event => event.stopPropagation()));
+      const head = document.createElement('div'); head.className = 'book-podcast-head';
+      const title = document.createElement('p'); title.className = 'book-marks-title'; title.textContent = '🎙 ' + hosts[0] + ' & ' + hosts[1];
+      play = document.createElement('button'); play.type = 'button'; play.className = 'book-podcast-play';
+      play.onclick = () => { if (on) stop(); else speakFrom(at); };
+      const shut = document.createElement('button'); shut.type = 'button'; shut.className = 'book-podcast-close'; shut.textContent = '✕';
+      shut.setAttribute('aria-label', 'Close podcast'); shut.onclick = close;
+      head.appendChild(title); head.appendChild(play); head.appendChild(shut);
+      list = document.createElement('ol'); list.className = 'book-podcast-lines';
+      p.lines.forEach((line, i) => {
+        const row = document.createElement('li');
+        row.className = 'book-podcast-line is-' + (line.s === 'B' ? 'b' : 'a');
+        const who = document.createElement('b'); who.textContent = hosts[line.s === 'B' ? 1 : 0];
+        const said = document.createElement('span'); said.textContent = line.t;
+        row.appendChild(who); row.appendChild(said);
+        row.onclick = () => speakFrom(i);
+        list.appendChild(row);
+      });
+      panel.appendChild(head); panel.appendChild(list);
+      document.body.appendChild(panel);
+      paint();
+    }
+    if (button) button.onclick = () => { if (panel) close(); else { open(); speakFrom(0); } };
+    paint();
+    return {active: () => on, stop, close, refresh() { if (panel && !usable()) close(); paint(); }, open, playFrom: speakFrom};
   },
 };

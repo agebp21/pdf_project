@@ -54,6 +54,12 @@
           <button id="export-html" class="primary apply" type="button">Save offline HTML as…</button>
           <button id="export-apk" class="secondary" type="button" disabled>Build Android APK</button>
           <button id="export-exe" class="secondary" type="button" disabled>Build Windows EXE (.zip)</button>
+          <div class="podcast-box">
+            <button id="podcast-make" class="secondary" type="button">🎙 Buat podcast (AI)</button>
+            <textarea id="podcast-script" rows="9" hidden aria-label="Naskah podcast" spellcheck="false"></textarea>
+            <div id="podcast-tools" class="podcast-tools" hidden><button id="podcast-listen" class="secondary" type="button">▶ Dengar</button><button id="podcast-clear" class="secondary" type="button">Hapus podcast</button></div>
+            <p id="podcast-status" class="muted">Dua penyiar (Rina &amp; Bima) membahas isi buku ini. Naskah bisa diedit; ikut tersimpan di proyek dan semua ekspor.</p>
+          </div>
         </fieldset>
         <button id="open-project" class="secondary" type="button" onclick="document.getElementById('project-file').click()">Open project… (.smflipbook)</button>
         <input id="project-file" type="file" accept=".smflipbook,.sm-flipbook" hidden>
@@ -67,7 +73,7 @@
       <section class="preview" aria-label="Book from PDF">
         <div class="preview-top"><span id="document-name">FLIPBOOK PREVIEW</span><span id="page-status" aria-live="polite">—</span></div>
         <div id="reader-stage" class="stage"><div id="empty-book"><span>▤</span><h2>Open your first PDF</h2><p>PDF pages will appear here as a flippable book.</p><a href="converter.html?tool=word-to-pdf">Have a Word file? Convert it first →</a></div></div>
-        <div class="controls"><div class="navigation"><button id="prev" disabled aria-label="Previous page">←</button><button id="home" disabled aria-label="Back to cover" title="Back to cover">Home</button><button id="next" disabled aria-label="Next page">→</button><button id="bookmark" type="button"></button><button id="bookmarks" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="notes" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="highlight" type="button" aria-pressed="false"></button><button id="speak" type="button" aria-pressed="false" hidden></button><button id="sound" type="button"></button></div><div class="playback" hidden style="display:none"><button id="replay" disabled>↻ Putar animasi</button><button id="fullscreen">Layar penuh</button></div></div>
+        <div class="controls"><div class="navigation"><button id="prev" disabled aria-label="Previous page">←</button><button id="home" disabled aria-label="Back to cover" title="Back to cover">Home</button><button id="next" disabled aria-label="Next page">→</button><button id="bookmark" type="button"></button><button id="bookmarks" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="notes" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="highlight" type="button" aria-pressed="false"></button><button id="speak" type="button" aria-pressed="false" hidden></button><button id="podcast" type="button" aria-expanded="false" hidden></button><button id="sound" type="button"></button></div><div class="playback" hidden style="display:none"><button id="replay" disabled>↻ Putar animasi</button><button id="fullscreen">Layar penuh</button></div></div>
         <p id="reader-error" role="alert" hidden></p>
       </section>
     </div>

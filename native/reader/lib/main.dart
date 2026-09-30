@@ -73,7 +73,7 @@ class _BookScreenState extends State<BookScreen> {
           if (message.message.startsWith('tts:')) {
             final data = jsonDecode(message.message.substring(4)) as Map<String, dynamic>;
             if (data['op'] == 'speak') {
-              speech.invokeMethod('speak', {'id': data['id'], 'text': data['text'], 'lang': data['lang']});
+              speech.invokeMethod('speak', {'id': data['id'], 'text': data['text'], 'lang': data['lang'], 'gender': data['gender'] ?? 'female'});
             } else {
               speech.invokeMethod('stop');
             }

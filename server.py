@@ -154,7 +154,8 @@ def validate_manifest(data):
         overlays[key] = dict(label=item['label'][:40], value=value, position=item['position'])
     return dict(version=1, title=data['title'][:200], pageCount=count, ratio=ratio, overlays=overlays,
                 links=validate_links(data.get('links', {}), count), words=(words := validate_words(data.get('words', {}), count)),
-                text=validate_text(data.get('text', {}), words))
+                text=validate_text(data.get('text', {}), words),
+                **({'podcast': podcast} if (podcast := validate_podcast(data.get('podcast'))) else {}))
 
 
 def validate_words(words, count):
@@ -188,6 +189,90 @@ def validate_text(text, words):
             raise ValueError('Isi teks halaman tidak valid.')
         out[key] = [line[:4000] for line in lines]
     return out
+
+
+def validate_podcast(podcast):
+    """Podcast script: {lines: [{s: 'A'|'B', t}], hosts: [a, b], lang}; None when absent."""
+    if podcast is None:
+        return None
+    if not isinstance(podcast, dict) or not isinstance(podcast.get('lines'), list) or len(podcast['lines']) > 400:
+        raise ValueError('Data podcast tidak valid.')
+    lines = []
+    for line in podcast['lines']:
+        if not isinstance(line, dict) or line.get('s') not in ('A', 'B') or not isinstance(line.get('t'), str) or not line['t'].strip():
+            raise ValueError('Baris podcast tidak valid.')
+        lines.append(dict(s=line['s'], t=line['t'].strip()[:2000]))
+    if not lines:
+        return None
+    hosts = podcast.get('hosts')
+    if not (isinstance(hosts, list) and len(hosts) == 2 and all(isinstance(h, str) and h.strip() for h in hosts)):
+        hosts = ['Rina', 'Bima']
+    lang = podcast.get('lang') if podcast.get('lang') in ('id-ID', 'ms-MY', 'en-US') else 'id-ID'
+    return dict(lines=lines, hosts=[h.strip()[:30] for h in hosts], lang=lang)
+
+
+# ---------- Podcast script (AI through Sumopod, an OpenAI-compatible gateway).
+# .env: SUMOPOD_API_KEY, SUMOPOD_BASE_URL, PODCAST_MODEL. The key stays here.
+PODCAST_LANGUAGES = {
+    'id-ID': 'Bahasa Indonesia santai tapi sopan (boleh "kita", "nih", "ya")',
+    'ms-MY': 'Bahasa Melayu Malaysia yang santai tapi sopan',
+    'en-US': 'casual but polite English',
+}
+PODCAST_MAX_SOURCE = 120_000      # characters of book text sent (cost cap)
+
+
+def podcast_prompt(lang, hosts):
+    a, b = hosts
+    return f"""Kamu penulis naskah podcast "Ngobrol Buku" dari MyFlipbook.
+Tulis naskah obrolan dua penyiar yang membahas dokumen yang diberikan:
+- {a.upper()} (perempuan): pemandu, rapi, suka merangkum.
+- {b.upper()} (laki-laki): penasaran, suka bertanya dan memberi contoh sehari-hari.
+Aturan:
+- Bahasa: {PODCAST_LANGUAGES.get(lang, PODCAST_LANGUAGES['id-ID'])}, seperti dua teman ngobrol, bukan membaca slide.
+- Panjang sekitar 650-750 kata (kira-kira 5 menit bicara).
+- Pembuka singkat (sebut judul dokumen), isi (poin-poin penting dengan urutan yang enak diikuti), penutup singkat dengan satu kalimat inti; kedua penyiar berpamitan.
+- HANYA gunakan fakta dari dokumen. Jangan mengarang angka, nama, tanggal, atau klaim yang tidak ada, dan jangan menambah tafsiran di luar dokumen.
+- Tulis angka, rentang, dan simbol sebagai kata agar enak dibacakan mesin suara (mis. "5-8 detik" -> "lima sampai delapan detik", "&" -> "dan").
+- Format keluaran: setiap giliran satu baris, diawali "{a.upper()}:" atau "{b.upper()}:". Tanpa judul, tanpa catatan panggung, tanpa markdown."""
+
+
+def podcast_script(title, text, lang='id-ID', hosts=('Rina', 'Bima')):
+    """Ask the AI for a two-host script; returns dict(lines, hosts, lang, model)."""
+    key = os.environ.get('SUMOPOD_API_KEY', '').strip()
+    base = os.environ.get('SUMOPOD_BASE_URL', 'https://ai.sumopod.com/v1').strip().rstrip('/')
+    model = os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
+    if not key:
+        raise RuntimeError('Podcast AI belum diatur di server (SUMOPOD_API_KEY di .env).')
+    source = f'Judul: {title}\n\n{text}'[:PODCAST_MAX_SOURCE]
+    body = json.dumps({'model': model, 'max_tokens': 8000, 'temperature': 0.8, 'messages': [
+        {'role': 'system', 'content': podcast_prompt(lang, hosts)},
+        {'role': 'user', 'content': 'Dokumen (teks per halaman):\n\n' + source}]}).encode('utf-8')
+    last = 'Naskah kosong.'
+    for _ in range(2):          # some models now and then answer with nothing but reasoning
+        request = urllib.request.Request(base + '/chat/completions', data=body, method='POST',
+                                         headers={'Authorization': 'Bearer ' + key, 'Content-Type': 'application/json'})
+        try:
+            with urllib.request.urlopen(request, timeout=240) as response:
+                data = json.loads(response.read().decode('utf-8'))
+        except urllib.error.HTTPError as cause:
+            detail = cause.read().decode('utf-8', 'replace')[:300]
+            raise RuntimeError(f'Layanan AI menolak permintaan ({cause.code}). {detail}') from cause
+        except (urllib.error.URLError, TimeoutError, OSError) as cause:
+            raise RuntimeError('Layanan AI tidak bisa dihubungi. Cek koneksi internet server.') from cause
+        content = ((data.get('choices') or [{}])[0].get('message') or {}).get('content') or ''
+        lines = []
+        names = [h.upper() for h in hosts]
+        for raw in content.splitlines():
+            raw = raw.replace('**', '').replace('__', '')     # markdown bold around a name
+            match = re.match(r'\s*([A-Za-z]+)\s*:\s*(.+)', raw)
+            if match and match[1].upper() in names:
+                lines.append(dict(s='A' if match[1].upper() == names[0] else 'B', t=match[2].strip()))
+            elif lines and raw.strip():
+                lines[-1]['t'] += ' ' + raw.strip()
+        if len(lines) >= 4:
+            return dict(lines=lines[:400], hosts=list(hosts), lang=lang, model=model)
+        last = 'AI tidak menghasilkan naskah. Coba lagi.'
+    raise RuntimeError(last)
 
 
 def validate_links(links, count):
@@ -1133,6 +1218,33 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             self.send_json(404, {'error': 'Tidak ditemukan.'})
 
+    def podcast_route(self):
+        """POST {title, text: {page: [lines]}, lang, hosts} -> two-host podcast script."""
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 8 * 1024 * 1024:
+                raise ValueError('Teks buku kosong atau terlalu besar.')
+            data = json.loads(self.rfile.read(size).decode('utf-8'))
+            pages = data.get('text')
+            if not isinstance(pages, dict):
+                raise ValueError('Teks buku tidak valid.')
+            ordered = sorted((int(k), v) for k, v in pages.items() if re.fullmatch(r'0|[1-9][0-9]*', str(k)) and isinstance(v, list))
+            text = '\n\n'.join(f'[Halaman {k + 1}]\n' + '\n'.join(str(line) for line in lines if isinstance(line, str)) for k, lines in ordered)
+            if len(text.split()) < 40:
+                raise ValueError('Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR dulu.')
+            lang = data.get('lang') if data.get('lang') in PODCAST_LANGUAGES else 'id-ID'
+            hosts = data.get('hosts')
+            if not (isinstance(hosts, list) and len(hosts) == 2 and all(isinstance(h, str) and re.fullmatch(r'[A-Za-z]{2,20}', h) for h in hosts)):
+                hosts = ['Rina', 'Bima']
+            title = str(data.get('title') or 'Buku')[:200]
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as cause:
+            self.send_json(400, {'error': str(cause) if isinstance(cause, ValueError) and not isinstance(cause, json.JSONDecodeError) else 'Permintaan tidak valid.'})
+            return
+        try:
+            self.send_json(200, podcast_script(title, text, lang, hosts))
+        except RuntimeError as cause:
+            self.send_json(502, {'error': str(cause)})
+
     def entitlement_error(self, feature):
         """None when allowed, else (status, message).
 
@@ -1367,7 +1479,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(cause.status, {'error': str(cause)})
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
-        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else match[1] if match else None
+        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'export' if self.path == '/api/podcast/script' else match[1] if match else None
         denied = feature and self.entitlement_error(feature)
         if denied:
             self.send_json(denied[0], {'error': denied[1]})
@@ -1380,6 +1492,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == '/api/fetch-source':
             self.fetch_source_route()
+            return
+        if self.path == '/api/podcast/script':
+            self.podcast_route()
             return
         if self.path in OFFICE_ROUTES:
             self.convert_office()

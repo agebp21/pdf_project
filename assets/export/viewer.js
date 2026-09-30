@@ -104,11 +104,13 @@
       onRecolor: (index, said, color) => notes.tint(index, said, color)});
     // Read aloud: speaks the pages on screen, then turns to the next ones.
     const speech = FlipbookSpeech.bind({text: data.text || {}, words: data.words || {}, pages: elements, visible, button: $('#speak'),
-      busy: () => highlights.active(),
+      busy: () => highlights.active(), onStart: () => podcast.stop(),
       notice: message => { const tip = $('#zoom-hint'); tip.textContent = message; tip.hidden = false; setTimeout(() => { tip.hidden = true; }, 6000); },
       next: () => { if ($('#next').disabled) return false; goNext(); return true; }});
     book.on('flip', () => speech.pageChanged());
     book.on('changeState', event => { if (event.data === 'read') speech.pageChanged(); });
+    // Podcast: two hosts talk the book through (script made in the editor).
+    const podcast = FlipbookPodcast.bind({podcast: data.podcast, button: $('#podcast'), onStart: () => speech.stop()});
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };
@@ -132,7 +134,7 @@
     }
     document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Exit fullscreen':'Fullscreen'});
     FlipbookIdle.bind({
-      active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !notes.editing() && !highlights.active() && !speech.active(),
+      active: () => book.getState() === 'read' && book.getCurrentPageIndex() > 0 && !notes.editing() && !highlights.active() && !speech.active() && !podcast.active(),
       home: () => { book.turnToPage(0); update(); animate(); }
     });
     const zoom = FlipbookZoom.bind($('main'), $('#stage'), {button: $('#zoom'), hint: $('#zoom-hint'),

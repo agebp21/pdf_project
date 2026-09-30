@@ -26,7 +26,8 @@ class MainActivity : FlutterActivity() {
                     val id = call.argument<Int>("id") ?: 0
                     val text = call.argument<String>("text") ?: ""
                     val lang = call.argument<String>("lang") ?: "id-ID"
-                    whenReady(id) { speak(id, text, lang) }
+                    val male = call.argument<String>("gender") == "male"
+                    whenReady(id) { speak(id, text, lang, male) }
                     result.success(null)
                 }
                 "stop" -> { waiting.clear(); tts?.stop(); result.success(null) }
@@ -55,7 +56,7 @@ class MainActivity : FlutterActivity() {
         }
     }
 
-    private fun speak(id: Int, text: String, lang: String) {
+    private fun speak(id: Int, text: String, lang: String, male: Boolean) {
         val engine = tts ?: return
         // Malay falls back to Indonesian (close), then the device's default voice.
         val missing = { code: Int -> code == TextToSpeech.LANG_MISSING_DATA || code == TextToSpeech.LANG_NOT_SUPPORTED }
@@ -64,7 +65,10 @@ class MainActivity : FlutterActivity() {
             spoken = if (lang.startsWith("ms")) "id-ID" else ""
             if (spoken.isEmpty() || missing(engine.setLanguage(Locale.forLanguageTag(spoken)))) { engine.language = Locale.getDefault(); spoken = "" }
         }
-        if (spoken.isNotEmpty()) woman(engine, spoken)?.let { engine.voice = it }
+        // Podcast host B is a man: a man's voice, else the woman's voice lower.
+        val chosen = if (spoken.isEmpty()) null else pickVoice(engine, spoken, if (male) men else women)
+        chosen?.let { engine.voice = it }
+        engine.setPitch(if (male && chosen == null) 0.75f else 1.0f)
         if (engine.speak(text, TextToSpeech.QUEUE_FLUSH, null, id.toString()) != TextToSpeech.SUCCESS) report(id.toString(), false)
     }
 
@@ -77,10 +81,14 @@ class MainActivity : FlutterActivity() {
         "ms" to listOf("mfc", "msa", "msb"),
         "en" to listOf("tpc", "iob", "iog", "tpf", "sfg")
     )
+    private val men = mapOf(
+        "id" to listOf("idd", "ide"),
+        "en" to listOf("iol", "iom", "tpd")
+    )
 
-    private fun woman(engine: TextToSpeech, lang: String): android.speech.tts.Voice? {
+    private fun pickVoice(engine: TextToSpeech, lang: String, table: Map<String, List<String>>): android.speech.tts.Voice? {
         val code = lang.substringBefore('-').lowercase()
-        val names = women[code] ?: return null
+        val names = table[code] ?: return null
         val all = try { engine.voices } catch (e: Exception) { null } ?: return null
         val country = lang.substringAfter('-', "").uppercase()
         val fits = all.filter { val l = if (it.locale.language == "in") "id" else it.locale.language
