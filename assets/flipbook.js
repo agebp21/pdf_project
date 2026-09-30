@@ -166,7 +166,8 @@
         onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
         onRecolor: (index, said, color) => notes.tint(index, said, color)});
       speech?.close();
-      speech = FlipbookSpeech.bind({text: bookText, visible: visiblePages, button: $('#speak'), notice: message => { $('#load-status').textContent = message; },
+      speech = FlipbookSpeech.bind({text: bookText, words: bookWords, pages: newElements, visible: visiblePages, button: $('#speak'),
+        busy: () => highlights.active(), notice: message => { $('#load-status').textContent = message; },
         next: () => { if ($('#next').disabled) return false; goNext(); return true; }});
       book.on('flip', () => speech.pageChanged());
       book.on('changeState', event => { if (event.data === 'read') speech.pageChanged(); });

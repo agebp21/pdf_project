@@ -59,6 +59,44 @@ assert.equal(S.lang('This is the book that we made for the family'), 'en-US');
   S.bind({ text: {}, visible, engine, next: () => false, button: b2 }); assert.equal(b2.hidden, true);
   const b3 = w.document.createElement('button');
   S.bind({ text: pages, visible, engine: null, next: () => false, button: b3 }); assert.equal(b3.hidden, true, 'no voices here (jsdom)');
+  // Click a word while reading: read on from that word; the piece being read is marked.
+  {
+    const raw = [[1000, 300, 1000, 1000, 2200, 800, 3200, 900], [1400, 300, 1000, 1200, 2400, 700, 3300, 1100]];
+    const lines = ['Satu langkah seribu.', 'Makna untuk semua.'];
+    const page = w.document.createElement('article'); w.document.body.appendChild(page);
+    page.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 1000 });
+    const heard = []; let finish = null;
+    const held = { speak(text, lang, done) { heard.push(text); finish = done; }, stop() {} };
+    let busy = false;
+    const s3 = S.bind({ text: { '0': lines }, words: { '0': raw }, pages: [page], visible: () => [0], next: () => false, engine: held, busy: () => busy });
+    const down = (x, y) => page.dispatchEvent(new w.MouseEvent('mousedown', { clientX: x, clientY: y, bubbles: true, cancelable: true }));
+    // Not reading: a click does nothing (the page turns as usual).
+    down(250, 110); assert.deepEqual(heard, []);
+    s3.start();
+    assert.deepEqual(heard, ['Satu langkah seribu. Makna untuk semua.']);
+    assert.ok(w.document.body.classList.contains('is-reading'), 'speaker cursor on');
+    let marks = [...page.querySelectorAll('.book-reading span')];
+    assert.equal(marks.length, 2, 'both lines of the piece marked');
+    assert.equal(marks[0].style.left, '10%'); assert.equal(marks[0].style.top, '10%');
+    // Click "seribu" (3rd word of line 1): reads from there.
+    let outside = 0; w.document.body.addEventListener('mousedown', () => { outside++; });
+    down(360, 115);
+    assert.equal(heard[1], 'seribu. Makna untuk semua.');
+    assert.equal(outside, 0, 'the click on a word never reaches PageFlip');
+    marks = [...page.querySelectorAll('.book-reading span')];
+    assert.equal(marks[0].style.left, '32%', 'the mark starts at the clicked word');
+    // Click "untuk" (2nd word of line 2).
+    down(270, 150); assert.equal(heard[2], 'untuk semua.');
+    // A margin click is not a word: the page keeps it.
+    down(900, 800); assert.equal(heard.length, 3); assert.equal(outside, 1);
+    // While the highlighter owns clicks, nothing happens.
+    busy = true; down(110, 110); assert.equal(heard.length, 3); busy = false;
+    s3.close();
+    assert.equal(page.querySelector('.book-reading'), null, 'mark removed on stop');
+    assert.ok(!w.document.body.classList.contains('is-reading'));
+    down(110, 110); assert.equal(heard.length, 3, 'listeners removed on close');
+  }
+
   // Voice choice (Web Speech): an Indonesian woman's voice.
   const pick = voices => {
     let used = null;
@@ -75,5 +113,5 @@ assert.equal(S.lang('This is the book that we made for the family'), 'en-US');
   assert.equal(pick(windows), 'Microsoft Andika - Indonesian (Indonesia)', 'Windows only has Andika: still Indonesian');
   assert.equal(pick([v('Some voice', 'in_ID')]), 'Some voice', 'old Android code "in"');
   delete w.speechSynthesis; delete w.SpeechSynthesisUtterance;
-  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice');
+  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there');
 })().catch(e => { console.error(e); process.exit(1); });

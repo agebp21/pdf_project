@@ -103,7 +103,8 @@
       onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
       onRecolor: (index, said, color) => notes.tint(index, said, color)});
     // Read aloud: speaks the pages on screen, then turns to the next ones.
-    const speech = FlipbookSpeech.bind({text: data.text || {}, visible, button: $('#speak'),
+    const speech = FlipbookSpeech.bind({text: data.text || {}, words: data.words || {}, pages: elements, visible, button: $('#speak'),
+      busy: () => highlights.active(),
       notice: message => { const tip = $('#zoom-hint'); tip.textContent = message; tip.hidden = false; setTimeout(() => { tip.hidden = true; }, 6000); },
       next: () => { if ($('#next').disabled) return false; goNext(); return true; }});
     book.on('flip', () => speech.pageChanged());

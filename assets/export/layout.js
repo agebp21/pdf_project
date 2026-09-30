@@ -1506,29 +1506,52 @@
 // ES2018 for old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookSpeech = {
   MAX: 220,
-  // A page's text lines → pieces of whole sentences, each at most MAX
-  // characters (browsers cut very long utterances short).
-  chunks(lines) {
-    const text = (Array.isArray(lines) ? lines.join(' ') : String(lines || ''))
-      .replace(/\.{3,}|…{2,}|_{3,}/g, ' ')          // table-of-contents dot leaders
-      .replace(/\s+/g, ' ').trim();
-    if (!text) return [];
-    const sentences = text.match(/[^.!?]+[.!?]*["'”)]*\s*/g) || [text], out = [], max = this.MAX;
-    let current = '';
-    const push = piece => {
-      if (!piece) return;
-      if ((current + ' ' + piece).trim().length <= max) { current = (current + ' ' + piece).trim(); return; }
-      if (current) out.push(current);
-      current = '';
-      if (piece.length <= max) { current = piece; return; }
-      piece.split(' ').forEach(word => {                 // a very long sentence: split between words
-        if ((current + ' ' + word).trim().length > max && current) { out.push(current); current = ''; }
-        current = (current + ' ' + word).trim();
-      });
-    };
-    sentences.forEach(s => push(s.trim()));
-    if (current) out.push(current);
+  // Words of a page in reading order: {t, line, word, box: [x, y, w, h]}
+  // (fractions of the page; no box when only the text is known).
+  words(raw, text) {
+    if (raw && raw.length && typeof FlipbookHighlights !== 'undefined') {
+      const out = [];
+      FlipbookHighlights.lines(raw, text).forEach((line, li) => line.words.forEach((w, wi) => {
+        if (w.t) out.push({t: w.t, line: li, word: wi, box: [w.x, line.y, w.w, line.h]});
+      }));
+      if (out.length) return out;
+    }
+    const out = [];
+    (Array.isArray(text) ? text : [String(text || '')]).forEach((line, li) =>
+      String(line || '').split(/\s+/).forEach((t, wi) => { if (t) out.push({t, line: li, word: wi, box: null}); }));
     return out;
+  },
+  // Words → pieces of whole sentences of at most MAX characters (browsers
+  // cut long utterances short): {text, boxes: one rectangle per line}.
+  // Table-of-contents dot leaders are not read.
+  pieces(words) {
+    const out = [], max = this.MAX;
+    let cur = [], length = 0;
+    const flush = () => {
+      if (!cur.length) return;
+      const lines = {};
+      cur.forEach(w => {
+        if (!w.box) return;
+        const b = w.box, l = lines[w.line];
+        if (!l) lines[w.line] = b.slice();
+        else { const right = Math.max(l[0] + l[2], b[0] + b[2]); l[0] = Math.min(l[0], b[0]); l[2] = right - l[0]; }
+      });
+      out.push({text: cur.map(w => w.t).join(' '), boxes: Object.keys(lines).map(k => lines[k]), first: cur[0]});
+      cur = []; length = 0;
+    };
+    words.forEach(w => {
+      const t = w.t.replace(/\.{3,}|\u2026{2,}|_{3,}/g, '');
+      if (!t) return;
+      if (length && length + 1 + t.length > max) flush();
+      cur.push({t, line: w.line, word: w.word, box: w.box}); length += (length ? 1 : 0) + t.length;
+      if (/[.!?]["'\u201d)]*$/.test(t) && length > max / 3) flush();   // end of a sentence
+    });
+    flush();
+    return out;
+  },
+  // A page's text lines → the text of its pieces.
+  chunks(lines) {
+    return this.pieces(this.words(null, Array.isArray(lines) ? lines : [String(lines || '')])).map(piece => piece.text);
   },
   // Indonesian or English, from common short words.
   lang(text) {
@@ -1589,72 +1612,138 @@
       has(lang) { const all = synth.getVoices() || []; return !all.length || !!voice(lang); }
     };
   },
-  /* options: {text: {page: [lines]}, visible(): page indices on screen,
-     next(): turns the page, false at the end of the book, button,
-     notice(message) (no voice in the book's language), engine (tests)} */
+  /* options: {text: {page: [lines]}, words: {page: [positions]} (same as
+     highlights), pages (elements: reading marks, click a word to read
+     from there), visible(): page indices on screen, next(): turns the
+     page, false at the end of the book, busy(): another tool owns clicks
+     (highlighter), button, notice(message) (no voice in the book's
+     language), engine (tests)} */
   bind(options) {
-    const self = this, text = options.text || {}, engine = options.engine || self.engine();
+    const self = this, text = options.text || {}, positions = options.words || {}, pages = options.pages || [];
+    const engine = options.engine || self.engine();
     const all = Object.keys(text).map(k => (text[k] || []).join(' ')).join(' ');
     const lang = self.lang(all.slice(0, 20000));
-    let on = false, run = 0, shown = '', wait = 0;
-    const button = options.button;
+    let on = false, run = 0, shown = '', wait = 0, marked = null;
+    const button = options.button, cache = {};
+    const wordsOf = index => cache[index] || (cache[index] = self.words(positions[String(index)], text[String(index)]));
     function paint() {
+      if (typeof document !== 'undefined' && document.body) document.body.classList.toggle('is-reading', on);
       if (!button) return;
       button.textContent = on ? '⏹ Stop' : '🎧 Listen';
-      button.title = on ? 'Stop reading aloud' : 'Read the book aloud (turns the pages for you)';
+      button.title = on ? 'Stop reading aloud · click a word on the page to read from there' : 'Read the book aloud (turns the pages for you)';
       button.setAttribute('aria-pressed', String(on));
       button.classList.toggle('is-on', on);
+    }
+    // The piece being read, marked on its page.
+    function mark(index, piece) {
+      if (marked) { marked.remove(); marked = null; }
+      const page = pages[index];
+      if (!page || !piece || !piece.boxes.length) return;
+      marked = document.createElement('div');
+      marked.className = 'book-reading';
+      piece.boxes.forEach(b => {
+        const m = document.createElement('span');
+        m.style.left = b[0] * 100 + '%'; m.style.top = b[1] * 100 + '%';
+        m.style.width = b[2] * 100 + '%'; m.style.height = b[3] * 100 + '%';
+        marked.appendChild(m);
+      });
+      page.appendChild(marked);
     }
     function stop() {
       on = false; run++; clearTimeout(wait);
       if (engine) engine.stop();
+      mark(-1, null);
       paint();
     }
     function turn(mine) {
       if (!on || mine !== run) return;
+      mark(-1, null);
       if (!options.next()) stop();                       // the end of the book
       // the new pages are read when the viewer calls pageChanged()
     }
-    function read() {
+    // Read the pages on screen, or from a word: from = {page, line, word}.
+    function read(from) {
       const mine = ++run;
       clearTimeout(wait);
       engine.stop();
-      const pages = options.visible();
-      shown = pages.join(',');
+      const shownPages = options.visible();
+      shown = shownPages.join(',');
       const queue = [];
-      pages.forEach(index => self.chunks(text[String(index)]).forEach(piece => queue.push(piece)));
+      shownPages.forEach(index => {
+        if (from && index < from.page) return;
+        let words = wordsOf(index);
+        if (from && index === from.page) words = words.filter(w => w.line > from.line || (w.line === from.line && w.word >= from.word));
+        self.pieces(words).forEach(piece => queue.push({page: index, piece}));
+      });
       // A page without text (a picture): a short pause, then on.
-      if (!queue.length) { wait = setTimeout(() => turn(mine), 1500); return; }
+      if (!queue.length) { mark(-1, null); wait = setTimeout(() => turn(mine), 1500); return; }
       const step = () => {
         if (!on || mine !== run) return;
         if (!queue.length) { turn(mine); return; }
-        engine.speak(queue.shift(), lang, ok => {
+        const next = queue.shift();
+        mark(next.page, next.piece);
+        engine.speak(next.piece.text, lang, ok => {
           if (!on || mine !== run) return;
           if (ok) step(); else stop();
         });
       };
       step();
     }
-    function start() {
+    function start(from) {
       if (!engine) return;
-      on = true; paint(); read();
-      if (engine.has && !engine.has(lang) && options.notice) {
+      const first = !on;
+      on = true; paint(); read(from);
+      if (first && engine.has && !engine.has(lang) && options.notice) {
         options.notice(lang === 'id-ID'
-          ? 'No Indonesian voice on this device: reading with the default voice. Windows: Settings › Time & language › Speech › Add voices.'
+          ? 'No Indonesian voice on this device: reading with the default voice. Windows: Settings \u203a Time & language \u203a Speech \u203a Add voices.'
           : 'No English voice on this device: reading with the default voice.');
       }
     }
+    // While reading, a click (or tap) on a word reads on from that word.
+    function wordAt(index, clientX, clientY) {
+      const raw = positions[String(index)], page = pages[index];
+      if (!raw || !page || typeof FlipbookHighlights === 'undefined') return null;
+      const r = page.getBoundingClientRect();
+      if (!r.width || !r.height) return null;
+      const hit = FlipbookHighlights.locate(FlipbookHighlights.lines(raw, text[String(index)]), {x: (clientX - r.left) / r.width, y: (clientY - r.top) / r.height}, true);
+      return hit ? {page: index, line: hit.line, word: hit.word} : null;
+    }
+    const listening = () => on && !(options.busy && options.busy());
+    const handlers = pages.map((page, index) => {
+      const down = event => {
+        if (!listening() || event.button > 0) return;
+        const at = wordAt(index, event.clientX, event.clientY);
+        if (!at) return;                                  // margins still turn the page
+        event.stopPropagation(); if (event.cancelable) event.preventDefault();
+        start(at);
+      };
+      // Touch: a quick still tap (a swipe still turns the page).
+      let touch = null;
+      const touchStart = event => { touch = listening() && event.touches.length === 1 ? {x: event.touches[0].clientX, y: event.touches[0].clientY, time: Date.now()} : null; };
+      const touchEnd = event => {
+        if (!touch || !listening()) return;
+        const t = event.changedTouches && event.changedTouches[0], from = touch; touch = null;
+        if (!t || Math.abs(t.clientX - from.x) + Math.abs(t.clientY - from.y) > 12 || Date.now() - from.time > 400) return;
+        const at = wordAt(index, t.clientX, t.clientY);
+        if (at) start(at);
+      };
+      page.addEventListener('mousedown', down, true);
+      page.addEventListener('touchstart', touchStart, {capture: true, passive: true});
+      page.addEventListener('touchend', touchEnd, true);
+      return () => { page.removeEventListener('mousedown', down, true); page.removeEventListener('touchstart', touchStart, true); page.removeEventListener('touchend', touchEnd, true); };
+    });
     if (button) {
       // Books without any text (scans) have nothing to read.
       button.hidden = !engine || !all.trim();
-      button.onclick = () => { if (on) stop(); else start(); };
+      button.onclick = () => { if (on) stop(); else start(null); };
     }
     paint();
     return {
-      active: () => on, start, stop, lang: () => lang,
+      active: () => on, start: () => start(null), stop, lang: () => lang,
+      readFrom: (index, line, word) => start({page: index, line, word}),
       // The viewer calls this after every page turn (by the reader or by us).
-      pageChanged() { if (on && options.visible().join(',') !== shown) read(); },
-      close() { stop(); }
+      pageChanged() { if (on && options.visible().join(',') !== shown) read(null); },
+      close() { stop(); handlers.forEach(off => off()); }
     };
   },
 };
