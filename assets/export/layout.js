@@ -1026,7 +1026,43 @@
     // onclick: the preview rebinds this button for every PDF it opens.
     if (options.open) options.open.onclick = () => { if (list) closeList(); else openList(); };
     refresh();
-    return {refresh, text, editing: () => !!editing, close() { closeEditor(); closeReader(); closeList(); }, notes: () => JSON.parse(JSON.stringify(notes))};
+    // Highlighted text becomes a quoted note on its page ("…"). A longer
+    // highlight over an earlier quote replaces that quote; text already in a
+    // note adds nothing.
+    const QUOTE = /^\u201c([\s\S]*)\u201d$/;
+    function flash(index, item) {
+      const stack = pages[index] && pages[index].querySelector('.book-note-stack');
+      const tab = stack && stack.querySelectorAll('.book-note-tab.has-note')[item];
+      if (!tab) return;
+      stack.classList.add('has-new'); tab.classList.add('is-new');
+      setTimeout(() => { stack.classList.remove('has-new'); tab.classList.remove('is-new'); }, 1800);
+    }
+    function quote(index, said) {
+      said = String(said || '').replace(/\s+/g, ' ').trim();
+      if (!said) return -1;
+      const items = notes[index] ? notes[index].items : [];
+      if (items.some(note => note.text.indexOf(said) >= 0)) return -1;
+      const older = [];
+      items.forEach((note, i) => { const m = QUOTE.exec(note.text); if (m && said.indexOf(m[1]) >= 0) older.push(i); });
+      let item;
+      if (older.length) {
+        for (let k = older.length - 1; k > 0; k--) store(index, older[k], '');
+        item = store(index, older[0], '\u201c' + said + '\u201d');
+      } else {
+        if (items.length >= self.PER_PAGE) return -1;
+        item = store(index, -1, '\u201c' + said + '\u201d');
+      }
+      flash(index, item);
+      return item;
+    }
+    // Erasing a highlight removes its quote, unless the reader has written in it.
+    function unquote(index, said) {
+      said = String(said || '').replace(/\s+/g, ' ').trim();
+      const items = notes[index] ? notes[index].items : [];
+      const i = items.findIndex(note => note.text === '\u201c' + said + '\u201d');
+      if (said && i >= 0) store(index, i, '');
+    }
+    return {refresh, text, quote, unquote, editing: () => !!editing, close() { closeEditor(); closeReader(); closeList(); }, notes: () => JSON.parse(JSON.stringify(notes))};
   },
 };
 
@@ -1062,11 +1098,16 @@
   key(title, pageCount, ratio) {
     return FlipbookBookmarks.key(title, pageCount, ratio).replace('mf-bookmarks:', 'mf-highlights:');
   },
-  // Stored lines [y, h, x0, w0, ...] (1/10000) → fractions.
-  lines(raw) {
-    return (raw || []).map(l => {
-      const words = [];
-      for (let i = 2; i + 1 < l.length; i += 2) words.push({x: l[i] / 1e4, w: l[i + 1] / 1e4});
+  // Stored lines [y, h, x0, w0, ...] (1/10000) → fractions; text (optional):
+  // the same lines as strings, words joined by single spaces.
+  lines(raw, text) {
+    return (raw || []).map((l, n) => {
+      const said = text && typeof text[n] === 'string' ? text[n].split(' ') : null, words = [];
+      for (let i = 2; i + 1 < l.length; i += 2) {
+        const word = {x: l[i] / 1e4, w: l[i + 1] / 1e4};
+        if (said && typeof said[(i - 2) / 2] === 'string') word.t = said[(i - 2) / 2];
+        words.push(word);
+      }
       return {y: l[0] / 1e4, h: l[1] / 1e4, words};
     }).filter(l => l.words.length);
   },
@@ -1107,6 +1148,17 @@
       if (seg) rects.push([r(seg.x), r(line.y), r(seg.w), r(line.h)]);
     }
     return rects;
+  },
+  // The words a highlight covers, in reading order ('' on pages without text).
+  quote(lines, rects) {
+    const parts = [];
+    lines.forEach(line => {
+      const mid = line.y + line.h / 2;
+      const picked = line.words.filter(w => w.t && rects.some(q => mid >= q[1] && mid <= q[1] + q[3] &&
+        w.x + w.w / 2 >= q[0] && w.x + w.w / 2 <= q[0] + q[2]));
+      if (picked.length) parts.push(picked.map(w => w.t).join(' '));
+    });
+    return parts.join(' ').trim();
   },
   // How much of the smaller rectangle two rectangles share (0..1).
   overlap(p, q) {
@@ -1169,7 +1221,9 @@
     let color = 'y';
     try { const saved = localStorage.getItem('mf-highlight-color'); if (self.COLORS[saved]) color = saved; } catch (e) {}
     const lineCache = {};
-    const linesOf = index => (lineCache[index] || (lineCache[index] = self.lines(words[String(index)])));
+    const texts = options.text || {};
+    const linesOf = index => (lineCache[index] || (lineCache[index] = self.lines(words[String(index)], texts[String(index)])));
+    const said = (index, h) => self.quote(linesOf(index), h.r);
     // Colour bar shown in highlighter mode.
     const bar = document.createElement('div');
     bar.className = 'book-hl-bar'; bar.hidden = true; bar.setAttribute('role', 'toolbar'); bar.setAttribute('aria-label', 'Highlighter');
@@ -1290,10 +1344,11 @@
       if (event && event.cancelable) event.preventDefault();
       if (erasing) {
         const region = (drag.moved && self.box(a, b)) ? self.box(a, b)[0] : [a.x, a.y, 0, 0];
-        const before = (store[index] || []).length, left = self.erase(store[index] || [], region);
-        if (left.length !== before) {
+        const old = store[index] || [], left = self.erase(old, region);
+        if (left.length !== old.length) {
           if (left.length) store[index] = left; else delete store[index];
           persist(index);
+          if (options.onUnquote) old.filter(h => left.indexOf(h) < 0).forEach(h => options.onUnquote(index, said(index, h)));
         }
       } else if (!drag.moved) {
         // Tap: select the highlight under the finger (or clear the selection).
@@ -1309,6 +1364,8 @@
           const previous = selected; selected = null;
           if (previous) render(previous.page);
           persist(index);
+          // The highlighted text goes straight into a note on the page edge.
+          if (options.onQuote) options.onQuote(index, said(index, store[index][store[index].length - 1]));
         }
       }
       drag = null; paintBar();

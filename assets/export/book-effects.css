@@ -68,6 +68,11 @@
 .book-hl.is-selected{opacity:.7;outline:2px solid #1c1917;outline-offset:1px}
 body.is-highlighting .page,body.is-highlighting .pdf-page{cursor:text;cursor:var(--hl-cursor,text)}
 body.is-highlighting .book-note-stack{pointer-events:none;opacity:.25}
+/* A note just made from a highlight: shown in full and pulsing. */
+.book-note-stack.has-new{opacity:1!important}
+.book-note-tab.is-new{animation:book-note-new .6s ease-in-out 3}
+@keyframes book-note-new{50%{transform:scale(1.3);box-shadow:0 0 0 4px rgba(211,29,36,.35)}}
+@media (prefers-reduced-motion:reduce){.book-note-tab.is-new{animation:none;outline:3px solid #d31d24}}
 .book-hl-bar{position:fixed;left:10px;top:50%;transform:translateY(-50%);z-index:2100;display:flex;flex-direction:column;align-items:center;gap:8px;max-height:calc(100vh - 20px);padding:10px 8px;border-radius:18px;background:#fffdf8;border:1px solid #e4ded0;box-shadow:0 12px 34px rgba(0,0,0,.28);font:13px/1.2 system-ui,sans-serif;color:#1c1917}
 .book-hl-bar[hidden]{display:none}
 .book-hl-swatch{width:30px;height:30px;padding:0;border:2px solid #fff;border-radius:999px;box-shadow:0 0 0 1px rgba(0,0,0,.22);cursor:pointer}

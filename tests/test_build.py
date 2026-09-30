@@ -92,6 +92,12 @@ class BuildTests(unittest.TestCase):
         ok = server.validate_manifest(dict(base, words={'1': [[100, 200, 300, 40, 400, 60]]}))
         self.assertEqual(ok['words'], {'1': [[100, 200, 300, 40, 400, 60]]})
         self.assertEqual(server.validate_manifest(base)['words'], {}, 'older books without words still build')
+        worded = dict(base, words={'1': [[100, 200, 300, 40, 400, 60]]})
+        self.assertEqual(server.validate_manifest(dict(worded, text={'1': ['Halo dunia']}))['text'], {'1': ['Halo dunia']})
+        self.assertEqual(server.validate_manifest(worded)['text'], {})
+        for bad in ({'0': ['x']}, {'1': ['a', 'b']}, {'1': [5]}, ['x']):
+            with self.assertRaises(ValueError):
+                server.validate_manifest(dict(worded, text=bad))
         for bad in ({'2': [[1, 2, 3, 4]]}, {'0': [[1, 2, 3]]}, {'0': [[1, 2, 3, 20000]]}, {'0': [[1, 2, 3, 4.5]]},
                     {'0': [[1, 2, 3, True]]}, {'0': 'x'}, []):
             with self.subTest(bad=bad), self.assertRaises(ValueError):

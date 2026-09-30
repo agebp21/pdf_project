@@ -686,3 +686,12 @@ Owner: tombol Link / site di-takeout, tombol sisanya (Upload file, Google Drive)
 ### 30 September 2026 - Dialog Add file dikecilkan
 
 Owner: ukuran dialog lebih kecil. `.add-card` lebar maks 520 px (dulu 700), padding/judul (19 px)/kolom link (tombol → 32 px)/tombol sumber (13 px)/kotak drop (12 px) diperkecil sekitar seperempat; versi HP (≤520 px) ikut. Hanya CSS `assets/theme-cream.css`.
+
+### 30 September 2026 - Stabilo langsung jadi catatan (kutipan) di tab pinggir halaman
+
+Owner: teks yang di-stabilo langsung dibuat catatan di tab pinggir halaman. Alur:
+- `pdf-words.js`: `extract(pdf, {withText:true})` -> `{words, text}`; `text` = per halaman, per baris, string kata-kata dipisah satu spasi (kata ke-i = `split(' ')[i]`, sejajar dengan `words`). Field model/proyek/ekspor baru `text` (divalidasi `validText` di flipbook-export.js dan `validate_text` di server.py: halaman harus ada di `words`, baris ≤ jumlah baris words, string ≤ 4000). Proyek/buku lama tanpa `text` tetap jalan (stabilo tanpa catatan).
+- `FlipbookHighlights`: `lines(raw, text)` menempelkan teks kata; `quote(lines, rects)` = kata-kata di bawah stabilo; bind options `text`, `onQuote(index, said)` (setelah stabilo baru/gabungan), `onUnquote` (saat dihapus).
+- `FlipbookNotes`: `quote(index, said)` membuat tab catatan `“…”` (auto-bookmark seperti catatan biasa, tab berdenyut `.is-new` walau mode stabilo meredupkan tab); teks yang sudah ada di catatan tidak ditambah; stabilo yang diperpanjang mengganti kutipan lamanya (tidak dobel). `unquote` menghapus kutipan saat stabilonya dihapus, kecuali pembaca sudah mengedit catatannya. Maks 8 catatan/halaman tetap berlaku.
+- Halaman scan tanpa lapisan teks: stabilo kotak bebas, tanpa catatan (pakai OCR dulu).
+Tes: `tests/highlight-notes.test.cjs`, export/test_build/qa-runtime diperbarui. E2E Chromium: editor (toc-text.pdf, "Daftar Isi" -> tab catatan + bookmark) dan HTML satu-file tersegel (catatan terbentuk; teks tidak terbaca polos di file).

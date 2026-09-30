@@ -153,7 +153,8 @@ def validate_manifest(data):
             raise ValueError('Nilai animasi tidak valid.')
         overlays[key] = dict(label=item['label'][:40], value=value, position=item['position'])
     return dict(version=1, title=data['title'][:200], pageCount=count, ratio=ratio, overlays=overlays,
-                links=validate_links(data.get('links', {}), count), words=validate_words(data.get('words', {}), count))
+                links=validate_links(data.get('links', {}), count), words=(words := validate_words(data.get('words', {}), count)),
+                text=validate_text(data.get('text', {}), words))
 
 
 def validate_words(words, count):
@@ -172,6 +173,20 @@ def validate_words(words, count):
                 raise ValueError('Posisi teks tidak valid.')
             cleaned.append(line)
         out[key] = cleaned
+    return out
+
+
+def validate_text(text, words):
+    """Text of the word lines (words joined by single spaces), same pages
+    and at most as many lines as the word positions."""
+    if not isinstance(text, dict):
+        raise ValueError('Data teks halaman tidak valid.')
+    out = {}
+    for key, lines in text.items():
+        if key not in words or not isinstance(lines, list) or len(lines) > len(words[key]) \
+                or not all(isinstance(line, str) for line in lines):
+            raise ValueError('Isi teks halaman tidak valid.')
+        out[key] = [line[:4000] for line in lines]
     return out
 
 

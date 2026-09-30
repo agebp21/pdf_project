@@ -6,17 +6,22 @@
  * per text line, top to bottom, words left to right, all integers in
  * 1/10000 of the book page box (letterboxing already applied). Pages
  * without text (scans) are left out; highlights there are free boxes.
+ *
+ * With {withText: true} it returns {words, text}: text has the same pages
+ * and lines, each line a string of its words joined by single spaces (so
+ * word i of the line is line.split(' ')[i]) — highlighted text becomes a
+ * note in the reader.
  */
 (function (root) {
   'use strict';
-  const UNIT = 10000, MAX_LINES = 400, MAX_WORDS = 300;
+  const UNIT = 10000, MAX_LINES = 400, MAX_WORDS = 300, MAX_LINE_TEXT = 4000;
 
   async function pageLines(page, bookRatio) {
-    const viewport = page.getViewport({ scale: 1 });
+    const viewport = page.getViewport({ scale: 1 }), none = { lines: [], text: [] };
     let content;
-    try { content = await page.getTextContent(); } catch (e) { return []; }
+    try { content = await page.getTextContent(); } catch (e) { return none; }
     const Util = root.pdfjsLib && root.pdfjsLib.Util;
-    if (!Util) return [];
+    if (!Util) return none;
     const unit = Math.hypot(viewport.transform[0], viewport.transform[1]) || 1;
     const boxes = [];
     for (const item of content.items) {
@@ -32,7 +37,7 @@
       while ((m = words.exec(text))) {
         const x = left + width * m.index / n, w = width * m[0].length / n;
         const box = root.PdfLinks.toBox([x, top, x + w, top + height], viewport, bookRatio);
-        if (box.w > 0 && box.h > 0) boxes.push(box);
+        if (box.w > 0 && box.h > 0) { box.t = m[0]; boxes.push(box); }
       }
     }
     // Group into lines: boxes whose vertical centres are within half a line.
@@ -49,26 +54,30 @@
       else { const bottom = Math.max(line.y + line.h, box.y + box.h); line.y = Math.min(line.y, box.y); line.h = bottom - line.y; }
       line.words.push(box);
     }
-    return lines.slice(0, MAX_LINES).map(line => {
-      line.words.sort((a, b) => a.x - b.x);
-      const out = [Math.round(line.y * UNIT), Math.max(1, Math.round(line.h * UNIT))];
-      line.words.slice(0, MAX_WORDS).forEach(w => out.push(Math.round(w.x * UNIT), Math.max(1, Math.round(w.w * UNIT))));
-      return out;
-    });
+    const kept = lines.slice(0, MAX_LINES);
+    kept.forEach(line => { line.words.sort((a, b) => a.x - b.x); line.words = line.words.slice(0, MAX_WORDS); });
+    return {
+      lines: kept.map(line => {
+        const out = [Math.round(line.y * UNIT), Math.max(1, Math.round(line.h * UNIT))];
+        line.words.forEach(w => out.push(Math.round(w.x * UNIT), Math.max(1, Math.round(w.w * UNIT))));
+        return out;
+      }),
+      text: kept.map(line => line.words.map(w => w.t).join(' ').slice(0, MAX_LINE_TEXT))
+    };
   }
 
   async function extract(pdf, options) {
     const opts = options || {};
     const first = (await pdf.getPage(1)).getViewport({ scale: 1 });
-    const bookRatio = first.width / first.height, out = {};
+    const bookRatio = first.width / first.height, out = {}, text = {};
     for (let i = 1; i <= pdf.numPages; i++) {
       if (opts.progress) opts.progress(i, pdf.numPages);
       const page = await pdf.getPage(i);
-      const lines = await pageLines(page, bookRatio);
-      if (lines.length) out[String(i - 1)] = lines;
+      const found = await pageLines(page, bookRatio);
+      if (found.lines.length) { out[String(i - 1)] = found.lines; text[String(i - 1)] = found.text; }
       page.cleanup();
     }
-    return out;
+    return opts.withText ? { words: out, text } : out;
   }
 
   root.PdfWords = { extract, UNIT };

@@ -46,6 +46,18 @@
     }
     return out;
   }
+  // Text of those lines (words joined by single spaces), same pages and
+  // line count as words; highlighted text becomes a reader note.
+  function validText(text, words) {
+    const out = {};
+    if (text === undefined) return out;
+    if (!text || typeof text !== 'object' || Array.isArray(text)) throw Error('Data teks halaman tidak valid.');
+    for (const [key, lines] of Object.entries(text)) {
+      if (!words[key] || !Array.isArray(lines) || lines.length > words[key].length || !lines.every(line => typeof line === 'string')) throw Error('Isi teks halaman tidak valid.');
+      out[key] = lines.map(line => line.slice(0, 4000));
+    }
+    return out;
+  }
   function validate(data) {
     if (!data || data.version !== 1 || typeof data.title !== 'string' || !Number.isInteger(data.pageCount) || data.pageCount < 1 || !Number.isFinite(data.ratio) || data.ratio <= 0) throw Error('Format proyek tidak valid atau belum didukung.');
     if (!data.overlays || typeof data.overlays !== 'object' || Array.isArray(data.overlays)) throw Error('Data animasi tidak valid.');
@@ -54,7 +66,8 @@
       if (!/^(0|[1-9]\d*)$/.test(key) || Number(key) >= data.pageCount || !config || typeof config.label !== 'string' || !Number.isFinite(config.value) || config.value < 0 || config.value > 999999 || !positions.has(config.position)) throw Error('Data animasi atau nomor halaman tidak valid.');
       overlays[key] = {label:config.label.slice(0,40),value:config.value,position:config.position};
     }
-    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words:validWords(data.words,data.pageCount)};
+    const words=validWords(data.words,data.pageCount);
+    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words)};
   }
   const scriptData = data => 'window.FLIPBOOK_DATA = ' + JSON.stringify(validate(data)).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029') + ';\n';
   async function asset(path) {

@@ -92,7 +92,9 @@
       pages: elements, goPage, open: $('#notes'), bookmark: (index, on) => marks.set(index, on)});
     // Highlighter ("stabilo"): snaps to the words read from the PDF.
     const highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(data.title, data.pageCount, data.ratio),
-      pages: elements, words: data.words || {}, button: $('#highlight')});
+      pages: elements, words: data.words || {}, text: data.text || {}, button: $('#highlight'),
+      // Highlighted text becomes a note on the page edge (and goes when erased).
+      onQuote: (index, said) => notes.quote(index, said), onUnquote: (index, said) => notes.unquote(index, said)});
     // Magnifier: a lens dragged over the page.
     const loupe = FlipbookLoupe.bind({pages: elements, button: $('#loupe')});
     // Like the preview, the book ends above the control bar so the bar never
