@@ -829,7 +829,9 @@
   /* options: {key, title, pages (elements), goPage(i), open (button),
      bookmark(index, on) → true when it changed the page's bookmark,
      blank: false → no ✎ tab on pages without notes (notes come from
-     highlights; ＋ still adds more on pages that have one)} */
+     highlights; ＋ still adds more on pages that have one),
+     onRemove(index, said): the reader deleted a quote note ("said" = the
+     quoted text) → its highlight goes too} */
   bind(options) {
     const self = this, pages = options.pages;
     let notes = self.load(options.key), editor = null, reader = null, list = null, editing = null, timer = 0, saved = true;
@@ -919,7 +921,7 @@
       const head = document.createElement('p'); head.className = 'book-note-card-title'; head.textContent = label(index) + ' · note ' + (item + 1);
       const body = document.createElement('div'); body.className = 'book-note-card-text'; body.textContent = note.text;
       const row = document.createElement('div'); row.className = 'book-note-actions';
-      row.appendChild(button('🗑 Delete', 'book-note-delete', () => { closeReader(); store(index, item, ''); }));
+      row.appendChild(button('🗑 Delete', 'book-note-delete', () => { closeReader(); remove(index, item); }));
       row.appendChild(button('✎ Edit', 'book-note-done', () => { closeReader(); edit(index, item); }));
       box.appendChild(head); box.appendChild(body); box.appendChild(row);
       document.body.appendChild(box);
@@ -967,7 +969,13 @@
       });
       area.addEventListener('keydown', event => { if (event.key === 'Escape') { event.preventDefault(); closeEditor(); } });
       const row = document.createElement('div'); row.className = 'book-note-actions';
-      row.appendChild(button('Delete', 'book-note-delete', () => { area.value = ''; closeEditor(); }));
+      row.appendChild(button('Delete', 'book-note-delete', () => {
+        // Saved text of this note (autosave may have given a new one a number).
+        const page = editing.page, item = editing.item;
+        const had = item >= 0 && notes[page] && notes[page].items[item] ? notes[page].items[item].text : '';
+        area.value = ''; closeEditor();
+        removed(page, had);
+      }));
       row.appendChild(button('Done', 'book-note-done', closeEditor));
       editor.appendChild(area); editor.appendChild(status); editor.appendChild(row);
       document.body.appendChild(editor);
@@ -1028,6 +1036,17 @@
     // onclick: the preview rebinds this button for every PDF it opens.
     if (options.open) options.open.onclick = () => { if (list) closeList(); else openList(); };
     refresh();
+    // The reader deleted a note: a quote (“…” at its start) takes its highlight along.
+    function removed(index, text) {
+      const m = /^\u201c([^\u201d]*)\u201d/.exec(text || '');
+      if (m && options.onRemove) options.onRemove(index, m[1]);
+    }
+    function remove(index, item) {
+      const note = notes[index] && notes[index].items[item];
+      if (!note) return;
+      store(index, item, '');
+      removed(index, note.text);
+    }
     // Highlighted text becomes a quoted note on its page ("…"). A longer
     // highlight over an earlier quote replaces that quote; text already in a
     // note adds nothing.
@@ -1415,6 +1434,17 @@
     paintBar();
     return {
       active: () => mode, setMode,
+      // A quote note was deleted: remove the highlight it came from.
+      forget(index, quote) {
+        const list = store[index] || [], text = String(quote || '').replace(/\s+/g, ' ').trim();
+        if (!text) return 0;
+        const left = list.filter(h => said(index, h) !== text);
+        if (left.length === list.length) return 0;
+        if (selected && selected.page === index) selected = null;
+        if (left.length) store[index] = left; else delete store[index];
+        persist(index); paintBar();
+        return list.length - left.length;
+      },
       close() { setMode(false); bar.remove(); },
       bar: () => bar,
       store: () => JSON.parse(JSON.stringify(store)),

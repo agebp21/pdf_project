@@ -89,7 +89,9 @@
     book.on('flip', () => marks.refresh());
     // Reader notes: ✎ on the edge of every page, kept on this device.
     const notes = FlipbookNotes.bind({key: FlipbookNotes.key(data.title, data.pageCount, data.ratio), title: data.title,
-      pages: elements, goPage, open: $('#notes'), blank: false, bookmark: (index, on) => marks.set(index, on)});
+      pages: elements, goPage, open: $('#notes'), blank: false, bookmark: (index, on) => marks.set(index, on),
+      // Deleting a quote note removes its highlight (highlights is bound just below).
+      onRemove: (index, said) => highlights.forget(index, said)});
     // Highlighter ("stabilo"): snaps to the words read from the PDF.
     const highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(data.title, data.pageCount, data.ratio),
       pages: elements, words: data.words || {}, text: data.text || {}, button: $('#highlight'),

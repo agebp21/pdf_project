@@ -20,7 +20,8 @@ assert.equal(H.quote(lines, H.select(lines, { x: 0.25, y: 0.11 }, { x: 0.27, y: 
 assert.equal(H.quote(H.lines(raw), [[0, 0, 1, 1]]), '', 'no words known → no quote');
 
 const pages = [0, 1].map(() => { const p = w.document.createElement('article'); w.document.body.appendChild(p); p.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 1000 }); return p; });
-const notes = N.bind({ key: N.key('Buku', 2, 0.7), title: 'Buku', pages, goPage: () => {}, open: w.document.getElementById('notes'), blank: false });
+const notes = N.bind({ key: N.key('Buku', 2, 0.7), title: 'Buku', pages, goPage: () => {}, open: w.document.getElementById('notes'), blank: false,
+  onRemove: (i, s) => hl.forget(i, s) });
 assert.equal(pages[0].querySelectorAll('.book-note-tab').length, 0, 'blank: false → no ✎ tab on a page without notes');
 const hl = H.bind({ key: H.key('Buku', 2, 0.7), pages, words: { '0': raw }, text: { '0': text }, button: w.document.getElementById('hl'),
   onQuote: (i, s) => notes.quote(i, s), onUnquote: (i, s) => notes.unquote(i, s) });
@@ -61,4 +62,20 @@ area.value = '“Satu” — penting!'; w.document.querySelector('.book-note-edi
 w.document.querySelector('.book-hl-eraser').click();
 drag(0, 110, 110, 115, 112);
 assert.deepEqual(texts(0), ['“Satu” — penting!', '“untuk semua”']);
-console.log('PASS highlight-notes: highlighted text becomes a quoted note, replaced when extended, none without text, removed with its highlight unless edited');
+// Deleting a quote note (card 🗑) removes its highlight too.
+const quoted = () => (hl.store()['0'] || []).length;
+assert.equal(quoted(), 1, 'the "untuk semua" highlight');
+pages[0].querySelectorAll('.book-note-tab.has-note')[1].click();
+w.document.querySelector('.book-note-card .book-note-delete').click();
+assert.deepEqual(texts(0), ['“Satu” — penting!']); assert.equal(quoted(), 0, 'highlight gone with its note');
+// An edited quote still takes its highlight when deleted (editor Delete).
+w.document.querySelector('.book-hl-brush').click();
+drag(0, 110, 110, 180, 112);   // "Satu" again: already in a note, so no new note
+assert.equal(quoted(), 1); assert.equal(texts(0).length, 1);
+pages[0].querySelectorAll('.book-note-tab.has-note')[0].click();
+w.document.querySelector('.book-note-card .book-note-done').click();
+w.document.querySelector('.book-note-editor .book-note-delete').click();
+assert.deepEqual(texts(0), []); assert.equal(quoted(), 0);
+// Other highlights on the page are left alone; a plain note deleted touches nothing.
+assert.equal(hl.forget(0, 'tidak ada'), 0);
+console.log('PASS highlight-notes: highlighted text becomes a quoted note, replaced when extended, none without text, removed with its highlight unless edited; deleting the note removes its highlight');

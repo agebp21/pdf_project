@@ -158,7 +158,8 @@
       book.on('flip', () => marks.refresh());
       notes?.close();
       notes = FlipbookNotes.bind({key: FlipbookNotes.key(name, newElements.length, ratio), title: name.replace(/\.pdf$/i, ''),
-        pages: newElements, goPage, open: $('#notes'), blank: false, bookmark: (index, on) => marks.set(index, on)});
+        pages: newElements, goPage, open: $('#notes'), blank: false, bookmark: (index, on) => marks.set(index, on),
+        onRemove: (index, said) => highlights?.forget(index, said)});
       highlights?.close();
       highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(name, newElements.length, ratio),
         pages: newElements, words: bookWords, text: bookText, button: $('#highlight'),
