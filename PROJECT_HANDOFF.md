@@ -654,3 +654,7 @@ Catatan baru memanggil `options.bookmark(index, true)` (viewer/preview: `marks.s
 ### 30 September 2026 - Logo baru MyFlipBook
 
 Sumber: `assets/img/logo-source.jpg` (= "flipbook logo.jpeg" dari owner). Diturunkan (latar putih -> transparan, color-to-alpha): `assets/img/logo.png` (nav, 120 px tinggi), `logo-icon.png` (512), `favicon.png` (64), `apple-touch-icon.png` (180, latar putih); ikon Android `mipmap-*/ic_launcher.png` (48-192, latar putih) dan Windows `app_icon.ico` (16-256, juga dipakai launcher EXE satu file). Semua halaman: `.clay-brand-logo` / `.brand img` menggantikan kotak "MF"; `<link rel="icon">` + apple-touch-icon. Logo berteks hitam: jangan dipakai di latar gelap.
+
+### 30 September 2026 - Logo diganti versi HIJAU (+ banner beranda)
+
+Owner: logo harus hijau, bukan biru. Sumber baru `assets/img/logo-source.png` (= "Logo Warna - MyFlipBook.png", sudah transparan; `logo-source.jpg` biru dihapus). Semua turunan dibuat ulang dari situ: `logo.png` (nav, 120 px), `logo-icon.png`, `favicon.png`, `apple-touch-icon.png`, Android `mipmap-*/ic_launcher.png`, Windows `app_icon.ico`. Banner beranda (`hero-1671`/`hero-900`/`hero-mobile`, .jpg + .webp): logo buku-terbuka lama di kiri atas dihapus, diganti logo hijau; tagline asli "PDF TO FLIPBOOK & MORE" dipertahankan (pikselnya dipindah, rata kiri dengan wordmark). Semua referensi gambar logo/hero di 10 halaman diberi `?v=green` agar cache browser tidak menampilkan versi lama.
