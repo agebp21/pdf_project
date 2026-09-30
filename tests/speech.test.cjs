@@ -29,7 +29,8 @@ assert.deepEqual(S.chunks(['KATA PENGANTAR', 'Buku ini tentang NUSANTARA.']), ['
 // Language.
 assert.equal(S.lang('Ini adalah buku yang dibuat untuk anak dan keluarga'), 'id-ID');
 assert.equal(S.lang('This is the book that we made for the family'), 'en-US');
-assert.equal(S.lang('Buku ini ialah untuk semua rakyat kerana kerajaan boleh membantu anda sahaja'), 'ms-MY', 'Malay');
+assert.equal(S.lang('Buku ini iaitu untuk semua rakyat kerana kerajaan boleh membantu anda sahaja, sila baca'), 'ms-MY', 'Malay');
+assert.equal(S.lang('Video ini telah dibuat bagi anda yang ingin tahu, kerana menarik'), 'id-ID', 'one Malay word is not enough');
 assert.equal(S.lang('Buku ini adalah untuk semua orang karena pemerintah bisa membantu'), 'id-ID', 'Indonesian');
 
 (async () => {

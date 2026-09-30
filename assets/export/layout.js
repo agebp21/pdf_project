@@ -1583,11 +1583,12 @@
     const malayic = {yang: 1, dan: 1, di: 1, ke: 1, dari: 1, untuk: 1, dengan: 1, ini: 1, itu: 1, pada: 1, dalam: 1, tidak: 1, akan: 1, sebagai: 1, kami: 1, juga: 1, atau: 1, oleh: 1};
     const en = {the: 1, and: 1, of: 1, to: 1, is: 1, in: 1, for: 1, with: 1, that: 1, this: 1, are: 1, on: 1, be: 1, it: 1, as: 1, we: 1};
     const id = {adalah: 1, karena: 1, saja: 1, bisa: 1, yaitu: 1, pemerintah: 1, kalian: 1, sudah: 1, belum: 1, sangat: 1, sekolah: 1, uang: 1, mobil: 1, kantor: 1};
-    const ms = {ialah: 1, iaitu: 1, kerana: 1, sahaja: 1, boleh: 1, kerajaan: 1, anda: 1, telah: 1, sebab: 1, wang: 1, kereta: 1, pejabat: 1, negeri: 1, bagi: 1, supaya: 1};
+    // Only words Indonesian (almost) never uses; Malay must clearly win.
+    const ms = {iaitu: 1, kerana: 1, sahaja: 1, berbeza: 1, kakitangan: 1, mesyuarat: 1, percuma: 1, sila: 1, wang: 1, sebarang: 1};
     let a = 0, b = 0, i = 0, m = 0;
     words.forEach(w => { if (malayic[w] || id[w] || ms[w]) a++; if (en[w]) b++; if (id[w]) i++; if (ms[w]) m++; });
     if (b > a) return 'en-US';
-    return m > i ? 'ms-MY' : 'id-ID';
+    return m >= 3 && m > 2 * i ? 'ms-MY' : 'id-ID';
   },
   NAMES: {id: 'Indonesian', ms: 'Malay', en: 'English'},
   // The voice engine here: {speak(text, lang, done(ok)), stop()} or null.
