@@ -1214,6 +1214,20 @@
     done.onclick = () => setMode(false);
     bar.appendChild(hint); bar.appendChild(remove); bar.appendChild(done);
     document.body.appendChild(bar);
+    // With a toolbar button the bar pops up just above it (below it when
+    // there is no room above); without one it stays a rail on the left.
+    if (options.button) bar.classList.add('is-popup');
+    function placeBar() {
+      if (!mode || !options.button) return;
+      const r = options.button.getBoundingClientRect(), width = bar.offsetWidth, height = bar.offsetHeight;
+      const middle = r.left + r.width / 2;
+      const left = Math.max(8, Math.min(window.innerWidth - width - 8, middle - width / 2));
+      const below = r.top - height - 12 < 8;
+      bar.classList.toggle('is-below', below);
+      bar.style.left = left + 'px';
+      bar.style.top = (below ? r.bottom + 12 : r.top - height - 12) + 'px';
+      bar.style.setProperty('--hl-arrow', (middle - left) + 'px');
+    }
     function paintBar() {
       Object.keys(swatches).forEach(c => swatches[c].setAttribute('aria-pressed', String(!erasing && (selected ? store[selected.page][selected.index].c === c : c === color))));
       eraser.setAttribute('aria-pressed', String(erasing));
@@ -1224,6 +1238,7 @@
       remove.hidden = !selected;
       hint.textContent = erasing ? 'Drag over highlights to erase them' : selected ? 'Pick a colour or delete' : 'Drag over text to highlight';
       bar.title = hint.textContent;
+      placeBar();
     }
     function render(index) {
       const page = pages[index];
@@ -1321,6 +1336,8 @@
       mode = on;
       document.body.classList.toggle('is-highlighting', on);
       bar.hidden = !on;
+      window[on ? 'addEventListener' : 'removeEventListener']('resize', placeBar);
+      window[on ? 'addEventListener' : 'removeEventListener']('scroll', placeBar, true);
       if (options.button) { options.button.setAttribute('aria-pressed', String(on)); options.button.classList.toggle('is-on', on); }
       if (on) document.addEventListener('keydown', escape);
       else {
@@ -1340,6 +1357,7 @@
     return {
       active: () => mode, setMode,
       close() { setMode(false); bar.remove(); },
+      bar: () => bar,
       store: () => JSON.parse(JSON.stringify(store)),
     };
   },

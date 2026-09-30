@@ -610,3 +610,7 @@ Di mode stabilo, kursor mouse di atas halaman = ikon kuas (bulu kuas berwarna se
 ### 30 September 2026 - Kursor + ikon: pulpen stabilo kecil (bukan kuas)
 
 Owner: jangan kuas, pakai pulpen stabilo kecil; penghapus juga dikecilkan. Ikon tombol stabilo (toolbar + rel) dan kursor sekarang pulpen stabilo (badan + leher + ujung, digambar tegak lalu `rotate(45 12 12)` sehingga ujung di kiri bawah). Kursor 20x20 px (dulu 32): badan + ujung berwarna stabilo terpilih, leher abu gelap, garis luar putih; hotspot pulpen `5 15`, penghapus `3 14`. Nama internal (`ICONS.brush`, `.book-hl-brush`) tetap supaya selector/tes tidak berubah; label/tooltip sekarang "Highlighter".
+
+### 30 September 2026 - Pilihan stabilo jadi popup di atas tombolnya
+
+Owner: pilihan warna stabilo di atas ikonnya, jangan di pinggir. Kalau `FlipbookHighlights.bind` diberi `button`, bar (`.book-hl-bar.is-popup`) sekarang popup horizontal tepat di atas tombol stabilo (pulpen/penghapus | titik warna | Delete | Done) dengan panah ke tombol (`--hl-arrow`); posisi dihitung `placeBar()` (ditempel ke tepi layar 8 px, pindah ke bawah tombol `.is-below` bila di atas tidak muat), ikut resize/scroll selama mode aktif. Tanpa tombol tetap rel kiri seperti dulu. Dicek Chromium 1000x640, HP 390x780, landscape 800x390.

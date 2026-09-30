@@ -87,6 +87,14 @@ body.is-highlighting .book-note-stack{pointer-events:none;opacity:.25}
 body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl-cursor,crosshair)}
 #highlight.is-on{background:#ffd43b;border-color:#e0b100}
 @media (max-height:360px){.book-hl-bar{gap:5px;padding:6px}.book-hl-swatch{width:24px;height:24px}}
+/* Popup above the highlighter button (placed by JS). */
+.book-hl-bar.is-popup{flex-direction:row;flex-wrap:wrap;justify-content:center;right:auto;bottom:auto;transform:none;max-width:calc(100vw - 16px);max-height:none;padding:8px 10px;gap:8px;border-radius:16px}
+.book-hl-bar.is-popup::after{content:"";position:absolute;left:var(--hl-arrow,50%);bottom:-7px;width:12px;height:12px;margin-left:-6px;background:#fffdf8;border-right:1px solid #e4ded0;border-bottom:1px solid #e4ded0;transform:rotate(45deg)}
+.book-hl-bar.is-popup.is-below::after{bottom:auto;top:-7px;transform:rotate(225deg)}
+.book-hl-bar.is-popup .book-hl-tools{flex-direction:row;padding:0 8px 0 0;border-bottom:0;border-right:1px solid #efe9dc}
+.book-hl-bar.is-popup .book-hl-brush,.book-hl-bar.is-popup .book-hl-eraser{width:32px;height:32px;border-radius:10px}
+.book-hl-bar.is-popup .book-hl-icon{width:18px;height:18px}
+.book-hl-bar.is-popup .book-hl-swatch{width:26px;height:26px}
 .book-note-download{display:block;width:100%;margin-top:10px;padding:9px;border:1px dashed #d6cfbf;border-radius:10px;background:#fff;font:600 13px system-ui,sans-serif;color:#1a3c34;cursor:pointer}
 .book-mark-state{margin-left:auto;padding:3px 9px;border-radius:999px;font-size:12px;font-weight:700;color:#57534e;background:#f5f0e6;white-space:nowrap}
 .book-mark-pick.is-marked{border-color:#e5252a;background:#fff4e5}
