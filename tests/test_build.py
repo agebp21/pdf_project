@@ -37,8 +37,21 @@ class BuildTests(unittest.TestCase):
             data = server.unpack_book(self.archive(self.manifest()), destination)
             self.assertEqual(data['pageCount'], 1)
             self.assertFalse((Path(temporary) / 'escape.txt').exists())
-            self.assertNotIn('malicious-client-code', (destination / 'viewer.js').read_text())
-            self.assertNotIn('</script>', (destination / 'book-data.js').read_text())
+            # One sealed file: the server's own reader, no loose pages.
+            self.assertEqual(sorted(p.name for p in destination.iterdir()), ['index.html'])
+            html = (destination / 'index.html').read_text(encoding='utf-8')
+            self.assertNotIn('malicious-client-code', html)
+            self.assertIn('<title>Book &lt;/script&gt;</title>', html)
+            self.assertEqual(html.count('</script>'), 6, 'payload + 5 reader scripts: the title cannot close a script early')
+            # The embedded pages and data decrypt back to the originals.
+            import base64, re as _re
+            payload = json.loads(_re.search(r'<script type="application/json" id="book-payload">(.*?)</script>', html, _re.S)[1])
+            key, nonce = base64.b64decode(payload['k']), base64.b64decode(payload['n'])
+            page = server.book_seal.chacha20(key, server.book_seal.page_nonce(nonce, 0), base64.b64decode(payload['p'][0]))
+            self.assertEqual(page, b'\xff\xd8\xff\xe0fixture')
+            book = json.loads(server.book_seal.chacha20(key, server.book_seal.page_nonce(nonce, -1), base64.b64decode(payload['d'])))
+            self.assertEqual(book['title'], 'Book </script>')
+            self.assertNotIn(b'fixture', html.encode(), 'no page bytes in the clear')
 
     def test_bad_values(self):
         for value in [float('nan'), -1, '12']:
@@ -83,6 +96,37 @@ class BuildTests(unittest.TestCase):
                     {'0': [[1, 2, 3, True]]}, {'0': 'x'}, []):
             with self.subTest(bad=bad), self.assertRaises(ValueError):
                 server.validate_manifest(dict(base, words=bad))
+
+    def test_windows_book_is_one_exe(self):
+        """The launcher carries the whole reader folder; the trailer says where."""
+        with tempfile.TemporaryDirectory() as temporary:
+            temporary = Path(temporary)
+            release = temporary / 'Release'
+            (release / 'data/flutter_assets/assets/book').mkdir(parents=True)
+            (release / 'sarvamaya_book.exe').write_bytes(b'MZreader')
+            (release / 'flutter_windows.dll').write_bytes(b'dll')
+            (release / 'data/flutter_assets/assets/book/index.html').write_text('<html>sealed</html>')
+            launcher = temporary / 'launcher.exe'
+            launcher.write_bytes(b'MZlauncher-code')
+            single = server.pack_launcher(launcher, release, 'sarvamaya_book.exe', temporary / 'Buku.exe')
+            data = single.read_bytes()
+            self.assertTrue(data.startswith(b'MZlauncher-code'))
+            trailer = data[-server.LAUNCHER_TRAILER:]
+            self.assertEqual(trailer[:8], b'MFBOOK01')
+            offset, length = int.from_bytes(trailer[8:16], 'little'), int.from_bytes(trailer[16:24], 'little')
+            self.assertEqual(offset, len(b'MZlauncher-code'))
+            self.assertRegex(trailer[24:56].decode('ascii'), r'^[0-9a-f]{32}$')
+            self.assertEqual(trailer[56:].rstrip(b'\0'), b'sarvamaya_book.exe')
+            with zipfile.ZipFile(io.BytesIO(data[offset:offset + length])) as package:
+                self.assertEqual(sorted(package.namelist()), ['data/flutter_assets/assets/book/index.html', 'flutter_windows.dll', 'sarvamaya_book.exe'])
+            self.assertEqual(sorted(p.name for p in temporary.iterdir()), ['Buku.exe', 'Release', 'launcher.exe'], 'temporary ZIP removed')
+
+    @unittest.skipUnless(server.find_csc(), '.NET Framework compiler not available')
+    def test_launcher_compiles(self):
+        with tempfile.TemporaryDirectory() as temporary:
+            log = Path(temporary) / 'build.log'
+            exe = server.build_launcher(Path(temporary) / 'launcher.exe', log)
+            self.assertTrue(exe.read_bytes().startswith(b'MZ'))
 
     def test_windows_file_details_named_after_book(self):
         with tempfile.TemporaryDirectory() as temporary:

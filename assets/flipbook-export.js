@@ -78,6 +78,28 @@
     }
     return zip.generateAsync({type:'blob',compression:'STORE'},meta=>onProgress('Membuat ZIP…',0.6+0.4*meta.percent/100));
   }
+  // The book as ONE html file (reader inlined, pages + data encrypted), for
+  // HTML exports: nothing to unzip, one file to open.
+  async function packageSingleHtml(model, imageUrls, onProgress = () => {}) {
+    if (!globalThis.BookSeal) throw Error('Modul enkripsi buku tidak tersedia. Muat ulang halaman.');
+    const data = validate(model);
+    if (imageUrls.length !== data.pageCount) throw Error('Jumlah gambar dan halaman tidak cocok.');
+    const names = ['index.html','viewer.css','book-effects.css','book-seal.js','layout.js','viewer.js'];
+    const [template, viewerCss, effectsCss, seal, layout, viewer] = await Promise.all(names.map(name => asset('assets/export/' + name)));
+    const engine = await asset('assets/vendor/page-flip.browser.js');
+    const pages = [];
+    for (let i = 0; i < imageUrls.length; i++) {
+      onProgress(`Mengemas halaman ${i+1} / ${imageUrls.length}…`, 0.45 * i / imageUrls.length);
+      const response = await fetch(imageUrls[i]); if (!response.ok) throw Error('Gambar halaman gagal dibaca.');
+      pages.push(new Uint8Array(await response.arrayBuffer()));
+    }
+    const payload = await BookSeal.sealAsync(data, pages, fraction => onProgress('Mengenkripsi halaman…', 0.45 + 0.5 * fraction));
+    onProgress('Menyusun file buku…', 0.97);
+    const html = BookSeal.singleHtml(template, [viewerCss, effectsCss], [seal, 'BookSeal.open();', engine, layout, viewer], payload, data.title);
+    return new Blob([html], {type: 'text/html;charset=utf-8'});
+  }
+  // A file name from the book title, as readable as the OS allows.
+  const titleFile = title => String(title).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').replace(/\s+/g, ' ').trim().replace(/^[.-]+|[.-]+$/g, '').slice(0, 80) || 'flipbook';
   async function saveProject(model, sourcePdf, onProgress = () => {}) {
     const zip=new JSZip();zip.file('project.json',JSON.stringify(validate(model),null,2));zip.file('source.pdf',await sourcePdf.arrayBuffer());
     return zip.generateAsync({type:'blob',compression:'STORE'},meta=>onProgress('Menyusun proyek…',meta.percent/100));
@@ -151,5 +173,5 @@
     });
   }
   const filename = title => (title.replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-|-$/g,'').slice(0,80)||'flipbook');
-  globalThis.FlipbookExport={validate,scriptData,packageBook,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,upload,HOW_TO_OPEN};
+  globalThis.FlipbookExport={validate,scriptData,packageBook,packageSingleHtml,titleFile,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,upload,HOW_TO_OPEN};
 })();

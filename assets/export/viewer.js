@@ -11,7 +11,10 @@
       document.title = data.title; $('#title').textContent = data.title;
       const elements = Array.from({length:data.pageCount}, (_, index) => {
       const page = document.createElement('article'); page.className = 'page';
-      const image = document.createElement('img'); image.src = `pages/${index + 1}.jpg`; image.alt = `Page ${index + 1}`;
+      const image = document.createElement('img'); image.alt = `Page ${index + 1}`;
+      // A sealed one-file book hands out decrypted pages; otherwise pages/N.jpg.
+      if (window.FLIPBOOK_PAGE_URL) window.FLIPBOOK_PAGE_URL(index, url => { image.src = url; });
+      else image.src = `pages/${index + 1}.jpg`;
       image.decoding = 'async'; image.loading = index > 2 ? 'lazy' : 'eager';
       image.onerror = () => { $('#error').hidden = false; $('#error').textContent = 'Page image missing. Extract the whole ZIP into one folder.'; };
       page.append(image);

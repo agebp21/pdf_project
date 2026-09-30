@@ -380,7 +380,7 @@
     bar.querySelector('span').style.width = percent + '%';
     $('#export-percent').textContent = percent + '%';
   }
-  const EXPORT_NAMES = {project: '.smflipbook', html: '-HTML.zip', apk: '.apk', exe: '-Windows.zip'};
+  const EXPORT_NAMES = {project: '.smflipbook', html: '.html', apk: '.apk', exe: '-Windows.zip'};
   async function exportBook(target) {
     if (!sourcePdf || opening || exporting) return;
     if (target !== 'project') {
@@ -396,7 +396,7 @@
     // Map a step's own 0..1 into its slice of the whole bar.
     const step = (from, to) => fraction => progress(from + (to - from) * Math.max(0, Math.min(1, fraction)));
     try {
-      const data = model(), name = FlipbookExport.filename(data.title);
+      const data = model(), name = FlipbookExport.titleFile(data.title);   // files named like the book
       const outputName = name + EXPORT_NAMES[target];
       // Every export asks where to save first (inside the click), then runs to the end on its own.
       const saveHandle = await FlipbookExport.chooseSave(outputName);
@@ -409,14 +409,16 @@
         return;
       }
       const native = target === 'apk' || target === 'exe';
-      const pack = native ? step(0, .12) : step(0, .92);
-      const bundle = await FlipbookExport.packageBook(data, imageUrls, (message, fraction) => { status(message); if (fraction !== undefined) pack(fraction); });
       if (!native) {
+        // One file named after the book: pages and data encrypted inside.
+        const single = await FlipbookExport.packageSingleHtml(data, imageUrls, (message, fraction) => { status(message); if (fraction !== undefined) step(0, .95)(fraction); });
         status('Menyimpan HTML…');
-        const saved = await FlipbookExport.saveBlob(bundle, outputName, saveHandle); progress(1);
-        status((saved?'HTML tersimpan di lokasi pilihanmu. ':'HTML dikirim ke download browser. ')+'Ekstrak seluruh ZIP lalu buka index.html.');
+        const saved = await FlipbookExport.saveBlob(single, outputName, saveHandle); progress(1);
+        status((saved?'HTML tersimpan di lokasi pilihanmu. ':'HTML dikirim ke download browser. ')+'Klik 2x file '+outputName+' untuk membaca bukunya.');
         return;
       }
+      const pack = step(0, .12);
+      const bundle = await FlipbookExport.packageBook(data, imageUrls, (message, fraction) => { status(message); if (fraction !== undefined) pack(fraction); });
       const capabilities=await fetch('/api/capabilities',{cache:'no-store'});
       if(!capabilities.ok)throw Error('Layanan build lokal tidak tersedia. Jalankan python server.py.');
       buildConfig=await capabilities.json();

@@ -33,6 +33,7 @@ import urllib.request
 from urllib.parse import parse_qs, quote, unquote, urlsplit
 
 import accounts
+import book_seal
 import invoice
 
 ROOT = Path(__file__).resolve().parent
@@ -164,7 +165,10 @@ def validate_links(links, count):
 
 
 def unpack_book(archive, destination):
-    """Only read canonical image names; regenerate all executable content."""
+    """Only read canonical image names; regenerate all executable content.
+
+    The app gets ONE sealed index.html (reader inlined, pages and data
+    encrypted, see book_seal.py) instead of loose page images."""
     with zipfile.ZipFile(archive) as package:
         names = package.namelist()
         if len(names) != len(set(names)):
@@ -174,38 +178,93 @@ def unpack_book(archive, destination):
         data = validate_manifest(json.loads(package.read('book.json')))
         if data['pageCount'] > len(names):
             raise ValueError('Gambar halaman tidak lengkap.')
-        destination.mkdir(parents=True, exist_ok=True)
-        (destination / 'pages').mkdir(exist_ok=True)
+        pages = []
         for index in range(1, data['pageCount'] + 1):
-            name = f'pages/{index}.jpg'
-            with package.open(name) as source, (destination / name).open('wb') as target:
-                signature = source.read(3)
-                if signature != b'\xff\xd8\xff':
-                    raise ValueError(f'Gambar halaman {index} bukan JPEG.')
-                target.write(signature)
-                shutil.copyfileobj(source, target)
-    for name in ('index.html', 'viewer.css', 'book-effects.css', 'layout.js', 'viewer.js'):
-        shutil.copy2(ROOT / 'assets/export' / name, destination / name)
-    for name in ('page-flip.browser.js', 'PAGEFLIP-LICENSE.txt'):
-        shutil.copy2(ROOT / 'assets/vendor' / name, destination / name)
-    encoded = json.dumps(data, ensure_ascii=True).replace('<', '\\u003c')
-    (destination / 'book-data.js').write_text('window.FLIPBOOK_DATA = ' + encoded + ';\n', encoding='utf-8')
-    (destination / 'book.json').write_text(json.dumps(data), encoding='utf-8')
+            page = package.read(f'pages/{index}.jpg')
+            if not page.startswith(b'\xff\xd8\xff'):
+                raise ValueError(f'Gambar halaman {index} bukan JPEG.')
+            pages.append(page)
+    export = ROOT / 'assets/export'
+    read = lambda path: path.read_text(encoding='utf-8')
+    html = book_seal.single_html(
+        read(export / 'index.html'), [read(export / 'viewer.css'), read(export / 'book-effects.css')],
+        [read(export / 'book-seal.js'), 'BookSeal.open();', read(ROOT / 'assets/vendor/page-flip.browser.js'),
+         read(export / 'layout.js'), read(export / 'viewer.js')],
+        book_seal.seal_payload(data, pages), data['title'])
+    destination.mkdir(parents=True, exist_ok=True)
+    (destination / 'index.html').write_text(html, encoding='utf-8')
     return data
 
 
 WINDOWS_HOW_TO = '''HOW TO OPEN THIS BOOK (Windows)
 
-1. Right-click the ZIP and choose "Extract All". Extract EVERYTHING into one folder.
-2. Open that folder and double-click {exe}.
+1. Right-click the ZIP and choose "Extract All".
+2. Double-click {exe}.
+
+The book is one file. The first time it opens it unpacks itself (a few
+seconds); after that it opens straight away. You can copy {exe} anywhere.
 
 If Windows shows "Windows protected your PC", click "More info" and then "Run anyway".
 
-Keep the "data" folder and the .dll files next to the .exe, or the app will not start.
 Requires Microsoft Edge WebView2 Runtime. Most Windows 10/11 PCs already have it;
 otherwise get it free from https://developer.microsoft.com/microsoft-edge/webview2/
 No internet connection is needed to read the book.
 '''
+
+LAUNCHER_MAGIC = b'MFBOOK01'
+LAUNCHER_TRAILER = 120
+
+
+def find_csc():
+    """The C# compiler that ships with .NET Framework 4 on every Windows 10/11."""
+    windir = os.environ.get('WINDIR', r'C:\Windows')
+    for framework in ('Framework64', 'Framework'):
+        candidate = Path(windir) / 'Microsoft.NET' / framework / 'v4.0.30319' / 'csc.exe'
+        if candidate.is_file():
+            return str(candidate)
+    return None
+
+
+def build_launcher(output, log):
+    """Compile native/launcher/Launcher.cs into a small Windows program."""
+    csc = find_csc()
+    if not csc:
+        raise RuntimeError('Kompiler .NET (csc.exe) tidak ditemukan.')
+    icon = ROOT / 'native/reader/windows/runner/resources/app_icon.ico'
+    args = [csc, '-nologo', '-target:winexe', '-optimize+', f'-out:{output}', '-r:System.IO.Compression.dll',
+            '-r:System.Windows.Forms.dll', str(ROOT / 'native/launcher/Launcher.cs')]
+    if icon.is_file():
+        args.insert(4, f'-win32icon:{icon}')
+    if run_command(args, ROOT, log) or not Path(output).is_file():
+        raise RuntimeError('Pembuka EXE gagal dikompilasi. Unduh log build untuk rinciannya.')
+    return Path(output)
+
+
+def pack_launcher(launcher, release, reader_exe, output):
+    """ONE book .exe: the launcher with the whole reader folder appended as
+    a ZIP, plus a trailer telling the launcher where it is (Launcher.cs)."""
+    payload = Path(output).with_suffix('.payload.zip')
+    with zipfile.ZipFile(payload, 'w', zipfile.ZIP_DEFLATED) as package:
+        for file in sorted(release.rglob('*')):
+            if file.is_file():
+                package.write(file, file.relative_to(release).as_posix())
+    digest = hashlib.sha256()
+    with payload.open('rb') as source:
+        for chunk in iter(lambda: source.read(1024 * 1024), b''):
+            digest.update(chunk)
+    name = reader_exe.encode('utf-8')
+    if len(name) > 64:
+        raise ValueError('Nama EXE pembaca terlalu panjang.')
+    with Path(output).open('wb') as target:
+        target.write(Path(launcher).read_bytes())
+        offset = target.tell()
+        with payload.open('rb') as source:
+            shutil.copyfileobj(source, target)
+        length = target.tell() - offset
+        target.write(LAUNCHER_MAGIC + offset.to_bytes(8, 'little') + length.to_bytes(8, 'little')
+                     + digest.hexdigest()[:32].encode('ascii') + name.ljust(64, b'\0'))
+    payload.unlink()
+    return Path(output)
 
 
 def android_app_id(title):
@@ -735,13 +794,19 @@ def build_job(job_id, target):
                 raise RuntimeError('EXE hasil build tidak ditemukan.')
             output = folder / 'flipbook-windows.zip'
             exe = exe_name(data['title']) + '.exe'
+            # One file for the reader: everything else is packed inside it.
+            job.update(message='Mengemas aplikasi Windows jadi satu file…', progress=0.95)
+            launcher = build_launcher(folder / 'launcher.exe', log)
+            single = pack_launcher(launcher, release, 'sarvamaya_book.exe', folder / 'book.exe')
             with zipfile.ZipFile(output, 'w', zipfile.ZIP_DEFLATED) as package:
-                for file in release.rglob('*'):
-                    if file.is_file():
-                        name = file.relative_to(release).as_posix()
-                        package.write(file, exe if name == 'sarvamaya_book.exe' else name)
+                package.write(single, exe)
                 package.writestr('HOW-TO-OPEN.txt', WINDOWS_HOW_TO.format(exe=exe))
-        job.update(status='done', message='Build selesai.', progress=1, artifact=output.name, download=f'/api/jobs/{job_id}/download')
+            single.unlink(); launcher.unlink()
+        # Download named after the book (the browser takes the server's name).
+        label = exe_name(data['title'])
+        job.update(status='done', message='Build selesai.', progress=1, artifact=output.name,
+                   download_name=label + ('.apk' if target == 'apk' else ' - Windows.zip'),
+                   download=f'/api/jobs/{job_id}/download')
     except Exception as cause:
         with log.open('a', encoding='utf-8') as stream:
             stream.write('\n' + str(cause) + '\n')
@@ -991,7 +1056,9 @@ class Handler(SimpleHTTPRequestHandler):
                     return
                 self.send_response(200)
                 self.send_header('Content-Type', 'application/octet-stream' if action == 'download' else 'text/plain; charset=utf-8')
-                self.send_header('Content-Disposition', f'attachment; filename="{filename}"')
+                shown = job.get('download_name', filename) if action == 'download' else filename
+                ascii_name = re.sub(r'[^A-Za-z0-9._ -]+', '_', shown)
+                self.send_header('Content-Disposition', f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{quote(shown)}')
                 self.send_header('Content-Length', str(file.stat().st_size))
                 self.end_headers()
                 with file.open('rb') as source:

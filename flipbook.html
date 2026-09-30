@@ -14,6 +14,7 @@
   <script defer src="assets/vendor/jszip.min.js"></script>
   <script defer src="assets/flipbook-export.js"></script>
   <script defer src="assets/export/layout.js"></script>
+  <script defer src="assets/export/book-seal.js"></script>
   <script defer src="assets/pdf-links.js"></script>
   <script defer src="assets/pdf-words.js"></script>
   <script defer src="assets/flipbook.js"></script>
@@ -55,7 +56,7 @@
         <input id="project-file" type="file" accept=".smflipbook,.sm-flipbook" hidden>
         <p class="muted">Every export (APK and EXE too) first asks where to save, then finishes on its own. If your browser has no Save dialog, the result downloads normally.</p>
         <p id="build-availability" class="muted">Checking local build service…</p>
-        <p class="muted">APKs are for testing for now. The Windows package holds the EXE plus support files; readers need WebView2.</p>
+        <p class="muted">Every book is one file named after its title: an .html, an .apk, or a Windows .exe (in a ZIP with how-to-open). Pages are encrypted inside. Windows readers need WebView2.</p>
         <div id="export-progress" class="export-progress" role="progressbar" aria-label="Export progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="export-progress-track"><span></span></div><small id="export-percent">0%</small></div>
         <p id="export-status" class="feedback" role="status"></p>
         <a id="build-download" class="secondary" style="text-align:center" hidden download>Download build result</a>

@@ -24,7 +24,7 @@ function install(test){
  w.HTMLCanvasElement.prototype.getContext=function(){if(!this.native||this.native.width!==this.width||this.native.height!==this.height)this.native=canvas.createCanvas(this.width,this.height);return this.native.getContext('2d')};
  w.HTMLCanvasElement.prototype.toBlob=function(callback){callback(new Blob([this.native.toBuffer('image/jpeg')],{type:'image/jpeg'}))};
  // Use the same bundled JSZip through Node to avoid jsdom's postMessage scheduler.
- w.JSZip=require('../assets/vendor/jszip.min.js');test.load('assets/flipbook-export.js');test.load('assets/flipbook-transfer.js');
+ w.JSZip=require('../assets/vendor/jszip.min.js');test.load('assets/flipbook-export.js');test.load('assets/flipbook-transfer.js');test.load('assets/export/book-seal.js');
  const files=new Map();w.showSaveFilePicker=async options=>({createWritable:async()=>({write:async blob=>{files.set(options.suggestedName,blob)},close:async()=>{},abort:async()=>{}})});
  return files;
 }
@@ -52,9 +52,12 @@ async function main(){
  assert.equal(w.engine.getPageCount(),8);assert.equal(w.document.querySelector('#reader-error').hidden,true);
  w.document.querySelector('#export-html').click();await until(test,()=>files.size===2,'export HTML');
  await until(test,()=>!w.document.querySelector('#export-fields').disabled,'export unlock');
- const zip=[...files.entries()].find(([name])=>name.endsWith('.zip'))[1];
- const parsed=await w.JSZip.loadAsync(await zip.arrayBuffer());assert.ok(parsed.file('book-effects.css'));assert.ok(parsed.file('pages/8.jpg'));
- fs.writeFileSync(path.join(root,'.build/qa/qa-from-editor-HTML.zip'),Buffer.from(await zip.arrayBuffer()));
+ // HTML export: ONE file named after the book, pages and data encrypted inside.
+ const [htmlName,htmlBlob]=[...files.entries()].find(([name])=>name.endsWith('.html'));
+ const single=await htmlBlob.text();
+ assert.ok(htmlName.endsWith('.html')&&!htmlName.includes('-HTML'),htmlName);
+ assert.ok(single.includes('id="book-payload"')&&!single.includes('pages/8.jpg')&&!single.includes('src="viewer.js"'));
+ fs.writeFileSync(path.join(root,'.build/qa/qa-from-editor.html'),single);
  // Simulate a server restart after page load: build must fetch a fresh token.
  const normalFetch=w.fetch,normalUpload=w.FlipbookExport.upload;let submitted=[];
  w.fetch=async(url,options)=>{

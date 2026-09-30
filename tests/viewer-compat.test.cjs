@@ -5,7 +5,7 @@
 const fs=require('node:fs'),assert=require('node:assert/strict');
 const acorn=require('../.build/qa-runtime/node_modules/acorn');
 const walk=require('../.build/qa-runtime/node_modules/acorn-walk');
-const files=['assets/export/viewer.js','assets/export/layout.js','assets/animation-playback.js'];
+const files=['assets/export/viewer.js','assets/export/layout.js','assets/export/book-seal.js','assets/animation-playback.js'];
 // Chrome 66 has none of these (added in Chrome 69-86).
 const bannedGlobals=new Set(['globalThis','structuredClone','queueMicrotask']);
 const bannedMethods=new Set(['replaceChildren','replaceAll','fromEntries','flat','flatMap','at','matchAll','allSettled','any']);
