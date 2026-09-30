@@ -79,7 +79,11 @@
     book.on('flip',update);book.on('changeOrientation',()=>{update();animate()});
     FlipbookSound.attach(book);
     // Skip pages already on screen; a hovered corner (fold_corner) may still flip.
-    const goPage = target => { if (['read', 'fold_corner'].indexOf(book.getState()) >= 0 && visible().indexOf(target) < 0) book.flip(target, 'top'); };
+    // Touch devices set disableFlipByClick (a tap on a page must not turn it),
+    // but PageFlip applies that to flipNext/flipPrev/flip too: buttons, links
+    // and bookmarks lift it for their own turn.
+    const turn = go => { const settings = book.getSettings(), was = settings.disableFlipByClick; settings.disableFlipByClick = false; try { go(); } finally { settings.disableFlipByClick = was; } };
+    const goPage = target => { if (['read', 'fold_corner'].indexOf(book.getState()) >= 0 && visible().indexOf(target) < 0) turn(() => book.flip(target, 'top')); };
     Object.keys(data.links || {}).forEach(key => FlipbookLinks.mount(elements[Number(key)], data.links[key], goPage));
     book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});$('#home').disabled=$('#prev').disabled=$('#next').disabled=true}});
     book.loadFromHTML(sheets);update();animate();
@@ -136,8 +140,8 @@
       }});
     book.on('flip', () => zoom.reset());
     // The cover opens/closes with the curved turn; ignore clicks while it animates.
-    const goPrev=()=>{zoom.reset();if(curl.busy())return;if(book.getCurrentPageIndex()===1&&curl.close())return;book.flipPrev()};
-    const goNext=()=>{zoom.reset();if(curl.busy())return;if(!curl.open())book.flipNext()};
+    const goPrev=()=>{zoom.reset();if(curl.busy())return;if(book.getCurrentPageIndex()===1&&curl.close())return;turn(()=>book.flipPrev())};
+    const goNext=()=>{zoom.reset();if(curl.busy())return;if(!curl.open())turn(()=>book.flipNext())};
     $('#home').onclick=()=>{zoom.reset();if(curl.busy()||curl.close())return;if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
     $('#prev').onclick=goPrev;$('#next').onclick=goNext;$('#replay').onclick=()=>animate(false);
     document.addEventListener('keydown',event=>{if(FlipbookNotes.typing(event))return;if(event.key==='ArrowRight'&&!$('#next').disabled)goNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)goPrev()});

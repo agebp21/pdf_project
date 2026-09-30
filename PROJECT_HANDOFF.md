@@ -728,3 +728,8 @@ Owner: daftar catatan dirapikan. Sebelumnya cuplikan 90 karakter satu baris (`no
 ### 30 September 2026 - Tab ＋ di pinggir halaman juga dihapus
 
 Owner: tanda ＋ tidak usah. Dengan `blank: false` (reader + editor) sekarang tidak ada tab tambah sama sekali (✎ maupun ＋); catatan hanya lahir dari stabilo dan bisa diedit/dihapus dari tabnya atau daftar My notes. Konsekuensi: menulis catatan bebas tanpa stabilo tidak bisa lagi dari pinggir halaman (edit kutipan tetap bisa untuk menambah komentar).
+
+### 30 September 2026 - Halaman landscape satu per satu (2x lebih besar) + bug tombol di HP
+
+Owner: kertas landscape (slide 16:9) terlalu kecil. `FlipbookLayout.geometry`: dokumen dengan rasio > `WIDE` (1.15) tampil satu halaman per layar bila itu membuat halaman >= 1.4x lebih besar dari spread (selalu di pratinjau editor/compact; tinggi pratinjau ikut `bind`). Portrait tidak berubah; layar sangat lebar / HP miring yang pendek tetap spread bila satu halaman tidak lebih besar. Hasil: editor 16:9 ~434x245 -> 869x489 px; reader laptop 1280x720 -> 1156x650. Tes geometry lama "wide pages still spread" diganti.
+Bug lama ditemukan saat tes & diperbaiki: di perangkat sentuh viewer memasang `disableFlipByClick` (tap di tengah halaman tidak membalik), tapi PageFlip juga menerapkannya ke `flipNext/flipPrev/flip(page)`, sehingga tombol ← →, link daftar isi dan lompat bookmark TIDAK membalik halaman di HP/tablet/APK (hanya swipe yang jalan). `viewer.js` sekarang membungkus panggilan itu dengan `turn()` yang mematikan opsi sesaat. Dicek Chromium mode mobile: HP miring/tegak, buku portrait & landscape: tombol → jalan; tap di tengah halaman tetap tidak membalik. Editor tidak memakai opsi itu (tidak terdampak).

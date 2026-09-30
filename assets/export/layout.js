@@ -26,6 +26,7 @@
     back.className=className+' book-back-blank';back.setAttribute('aria-label','Back cover');
     return pages.concat([back]);
   },
+  WIDE: 1.15,
   geometry(width,height,ratio,index,count,compact) {
     // Same rule as the editor preview so exports look like what was
     // previewed: a two-page spread from 700px wide, one page on phones held
@@ -33,7 +34,11 @@
     // compact editor preview sizes its height from this, so width decides.
     // Depends on the reading area only, never on the current page;
     // showCover keeps the cover alone without enlarging it.
-    const single=count===1 || (width<700 && (compact || width<=height));
+    // Landscape pages (slides) side by side get tiny: one page at a time
+    // when that makes the page clearly bigger (always in the compact preview).
+    const spread=Math.min(height,width/(2*ratio)), alone=Math.min(height,width/ratio);
+    const wide=ratio>this.WIDE && (compact || alone>=spread*1.4);
+    const single=count===1 || wide || (width<700 && (compact || width<=height));
     return {single,minWidth:single?width+1:1,maxWidth:width,maxHeight:height};
   },
   // A closed book sits centred: the front cover alone would otherwise fill
@@ -73,7 +78,7 @@
         const immersive=Boolean(document.fullscreenElement)||Boolean(stage.closest('.reading-fullscreen'));
         if(immersive) stage.style.height='100%';
         else {
-          const pages=book.getPageCount()===1||w<700?1:2;
+          const pages=book.getPageCount()===1||w<700||ratio>this.WIDE?1:2;
           stage.style.height=(w/(ratio*pages))+'px';
         }
       }

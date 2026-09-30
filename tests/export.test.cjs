@@ -40,8 +40,12 @@ assert.deepEqual(FlipbookLayout.geometry(1920,1080,.7,0,8),FlipbookLayout.geomet
 assert.deepEqual(FlipbookLayout.geometry(1920,1080,.7,7,8),FlipbookLayout.geometry(1920,1080,.7,1,8));
 assert.equal(FlipbookLayout.geometry(1920,1080,.7,1,8).single,false);
 assert.equal(FlipbookLayout.geometry(390,844,.7,1,8).single,true);
-assert.equal(FlipbookLayout.geometry(1920,1080,2.5,1,8).single,false,'wide pages still spread, like the preview');
-assert.equal(FlipbookLayout.geometry(1280,720,1.29,1,8).single,false,'landscape PDF spreads on a laptop screen');
+assert.equal(FlipbookLayout.geometry(1920,1080,2.5,1,8).single,true,'wide pages: one at a time (twice as big)');
+assert.equal(FlipbookLayout.geometry(1280,720,1.29,1,8).single,true,'landscape PDF (slides) one page at a time on a laptop');
+assert.equal(FlipbookLayout.geometry(1280,720,16/9,1,8).single,true);
+assert.equal(FlipbookLayout.geometry(3440,1000,1.29,1,8).single,false,'very wide screen: the spread is nearly as big, keep it');
+assert.equal(FlipbookLayout.geometry(1280,720,1.1,1,8).single,false,'nearly square pages keep the spread');
+assert.equal(FlipbookLayout.geometry(940,500,16/9,1,8,true).single,true,'compact preview: landscape pages one at a time');
 assert.equal(FlipbookLayout.geometry(699,900,.7,1,8).single,true);
 {
   const Z=FlipbookZoom;
