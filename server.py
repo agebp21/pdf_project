@@ -33,6 +33,15 @@ import urllib.error
 import urllib.request
 from urllib.parse import parse_qs, quote, unquote, urlencode, urlsplit
 
+try:
+    # Verify HTTPS like the browser does (the operating system's certificate
+    # store, which also fetches missing intermediate certificates): many
+    # journal sites send an incomplete chain that plain Python rejects.
+    import truststore
+    truststore.inject_into_ssl()
+except ImportError:          # optional: pip install truststore
+    pass
+
 import accounts
 import library
 import book_seal

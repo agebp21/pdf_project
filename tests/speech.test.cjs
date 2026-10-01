@@ -26,6 +26,33 @@ assert.equal(S.say('VISI DAN MISI YANG BARU'), 'Visi Dan Misi Yang Baru', 'a hea
 assert.equal(S.say('(PENTING) catatan'), '(Penting) catatan', 'punctuation kept');
 assert.equal(S.say('Teks FILM dan TEKS'), 'Teks Film dan Teks');
 assert.deepEqual(S.chunks(['KATA PENGANTAR', 'Buku ini tentang NUSANTARA.']), ['Kata Pengantar Buku ini tentang Nusantara.']);
+// Headers / footers / page numbers: found on the page edges and skipped.
+{
+  const head = [300, 200, 800, 3000];                 // y 0.03: top edge, one long "word" box
+  const body = [4000, 300, 1000, 2000, 3200, 1500];   // y 0.40: middle
+  const foot = [9500, 200, 4800, 400];                // y 0.95: bottom edge
+  const positions = {}, text = {};
+  for (let p = 0; p < 5; p++) {
+    positions[p] = [head, body, foot];
+    text[p] = [`JUPITER-Volume-07-Nomor-01-Edisi-Maret-2022-${10 + p}-18`, `Isi${p} halaman.`, String(11 + p)];
+  }
+  positions[2] = [head, body];                         // one page without a page number
+  text[2] = ['JUPITER-Volume-07-Nomor-01-Edisi-Maret-2022-12-18', 'Isi2 halaman.'];
+  const skip = S.furniture(positions, text);
+  assert.ok(skip['0:0'] && skip['4:0'], 'the repeated journal header (numbers differ)');
+  assert.ok(skip['0:2'] && skip['3:2'], 'page numbers at the bottom');
+  assert.ok(!skip['0:1'] && !skip['2:1'], 'the body is read');
+  // A header on one page only is kept (it may be a title).
+  const one = S.furniture({0: [head, body]}, {0: ['Judul Artikel Pertama', 'Isi.']});
+  assert.ok(!one['0:0']);
+  // Reading skips them.
+  const heard = [];
+  const quiet = { speak(t, l, done) { heard.push(t); setTimeout(() => done(true), 1); }, stop() {} };
+  const sp = S.bind({ text, words: positions, visible: () => [0], engine: quiet, next: () => false });
+  sp.start();
+  assert.deepEqual(heard, ['Isi0 halaman.'], 'only the body of the page');
+  sp.stop();
+}
 // Language.
 assert.equal(S.lang('Ini adalah buku yang dibuat untuk anak dan keluarga'), 'id-ID');
 assert.equal(S.lang('This is the book that we made for the family'), 'en-US');
@@ -184,5 +211,5 @@ assert.equal(S.lang('Buku ini adalah untuk semua orang karena pemerintah bisa me
   assert.equal(pickFor('ms-MY', [v('Microsoft Osman Online (Natural) - Malay (Malaysia)', 'ms-MY'), v('Microsoft Yasmin Online (Natural) - Malay (Malaysia)', 'ms-MY')]), 'Microsoft Yasmin Online (Natural) - Malay (Malaysia) ms-MY', 'Edge Malay: Yasmin');
   assert.equal(pickFor('ms-MY', chrome), 'Google Bahasa Indonesia id-ID', 'no Malay voice (Chrome): the Indonesian one');
   delete w.speechSynthesis; delete w.SpeechSynthesisUtterance;
-  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there, capitals read as words, Malay and English voices, Listen waits for a word, recovers from voice hiccups and unturned pages');
+  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there, capitals read as words, Malay and English voices, Listen waits for a word, recovers from voice hiccups and unturned pages, skips headers and page numbers');
 })().catch(e => { console.error(e); process.exit(1); });

@@ -1598,6 +1598,32 @@
     if (core.length <= 3 && !shouting) return token;          // AI, DKI inside a normal sentence
     return token.replace(core, core.charAt(0) + core.slice(1).toLowerCase());
   },
+  // Running headers / footers and page numbers, which reading aloud skips:
+  // lines near the top or bottom edge that repeat on several pages (digits
+  // ignored, so "Volume 7 ... 10-18" matches "... 11-18"), or that are only a
+  // page number. Returns {"page:line": true} (line = index in lines()).
+  furniture(positions, text) {
+    const skip = {}, groups = {}, pages = Object.keys(positions || {});
+    if (typeof FlipbookHighlights === 'undefined') return skip;
+    pages.forEach(page => {
+      FlipbookHighlights.lines(positions[page], (text || {})[page]).forEach((line, li) => {
+        if (!(line.y < 0.12 || line.y + line.h > 0.88)) return;          // only the page edges
+        const said = line.words.map(w => w.t || '').join(' ').trim();
+        if (!said) return;
+        if (/^((page|halaman|hal\.?|p\.)\s*)?[\divxlcdm]+([\s.\-–|\/]+(of|dari)?\s*[\divxlcdm]+)?\.?$/i.test(said)) { skip[page + ':' + li] = true; return; }
+        const key = said.toLowerCase().replace(/\d+/g, '#').replace(/\s+/g, ' ');
+        if (key.replace(/[#\W]/g, '').length < 3) return;
+        (groups[key] = groups[key] || []).push(page + ':' + li);
+      });
+    });
+    const enough = pages.length <= 4 ? 2 : 3;
+    Object.keys(groups).forEach(key => {
+      const where = groups[key], onPages = {};
+      where.forEach(at => { onPages[at.split(':')[0]] = true; });
+      if (Object.keys(onPages).length >= enough) where.forEach(at => { skip[at] = true; });
+    });
+    return skip;
+  },
   // A page's text lines → the text of its pieces.
   chunks(lines) {
     return this.pieces(this.words(null, Array.isArray(lines) ? lines : [String(lines || '')])).map(piece => piece.text);
@@ -1708,7 +1734,10 @@
     const lang = self.lang(all.slice(0, 20000));
     let on = false, speaking = false, run = 0, shown = '', wait = 0, marked = null;
     const button = options.button, cache = {};
-    const wordsOf = index => cache[index] || (cache[index] = self.words(positions[String(index)], text[String(index)]));
+    // Headers, footers and page numbers are not read.
+    const furniture = self.furniture(positions, text);
+    const wordsOf = index => cache[index] || (cache[index] = self.words(positions[String(index)], text[String(index)])
+      .filter(w => !(w.box && furniture[index + ':' + w.line])));
     function paint() {
       if (typeof document !== 'undefined' && document.body) document.body.classList.toggle('is-reading', on);
       if (!button) return;
