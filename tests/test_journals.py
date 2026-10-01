@@ -18,7 +18,7 @@ import server
 WORK = {
     'id': 'https://openalex.org/W123', 'display_name': '  Filsafat   Jawa dalam Novel ', 'publication_year': 2018,
     'doi': 'https://doi.org/10.1/abc', 'cited_by_count': 4, 'language': 'id',
-    'authorships': [{'author': {'display_name': f'Penulis {n}'}} for n in range(10)],
+    'authorships': [{'author': {'display_name': f'Penulis {n}'}} for n in range(10)] + [{'author': {'display_name': 'Penulis 0'}}],   # a repeat
     'primary_location': {'landing_page_url': 'https://jurnal.example/article/1', 'source': {'display_name': 'BAHAS', 'host_organization_name': 'UNIMED'}},
     'best_oa_location': {'pdf_url': 'https://jurnal.example/download/1.pdf', 'landing_page_url': 'https://jurnal.example/article/1', 'license': 'cc-by'},
     'open_access': {'is_oa': True},
@@ -45,7 +45,7 @@ class JournalTests(unittest.TestCase):
         filters = query['filter'][0].split(',')
         self.assertIn('is_oa:true', filters); self.assertIn('publication_year:2010-2024', filters)
         self.assertIn('language:id', filters); self.assertIn('institutions.country_code:id', filters)
-        self.assertIn('title_and_abstract.search:filsafat  jawa', filters, 'search in title + abstract; commas would split the filter')
+        self.assertIn('title_and_abstract.search.exact:filsafat  jawa', filters, 'exact words in title + abstract; commas would split the filter')
         self.assertEqual((query['sort'][0], query['page'][0], query['api_key'][0]), ('cited_by_count:desc', '2', 'k1'))
         self.assertNotIn('mailto', query)
         self.assertEqual(out['total'], 173)

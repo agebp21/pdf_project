@@ -888,8 +888,9 @@ def journal_search(query, page=1, oa=True, year_from=None, year_to=None, lang=No
         filters.append(f'language:{lang}')
     if indonesia:
         filters.append('institutions.country_code:id')
-    # Title and abstract only: a search through full texts drifts to loosely related papers.
-    filters.append('title_and_abstract.search:' + query.replace(',', ' '))
+    # Title and abstract only (full texts drift to loosely related papers), and
+    # exact words: a stemmed "immersive" also finds "immersed"/"immersion" (physics, chemistry).
+    filters.append('title_and_abstract.search.exact:' + query.replace(',', ' '))
     params = {'filter': ','.join(filters), 'per-page': 20, 'page': page,
               'select': 'id,display_name,publication_year,doi,cited_by_count,language,authorships,primary_location,'
                         'best_oa_location,open_access,abstract_inverted_index'}
@@ -921,11 +922,12 @@ def journal_search(query, page=1, oa=True, year_from=None, year_to=None, lang=No
         best = work.get('best_oa_location') or {}
         doi = work.get('doi') or ''
         pdf = best.get('pdf_url') or ''
+        names = list(dict.fromkeys(n for n in ((x.get('author') or {}).get('display_name') for x in work.get('authorships') or []) if n))   # OpenAlex repeats some
         results.append(dict(
             id=str(work.get('id', '')).rsplit('/', 1)[-1],
             title=' '.join(str(work.get('display_name') or 'Tanpa judul').split()),
-            authors=[(a.get('author') or {}).get('display_name') for a in (work.get('authorships') or [])[:8] if (a.get('author') or {}).get('display_name')],
-            moreAuthors=max(0, len(work.get('authorships') or []) - 8),
+            authors=names[:8],
+            moreAuthors=max(0, len(names) - 8),
             journal=source.get('display_name') or '',
             publisher=source.get('host_organization_name') or '',
             year=work.get('publication_year'),
