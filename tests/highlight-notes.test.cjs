@@ -19,6 +19,16 @@ assert.equal(H.lines(raw)[0].words[0].t, undefined, 'no text: plain boxes');
 assert.equal(H.quote(lines, H.select(lines, { x: 0.25, y: 0.11 }, { x: 0.27, y: 0.15 })), 'langkah seribu makna untuk');
 assert.equal(H.quote(H.lines(raw), [[0, 0, 1, 1]]), '', 'no words known → no quote');
 
+// Lists stay lists: bullet / numbered lines start a new line in the quote.
+{
+  const raw = [[1000, 300, 1000, 2000], [1400, 300, 1000, 2000, 3100, 2000], [1800, 300, 1000, 2000, 3100, 2000], [2200, 300, 1000, 2000], [2600, 300, 1000, 2000, 3100, 2000]];
+  const text = ['Visual', '\u2022 Premium', '\uf0b7 Futuristic', 'Elegant', '2) Corporate'];   // wrapped "Elegant" continues the item before
+  const lines = H.lines(raw, text);
+  assert.equal(H.quote(lines, [[0, 0, 1, 1]]), 'Visual\n\u2022 Premium\n\u2022 Futuristic Elegant\n2) Corporate');
+  assert.equal(H.item('- satu'), '\u2022 satu'); assert.equal(H.item('a. dua'), 'a. dua'); assert.equal(H.item('Biasa saja'), null);
+  assert.equal(H.tidy('  a   b \n\n \u2022 c  '), 'a b\n\u2022 c', 'spaces collapsed, list lines kept');
+}
+
 const pages = [0, 1].map(() => { const p = w.document.createElement('article'); w.document.body.appendChild(p); p.getBoundingClientRect = () => ({ left: 0, top: 0, width: 1000, height: 1000 }); return p; });
 const notes = N.bind({ key: N.key('Buku', 2, 0.7), title: 'Buku', pages, goPage: () => {}, open: w.document.getElementById('notes'), blank: false,
   onRemove: (i, s) => hl.forget(i, s) });
@@ -98,4 +108,4 @@ w.document.querySelector('.book-note-card .book-note-done').click();
 w.document.querySelector('.book-note-editor textarea').value = '“Satu” ok';
 w.document.querySelector('.book-note-editor .book-note-done').click();
 assert.equal(colorOf(0), H.COLORS.b);
-console.log('PASS highlight-notes: highlighted text becomes a quoted note, replaced when extended, none without text, removed with its highlight unless edited; deleting the note removes its highlight; notes take the highlight colour');
+console.log('PASS highlight-notes: highlighted text becomes a quoted note, replaced when extended, none without text, removed with its highlight unless edited; deleting the note removes its highlight; notes take the highlight colour; bullet lists stay lists');

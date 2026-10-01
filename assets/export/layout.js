@@ -1116,7 +1116,7 @@
       setTimeout(() => { stack.classList.remove('has-new'); tab.classList.remove('is-new'); }, 1800);
     }
     function quote(index, said, color) {
-      said = String(said || '').replace(/\s+/g, ' ').trim();
+      said = FlipbookHighlights.tidy(said);
       if (!said) return -1;
       const items = notes[index] ? notes[index].items : [];
       // Already noted (re-highlighting in another colour recolours the quote).
@@ -1136,14 +1136,14 @@
     }
     // Erasing a highlight removes its quote, unless the reader has written in it.
     function unquote(index, said) {
-      said = String(said || '').replace(/\s+/g, ' ').trim();
+      said = FlipbookHighlights.tidy(said);
       const items = notes[index] ? notes[index].items : [];
       const i = items.findIndex(note => note.text === '\u201c' + said + '\u201d');
       if (said && i >= 0) store(index, i, '');
     }
     // A highlight changed colour: its quote note follows.
     function tint(index, said, color) {
-      said = String(said || '').replace(/\s+/g, ' ').trim();
+      said = FlipbookHighlights.tidy(said);
       const items = notes[index] ? notes[index].items : [];
       const i = items.findIndex(note => note.text.indexOf('\u201c' + said + '\u201d') === 0);
       if (!said || i < 0 || items[i].color === color) return;
@@ -1239,16 +1239,32 @@
     return rects;
   },
   // The words a highlight covers, in reading order ('' on pages without text).
+  // Lines run on with a space, but a line that starts a bullet or numbered
+  // item starts a new line (bullets shown as "• "), so lists stay lists.
   quote(lines, rects) {
-    const parts = [];
+    let out = '';
     lines.forEach(line => {
       const mid = line.y + line.h / 2;
       const picked = line.words.filter(w => w.t && rects.some(q => mid >= q[1] && mid <= q[1] + q[3] &&
         w.x + w.w / 2 >= q[0] && w.x + w.w / 2 <= q[0] + q[2]));
-      if (picked.length) parts.push(picked.map(w => w.t).join(' '));
+      if (!picked.length) return;
+      let said = picked.map(w => w.t).join(' ');
+      const item = this.item(said);
+      if (item) said = item;
+      out += !out ? said : (item ? '\n' : ' ') + said;
     });
-    return parts.join(' ').trim();
+    return out.trim();
   },
+  // "• text" when a line starts a list item (•, ●, ▪, ➢, -, *, Wingdings/Symbol
+  // bullets, or 1. 2) a. b)), else null.
+  item(line) {
+    const bullet = /^\s*(?:[\u2022\u25cf\u25e6\u25aa\u25a0\u25a1\u25c6\u25c7\u27a2\u27a4\u25ba\u25b6\u2713\u2714\u2756\u00b7*\u2013\u2014-]|[\uf000-\uf0ff])\s*(\S.*)$/.exec(line);
+    if (bullet) return '\u2022 ' + bullet[1];
+    const numbered = /^\s*((?:\d{1,2}|[a-zA-Z]|[ivxIVX]{1,4})[.)])\s+(\S.*)$/.exec(line);
+    return numbered ? numbered[1] + ' ' + numbered[2] : null;
+  },
+  // One spelling for a quote: spaces collapsed, line breaks (list items) kept.
+  tidy(text) { return String(text || '').replace(/[^\S\n]+/g, ' ').replace(/ ?\n ?/g, '\n').replace(/\n{2,}/g, '\n').trim(); },
   // How much of the smaller rectangle two rectangles share (0..1).
   overlap(p, q) {
     const w = Math.min(p[0] + p[2], q[0] + q[2]) - Math.max(p[0], q[0]);
@@ -1509,7 +1525,7 @@
       active: () => mode, setMode,
       // A quote note was deleted: remove the highlight it came from.
       forget(index, quote) {
-        const list = store[index] || [], text = String(quote || '').replace(/\s+/g, ' ').trim();
+        const list = store[index] || [], text = self.tidy(quote);
         if (!text) return 0;
         const left = list.filter(h => said(index, h) !== text);
         if (left.length === list.length) return 0;
