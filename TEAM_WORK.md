@@ -941,3 +941,7 @@ Tes: tests/test_editions.py (penjaga dengan mesin tiruan, mask hilang -> tanpa m
 
 Owner: saat "🌐 44 / 600" buku belum berubah (halaman baru diganti setelah seluruh buku selesai). Sekarang: `PdfTranslate.book` punya `onPage(index, blob)`; editor mengganti gambar halaman itu seketika. Tombol saat berjalan: "🌐 n / N · Berhenti" (EN "· Stop"); klik = berhenti (`FlipbookEditions` opsi `cancel`). Berhenti/gagal: tampilan kembali ke asli, halaman yang sudah jadi disimpan (`bookChecked[lang]`, `bookVersions[lang]`, My Library ikut disimpan), klik berikutnya -> dialog "Lanjutkan terjemahan? x dari N halaman sudah selesai" dan hanya halaman sisa yang diproses. Edisi dianggap siap (`bookComplete`) hanya bila seluruh buku selesai (atau dimuat dari proyek). Membuka PDF lain menghentikan proses.
 E2E: Perahu Kertas 456 hal — 15 dtk: 10 halaman sudah berganti; Stop -> kembali asli; klik lagi -> "Lanjutkan…"; NTT sampai selesai.
+
+### 2 Oktober 2026 - Edisi ID | EN mulai dari halaman yang sedang dibaca
+
+Owner: "harus nunggu 600 dulu?" — halaman sudah berganti satu per satu (sebelumnya), tapi urut dari halaman 1. Sekarang `translateBook` mengurutkan halaman: dari halaman yang sedang tampil ke belakang dulu, lalu halaman sebelumnya. E2E Perahu Kertas: membaca hal 18–19 -> yang pertama berganti 18, 19, 20, 21…

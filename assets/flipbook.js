@@ -387,7 +387,10 @@
     const book = pdf, total = pageElements.length;
     const checked = bookChecked[lang] || (bookChecked[lang] = new Set());
     const pages = bookVersions[lang] || (bookVersions[lang] = {});
-    const todo = pageElements.map((_, index) => index).filter(index => !checked.has(index));
+    // From the page being read onward first, then the pages before it.
+    const from = Math.min(...(visiblePages().length ? visiblePages() : [0]));
+    const todo = pageElements.map((_, index) => index).filter(index => !checked.has(index))
+      .sort((a, b) => (a < from) - (b < from) || a - b);
     const before = total - todo.length;
     stopTranslating = false;
     const say = done => report(L(`🌐 ${Math.min(total, before + done)} / ${total} · Stop`, `🌐 ${Math.min(total, before + done)} / ${total} · Berhenti`));
