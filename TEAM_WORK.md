@@ -797,3 +797,7 @@ Tes: tests/test_verify.py (alur daftar->email->verify, akun lama, Google: tautan
 ### 1 Oktober 2026 - Judul putih di atas halaman dihapus dari buku ekspor
 
 Owner: teks putih nama file di tengah atas buku hasil ekspor dibuang. Template reader `assets/export/index.html`: `<h1 id="title">` dihapus dari `<header>` (tinggal merek kecil "MYFLIPBOOK"); `viewer.js` hanya mengisi `document.title` (judul tab/jendela). Berlaku untuk HTML, APK, EXE berikutnya.
+
+### 1 Oktober 2026 - Split PDF: semua halaman tampil (thumbnail asli) + baca dulu sebelum centang
+
+Owner: halaman PDF harus tampil semua agar bisa dibaca dulu lalu dicentang. converter.html (split-pdf): mode baru default & pertama "☑️ Pilih halaman" (menggantikan "Pick manually"); grid `#splitGrid` tampil untuk semua mode setelah PDF dipilih, berisi thumbnail asli pdf.js (digambar malas lewat IntersectionObserver, root grid, margin 300px; aman ganti PDF di tengah); klik gambar -> penampil besar `#splitViewer` (← → / panah keyboard, Esc, "Pilih halaman ini"); centang halaman otomatis pindah ke mode Pilih halaman; awalnya tidak ada yang dicentang (tombol: "Centang halaman dulu" / "Ambil N halaman terpilih →"); mode rentang menandai halaman yang terkena rentang di grid. E2E Chromium (PDF NTT 11 hlm): 11 thumbnail, penampil 1280×720, pilih hal 3, 4 (lewat penampil) dan 8 -> PDF hasil 3 halaman benar. qa-converter tetap lulus.
