@@ -857,3 +857,7 @@ Owner: login pakai Google + verifikasi; akun belum terverifikasi TIDAK boleh log
 - login.html: tombol GIS "Lanjutkan dengan Google" (hanya bila client id ada), layar "Cek emailmu" + Kirim ulang, tombol kirim ulang saat login 403, pesan link gagal; i18n EN/ID. account.html: notice "Email terverifikasi".
 - .env (tidak di git): MAIL_FROM, MAIL_FROM_NAME, SMTP_HOST (kosong), SMTP_PORT, SMTP_USER, SMTP_PASS (kosong), GOOGLE_CLIENT_ID (kosong) — owner perlu mengisi App Password Gmail dan Client ID. Catatan: Google Sign-In hanya jalan di origin terdaftar (https atau http://localhost); http://192.168.18.16:8080 (IP LAN) tidak bisa didaftarkan Google.
 Tes: tests/test_verify.py (alur daftar->email->verify, akun lama, Google: tautan/baru/ditolak/503); UI login dites Chromium dengan API tiruan.
+
+### 1 Oktober 2026 - Judul putih di atas halaman dihapus dari buku ekspor
+
+Owner: teks putih nama file di tengah atas buku hasil ekspor dibuang. Template reader `assets/export/index.html`: `<h1 id="title">` dihapus dari `<header>` (tinggal merek kecil "MYFLIPBOOK"); `viewer.js` hanya mengisi `document.title` (judul tab/jendela). Berlaku untuk HTML, APK, EXE berikutnya.

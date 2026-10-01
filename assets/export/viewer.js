@@ -8,7 +8,7 @@
     if (!data || ![1,2].includes(data.version) || (data.version===2&&!window.AnimationPlayback) || !Number.isInteger(data.pageCount) || data.pageCount < 1) throw Error('Invalid book data.');
     // ES2018 only (no ?. / ??): old Android System WebViews must run this.
     const pageElements = index => { const page = data.pages && data.pages[String(index)]; return (page && page.elements) || []; };
-      document.title = data.title; $('#title').textContent = data.title;
+      document.title = data.title;   // the window / tab title only: no title over the pages
       const elements = Array.from({length:data.pageCount}, (_, index) => {
       const page = document.createElement('article'); page.className = 'page';
       const image = document.createElement('img'); image.alt = `Page ${index + 1}`;
