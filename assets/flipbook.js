@@ -13,7 +13,10 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, translating = false, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, translating = false, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
+  // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
+  // fights the book's own transforms (cover centring, curl); bound once.
+  const zoomBox = document.createElement('div'); zoomBox.id = 'pdf-zoom';
   // Arsipku: the archived copy of the open book (members only).
   let libraryId = null, openingLibraryId = null, archiveUser;
   function exportState() {
@@ -125,7 +128,9 @@
       // Odd page counts get a blank back cover so the book can close.
       const sheets = FlipbookLayout.withBackCover(newElements, 'pdf-page');
       const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...sheets);
-      $('#reader-stage').replaceChildren(container);
+      zoom?.reset();
+      zoomBox.replaceChildren(container);
+      $('#reader-stage').replaceChildren(zoomBox);
       const ratio = natural.width / natural.height;
       bookRatio = ratio;
       const width = ratio > 1 ? 460 : 380;
@@ -141,6 +146,15 @@
       disposeLayout=FlipbookLayout.bind(book,$('#reader-stage'),ratio,{compact:true});
       FlipbookLayout.centerCover(book, container, reduced);
       curl = FlipbookCurl.bind(book, container, sheets, {reduced, onTurn: () => FlipbookSound.play()});
+      if (!zoom) zoom = FlipbookZoom.bind($('#reader-stage'), zoomBox, {button: $('#zoom'),
+        // The pages on screen: pan no further than the book.
+        content: () => {
+          const bounds = book && book.getBoundsRect(), block = document.querySelector('#pdf-book .stf__block');
+          if (!bounds || !block) return null;
+          const b = block.getBoundingClientRect(), s = b.width / (block.offsetWidth || b.width);
+          return {left: b.left + bounds.left * s, top: b.top + bounds.top * s, width: bounds.width * s, height: bounds.height * s};
+        }});
+      book.on('flip', () => zoom.reset());
       sourcePdf = blob;
       $('#export-title').value = project ? project.title : name.replace(/\.pdf$/i,'');
       if (project) for (const [index,config] of Object.entries(project.overlays)) { overlays.set(Number(index),config); renderOverlay(Number(index),config); }
@@ -584,11 +598,12 @@
   $('#add-dialog').addEventListener('drop', e => openSources(e.dataTransfer.files));
   // The cover opens/closes with the curved turn; other pages use PageFlip.
   // Ignore clicks while a cover turn is still animating.
-  const goPrev = () => { if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; book.flipPrev(); };
-  const goNext = () => { if (!book || curl?.busy()) return; if (!curl?.open()) book.flipNext(); };
+  const goPrev = () => { zoom?.reset(); if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; book.flipPrev(); };
+  const goNext = () => { zoom?.reset(); if (!book || curl?.busy()) return; if (!curl?.open()) book.flipNext(); };
   $('#prev').addEventListener('click', goPrev);
   $('#next').addEventListener('click', goNext);
   $('#home').addEventListener('click', () => {
+    zoom?.reset();
     if (!book || opening || curl?.busy()) return;
     if (curl?.close()) return;
     if (book.getState() !== 'read') return;
