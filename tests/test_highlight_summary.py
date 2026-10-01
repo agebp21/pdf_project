@@ -21,9 +21,18 @@ class SummarizeHighlightTests(unittest.TestCase):
         system, user = chat.call_args[0][:2]
         self.assertIn('BAHASA YANG SAMA', system)
         self.assertEqual(user, 'Satu langkah\n• seribu makna', 'spaces tidied, list lines kept')
-        self.assertEqual(chat.call_args.kwargs['max_tokens'], 2000, 'room for thinking models')
-        with mock.patch.object(server, 'ai_chat', return_value='x' * 2000) as chat:
-            self.assertEqual(len(server.summarize_highlight('y' * 9000)), 800)
+        self.assertEqual(chat.call_args.kwargs['max_tokens'], 4000, 'room for thinking models')
+        self.assertIn('sekitar 40 kata', system, 'short passage: at least ~40 words')
+        # Length follows the passage: about half of its words, 40-300.
+        self.assertEqual([server.highlight_summary_words('kata ' * n) for n in (10, 300, 2000)], [40, 150, 300])
+        with mock.patch.object(server, 'ai_chat', return_value='ok') as chat:
+            server.summarize_highlight('kata ' * 300)
+        self.assertIn('sekitar 150 kata', chat.call_args[0][0])
+        # Too long for the note: cut at the last full sentence.
+        long_reply = ('Kalimat yang cukup panjang untuk mengisi catatan. ' * 80).strip()
+        with mock.patch.object(server, 'ai_chat', return_value=long_reply) as chat:
+            out = server.summarize_highlight('y' * 9000)
+        self.assertLessEqual(len(out), server.HIGHLIGHT_SUMMARY_MAX); self.assertTrue(out.endswith('catatan.'))
         self.assertEqual(len(chat.call_args[0][1]), server.HIGHLIGHT_MAX_CHARS)
         with self.assertRaises(ValueError):
             server.summarize_highlight(' \n ')

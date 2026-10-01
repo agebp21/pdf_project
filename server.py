@@ -300,24 +300,40 @@ def summarize_book(title, text, lang='id-ID'):
 HIGHLIGHT_MAX_CHARS = 6000
 
 
+HIGHLIGHT_SUMMARY_MAX = 3000
+
+
+def highlight_summary_words(text):
+    """Target length: about half of the highlighted words, 40-300."""
+    return max(40, min(300, round(len(text.split()) * 0.5)))
+
+
 def summarize_highlight(text):
-    """A short, faithful summary of one highlighted passage (for its note on
-    the page edge), in the passage's own language."""
+    """A faithful summary of one highlighted passage (for its note on the page
+    edge), in the passage's own language; longer passages get longer notes."""
     lines = [' '.join(line.split()) for line in str(text or '').splitlines()]
     text = '\n'.join(line for line in lines if line)
     if len(text) < 2:
         raise ValueError('Teks yang distabilo kosong.')
+    text = text[:HIGHLIGHT_MAX_CHARS]
+    words = highlight_summary_words(text)
     model = os.environ.get('SUMMARY_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
-    system = ('Ringkas teks yang distabilo pembaca menjadi catatan singkat untuk tepi halaman, dalam BAHASA YANG SAMA dengan teksnya. '
-              'Setia pada isi: jangan menambah fakta, angka, atau pendapat. Maksimal 2 kalimat pendek, atau 2-4 butir diawali "- " '
-              'bila teksnya berupa daftar. Tanpa pembuka (jangan tulis "Ringkasan:"), tanpa markdown (tanpa **, #). '
-              'Bila teksnya sudah sangat pendek, tulis ulang intinya saja.')
-    # Thinking models (Gemini) spend most of max_tokens reasoning before they answer.
-    reply = ai_chat(system, text[:HIGHLIGHT_MAX_CHARS], model, max_tokens=2000, temperature=0.2)
+    system = ('Ringkas teks yang distabilo pembaca menjadi catatan di tepi halaman, dalam BAHASA YANG SAMA dengan teksnya. '
+              f'Panjang sekitar {words} kata (jangan lebih pendek dari itu bila isinya cukup). Pertahankan SEMUA poin utama, nama, angka, istilah penting, dan alur gagasannya; '
+              'buang pengulangan dan kalimat basa-basi. Setia pada isi: jangan menambah fakta, angka, atau pendapat. '
+              'Gunakan butir diawali "- " (satu poin per baris) bila teksnya berisi beberapa poin atau berupa daftar; '
+              'selain itu tulis paragraf yang runtut. Tanpa pembuka (jangan tulis "Ringkasan:"), tanpa markdown (tanpa **, #).')
+    # Thinking models (Gemini) spend a good part of max_tokens reasoning before they answer.
+    reply = ai_chat(system, text, model, max_tokens=4000, temperature=0.2)
     reply = re.sub(r'^\s*(ringkasan|summary|intisari)\s*:\s*', '', reply.replace('**', '').replace('##', ''), flags=re.I).strip()
     if not reply:
         raise RuntimeError('AI tidak menghasilkan ringkasan. Coba lagi.')
-    return reply[:800]
+    if len(reply) > HIGHLIGHT_SUMMARY_MAX:
+        # Over the note's room: stop at the last full sentence or line.
+        cut = reply[:HIGHLIGHT_SUMMARY_MAX]
+        end = max(cut.rfind('. '), cut.rfind('\n'))
+        reply = (cut[:end + 1] if end > HIGHLIGHT_SUMMARY_MAX // 2 else cut).strip()
+    return reply
 
 
 def ai_chat(system, user, model, max_tokens=8000, temperature=0.3):
