@@ -63,10 +63,17 @@ const config = {clientId: 'client-1', apiKey: 'key-1', appId: '123456'};
   // Cancel in the picker -> null.
   pickerReply = {action: 'cancel'};
   assert.equal(await DrivePicker.pick(config), null);
-  // A Google Doc too large to export -> a clear message.
+  // Google's own reason is shown: export too large, Drive API not turned on, anything else.
+  const refused = (status, reason, message) => ({ok: false, status, json: async () => ({error: {code: status, message, errors: [{reason}]}})});
   pickerReply = {action: 'picked', docs: [{id: 'big', name: 'Besar', mimeType: 'application/vnd.google-apps.presentation'}]};
-  fetchReply = {ok: false, status: 403};
-  await assert.rejects(DrivePicker.pick(config), /too large for Google to export/);
+  fetchReply = refused(403, 'exportSizeLimitExceeded', 'This file is too large to be exported.');
+  await assert.rejects(DrivePicker.pick(config), /Besar is too large for Google to export/);
+  fetchReply = refused(403, 'accessNotConfigured', 'Google Drive API has not been used in project 455 before or it is disabled.');
+  await assert.rejects(DrivePicker.pick(config), /Google Drive API is not turned on/);
+  fetchReply = refused(403, 'insufficientFilePermissions', 'The user does not have sufficient permissions for this file.');
+  await assert.rejects(DrivePicker.pick(config), /refused the download \(403: The user does not have sufficient permissions/);
+  fetchReply = {ok: false, status: 403};                       // no JSON body
+  await assert.rejects(DrivePicker.pick(config), /refused the download \(403\)/, 'a 403 is not called "too large" without Google saying so');
   // An expired/revoked token (401) asks to sign in again next time.
   fetchReply = {ok: false, status: 401};
   pickerReply = {action: 'picked', docs: [{id: 'x', name: 'x.pdf', mimeType: 'application/pdf'}]};
@@ -74,5 +81,5 @@ const config = {clientId: 'client-1', apiKey: 'key-1', appId: '123456'};
   fetchReply = {ok: true, status: 200};
   await DrivePicker.pick(config);
   assert.equal(tokenRequests, 2, 'signed in again after a 401');
-  console.log('PASS drive picker: scripts once, drive.file token reuse, Docs exported as PDF, files as is, cancel, export-too-large, 401 re-sign-in');
+  console.log('PASS drive picker: scripts once, drive.file token reuse, Docs exported as PDF, files as is, cancel, Google reasons (export too large, Drive API off, other), 401 re-sign-in');
 })().catch(error => { console.error(error); process.exit(1); });

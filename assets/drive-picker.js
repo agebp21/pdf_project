@@ -108,13 +108,19 @@
     var url = 'https://www.googleapis.com/drive/v3/files/' + encodeURIComponent(id) +
       (exported ? '/export?mimeType=' + encodeURIComponent(exported) : '?alt=media&supportsAllDrives=true');
     return (fetcher || root.fetch)(url, { headers: { Authorization: 'Bearer ' + oauth } }).then(function (response) {
-      if (!response.ok) {
-        if (response.status === 401) token = null;
-        throw new Error(exported && response.status === 403
-          ? name + ' is too large for Google to export as PDF. Download it as PDF from Google Drive and upload it.'
-          : 'Google Drive refused the download (' + response.status + ').');
-      }
-      return response.blob();
+      if (response.ok) return response.blob();
+      if (response.status === 401) token = null;
+      // Say what Google says: "API not enabled", "export too large", no access…
+      return (response.json ? response.json() : Promise.reject()).catch(function () { return {}; }).then(function (body) {
+        var error = (body && body.error) || {};
+        var reason = ((error.errors || [])[0] || {}).reason || ((error.details || [])[0] || {}).reason || '';
+        var said = String(error.message || '');
+        if (/accessNotConfigured|SERVICE_DISABLED/i.test(reason) || /has not been used|is disabled/i.test(said))
+          throw new Error('Google Drive API is not turned on for this app yet (Google Cloud → APIs & Services → Library → Google Drive API → Enable).');
+        if (exported && /exportSizeLimitExceeded/i.test(reason + ' ' + said))
+          throw new Error(name + ' is too large for Google to export as PDF. Download it as PDF from Google Drive and upload it.');
+        throw new Error('Google Drive refused the download (' + response.status + (said ? ': ' + said : '') + ').');
+      });
     }).then(function (blob) {
       var fileName = exported ? name.replace(/\.pdf$/i, '') + '.pdf' : name;
       // Drive's own type: downloads often come back as application/octet-stream.
