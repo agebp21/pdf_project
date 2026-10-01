@@ -1853,8 +1853,14 @@ class Handler(SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header('X-Content-Type-Options', 'nosniff')
-        if unquote(urlsplit(self.path).path).lstrip('/') in EXPORT_TEMPLATES:
+        page = unquote(urlsplit(self.path).path).lstrip('/')
+        has_cache = any(line.lower().startswith(b'cache-control:') for line in getattr(self, '_headers_buffer', []))
+        if page in EXPORT_TEMPLATES:
             self.send_header('Cache-Control', 'no-store')
+        elif not has_cache and (page == '' or page.endswith(('.html', '.js', '.css', '.json'))):
+            # Pages and scripts: the browser checks for a newer version each time
+            # (cheap 304 when unchanged), so an update never runs with stale JS.
+            self.send_header('Cache-Control', 'no-cache')
         super().end_headers()
 
     def do_GET(self):
