@@ -956,6 +956,151 @@ def journal_search(query, page=1, oa=True, year_from=None, year_to=None, lang=No
     return out
 
 
+# ---------- Ebook search: free, legal full books with a PDF.
+# OAPEN Library — peer-reviewed open-access books, licence checked by OAPEN.
+# Internet Archive — texts its uploader released under a licence (CC / public
+# domain), lending-only items excluded; the licence is the uploader's claim.
+EBOOK_PER_SOURCE = 10
+EBOOK_LANGS = {'id': ('Indonesian', 'ind'), 'en': ('English', 'eng'), 'ms': ('Malay', 'may')}
+IA_LANGS = {'ind': 'id', 'indonesian': 'id', 'eng': 'en', 'english': 'en', 'may': 'ms', 'msa': 'ms', 'malay': 'ms', 'jav': 'jv', 'javanese': 'jv', 'sun': 'su', 'sundanese': 'su'}
+
+
+def ebook_terms(query):
+    """Plain search words: no field/boolean syntax reaches the source's query parser."""
+    return ' '.join(re.sub(r"[^\w\s'-]", ' ', query, flags=re.UNICODE).split())[:200]
+
+
+def abstract_cut(text, limit=700):
+    text = ' '.join(str(text or '').split())
+    return text if len(text) <= limit else text[:limit].rsplit(' ', 1)[0] + '…'
+
+
+def ebook_get(url, what):
+    request = urllib.request.Request(url, headers={'User-Agent': 'MyFlipbook/1.0 (ebook search)', 'Accept': 'application/json'})
+    try:
+        with urllib.request.urlopen(request, timeout=25) as response:
+            return json.loads(response.read().decode('utf-8'))
+    except urllib.error.HTTPError as cause:
+        raise RuntimeError(f'{what} menolak permintaan ({cause.code}).') from cause
+    except (urllib.error.URLError, TimeoutError, OSError, ValueError) as cause:
+        raise RuntimeError(f'{what} tidak bisa dihubungi.') from cause
+
+
+OAPEN_HANDLE = re.compile(r'20\.500\.12657/\d{1,9}')
+ARCHIVE_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,120}')
+
+
+def oapen_books(terms, page, lang):
+    # Metadata only: listing each book's files makes OAPEN ~10x slower, so the
+    # PDF link is looked up when the reader asks for it (ebook_pdf).
+    params = {'query': f'{terms} AND dc.type:book', 'expand': 'metadata', 'limit': EBOOK_PER_SOURCE,
+              'offset': (page - 1) * EBOOK_PER_SOURCE}
+    items = ebook_get('https://library.oapen.org/rest/search?' + urlencode(params), 'OAPEN')
+    items = items if isinstance(items, list) else []
+    books = []
+    for item in items:
+        meta = {}
+        for field in item.get('metadata') or []:
+            meta.setdefault(field.get('key'), []).append(str(field.get('value') or '').strip())
+        one = lambda key: (meta.get(key) or [''])[0]
+        handle = str(item.get('handle') or '')
+        if not one('dc.title') or not OAPEN_HANDLE.fullmatch(handle):
+            continue
+        language = one('dc.language')
+        code = next((k for k, v in EBOOK_LANGS.items() if v[0] == language), language)
+        if lang in EBOOK_LANGS and code != lang:       # OAPEN's search ignores a language field
+            continue
+        title = one('dc.title') + (': ' + one('dc.title.alternative') if one('dc.title.alternative') else '')
+        books.append(dict(
+            source='oapen', id=handle, title=' '.join(title.split()),
+            authors=(meta.get('dc.contributor.author') or meta.get('dc.contributor.editor') or [])[:6],
+            year=one('dc.date.issued')[:4], language=code, publisher=one('publisher.name'),
+            license=one('dc.rights.uri') or one('dc.rights') or 'Open access', licenseByUploader=False,
+            abstract=abstract_cut(one('dc.description.abstract').strip(' "')),
+            link=f'https://library.oapen.org/handle/{handle}', cover='', pages=one('oapen.pages')))
+    return books, len(items) >= EBOOK_PER_SOURCE
+
+
+def archive_books(terms, page, lang):
+    query = (f'({terms}) AND mediatype:texts AND licenseurl:* AND NOT access-restricted-item:true '
+             'AND format:("Text PDF" OR PDF OR "Additional Text PDF")')
+    if lang in EBOOK_LANGS:
+        query += f' AND language:({EBOOK_LANGS[lang][1]} OR {EBOOK_LANGS[lang][0]})'
+    params = [('q', query), ('rows', EBOOK_PER_SOURCE), ('page', page), ('output', 'json')]
+    params += [('fl[]', f) for f in ('identifier', 'title', 'creator', 'year', 'date', 'language', 'licenseurl', 'description', 'publisher')]
+    data = ebook_get('https://archive.org/advancedsearch.php?' + urlencode(params), 'Internet Archive').get('response') or {}
+    listed = lambda v: v if isinstance(v, list) else [v] if v else []
+    books = []
+    for doc in data.get('docs') or []:
+        identifier = str(doc.get('identifier') or '')
+        if not ARCHIVE_ID.fullmatch(identifier):
+            continue
+        languages = [str(x) for x in listed(doc.get('language'))]
+        language = next((IA_LANGS[x.lower()] for x in languages if x.lower() in IA_LANGS), (languages or [''])[0])
+        description = re.sub(r'<[^>]+>', ' ', ' '.join(map(str, listed(doc.get('description')))))
+        books.append(dict(
+            source='archive', id=identifier, title=' '.join(str(doc.get('title') or 'Tanpa judul').split()),
+            authors=[str(a) for a in listed(doc.get('creator'))][:6],
+            year=str(doc.get('year') or doc.get('date') or '')[:4], language=language,
+            publisher=', '.join(map(str, listed(doc.get('publisher'))))[:120], license=str(doc.get('licenseurl') or ''),
+            licenseByUploader=True, abstract=abstract_cut(description),
+            link=f'https://archive.org/details/{identifier}', cover=f'https://archive.org/services/img/{identifier}', pages=''))
+    return books, page * EBOOK_PER_SOURCE < (data.get('numFound') or 0)
+
+
+def ebook_pdf(source, identifier):
+    """{pdf, size} of one search result's book, looked up when it's opened."""
+    if source == 'oapen' and OAPEN_HANDLE.fullmatch(identifier or ''):
+        item = ebook_get(f'https://library.oapen.org/rest/handle/{identifier}?expand=bitstreams', 'OAPEN')
+        streams = item.get('bitstreams') or [] if isinstance(item, dict) else []
+        pdf = next((s for s in streams if s.get('mimeType') == 'application/pdf' and s.get('bundleName') == 'ORIGINAL'), None)
+        if pdf and str(pdf.get('retrieveLink', '')).startswith('/rest/bitstreams/'):
+            return dict(pdf='https://library.oapen.org' + pdf['retrieveLink'], size=int(pdf.get('sizeBytes') or 0))
+    elif source == 'archive' and ARCHIVE_ID.fullmatch(identifier or ''):
+        files = ebook_get(f'https://archive.org/metadata/{identifier}/files', 'Internet Archive').get('result') or []
+        rank = {'Text PDF': 0, 'Additional Text PDF': 1, 'Image Container PDF': 2}
+        pdfs = sorted((f for f in files if str(f.get('name', '')).lower().endswith('.pdf')),
+                      key=lambda f: (rank.get(f.get('format'), 3), f.get('source') != 'original'))
+        if pdfs:
+            return dict(pdf=f"https://archive.org/download/{identifier}/{quote(pdfs[0]['name'])}", size=int(pdfs[0].get('size') or 0))
+    else:
+        raise ValueError('Buku tidak dikenal.')
+    return dict(pdf='', size=0)
+
+
+def ebook_search(query, page=1, lang=None, source='all'):
+    """Books with a PDF: dict(page, more, results=[...], errors=[...]). Sources
+    run side by side; one source failing still returns the other's books."""
+    terms = ebook_terms(query)
+    if len(terms) < 2:
+        raise RuntimeError('Tulis kata kunci 2-200 karakter.')
+    key = json.dumps(['ebook', terms.lower(), page, lang, source])
+    hit = JOURNAL_CACHE.get(key)
+    if hit and time.time() - hit[0] < JOURNAL_CACHE_SECONDS:
+        return hit[1]
+    wanted = [fn for name, fn in (('oapen', oapen_books), ('archive', archive_books)) if source in ('all', name)]
+    lists, more, errors = [], False, []
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        for job in [pool.submit(fn, terms, page, lang) for fn in wanted]:
+            try:
+                books, has_more = job.result()
+                lists.append(books)
+                more = more or has_more
+            except RuntimeError as cause:
+                errors.append(str(cause))
+    if not lists:
+        raise RuntimeError(' '.join(errors))
+    results = []
+    for i in range(max(map(len, lists))):          # alternate sources
+        results.extend(books[i] for books in lists if i < len(books))
+    out = dict(page=page, more=more, results=results, errors=errors, maxBytes=FETCH_MAX_BYTES)
+    if not errors:
+        if len(JOURNAL_CACHE) > 300:
+            JOURNAL_CACHE.clear()
+        JOURNAL_CACHE[key] = (time.time(), out)
+    return out
+
+
 # ---------- Email (verification links). SMTP from .env, e.g. Gmail:
 # SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=…@gmail.com SMTP_PASS=<app password>
 # MAIL_FROM=…@gmail.com MAIL_FROM_NAME=MyFlipbook. Without SMTP the message is
@@ -1574,6 +1719,25 @@ class Handler(SimpleHTTPRequestHandler):
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
 
+    def ebooks_route(self):
+        """GET /api/ebooks?q=&page=&lang=&src=all|oapen|archive -> books with a PDF."""
+        query = parse_qs(urlsplit(self.path).query)
+        one = lambda name, default='': (query.get(name) or [default])[0].strip()
+        q = ' '.join(one('q').split())
+        if not 2 <= len(q) <= 200:
+            self.send_json(400, {'error': 'Tulis kata kunci 2-200 karakter.'})
+            return
+        try:
+            page = max(1, min(50, int(one('page', '1') or 1)))
+        except ValueError:
+            page = 1
+        source = one('src', 'all')
+        try:
+            self.send_json(200, ebook_search(q, page, lang=one('lang') or None,
+                                             source=source if source in ('all', 'oapen', 'archive') else 'all'))
+        except RuntimeError as cause:
+            self.send_json(502, {'error': str(cause)})
+
     def book_text(self, data):
         """The {page: [lines]} of a request as one text, pages in order."""
         pages = data.get('text')
@@ -1697,6 +1861,20 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if path == '/api/journals':
             self.journals_route()
+            return
+        if path == '/api/ebooks':
+            self.ebooks_route()
+            return
+        if path == '/api/ebooks/pdf':
+            query = parse_qs(urlsplit(self.path).query)
+            try:
+                found = ebook_pdf((query.get('src') or [''])[0], (query.get('id') or [''])[0])
+            except ValueError as cause:
+                self.send_json(400, {'error': str(cause)})
+            except RuntimeError as cause:
+                self.send_json(502, {'error': str(cause)})
+            else:
+                self.send_json(200 if found['pdf'] else 404, dict(found, maxBytes=FETCH_MAX_BYTES) if found['pdf'] else {'error': 'Buku ini tidak punya berkas PDF.'})
             return
         if path == '/api/capabilities':
             flutter = bool(shutil.which('flutter'))
