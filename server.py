@@ -321,11 +321,16 @@ def summarize_highlight(text):
     system = ('Ringkas teks yang distabilo pembaca menjadi catatan di tepi halaman, dalam BAHASA YANG SAMA dengan teksnya. '
               f'Panjang sekitar {words} kata (jangan lebih pendek dari itu bila isinya cukup). Pertahankan SEMUA poin utama, nama, angka, istilah penting, dan alur gagasannya; '
               'buang pengulangan dan kalimat basa-basi. Setia pada isi: jangan menambah fakta, angka, atau pendapat. '
-              'Gunakan butir diawali "- " (satu poin per baris) bila teksnya berisi beberapa poin atau berupa daftar; '
-              'selain itu tulis paragraf yang runtut. Tanpa pembuka (jangan tulis "Ringkasan:"), tanpa markdown (tanpa **, #).')
+              'Tulis sebagai PARAGRAF kalimat utuh yang runtut, JANGAN memakai butir/bullet/penomoran, '
+              'walaupun teks aslinya berupa daftar (gabungkan poin-poinnya menjadi kalimat). '
+              'Tanpa pembuka (jangan tulis "Ringkasan:"), tanpa markdown (tanpa **, #).')
     # Thinking models (Gemini) spend a good part of max_tokens reasoning before they answer.
     reply = ai_chat(system, text, model, max_tokens=4000, temperature=0.2)
     reply = re.sub(r'^\s*(ringkasan|summary|intisari)\s*:\s*', '', reply.replace('**', '').replace('##', ''), flags=re.I).strip()
+    # Sentences, not a list: any bullet / numbered lines left are joined into one paragraph.
+    parts = [re.sub(r'^\s*(?:[-*•●▪]|\d{1,2}[.)])\s+', '', line).strip() for line in reply.splitlines()]
+    parts = [p for p in parts if p]
+    reply = ' '.join(p if re.search(r'[.!?…:;]$', p) or i == len(parts) - 1 else p + '.' for i, p in enumerate(parts))
     if not reply:
         raise RuntimeError('AI tidak menghasilkan ringkasan. Coba lagi.')
     if len(reply) > HIGHLIGHT_SUMMARY_MAX:

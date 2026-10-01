@@ -23,6 +23,11 @@ class SummarizeHighlightTests(unittest.TestCase):
         self.assertEqual(user, 'Satu langkah\n• seribu makna', 'spaces tidied, list lines kept')
         self.assertEqual(chat.call_args.kwargs['max_tokens'], 4000, 'room for thinking models')
         self.assertIn('sekitar 40 kata', system, 'short passage: at least ~40 words')
+        self.assertIn('JANGAN memakai butir', system, 'sentences, not bullets')
+        # Bullets that still come back become one paragraph of sentences.
+        with mock.patch.object(server, 'ai_chat', return_value='- Hero video dimulai setelah upacara\n• Visual menghidupkan pusat data.\n2) Ditutup dengan Grand Reveal'):
+            self.assertEqual(server.summarize_highlight('teks daftar'),
+                             'Hero video dimulai setelah upacara. Visual menghidupkan pusat data. Ditutup dengan Grand Reveal')
         # Length follows the passage: about half of its words, 40-300.
         self.assertEqual([server.highlight_summary_words('kata ' * n) for n in (10, 300, 2000)], [40, 150, 300])
         with mock.patch.object(server, 'ai_chat', return_value='ok') as chat:

@@ -887,3 +887,7 @@ Tes: highlights.test.cjs (kasus dua kolom selang-seling: kiri saja, ujung sejaja
 ### 1 Oktober 2026 - "Arsipku" diganti "My Library"
 
 Owner: Arsipku jadi My Library. Semua teks yang terlihat pengguna diganti (editor: "☁ Tersimpan di My Library", tautan "📚 My Library"; halaman library.html judul/tab/hapus/konfirmasi/"Masuk dulu untuk melihat My Library-mu"; nav account.html & journals.html; pesan kuota library.py; pesan login server.py; privacy.html & terms.html ID/EN) plus komentar kode. Nama file/route tetap (`library.html`, `/api/library/*`, `library.py`), jadi tautan lama tetap jalan. Catatan: entri lama di handoff ini masih menyebut "Arsipku" = fitur yang sama.
+
+### 1 Oktober 2026 - Ringkasan stabilo berupa kalimat (tanpa butir)
+
+Owner: ringkasan di note pakai kalimat, jangan bullet. `summarize_highlight()`: prompt meminta PARAGRAF kalimat utuh, tanpa butir/penomoran walau teks asli berupa daftar (poin digabung jadi kalimat); jaga-jaga: baris yang masih diawali "- • * 1." dibersihkan dan digabung jadi satu paragraf (titik ditambahkan bila perlu). Contoh nyata (ntt hal 2, 79 kata): 55 kata, 2 kalimat runtut, semua poin masuk. Format "✨ Summary" + "•" di klien praktis tidak terpakai lagi (tetap aman bila muncul).
