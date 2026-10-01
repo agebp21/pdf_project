@@ -116,6 +116,45 @@ assert.equal(S.lang('Buku ini adalah untuk semua orang karena pemerintah bisa me
     down(110, 110); assert.equal(heard.length, 3, 'listeners removed on close');
   }
 
+  // Robustness: a failed piece is tried again then skipped (no silent stop).
+  {
+    const heard = []; let calls = 0;
+    const flaky = { speak(text, lang, done) { calls++; heard.push(text); setTimeout(() => done(!(text.startsWith('Dua') && calls < 4)), 3); }, stop() {} };
+    let pageNow = 1;
+    const s4 = S.bind({ text: { '1': ['Satu kalimat yang cukup panjang untuk dibaca dengan baik.', 'Dua kalimat lagi yang juga cukup panjang untuk dibaca.'] },
+      visible: () => [pageNow], engine: flaky, next: () => false });
+    s4.start(); await sleep(60);
+    assert.ok(heard.length >= 1 && s4.active() === false, 'reached the end after a hiccup instead of hanging');
+  }
+  // A page that didn't turn (book busy) is turned again; reading goes on.
+  {
+    const said = []; let page = 1, tries = 0;
+    const quick = { speak(text, lang, done) { said.push(text); setTimeout(() => done(true), 2); }, stop() {} };
+    const s5 = S.bind({ text: { '1': ['Halaman dua.'], '3': ['Halaman empat.'] }, visible: () => [page], engine: quick,
+      next: () => { tries++; if (tries < 2) return true; page = 3; return true; } });   // the first turn is swallowed, no pageChanged
+    s5.start(); await sleep(3300);
+    assert.equal(tries, 2, 'turned again after 3 s');
+    await sleep(3200);
+    assert.ok(said.includes('Halaman empat.'), 'read the page it finally reached');
+    s5.stop();
+  }
+  // Web voices: a voice that never says it finished does not hang the reading.
+  {
+    const spoken = [];
+    w.SpeechSynthesisUtterance = function (text) { this.text = text; };
+    w.speechSynthesis = { speaking: false, pending: false, paused: false, getVoices: () => [], speak: u => { spoken.push(u.text); }, cancel() {} };
+    const engine = S.engine();
+    let ended = null;
+    const realTimeout = global.setTimeout;
+    global.setTimeout = (fn, ms) => realTimeout(fn, Math.min(ms, 20));     // speed the watchdog up
+    engine.speak('Halo', 'id-ID', ok => { ended = ok; });
+    await sleep(80);
+    global.setTimeout = realTimeout;
+    assert.equal(ended, true, 'no onend: moves on once nothing is speaking');
+    engine.stop();
+    delete w.speechSynthesis; delete w.SpeechSynthesisUtterance;
+  }
+
   // Voice choice (Web Speech): an Indonesian woman's voice.
   const pick = voices => {
     let used = null;
@@ -145,5 +184,5 @@ assert.equal(S.lang('Buku ini adalah untuk semua orang karena pemerintah bisa me
   assert.equal(pickFor('ms-MY', [v('Microsoft Osman Online (Natural) - Malay (Malaysia)', 'ms-MY'), v('Microsoft Yasmin Online (Natural) - Malay (Malaysia)', 'ms-MY')]), 'Microsoft Yasmin Online (Natural) - Malay (Malaysia) ms-MY', 'Edge Malay: Yasmin');
   assert.equal(pickFor('ms-MY', chrome), 'Google Bahasa Indonesia id-ID', 'no Malay voice (Chrome): the Indonesian one');
   delete w.speechSynthesis; delete w.SpeechSynthesisUtterance;
-  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there, capitals read as words, Malay and English voices, Listen waits for a word');
+  console.log('PASS speech: chunks, language, reads the spread then turns, skips pages without text, follows manual turns, stops at the end, picks an Indonesian woman voice, click a word to read from there, capitals read as words, Malay and English voices, Listen waits for a word, recovers from voice hiccups and unturned pages');
 })().catch(e => { console.error(e); process.exit(1); });

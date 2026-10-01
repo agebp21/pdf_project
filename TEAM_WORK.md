@@ -760,3 +760,11 @@ Uji "immersive" (owner): pencarian ber-stemming juga menemukan "immersed/immersi
 ### 1 Oktober 2026 - Kartu "Journal Search" di beranda
 
 Owner: menu kartu jurnal belum ada (hanya chip nav, dan chip itu tersembunyi di HP). Ditambah tool `journal-search` di daftar `tools` index.html (🔎, badge New!, kategori Workflows + PDF Intelligence, href journals.html, feat) dan di baris pertama ikon hero (HORDE_ROWS), deskripsi Indonesia `tool.journal-search` di i18n.js. Dicek desktop 1280 & HP 390: kartu dan ikon hero tampil, terjemahan ID jalan.
+
+### 1 Oktober 2026 - Listen tidak lagi berhenti sendiri
+
+Owner: Listen tiba-tiba diam padahal tombol masih ⏹ Stop. Tiga penyebab, semua diperbaiki di `FlipbookSpeech`:
+1. Web engine: suara Google online di Chrome diam setelah ±15 dtk dan kadang tak mengirim `onend` -> kini untuk suara non-lokal (`localService === false`) ada nudge `pause()/resume()` tiap 10 dtk, dan watchdog (8 dtk + 150 ms/karakter, lalu cek tiap 3 dtk): bila tak ada yang bersuara lagi, potongan dianggap selesai. Timer dibersihkan saat stop/potongan baru.
+2. Potongan gagal (jaringan/mesin sibuk) dulu langsung `stop()`; kini dicoba sekali lagi lalu dilewati, baru berhenti (dengan pemberitahuan) setelah 4 gagal berturut-turut.
+3. Halaman yang tidak jadi berbalik (buku sibuk) dulu ditunggu selamanya; kini dicek tiap 3 dtk: bila halaman sudah berganti tanpa event -> baca; bila belum -> `next()` lagi (maks 3x), lalu berhenti dengan pemberitahuan.
+Tes: speech.test.cjs (hiccup, halaman tak berbalik, suara tanpa onend). E2E Edge 45 dtk: membaca terus, 2-3 -> 4-5 -> 6-7. APK (Kotlin onError -> ok=false) ikut mekanisme coba-ulang yang sama.

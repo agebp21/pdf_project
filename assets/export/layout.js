@@ -1639,7 +1639,8 @@
     }
     const synth = root.speechSynthesis, Utterance = root.SpeechSynthesisUtterance;
     if (!synth || !Utterance) return null;
-    let current = null;
+    let current = null, keep = 0, guard = 0;
+    const clearTimers = () => { clearInterval(keep); clearTimeout(guard); keep = guard = 0; };
     // A woman's voice in the book's language: Google's (Chrome: "Google Bahasa
     // Indonesia" is a woman's voice), then Edge's natural ones (Gadis), then
     // any not known to be a man's (Windows' Indonesian "Andika" is last).
@@ -1675,14 +1676,21 @@
         u.lang = v && v.lang ? String(v.lang).replace('_', '-') : lang;
         if (v) u.voice = v;
         let finished = false;
-        const end = ok => { if (!finished) { finished = true; done(ok); } };
+        const end = ok => { if (!finished) { finished = true; clearTimers(); done(ok); } };
         u.onend = () => end(true);
         u.onerror = event => end(event && (event.error === 'interrupted' || event.error === 'canceled'));
         current = u;                                     // keep a reference: Chrome drops events of collected utterances
         if (synth.speaking || synth.pending) synth.cancel();   // never two pieces at once
+        clearTimers();
         synth.speak(u);
+        // Chrome: Google's online voices fall silent after ~15 s unless nudged,
+        // and now and then never fire onend; keep them going, and move on
+        // once nothing is speaking any more.
+        if (v && v.localService === false) keep = setInterval(() => { if (synth.speaking && !synth.paused) { synth.pause(); synth.resume(); } }, 10000);
+        const check = () => { if (finished) return; if (synth.speaking || synth.pending) { guard = setTimeout(check, 3000); return; } end(true); };
+        guard = setTimeout(check, 8000 + text.length * 150);
       },
-      stop() { current = null; synth.cancel(); },
+      stop() { current = null; clearTimers(); synth.cancel(); },
       // false when this device lists voices but none in that language.
       has(lang) { const all = synth.getVoices() || []; return !all.length || !!voice(lang); }
     };
@@ -1730,11 +1738,18 @@
       mark(-1, null);
       paint();
     }
-    function turn(mine) {
+    function turn(mine, tries) {
       if (!on || mine !== run) return;
       mark(-1, null);
-      if (!options.next()) stop();                       // the end of the book
-      // the new pages are read when the viewer calls pageChanged()
+      if (!options.next()) { stop(); return; }            // the end of the book
+      // The new pages are read when the viewer calls pageChanged(). If the
+      // book was busy and didn't turn, try again (then give up cleanly).
+      wait = setTimeout(() => {
+        if (!on || mine !== run) return;
+        if (options.visible().join(',') !== shown) { read(null); return; }   // turned without telling us
+        if ((tries || 0) < 3) turn(mine, (tries || 0) + 1);
+        else { stop(); if (options.notice) options.notice('Reading stopped: the page could not be turned.'); }
+      }, 3000);
     }
     // Read the pages on screen, or from a word: from = {page, line, word}.
     function read(from) {
@@ -1752,6 +1767,7 @@
       });
       // A page without text (a picture): a short pause, then on.
       if (!queue.length) { mark(-1, null); wait = setTimeout(() => turn(mine), 1500); return; }
+      let fails = 0;
       const step = () => {
         if (!on || mine !== run) return;
         if (!queue.length) { turn(mine); return; }
@@ -1759,7 +1775,12 @@
         mark(next.page, next.piece);
         engine.speak(next.piece.text, lang, ok => {
           if (!on || mine !== run) return;
-          if (ok) step(); else stop();
+          if (ok) { fails = 0; step(); return; }
+          // A voice hiccup (network, engine busy): this piece once more, then
+          // skip it; only several failures in a row stop the reading.
+          if (++fails >= 4) { stop(); if (options.notice) options.notice('Reading stopped: the voice is not responding.'); return; }
+          if (!next.retried) { next.retried = true; queue.unshift(next); }
+          setTimeout(step, 400);
         });
       };
       step();
