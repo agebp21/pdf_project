@@ -756,3 +756,7 @@ Server `GET /api/journals?q=&page=&oa=&from=&to=&lang=&id=&sort=` -> `journal_se
 ### 1 Oktober 2026 - Cari Jurnal: kata persis (tanpa stemming) + penulis tanpa duplikat
 
 Uji "immersive" (owner): pencarian ber-stemming juga menemukan "immersed/immersion" (fisika, kimia, "water immersion"). Sekarang filter `title_and_abstract.search.exact` (nama OpenAlex untuk tanpa stemming; `.no_stem` ditolak 400). Hasil: internasional 38.977 artikel OA (VR imersif di pendidikan, metaverse, presence — Computers & Education, IEEE Access, Nature Rev. Neurosci.), penulis Indonesia 2.160 (AR/VR pendidikan, teknologi imersif pariwisata, metaverse), 12-17 dari 20 teratas bisa jadi flipbook. Nama penulis yang diulang OpenAlex dibuang (`dict.fromkeys`).
+
+### 1 Oktober 2026 - Kartu "Journal Search" di beranda
+
+Owner: menu kartu jurnal belum ada (hanya chip nav, dan chip itu tersembunyi di HP). Ditambah tool `journal-search` di daftar `tools` index.html (🔎, badge New!, kategori Workflows + PDF Intelligence, href journals.html, feat) dan di baris pertama ikon hero (HORDE_ROWS), deskripsi Indonesia `tool.journal-search` di i18n.js. Dicek desktop 1280 & HP 390: kartu dan ikon hero tampil, terjemahan ID jalan.

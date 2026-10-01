@@ -208,6 +208,7 @@
       'status.failed': 'Gagal',
       'status.expired': 'Kedaluwarsa',
       'tool.pdf-to-flipbook': 'Buka PDF sebagai buku digital dan tambahkan statistik angka animasi di halaman mana pun.',
+      'tool.journal-search': 'Cari jurnal Indonesia & internasional (open access), lalu jadikan artikel flipbook dalam satu klik.',
       'tool.notebook': 'Ngobrol dengan PDF-mu seperti NotebookLM. Upload → ringkasan otomatis, tanya jawab, podcast & mindmap.',
       'tool.flipbook-animation': 'Coba grafik bergerak, statistik animasi, dan alur interaktif di dalam buku digital.',
       'tool.workflow': 'Buat alur kerja kustom dengan tool favoritmu, otomatiskan tugas, dan pakai ulang kapan saja.',
