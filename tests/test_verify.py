@@ -150,6 +150,23 @@ class VerifyTests(unittest.TestCase):
             self.assertEqual(Client(self.base).json('POST', '/api/auth/google', {'credential': 'x' * 40})[0], 503)
         self.assertEqual(Client(self.base).json('GET', '/api/auth/me')[1]['googleClientId'], 'client-123.apps.googleusercontent.com')
 
+    def test_google_cookie_does_not_sign_out(self):
+        """Google's button sets g_state={"i_l":0} on our site; the session must still be read."""
+        with self.google({'aud': 'client-123.apps.googleusercontent.com', 'iss': 'accounts.google.com', 'exp': str(int(time.time()) + 600),
+                          'email_verified': True, 'sub': 'g-9', 'email': 'rina@gmail.com', 'name': 'Rina'}):
+            client = Client(self.base)
+            client.json('POST', '/api/auth/google', {'credential': 'x' * 40})
+        session = next(c.value for c in client.jar if c.name == 'mf_session')
+        for header in (f'g_state={{"i_l":0,"i_ll":1790849000000}}; mf_session={session}',
+                       f'mf_session={session}; g_state={{"i_l":0}}; other="a b"'):
+            request = urllib.request.Request(self.base + '/api/auth/me', headers={'Cookie': header})
+            with urllib.request.urlopen(request) as response:
+                self.assertEqual(json.loads(response.read())['user']['email'], 'rina@gmail.com', header)
+        for header in ('mf_session=short', 'mf_session=' + 'a' * 40 + '<', 'g_state={"i_l":0}'):
+            request = urllib.request.Request(self.base + '/api/auth/me', headers={'Cookie': header})
+            with urllib.request.urlopen(request) as response:
+                self.assertIsNone(json.loads(response.read())['user'], header)
+
 
 if __name__ == '__main__':
     unittest.main()

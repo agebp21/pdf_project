@@ -67,7 +67,8 @@
       link.href = 'account.html';
       var name = document.createElement('span');
       name.className = 'mf-name';
-      name.textContent = data.user.name || data.user.email.split('@')[0];
+      name.textContent = (data.user.verified ? '✓ ' : '') + (data.user.name || data.user.email.split('@')[0]);
+      link.title = data.user.email + (data.user.verified ? ' · ' + T('auth.verified', 'verified') : '');
       var plan = document.createElement('span');
       plan.className = 'mf-plan' + (data.user.plan !== 'free' ? ' paid' : '');
       plan.textContent = data.user.planName;

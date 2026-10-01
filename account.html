@@ -23,6 +23,8 @@
   .profile{display:flex;flex-wrap:wrap;align-items:center;justify-content:space-between;gap:16px;padding:20px 22px}
   .who b{display:block;font-size:17px}
   .who span{font-size:13px}
+  .verified{display:inline-block;margin-left:8px;padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;background:#E6F4EA;color:#1E7A3C;white-space:nowrap}
+  .verified.no{background:#FFF7ED;color:#9A3412}
   .plan-now{display:flex;align-items:center;gap:10px;flex-wrap:wrap;font-size:13px}
   .chip{display:inline-block;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;padding:5px 11px;border-radius:999px;background:#E4F3C2;color:#1A3C34}
   .chip.paid{background:#1A3C34;color:#FFF7EA}
@@ -71,7 +73,7 @@
 
   <h1 class="clay-h" id="pageTitle" data-i18n="acct.title">Your account</h1>
   <div class="clay-panel profile" id="profile" hidden>
-    <div class="who"><b id="who"></b><span class="clay-muted" id="email"></span></div>
+    <div class="who"><b id="who"></b><span class="clay-muted" id="email"></span><span class="verified" id="verified" hidden></span></div>
     <div class="plan-now">
       <span class="clay-muted" data-i18n="acct.plan">Current plan</span> <span class="chip" id="planChip"></span>
       <span class="clay-muted" id="until"></span>
@@ -146,6 +148,10 @@
     $('profile').hidden=false;
     $('who').textContent=u.name||u.email.split('@')[0];
     $('email').textContent=u.email;
+    const id=lang()==='id-ID';
+    $('verified').hidden=false;
+    $('verified').className='verified'+(u.verified===false?' no':'');
+    $('verified').textContent=u.verified===false?(id?'Belum terverifikasi':'Not verified'):(id?'✓ Terverifikasi':'✓ Verified')+(u.google?' · Google':'');
     $('planChip').textContent=u.planName;
     $('planChip').className='chip'+(u.plan!=='free'?' paid':'');
     $('until').textContent=u.planExpiresAt?t('acct.until','Active until')+' '+date(u.planExpiresAt):'';

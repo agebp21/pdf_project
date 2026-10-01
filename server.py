@@ -27,7 +27,6 @@ import unicodedata
 import uuid
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
-from http.cookies import CookieError, SimpleCookie
 from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler, ThreadingHTTPServer
 import urllib.error
 import urllib.request
@@ -1472,11 +1471,14 @@ class Handler(SimpleHTTPRequestHandler):
 
     # ---- accounts helpers --------------------------------------------------
     def session_token(self):
-        try:
-            morsel = SimpleCookie(self.headers.get('Cookie', '')).get(SESSION_COOKIE)
-        except CookieError:
-            return None
-        return morsel.value if morsel else None
+        # Read our cookie by hand: SimpleCookie drops the WHOLE header when any
+        # other cookie isn't to its taste — e.g. Google sign-in's g_state={"i_l":0}
+        # — which silently logged everyone out after signing in with Google.
+        for part in self.headers.get('Cookie', '').split(';'):
+            name, _, value = part.strip().partition('=')
+            if name == SESSION_COOKIE and re.fullmatch(r'[A-Za-z0-9_-]{20,200}', value):
+                return value
+        return None
 
     def current_user(self):
         return get_accounts().user_for(self.session_token())
