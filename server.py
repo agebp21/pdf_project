@@ -56,7 +56,7 @@ BUILD_LOCK = threading.Lock()
 POSITIONS = {'top-left', 'top-right', 'bottom-left', 'bottom-right'}
 SESSION_COOKIE = 'mf_session'
 PAGES = {'index.html', 'converter.html', 'workflow.html', 'library.html', 'journals.html', 'flipbook.html', 'animation.html', 'notebook.html',
-         'login.html', 'account.html', 'coming-soon.html'}
+         'login.html', 'account.html', 'coming-soon.html', 'privacy.html', 'terms.html'}
 # Unreleased features: on a normal run (paywall on) these pages show the
 # coming-soon page; --no-paywall keeps them usable internally.
 SOON_PAGES = {'animation.html': 'Flipbook Animation'}
@@ -1329,6 +1329,30 @@ def office_to_pdf(source, filename):
         return result, output.name
 
 
+BUILD_KEEP_SECONDS = 7 * 24 * 3600
+
+
+def prune_builds(now=None):
+    """Delete finished build folders (uploaded book + APK/EXE) older than 7 days,
+    as the privacy policy says. Running builds are never touched."""
+    now = now or time.time()
+    removed = 0
+    for folder in BUILD.glob('*'):
+        if not (folder.is_dir() and re.fullmatch(r'[0-9a-f]{32}', folder.name)):
+            continue
+        if (JOBS.get(folder.name) or {}).get('status') in ('queued', 'running'):
+            continue
+        try:
+            old = now - folder.stat().st_mtime > BUILD_KEEP_SECONDS
+        except OSError:
+            continue
+        if old:
+            shutil.rmtree(folder, ignore_errors=True)
+            JOBS.pop(folder.name, None)
+            removed += 1
+    return removed
+
+
 def build_job(job_id, target):
     job, folder = JOBS[job_id], BUILD / job_id
     log = folder / 'build.log'
@@ -2132,6 +2156,7 @@ class Handler(SimpleHTTPRequestHandler):
             size = int(self.headers.get('Content-Length', '0'))
             if size <= 0:
                 raise ValueError('Paket buku kosong.')
+            prune_builds()
             job_id = uuid.uuid4().hex
             folder = BUILD / job_id
             folder.mkdir(parents=True)

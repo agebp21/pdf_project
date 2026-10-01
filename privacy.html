@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="assets/img/favicon.png?v=green">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=green">
+<title>Kebijakan Privasi — MyFlipbook</title>
+<meta name="description" content="Bagaimana MyFlipbook mengumpulkan, memakai, dan melindungi data Anda.">
+<script src="assets/i18n.js"></script>
+<link rel="stylesheet" href="assets/ui-clay.css">
+<link rel="stylesheet" href="assets/legal.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="assets/auth.js" defer></script>
+</head>
+<body>
+<div class="wrap">
+  <nav class="clay-nav">
+    <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=green" alt="MyFlipbook" width="128" height="34"></a>
+    <div class="nav-right"><span data-auth-slot></span><button type="button" class="lang" data-lang-toggle>ID</button></div>
+  </nav>
+
+  <!-- ============ BAHASA INDONESIA ============ -->
+  <article class="clay-panel legal" data-legal-lang="id">
+    <h1 class="clay-h">Kebijakan Privasi</h1>
+    <p class="updated">Terakhir diperbarui: 1 Oktober 2026</p>
+    <p class="lead">Kebijakan ini menjelaskan data apa yang dikumpulkan <b>MyFlipbook</b>, untuk apa, kepada siapa data itu dibagikan, dan hak Anda atas data tersebut.</p>
+
+    <nav class="toc" aria-label="Daftar isi">
+      <a href="#id-siapa">1. Siapa kami</a><a href="#id-data">2. Data yang kami kumpulkan</a><a href="#id-google">3. Data dari Google</a>
+      <a href="#id-cookie">4. Cookie & penyimpanan browser</a><a href="#id-guna">5. Untuk apa data dipakai</a><a href="#id-pihak">6. Pihak ketiga</a>
+      <a href="#id-simpan">7. Penyimpanan & keamanan</a><a href="#id-hak">8. Hak Anda</a><a href="#id-ubah">9. Perubahan</a><a href="#id-kontak">10. Kontak</a>
+    </nav>
+
+    <h2 id="id-siapa">1. Siapa kami</h2>
+    <p>MyFlipbook adalah layanan untuk mengubah PDF dan dokumen lain menjadi flipbook interaktif, beserta alat PDF, pencarian jurnal & ebook, dan fitur AI. MyFlipbook dikelola oleh <b>Sarvamaya</b>. Pertanyaan tentang privasi: <a href="mailto:sarvamayahybrid@gmail.com">sarvamayahybrid@gmail.com</a>.</p>
+
+    <h2 id="id-data">2. Data yang kami kumpulkan</h2>
+    <h3>Akun</h3>
+    <ul>
+      <li>Email, nama, status verifikasi email, paket langganan, dan tanggal pendaftaran.</li>
+      <li>Kata sandi <b>tidak pernah disimpan dalam bentuk asli</b>; yang disimpan hanya hash PBKDF2-SHA256 dengan salt.</li>
+      <li>Saat mendaftar dengan email, kami mengirim tautan verifikasi (berlaku 48 jam, sekali pakai).</li>
+    </ul>
+    <h3>File yang Anda olah</h3>
+    <ul>
+      <li><b>Sebagian besar alat PDF berjalan di browser Anda</b> (gabung, pisah, putar, kompres, OCR, PDF ke Word/PowerPoint/Excel, membuat flipbook). File tersebut tidak dikirim ke server kami.</li>
+      <li>Beberapa fitur memang membutuhkan server: konversi Word/Excel/PowerPoint ↔ PDF, mengambil dokumen dari tautan, dan membuat aplikasi Android (APK) / Windows (EXE). File sementara konversi <b>dihapus segera setelah selesai</b>; paket build dan hasilnya disimpan paling lama <b>7 hari</b> agar bisa diunduh, lalu dihapus otomatis.</li>
+      <li><b>Arsipku</b>: bila Anda masuk, proyek dan hasil ekspor flipbook disimpan di server dalam keadaan <b>terenkripsi</b>, sampai Anda menghapusnya atau akun Anda dihapus.</li>
+    </ul>
+    <h3>Fitur AI (Notebook PDF: ringkasan, terjemahan, podcast)</h3>
+    <ul>
+      <li>Saat Anda memakai fitur ini, <b>teks dokumen dikirim ke penyedia AI</b> (lihat bagian 6) untuk diproses dan hasilnya dikembalikan kepada Anda. Jangan memakai fitur AI untuk dokumen yang bersifat rahasia.</li>
+    </ul>
+    <h3>Pencarian jurnal & ebook</h3>
+    <ul><li>Kata kunci pencarian dikirim ke OpenAlex, OAPEN Library, dan Internet Archive untuk mencari hasil. Kami tidak mengaitkan pencarian dengan akun Anda.</li></ul>
+    <h3>Pembayaran</h3>
+    <ul><li>Pembayaran diproses oleh penyedia pembayaran. Kami menyimpan data pesanan (paket, jumlah, mata uang, status, nomor referensi, invoice), <b>bukan</b> nomor kartu atau data rekening Anda.</li></ul>
+    <h3>Data teknis</h3>
+    <ul><li>Alamat IP dan waktu permintaan, untuk keamanan (misalnya membatasi percobaan login berulang) dan untuk menjalankan layanan.</li></ul>
+
+    <h2 id="id-google">3. Data dari Google</h2>
+    <ul>
+      <li><b>Masuk dengan Google</b>: kami menerima email, nama, dan ID akun Google Anda dari Google. Kami tidak pernah menerima kata sandi Google Anda.</li>
+      <li><b>Google Drive</b> ("Add source → Google Drive"): MyFlipbook hanya meminta izin <code>drive.file</code>, artinya kami <b>hanya dapat mengakses file yang Anda pilih sendiri</b> di Google Picker, bukan isi Drive Anda yang lain. File itu diunduh langsung ke browser Anda untuk dijadikan flipbook. Token akses Google hanya disimpan sementara di memori browser Anda, tidak di server kami.</li>
+      <li>Penggunaan dan pemindahan informasi yang diterima dari Google API oleh MyFlipbook mematuhi <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, termasuk persyaratan <i>Limited Use</i>. Data Google tidak dipakai untuk iklan dan tidak dijual.</li>
+      <li>Anda dapat mencabut akses MyFlipbook kapan saja di <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">myaccount.google.com/permissions</a>.</li>
+    </ul>
+
+    <h2 id="id-cookie">4. Cookie & penyimpanan browser</h2>
+    <ul>
+      <li><code>mf_session</code>: menjaga Anda tetap masuk (HttpOnly, berlaku 30 hari, atau sampai Anda keluar).</li>
+      <li><code>g_state</code>: dipasang oleh tombol Masuk dengan Google.</li>
+      <li>Penyimpanan lokal browser untuk preferensi: bahasa, mata uang, warna stabilo, ukuran kartu catatan.</li>
+      <li>Catatan dan stabilo di dalam buku flipbook yang Anda baca disimpan di perangkat Anda sendiri.</li>
+    </ul>
+    <p>Kami tidak memakai cookie iklan atau pelacak pihak ketiga.</p>
+
+    <h2 id="id-guna">5. Untuk apa data dipakai</h2>
+    <ul>
+      <li>Menjalankan layanan: akun, Arsipku, konversi, build, fitur AI, pencarian.</li>
+      <li>Mengirim email penting (verifikasi email, informasi akun dan pembayaran).</li>
+      <li>Memproses langganan dan pembayaran.</li>
+      <li>Menjaga keamanan dan mencegah penyalahgunaan.</li>
+    </ul>
+    <p><b>Kami tidak menjual data pribadi Anda</b> dan tidak memakainya untuk iklan.</p>
+
+    <h2 id="id-pihak">6. Pihak ketiga</h2>
+    <table>
+      <thead><tr><th>Pihak</th><th>Untuk</th><th>Data yang dikirim</th></tr></thead>
+      <tbody>
+        <tr><td>Google (Sign-In, Picker, Drive API)</td><td>Masuk & memilih file Drive</td><td>Sesuai bagian 3</td></tr>
+        <tr><td>Google Gmail (SMTP)</td><td>Mengirim email verifikasi</td><td>Email & nama penerima, isi email</td></tr>
+        <tr><td>Sumopod (gateway AI) → Anthropic (Claude) / Google (Gemini)</td><td>Ringkasan, terjemahan, podcast</td><td>Teks dokumen yang Anda proses</td></tr>
+        <tr><td>OpenAlex, OAPEN Library, Internet Archive</td><td>Pencarian jurnal & ebook</td><td>Kata kunci pencarian</td></tr>
+        <tr><td>Penyedia pembayaran (Tripay / Midtrans untuk Rupiah, Lemon Squeezy untuk dolar AS)</td><td>Pembayaran langganan</td><td>Data pesanan; data pembayaran Anda masukkan langsung di halaman mereka</td></tr>
+      </tbody>
+    </table>
+    <p>Setiap pihak di atas memproses data sesuai kebijakan privasinya masing-masing.</p>
+
+    <h2 id="id-simpan">7. Penyimpanan & keamanan</h2>
+    <ul>
+      <li>Kata sandi di-hash, isi Arsipku dienkripsi di server, dan sesi login memakai cookie HttpOnly.</li>
+      <li>Data akun disimpan selama akun Anda aktif. File sementara dan build dihapus seperti dijelaskan di bagian 2.</li>
+      <li>Tidak ada sistem yang 100% aman, tetapi kami berupaya melindungi data Anda dengan langkah yang wajar.</li>
+    </ul>
+
+    <h2 id="id-hak">8. Hak Anda</h2>
+    <p>Sesuai Undang-Undang Pelindungan Data Pribadi (UU No. 27 Tahun 2022), Anda berhak meminta akses, perbaikan, atau penghapusan data pribadi Anda, serta menarik persetujuan. Untuk menghapus akun beserta isi Arsipku, kirim email dari alamat akun Anda ke <a href="mailto:sarvamayahybrid@gmail.com">sarvamayahybrid@gmail.com</a>. Catatan pembayaran dapat tetap kami simpan bila diwajibkan oleh peraturan perpajakan/keuangan.</p>
+    <p>MyFlipbook tidak ditujukan untuk anak di bawah 13 tahun tanpa pendampingan orang tua atau wali.</p>
+
+    <h2 id="id-ubah">9. Perubahan kebijakan</h2>
+    <p>Kebijakan ini dapat diperbarui. Tanggal "Terakhir diperbarui" di atas akan berubah, dan untuk perubahan penting kami akan memberi tahu melalui situs atau email.</p>
+
+    <h2 id="id-kontak">10. Kontak</h2>
+    <p>Sarvamaya — MyFlipbook · <a href="mailto:sarvamayahybrid@gmail.com">sarvamayahybrid@gmail.com</a> · Lihat juga <a href="terms.html">Syarat & Ketentuan</a>.</p>
+  </article>
+
+  <!-- ============ ENGLISH ============ -->
+  <article class="clay-panel legal" data-legal-lang="en" hidden>
+    <h1 class="clay-h">Privacy Policy</h1>
+    <p class="updated">Last updated: 1 October 2026</p>
+    <p class="lead">This policy explains what data <b>MyFlipbook</b> collects, why, who it is shared with, and your rights over it.</p>
+
+    <nav class="toc" aria-label="Contents">
+      <a href="#en-who">1. Who we are</a><a href="#en-data">2. Data we collect</a><a href="#en-google">3. Data from Google</a>
+      <a href="#en-cookies">4. Cookies & browser storage</a><a href="#en-use">5. How we use data</a><a href="#en-third">6. Third parties</a>
+      <a href="#en-keep">7. Storage & security</a><a href="#en-rights">8. Your rights</a><a href="#en-changes">9. Changes</a><a href="#en-contact">10. Contact</a>
+    </nav>
+
+    <h2 id="en-who">1. Who we are</h2>
+    <p>MyFlipbook turns PDFs and other documents into interactive flipbooks, with PDF tools, journal & ebook search, and AI features. MyFlipbook is run by <b>Sarvamaya</b>. Privacy questions: <a href="mailto:sarvamayahybrid@gmail.com">sarvamayahybrid@gmail.com</a>.</p>
+
+    <h2 id="en-data">2. Data we collect</h2>
+    <h3>Account</h3>
+    <ul>
+      <li>Email, name, email-verification status, plan, and sign-up date.</li>
+      <li>Passwords are <b>never stored as typed</b>; we keep only a salted PBKDF2-SHA256 hash.</li>
+      <li>When you sign up with email we send a verification link (valid 48 hours, single use).</li>
+    </ul>
+    <h3>Files you work on</h3>
+    <ul>
+      <li><b>Most PDF tools run in your browser</b> (merge, split, rotate, compress, OCR, PDF to Word/PowerPoint/Excel, making flipbooks). Those files are not sent to our server.</li>
+      <li>Some features need the server: Word/Excel/PowerPoint ↔ PDF conversion, fetching a document from a link, and building Android (APK) / Windows (EXE) apps. Temporary conversion files are <b>deleted as soon as the job finishes</b>; build packages and their results are kept for at most <b>7 days</b> so you can download them, then deleted automatically.</li>
+      <li><b>Arsipku</b> (your archive): when signed in, flipbook projects and exports are stored on our server <b>encrypted</b>, until you delete them or your account is deleted.</li>
+    </ul>
+    <h3>AI features (Notebook PDF: summary, translation, podcast)</h3>
+    <ul><li>When you use them, <b>the document's text is sent to an AI provider</b> (see section 6) to be processed, and the result is returned to you. Don't use AI features on confidential documents.</li></ul>
+    <h3>Journal & ebook search</h3>
+    <ul><li>Search keywords are sent to OpenAlex, OAPEN Library and Internet Archive to find results. We don't link searches to your account.</li></ul>
+    <h3>Payments</h3>
+    <ul><li>Payments are handled by payment providers. We keep order data (plan, amount, currency, status, reference, invoice), <b>not</b> your card or bank details.</li></ul>
+    <h3>Technical data</h3>
+    <ul><li>IP address and request time, for security (e.g. limiting repeated login attempts) and to run the service.</li></ul>
+
+    <h2 id="en-google">3. Data from Google</h2>
+    <ul>
+      <li><b>Sign in with Google</b>: Google gives us your email, name and Google account ID. We never receive your Google password.</li>
+      <li><b>Google Drive</b> ("Add source → Google Drive"): MyFlipbook only asks for the <code>drive.file</code> permission, so we can <b>only access files you pick yourself</b> in the Google Picker, nothing else in your Drive. The file is downloaded straight into your browser to make the flipbook. The Google access token stays briefly in your browser's memory, never on our server.</li>
+      <li>MyFlipbook's use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy" target="_blank" rel="noopener noreferrer">Google API Services User Data Policy</a>, including the Limited Use requirements. Google data is not used for advertising and is not sold.</li>
+      <li>You can remove MyFlipbook's access at any time at <a href="https://myaccount.google.com/permissions" target="_blank" rel="noopener noreferrer">myaccount.google.com/permissions</a>.</li>
+    </ul>
+
+    <h2 id="en-cookies">4. Cookies & browser storage</h2>
+    <ul>
+      <li><code>mf_session</code>: keeps you signed in (HttpOnly, 30 days, or until you log out).</li>
+      <li><code>g_state</code>: set by the Sign in with Google button.</li>
+      <li>Local browser storage for preferences: language, currency, highlighter colour, note card size.</li>
+      <li>Notes and highlights inside a flipbook you read are stored on your own device.</li>
+    </ul>
+    <p>We don't use advertising cookies or third-party trackers.</p>
+
+    <h2 id="en-use">5. How we use data</h2>
+    <ul>
+      <li>To run the service: accounts, Arsipku, conversions, builds, AI features, search.</li>
+      <li>To send essential email (email verification, account and payment information).</li>
+      <li>To process subscriptions and payments.</li>
+      <li>To keep the service secure and prevent abuse.</li>
+    </ul>
+    <p><b>We don't sell your personal data</b> and don't use it for advertising.</p>
+
+    <h2 id="en-third">6. Third parties</h2>
+    <table>
+      <thead><tr><th>Party</th><th>For</th><th>Data sent</th></tr></thead>
+      <tbody>
+        <tr><td>Google (Sign-In, Picker, Drive API)</td><td>Signing in & picking Drive files</td><td>As in section 3</td></tr>
+        <tr><td>Google Gmail (SMTP)</td><td>Sending verification email</td><td>Recipient email & name, message</td></tr>
+        <tr><td>Sumopod (AI gateway) → Anthropic (Claude) / Google (Gemini)</td><td>Summary, translation, podcast</td><td>The text of the document you process</td></tr>
+        <tr><td>OpenAlex, OAPEN Library, Internet Archive</td><td>Journal & ebook search</td><td>Search keywords</td></tr>
+        <tr><td>Payment providers (Tripay / Midtrans for rupiah, Lemon Squeezy for US dollars)</td><td>Subscription payments</td><td>Order data; you enter payment details on their pages</td></tr>
+      </tbody>
+    </table>
+    <p>Each party processes data under its own privacy policy.</p>
+
+    <h2 id="en-keep">7. Storage & security</h2>
+    <ul>
+      <li>Passwords are hashed, Arsipku content is encrypted on the server, and sessions use HttpOnly cookies.</li>
+      <li>Account data is kept while your account is active. Temporary files and builds are deleted as described in section 2.</li>
+      <li>No system is 100% secure, but we take reasonable steps to protect your data.</li>
+    </ul>
+
+    <h2 id="en-rights">8. Your rights</h2>
+    <p>Under Indonesia's Personal Data Protection Law (Law No. 27 of 2022) you may ask to access, correct or delete your personal data, and withdraw consent. To delete your account and your Arsipku content, email <a href="mailto:sarvamayahybrid@gmail.com">sarvamayahybrid@gmail.com</a> from your account's address. Payment records may be kept where tax or financial rules require it.</p>
+    <p>MyFlipbook is not meant for children under 13 without a parent or guardian.</p>
+
+    <h2 id="en-changes">9. Changes</h2>
+    <p>We may update this policy. The "Last updated" date above will change, and for important changes we'll tell you on the site or by email.</p>
+
+    <h2 id="en-contact">10. Contact</h2>
+    <p>Sarvamaya — MyFlipbook · <a href="mailto:sarvamayahybrid@gmail.com">sarvamayahybrid@gmail.com</a> · See also the <a href="terms.html">Terms of Service</a>.</p>
+  </article>
+  <p class="foot"><a href="index.html">← MyFlipbook</a> · <a href="terms.html">Syarat & Ketentuan / Terms</a></p>
+</div>
+<script src="assets/legal.js"></script>
+</body>
+</html>
