@@ -936,3 +936,8 @@ Owner: terjemahan seluruh buku pakai yang gratis; AI nanti untuk terjemahan yang
 - pdf-translate.js: judul rata tengah — garis yang berbagi pusat dengan selisih kiri > 0.4× ukuran font, atau pusatnya di tengah halaman (±4%), blok tengah boleh melebar simetris sampai 70% halaman ("Dari mereka, / para pembaca …" -> "From them, the readers..." satu baris di tengah).
 - Kinerja (CPU kantor): NTT 11 hal 6-8 dtk; novel Perahu Kertas 40 hal 41 dtk (±1 dtk/hal -> 600 hal ±10-11 menit), 0 kredit AI. Kualitas: lebih kaku dari AI tapi layak (contoh hal xi novel); kesalahan kecil kata tunggal ("Corporate" -> "Corporation").
 Tes: tests/test_editions.py (penjaga dengan mesin tiruan, mask hilang -> tanpa mask, route 200/400/503). 97 tes Python + JS lulus.
+
+### 2 Oktober 2026 - Edisi ID | EN: halaman berganti langsung, bisa dihentikan & dilanjutkan
+
+Owner: saat "🌐 44 / 600" buku belum berubah (halaman baru diganti setelah seluruh buku selesai). Sekarang: `PdfTranslate.book` punya `onPage(index, blob)`; editor mengganti gambar halaman itu seketika. Tombol saat berjalan: "🌐 n / N · Berhenti" (EN "· Stop"); klik = berhenti (`FlipbookEditions` opsi `cancel`). Berhenti/gagal: tampilan kembali ke asli, halaman yang sudah jadi disimpan (`bookChecked[lang]`, `bookVersions[lang]`, My Library ikut disimpan), klik berikutnya -> dialog "Lanjutkan terjemahan? x dari N halaman sudah selesai" dan hanya halaman sisa yang diproses. Edisi dianggap siap (`bookComplete`) hanya bila seluruh buku selesai (atau dimuat dari proyek). Membuka PDF lain menghentikan proses.
+E2E: Perahu Kertas 456 hal — 15 dtk: 10 halaman sudah berganti; Stop -> kembali asli; klik lagi -> "Lanjutkan…"; NTT sampai selesai.

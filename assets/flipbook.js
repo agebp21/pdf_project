@@ -15,7 +15,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?L('Exit full screen','Keluar fullscreen'):L('Full screen','Layar penuh')});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, editions = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, editions = null, bookChecked = {}, bookComplete = new Set(), stopTranslating = false, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.
   const zoomBox = document.createElement('div'); zoomBox.id = 'pdf-zoom';
@@ -137,6 +137,7 @@
         const kept = pictures[lang] || {};
         if (pages.every(page => kept[page])) bookVersions[lang] = Object.fromEntries(pages.map(page => [page, URL.createObjectURL(kept[page])]));
       });
+      bookComplete = new Set(Object.keys(bookVersions)); bookChecked = {}; stopTranslating = true;
       // Odd page counts get a blank back cover so the book can close.
       const sheets = FlipbookLayout.withBackCover(newElements, 'pdf-page');
       const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...sheets);
@@ -207,16 +208,20 @@
         preferred: () => FlipbookSpeech.lang(Object.values(bookText).slice(0, 6).map(lines => (lines || []).join(' ')).join(' ').slice(0, 8000)) === 'en-US' ? 'id-ID' : 'en-US'});
       book.on('flip', () => translateView.pageChanged());
       // 🌐 ID | EN: the whole book in another language, layout unchanged.
-      editions = FlipbookEditions.bind({button: $('#edition'), original: bookLang, ready: () => Object.keys(bookVersions),
+      editions = FlipbookEditions.bind({button: $('#edition'), original: bookLang, ready: () => [...bookComplete],
         offer: bookLang === 'en-US' ? ['id-ID'] : ['en-US'],
         apply: lang => pageElements.forEach((page, index) => {
           const image = page.querySelector('img');
           if (image) image.src = (lang !== bookLang && bookVersions[lang] && bookVersions[lang][index]) || imageUrls[index];
         }),
-        confirm: lang => MFDialog.confirm({title: L(`Translate the whole book into ${FlipbookEditions.NAMES[lang]}?`, `Terjemahkan seluruh buku ke ${FlipbookEditions.NAMES[lang] === 'English' ? 'bahasa Inggris' : FlipbookEditions.NAMES[lang] === 'Malay' ? 'bahasa Melayu' : 'bahasa Indonesia'}?`),
+        cancel: () => { stopTranslating = true; },
+        confirm: lang => (bookChecked[lang] && bookChecked[lang].size) ? MFDialog.confirm({
+          title: L(`Carry on translating into ${FlipbookEditions.NAMES[lang]}?`, `Lanjutkan terjemahan?`),
+          message: L(`${bookChecked[lang].size} of ${pageElements.length} pages are done; the rest follows.`, `${bookChecked[lang].size} dari ${pageElements.length} halaman sudah selesai; sisanya dilanjutkan.`),
+          ok: L('Carry on', 'Lanjutkan'), cancel: L('Cancel', 'Batal'), icon: '🌐'}) : MFDialog.confirm({title: L(`Translate the whole book into ${FlipbookEditions.NAMES[lang]}?`, `Terjemahkan seluruh buku ke ${FlipbookEditions.NAMES[lang] === 'English' ? 'bahasa Inggris' : FlipbookEditions.NAMES[lang] === 'Malay' ? 'bahasa Melayu' : 'bahasa Indonesia'}?`),
           message: L(`Every page keeps its look; only the text changes. ${pageElements.length} pages · a minute or a few · free machine translation (no AI credit). The translation is saved with the project and goes into exports.`,
             `Tampilan tiap halaman tetap; hanya teksnya yang berganti. ${pageElements.length} halaman · satu sampai beberapa menit · mesin penerjemah gratis (tanpa kredit AI). Terjemahan disimpan bersama proyek dan ikut diekspor.`),
-          ok: L('Translate', 'Terjemahkan'), cancel: L('Cancel', 'Batal'), icon: '🌐'}),
+          ok: L('Translate', 'Terjemahkan'), cancel: L('Cancel', 'Batal'), icon: '🌐'}) ,
         make: translateBook,
         onError: message => error(message)});
       summaryView?.close();
@@ -375,16 +380,46 @@
     return imageUrls.concat(FlipbookExport.versionImages(data).map(({lang, page}) => bookVersions[lang][page]));
   }
   // The whole book in another language, layout unchanged (assets/pdf-translate.js).
+  // Each page shows up as soon as it is done; a press on the button stops, and
+  // the next press carries on with the pages still to do.
   async function translateBook(lang, report) {
     if (!pdf) throw Error(L('Open a PDF first.', 'Buka PDF dulu.'));
-    const book = pdf, made = await PdfTranslate.book(book, {target: lang, translate: translateFree, maxPx: 1100,
-      onProgress: (stage, done, total) => report(`🌐 ${done} / ${total}`)});
-    if (book !== pdf) throw Error('cancelled');               // another PDF was opened meanwhile
-    const pages = {};
-    Object.keys(made).forEach(index => { pages[index] = URL.createObjectURL(made[index]); });
-    if (!Object.keys(pages).length) throw Error(L('This book has no text to translate (a scan? run OCR first).', 'Buku ini tidak punya teks untuk diterjemahkan (hasil scan? jalankan OCR dulu).'));
-    Object.values(bookVersions[lang] || {}).forEach(url => URL.revokeObjectURL(url));
-    bookVersions[lang] = pages;
+    const book = pdf, total = pageElements.length;
+    const checked = bookChecked[lang] || (bookChecked[lang] = new Set());
+    const pages = bookVersions[lang] || (bookVersions[lang] = {});
+    const todo = pageElements.map((_, index) => index).filter(index => !checked.has(index));
+    const before = total - todo.length;
+    stopTranslating = false;
+    const say = done => report(L(`🌐 ${Math.min(total, before + done)} / ${total} · Stop`, `🌐 ${Math.min(total, before + done)} / ${total} · Berhenti`));
+    const original = () => pageElements.forEach((page, index) => { const image = page.querySelector('img'); if (image) image.src = imageUrls[index]; });
+    say(0);
+    try {
+      await PdfTranslate.book(book, {target: lang, translate: translateFree, maxPx: 1100, pages: todo,
+        isCancelled: () => stopTranslating || book !== pdf,
+        onProgress: (stage, done) => say(done),
+        onPage: (index, blob) => {
+          if (book !== pdf) return;
+          if (pages[index]) URL.revokeObjectURL(pages[index]);
+          pages[index] = URL.createObjectURL(blob);
+          const image = pageElements[index] && pageElements[index].querySelector('img');
+          if (image) image.src = pages[index];                  // the page changes language right away
+        }});
+      todo.forEach(index => checked.add(index));                // pages without text count as done too
+    } catch (cause) {
+      if (book === pdf) {
+        Object.keys(pages).forEach(index => checked.add(Number(index)));
+        original();                                             // stopped / failed: back to the original until it's finished
+        if (!Object.keys(pages).length) delete bookVersions[lang];
+        else if (libraryId) archiveBook();
+      }
+      throw cause;
+    }
+    if (book !== pdf) throw Error('cancelled');
+    if (!Object.keys(pages).length) {
+      delete bookVersions[lang];
+      throw Error(L('This book has no text to translate (a scan? run OCR first).', 'Buku ini tidak punya teks untuk diterjemahkan (hasil scan? jalankan OCR dulu).'));
+    }
+    bookComplete.add(lang);
     if (libraryId) archiveBook();                              // keep My Library up to date
   }
   // Short AI summary of one highlighted passage (Summarize tool in the preview).

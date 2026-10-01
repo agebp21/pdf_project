@@ -2101,7 +2101,7 @@
   NAMES: {'id-ID': 'Indonesian', 'en-US': 'English', 'ms-MY': 'Malay'},
   /* options: {button, original (lang), ready() → [langs with pictures],
      offer: [langs that can still be made] (editor), apply(lang) swaps the pages,
-     make(lang, progress(text)) → Promise (editor: translate the book),
+     make(lang, progress(text)) → Promise (editor: translate the book), cancel() (a press while making),
      confirm(lang) → Promise<boolean> before making, onError(message)} */
   bind(options) {
     const self = this, button = options.button;
@@ -2131,7 +2131,7 @@
     }
     function show(lang) { current = lang; if (options.apply) options.apply(lang); paint(); }
     async function press() {
-      if (busy) return;
+      if (busy) { if (options.cancel) options.cancel(); return; }     // a press while making = stop
       const langs = list(), next = langs[(langs.indexOf(current) + 1) % langs.length];
       if (next === options.original || ready().indexOf(next) >= 0 || !options.make) { show(next); return; }
       if (options.confirm && !(await options.confirm(next))) return;

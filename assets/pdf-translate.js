@@ -8,7 +8,7 @@
  * (fewer AI calls, consistent terms), and each translation is drawn back into
  * its block — wrapped, growing into empty room, shrunk a little if needed.
  *
- *   PdfTranslate.book(pdf, {target, translate, maxPx, pages?, onProgress, isCancelled})
+ *   PdfTranslate.book(pdf, {target, translate, maxPx, pages?, onProgress, onPage, isCancelled})
  *     → Promise<{index: Blob (JPEG)}>   (pages without text are left out)
  *   translate(blocks {key: text}, target) → Promise<{key: translation}>
  */
@@ -177,6 +177,7 @@
       }
     };
     var progress = options.onProgress || function () {};
+    var onPage = options.onPage || function () {};          // (index, Blob) as soon as a page is drawn
     var cancelled = options.isCancelled || function () { return false; };
     var wanted = options.pages || Array.from({length: pdf.numPages}, function (_, i) { return i; });
     var done = {}, batch = [], chars = 0, count = 0;
@@ -194,7 +195,7 @@
         var items = page.list.map(function (b) { return {block: b, text: String(answer[b.key] || b.text).replace(/\s+/g, ' ').trim()}; });
         var image = await loadImage(page.layout.background.b64);
         var canvas = draw(page.layout, image, items);
-        done[page.index] = await toBlob(canvas);
+        done[page.index] = await toBlob(canvas); onPage(page.index, done[page.index]);
         canvas.width = canvas.height = 0;
         finished++;
         progress('draw', finished, total);
@@ -235,7 +236,7 @@
       var items = page.list.map(function (b) { return {block: b, text: String(answer[b.key] || b.text).replace(/\s+/g, ' ').trim()}; });
       var image = await loadImage(page.layout.background.b64);
       var canvas = draw(page.layout, image, items);
-      done[page.index] = await toBlob(canvas);
+      done[page.index] = await toBlob(canvas); onPage(page.index, done[page.index]);
       canvas.width = canvas.height = 0;
       finished++;
       progress('draw', finished, total);
