@@ -842,6 +842,11 @@
         if (!n || typeof n.text !== 'string' || !n.text.trim()) return null;
         const note = {text: n.text.slice(0, max), updated: Number(n.updated) || 0};
         if (typeof n.color === 'string' && /^#[0-9a-f]{6}$/i.test(n.color)) note.color = n.color;
+        // q: the highlighted text a summary note stands for (links it to its highlight).
+        if (typeof n.q === 'string' && n.q.trim()) {
+          note.q = n.q.slice(0, max);
+          if (note.text === this.SUMMARIZING) note.text = '\u201c' + note.q + '\u201d';   // closed mid-summary: back to the quote
+        }
         return note;
       };
       Object.keys(raw || {}).forEach(k => {
@@ -854,6 +859,8 @@
     } catch (e) { return {}; }
   },
   save(key, notes) { try { localStorage.setItem(key, JSON.stringify(notes)); return true; } catch (e) { return false; } },
+  // Shown while the AI summary of a highlight is on its way.
+  SUMMARIZING: '\u2728 Summarizing\u2026',
   /* options: {key, title, pages (elements), goPage(i), open (button),
      bookmark(index, on) → true when it changed the page's bookmark,
      blank: false → no ✎ / ＋ tab at all (notes come from highlights),
@@ -903,13 +910,15 @@
     }
     // Save one note (item -1 = a new note). Empty text removes it.
     // color: set a note's colour (a quote takes its highlight's); editing keeps it.
-    function store(index, item, text, color) {
+    function store(index, item, text, color, q) {
       const entry = notes[index] || {items: [], marked: false};
       const had = entry.items.length;
       if (text.trim()) {
         const note = {text: text.slice(0, self.MAX), updated: Date.now()};
-        const before = item >= 0 && item < entry.items.length ? entry.items[item].color : undefined;
+        const old = item >= 0 && item < entry.items.length ? entry.items[item] : null;
+        const before = old ? old.color : undefined;
         if (color || before) note.color = color || before;
+        if (q || (old && old.q)) note.q = (q || old.q).slice(0, self.MAX);   // editing keeps the link to the highlight
         if (item >= 0 && item < entry.items.length) entry.items[item] = note;
         else { entry.items.push(note); item = entry.items.length - 1; }
       } else if (item >= 0 && item < entry.items.length) entry.items.splice(item, 1);
@@ -1029,7 +1038,7 @@
       row.appendChild(button('Delete', 'book-note-delete', () => {
         // Saved text of this note (autosave may have given a new one a number).
         const page = editing.page, item = editing.item;
-        const had = item >= 0 && notes[page] && notes[page].items[item] ? notes[page].items[item].text : '';
+        const had = item >= 0 && notes[page] && notes[page].items[item] ? notes[page].items[item] : null;
         area.value = ''; closeEditor();
         removed(page, had);
       }));
@@ -1093,16 +1102,18 @@
     // onclick: the preview rebinds this button for every PDF it opens.
     if (options.open) options.open.onclick = () => { if (list) closeList(); else openList(); };
     refresh();
-    // The reader deleted a note: a quote (“…” at its start) takes its highlight along.
-    function removed(index, text) {
-      const m = /^\u201c([^\u201d]*)\u201d/.exec(text || '');
-      if (m && options.onRemove) options.onRemove(index, m[1]);
+    // The reader deleted a note: a quote (“…” at its start) or a summary
+    // (its hidden quote) takes its highlight along.
+    function removed(index, note) {
+      if (!note || !options.onRemove) return;
+      const m = /^\u201c([^\u201d]*)\u201d/.exec(note.text || '');
+      if (note.q || m) options.onRemove(index, note.q || m[1]);
     }
     function remove(index, item) {
       const note = notes[index] && notes[index].items[item];
       if (!note) return;
       store(index, item, '');
-      removed(index, note.text);
+      removed(index, note);
     }
     // Highlighted text becomes a quoted note on its page ("…"). A longer
     // highlight over an earlier quote replaces that quote; text already in a
@@ -1120,7 +1131,7 @@
       if (!said) return -1;
       const items = notes[index] ? notes[index].items : [];
       // Already noted (re-highlighting in another colour recolours the quote).
-      if (items.some(note => note.text.indexOf(said) >= 0)) { if (color) tint(index, said, color); return -1; }
+      if (items.some(note => note.q === said || note.text.indexOf(said) >= 0)) { if (color) tint(index, said, color); return -1; }
       const older = [];
       items.forEach((note, i) => { const m = QUOTE.exec(note.text); if (m && said.indexOf(m[1]) >= 0) older.push(i); });
       let item;
@@ -1134,24 +1145,51 @@
       flash(index, item);
       return item;
     }
-    // Erasing a highlight removes its quote, unless the reader has written in it.
+    // Erasing a highlight removes its quote or summary note, unless the reader
+    // has written in a quote.
     function unquote(index, said) {
       said = FlipbookHighlights.tidy(said);
       const items = notes[index] ? notes[index].items : [];
-      const i = items.findIndex(note => note.text === '\u201c' + said + '\u201d');
+      const i = items.findIndex(note => note.q === said || note.text === '\u201c' + said + '\u201d');
       if (said && i >= 0) store(index, i, '');
     }
-    // A highlight changed colour: its quote note follows.
+    // A highlight changed colour: its quote / summary note follows.
     function tint(index, said, color) {
       said = FlipbookHighlights.tidy(said);
       const items = notes[index] ? notes[index].items : [];
-      const i = items.findIndex(note => note.text.indexOf('\u201c' + said + '\u201d') === 0);
+      const i = items.findIndex(note => note.q === said || note.text.indexOf('\u201c' + said + '\u201d') === 0);
       if (!said || i < 0 || items[i].color === color) return;
       items[i].color = color;
       saved = self.save(options.key, notes);
       refresh();
     }
-    return {refresh, text, quote, unquote, tint, editing: () => !!editing, close() { closeEditor(); closeReader(); closeList(); }, notes: () => JSON.parse(JSON.stringify(notes))};
+    // Highlight in summary mode: a note that shows "Summarizing…" at once and
+    // then the AI summary of the highlighted text (fn(text) → Promise<summary>).
+    // It stays linked to its highlight. If the summary fails the note becomes
+    // the plain quote, and the returned promise rejects with the reason.
+    function summary(index, said, color, fn) {
+      said = FlipbookHighlights.tidy(said);
+      if (!said) return Promise.resolve(-1);
+      let items = notes[index] ? notes[index].items : [];
+      if (items.some(note => note.q === said)) { if (color) tint(index, said, color); return Promise.resolve(-1); }
+      let item = items.findIndex(note => note.text === '\u201c' + said + '\u201d');
+      if (item < 0 && items.length >= self.PER_PAGE) return Promise.resolve(-1);
+      item = store(index, item, self.SUMMARIZING, color, said);
+      flash(index, item);
+      const settle = text => {
+        items = notes[index] ? notes[index].items : [];
+        const i = items.findIndex(note => note.q === said && note.text === self.SUMMARIZING);
+        if (i >= 0) store(index, i, text);       // gone or edited meanwhile: leave it
+        return i;
+      };
+      return Promise.resolve().then(() => fn(said)).then(text => {
+        // "- " list lines become "\u2022 " like quoted lists; a list gets its own heading line.
+        text = FlipbookHighlights.tidy(String(text || '').replace(/^\s*[-*]\s+/gm, '\u2022 '));
+        if (!text) throw new Error('No summary came back.');
+        return settle((/^\u2022 /.test(text) ? '\u2728 Summary\n' : '\u2728 ') + text);
+      }, cause => { settle('\u201c' + said + '\u201d'); throw cause; });
+    }
+    return {refresh, text, quote, unquote, tint, summary, editing: () => !!editing, close() { closeEditor(); closeReader(); closeList(); }, notes: () => JSON.parse(JSON.stringify(notes))};
   },
 };
 
@@ -1165,7 +1203,9 @@
   ICONS: {
     // Highlighter pen.
     brush: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><g transform="rotate(45 12 12)"><path d="M10 1.5h4a1.5 1.5 0 0 1 1.5 1.5v11h-7V3A1.5 1.5 0 0 1 10 1.5z"/><path d="M8.5 14h7l-1.2 3h-4.6z" fill="currentColor"/><path d="M10.2 17h3.6l-.9 4.4-2.7-1.2z"/></g></svg>',
-    eraser: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H8a2 2 0 0 1-1.4-.6l-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l6 6a2 2 0 0 1 0 2.8L12.8 21"/><path d="m5.1 11.1 8.8 8.8"/></svg>'
+    eraser: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H8a2 2 0 0 1-1.4-.6l-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l6 6a2 2 0 0 1 0 2.8L12.8 21"/><path d="m5.1 11.1 8.8 8.8"/></svg>',
+    // Sparkles: highlights become a short AI summary note.
+    summary: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/><path d="M5 3.5l.6 1.4L7 5.5l-1.4.6L5 7.5l-.6-1.4L3 5.5l1.4-.6z"/></svg>'
   },
   // Mouse cursor while highlighting: a small highlighter pen (tip in the chosen
   // colour) or the eraser, white-outlined so it shows on any page.
@@ -1319,10 +1359,13 @@
     } catch (e) { return {}; }
   },
   save(key, store) { try { localStorage.setItem(key, JSON.stringify(store)); return true; } catch (e) { return false; } },
-  /* options: {key, pages (elements), words ({page: lines}), button} */
+  /* options: {key, pages (elements), words ({page: lines}), button,
+     onQuote/onUnquote/onRecolor (notes), summarize: true + onSummary(index,
+     said, color) → Promise (Summarize tool; only where a server can make
+     summaries)} */
   bind(options) {
     const self = this, pages = options.pages, words = options.words || {};
-    let store = self.load(options.key), mode = false, selected = null, drag = null, erasing = false;
+    let store = self.load(options.key), mode = false, selected = null, drag = null, erasing = false, summarizing = false, notice = '', noticeTimer = 0;
     let color = 'y';
     try { const saved = localStorage.getItem('mf-highlight-color'); if (self.COLORS[saved]) color = saved; } catch (e) {}
     const lineCache = {};
@@ -1369,9 +1412,19 @@
     // Highlighter pen: back to highlighting (the colour dots pick its colour).
     const brush = document.createElement('button'); brush.type = 'button'; brush.className = 'book-hl-brush';
     brush.innerHTML = self.ICONS.brush; brush.title = 'Highlighter: drag over text'; brush.setAttribute('aria-label', 'Highlighter');
-    brush.onclick = () => { erasing = false; paintBar(); };
+    brush.onclick = () => { erasing = false; summarizing = false; paintBar(); };
     const tools = document.createElement('div'); tools.className = 'book-hl-tools';
     tools.appendChild(brush); tools.appendChild(eraser);
+    // Summarize: new highlights become a short AI summary note instead of the quote.
+    const summarize = document.createElement('button'); summarize.type = 'button'; summarize.className = 'book-hl-summary';
+    summarize.innerHTML = self.ICONS.summary; summarize.title = 'Summarize: highlighted text becomes a short summary note';
+    summarize.setAttribute('aria-label', 'Summarize highlights');
+    summarize.onclick = () => {
+      summarizing = !summarizing; erasing = false;
+      if (selected) { const page = selected.page; selected = null; render(page); }
+      paintBar();
+    };
+    if (options.summarize && options.onSummary) tools.appendChild(summarize);
     bar.insertBefore(tools, bar.firstChild);
     const done = document.createElement('button'); done.type = 'button'; done.className = 'book-hl-done'; done.textContent = 'Done';
     done.onclick = () => setMode(false);
@@ -1394,12 +1447,14 @@
     function paintBar() {
       Object.keys(swatches).forEach(c => swatches[c].setAttribute('aria-pressed', String(!erasing && (selected ? store[selected.page][selected.index].c === c : c === color))));
       eraser.setAttribute('aria-pressed', String(erasing));
-      brush.setAttribute('aria-pressed', String(!erasing));
+      brush.setAttribute('aria-pressed', String(!erasing && !summarizing));
+      summarize.setAttribute('aria-pressed', String(summarizing && !erasing));
       brush.style.setProperty('--hl-color', self.COLORS[selected ? store[selected.page][selected.index].c : color]);
       document.body.style.setProperty('--hl-cursor', self.cursor(erasing ? 'eraser' : 'brush', self.COLORS[color]));
       document.body.classList.toggle('is-erasing', mode && erasing);
       remove.hidden = !selected;
-      hint.textContent = erasing ? 'Drag over highlights to erase them' : selected ? 'Pick a colour or delete' : 'Drag over text to highlight';
+      hint.textContent = notice || (erasing ? 'Drag over highlights to erase them' : selected ? 'Pick a colour or delete'
+        : summarizing ? 'Drag over text: its note becomes a short summary' : 'Drag over text to highlight');
       bar.title = hint.textContent;
       placeBar();
     }
@@ -1473,9 +1528,16 @@
           const previous = selected; selected = null;
           if (previous) render(previous.page);
           persist(index);
-          // The highlighted text goes straight into a note on the page edge.
+          // The highlighted text goes straight into a note on the page edge
+          // (in summary mode: a short AI summary of it).
           const made = store[index][store[index].length - 1];
-          if (options.onQuote) options.onQuote(index, said(index, made), self.COLORS[made.c]);
+          if (summarizing && options.summarize && options.onSummary) {
+            Promise.resolve(options.onSummary(index, said(index, made), self.COLORS[made.c])).catch(cause => {
+              notice = 'Summary failed: ' + ((cause && cause.message) || 'try again') + ' (kept the quote)';
+              clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice = ''; paintBar(); }, 6000);
+              paintBar();
+            });
+          } else if (options.onQuote) options.onQuote(index, said(index, made), self.COLORS[made.c]);
         }
       }
       drag = null; paintBar();
@@ -1510,7 +1572,7 @@
       else {
         document.removeEventListener('keydown', escape);
         if (selected) { const page = selected.page; selected = null; render(page); }
-        erasing = false;
+        erasing = false; summarizing = false;
       }
       paintBar();
     }

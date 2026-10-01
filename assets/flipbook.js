@@ -181,7 +181,9 @@
       highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(name, newElements.length, ratio),
         pages: newElements, words: bookWords, text: bookText, button: $('#highlight'),
         onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
-        onRecolor: (index, said, color) => notes.tint(index, said, color)});
+        onRecolor: (index, said, color) => notes.tint(index, said, color),
+        // ✨ Summarize: the server's AI turns a highlight into a short note.
+        summarize: true, onSummary: (index, said, color) => notes.summary(index, said, color, highlightSummary)});
       podcastView?.close();
       // Podcast / translation / summary are made in Notebook PDF now; a project
       // that already carries them still plays them in the preview.
@@ -314,6 +316,16 @@
       pendingTitle = file.name.replace(/\.[^.]+$/, '').slice(0, 200);
       await openSources([file]);
     } catch (cause) { addStatus(cause.message, true); }
+  }
+  // Short AI summary of one highlighted passage (Summarize tool in the preview).
+  async function highlightSummary(text) {
+    const caps = await serverCaps();
+    const response = await fetch('/api/highlight-summary', {method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Build-Token': caps.token || ''}, body: JSON.stringify({text})});
+    let data = {};
+    try { data = await response.json(); } catch (e) {}
+    if (!response.ok) throw Error(data.error || 'The summary could not be made.');
+    return data.summary;
   }
   async function serverCaps() {
     let caps = null;

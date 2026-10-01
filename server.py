@@ -297,6 +297,29 @@ def summarize_book(title, text, lang='id-ID'):
     raise RuntimeError('AI tidak menghasilkan ringkasan. Coba lagi.')
 
 
+HIGHLIGHT_MAX_CHARS = 6000
+
+
+def summarize_highlight(text):
+    """A short, faithful summary of one highlighted passage (for its note on
+    the page edge), in the passage's own language."""
+    lines = [' '.join(line.split()) for line in str(text or '').splitlines()]
+    text = '\n'.join(line for line in lines if line)
+    if len(text) < 2:
+        raise ValueError('Teks yang distabilo kosong.')
+    model = os.environ.get('SUMMARY_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
+    system = ('Ringkas teks yang distabilo pembaca menjadi catatan singkat untuk tepi halaman, dalam BAHASA YANG SAMA dengan teksnya. '
+              'Setia pada isi: jangan menambah fakta, angka, atau pendapat. Maksimal 2 kalimat pendek, atau 2-4 butir diawali "- " '
+              'bila teksnya berupa daftar. Tanpa pembuka (jangan tulis "Ringkasan:"), tanpa markdown (tanpa **, #). '
+              'Bila teksnya sudah sangat pendek, tulis ulang intinya saja.')
+    # Thinking models (Gemini) spend most of max_tokens reasoning before they answer.
+    reply = ai_chat(system, text[:HIGHLIGHT_MAX_CHARS], model, max_tokens=2000, temperature=0.2)
+    reply = re.sub(r'^\s*(ringkasan|summary|intisari)\s*:\s*', '', reply.replace('**', '').replace('##', ''), flags=re.I).strip()
+    if not reply:
+        raise RuntimeError('AI tidak menghasilkan ringkasan. Coba lagi.')
+    return reply[:800]
+
+
 def ai_chat(system, user, model, max_tokens=8000, temperature=0.3):
     """One chat completion through Sumopod; returns the reply text."""
     key = os.environ.get('SUMOPOD_API_KEY', '').strip()
@@ -1806,6 +1829,25 @@ class Handler(SimpleHTTPRequestHandler):
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
 
+    def highlight_summary_route(self):
+        """POST {text} (one highlighted passage) -> {summary}."""
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 64 * 1024:
+                raise ValueError('Teks kosong atau terlalu panjang.')
+            data = json.loads(self.rfile.read(size).decode('utf-8'))
+            text = data.get('text') if isinstance(data, dict) else None
+            if not isinstance(text, str):
+                raise ValueError('Teks yang distabilo kosong.')
+            summary = summarize_highlight(text)
+        except (ValueError, UnicodeDecodeError) as cause:
+            self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
+            return
+        except RuntimeError as cause:
+            self.send_json(502, {'error': str(cause)})
+            return
+        self.send_json(200, {'summary': summary})
+
     def translate_route(self):
         """POST {pages: {page: text}, target, title} -> {pages: {page: translation}}."""
         try:
@@ -2116,7 +2158,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(cause.status, {'error': str(cause)})
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
-        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'export' if self.path in ('/api/podcast/script', '/api/translate', '/api/summary') else match[1] if match else None
+        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'export' if self.path in ('/api/podcast/script', '/api/translate', '/api/summary', '/api/highlight-summary') else match[1] if match else None
         denied = feature and self.entitlement_error(feature)
         if denied:
             self.send_json(denied[0], {'error': denied[1]})
@@ -2138,6 +2180,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == '/api/summary':
             self.summary_route()
+            return
+        if self.path == '/api/highlight-summary':
+            self.highlight_summary_route()
             return
         if self.path in OFFICE_ROUTES:
             self.convert_office()
