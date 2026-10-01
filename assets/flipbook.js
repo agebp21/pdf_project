@@ -15,7 +15,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?L('Exit full screen','Keluar fullscreen'):L('Full screen','Layar penuh')});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, editions = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.
   const zoomBox = document.createElement('div'); zoomBox.id = 'pdf-zoom';
@@ -29,7 +29,7 @@
     $('#export-exe').disabled = !buildConfig?.exe;
     $('#project-file').disabled = opening || exporting;
   }
-  const model = () => ({version:1,title:$('#export-title').value.trim()||L('Interactive book','Buku interaktif'),pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{}),...(Object.keys(bookTranslations).length?{translations:bookTranslations}:{}),...(bookSummary?{summary:bookSummary}:{})});
+  const model = () => ({version:1,title:$('#export-title').value.trim()||L('Interactive book','Buku interaktif'),pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{}),...(Object.keys(bookTranslations).length?{translations:bookTranslations}:{}),...(bookSummary?{summary:bookSummary}:{}),...(bookLang?{lang:bookLang}:{}),...(Object.keys(bookVersions).length?{versions:Object.fromEntries(Object.entries(bookVersions).map(([lang,pages])=>[lang,Object.keys(pages).map(Number).sort((a,b)=>a-b)]))}:{})});
   const error = message => { $('#reader-error').textContent = message; $('#reader-error').hidden = !message; };
   // Sheets on screen (may include the blank back cover of an odd page count).
   function sheetsOnScreen() {
@@ -79,7 +79,7 @@
     const label = document.createElement('span'); label.textContent = config.label;
     element.append(number, label); pageElements[index].append(element);
   }
-  async function openPdf(blob, name, project = null) {
+  async function openPdf(blob, name, project = null, pictures = {}) {
     if (opening || exporting) return false;
     opening = true; $('#pdf-file').disabled = true; $('#add-file').disabled = true; $('#overlay-fields').disabled = true;
     $('#home').disabled = $('#prev').disabled = $('#next').disabled = $('#replay').disabled = true;
@@ -129,6 +129,14 @@
       if (pdf) await pdf.destroy();
       imageUrls.forEach(url => URL.revokeObjectURL(url));
       imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links; bookWords = words; bookText = text; bookPodcast = (project && project.podcast) || null; bookTranslations = (project && project.translations) || {}; bookSummary = (project && project.summary) || null;
+      // Translated editions ("ID | EN"): the book's language and the pictures kept in the project.
+      Object.values(bookVersions).forEach(pages => Object.values(pages).forEach(url => URL.revokeObjectURL(url)));
+      bookVersions = {};
+      bookLang = (project && project.lang) || FlipbookSpeech.lang(Object.values(text).slice(0, 8).map(lines => (lines || []).join(' ')).join(' ').slice(0, 12000));
+      Object.entries((project && project.versions) || {}).forEach(([lang, pages]) => {
+        const kept = pictures[lang] || {};
+        if (pages.every(page => kept[page])) bookVersions[lang] = Object.fromEntries(pages.map(page => [page, URL.createObjectURL(kept[page])]));
+      });
       // Odd page counts get a blank back cover so the book can close.
       const sheets = FlipbookLayout.withBackCover(newElements, 'pdf-page');
       const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...sheets);
@@ -198,6 +206,19 @@
         save: (lang, pages) => { bookTranslations[lang] = Object.assign(bookTranslations[lang] || {}, pages); },
         preferred: () => FlipbookSpeech.lang(Object.values(bookText).slice(0, 6).map(lines => (lines || []).join(' ')).join(' ').slice(0, 8000)) === 'en-US' ? 'id-ID' : 'en-US'});
       book.on('flip', () => translateView.pageChanged());
+      // 🌐 ID | EN: the whole book in another language, layout unchanged.
+      editions = FlipbookEditions.bind({button: $('#edition'), original: bookLang, ready: () => Object.keys(bookVersions),
+        offer: bookLang === 'en-US' ? ['id-ID'] : ['en-US'],
+        apply: lang => pageElements.forEach((page, index) => {
+          const image = page.querySelector('img');
+          if (image) image.src = (lang !== bookLang && bookVersions[lang] && bookVersions[lang][index]) || imageUrls[index];
+        }),
+        confirm: lang => MFDialog.confirm({title: L(`Translate the whole book into ${FlipbookEditions.NAMES[lang]}?`, `Terjemahkan seluruh buku ke ${FlipbookEditions.NAMES[lang] === 'English' ? 'bahasa Inggris' : FlipbookEditions.NAMES[lang] === 'Malay' ? 'bahasa Melayu' : 'bahasa Indonesia'}?`),
+          message: L(`Every page keeps its look; only the text changes. ${pageElements.length} pages · about ${Math.max(1, Math.round(pageElements.length * 4 / 60))} min · uses AI (Pro plan). The translation is saved with the project and goes into exports.`,
+            `Tampilan tiap halaman tetap; hanya teksnya yang berganti. ${pageElements.length} halaman · sekitar ${Math.max(1, Math.round(pageElements.length * 4 / 60))} menit · memakai AI (paket Pro). Terjemahan disimpan bersama proyek dan ikut diekspor.`),
+          ok: L('Translate', 'Terjemahkan'), cancel: L('Cancel', 'Batal'), icon: '🌐'}),
+        make: translateBook,
+        onError: message => error(message)});
       summaryView?.close();
       summaryView = FlipbookSummary.bind({summary: () => bookSummary, button: $('#summary')});
       speech?.close();
@@ -259,7 +280,7 @@
     if (!sourcePdf || !(await archiveMember())) { if (archiveUser === null) archiveNote(L('Log in to save to My Library automatically.', 'Masuk untuk menyimpan otomatis ke My Library.')); return null; }
     try {
       archiveNote(L('☁ Saving to My Library…', '☁ Menyimpan ke My Library…'));
-      const project = await FlipbookExport.saveProject(model(), sourcePdf);
+      const project = await FlipbookExport.saveProject(model(), sourcePdf, () => {}, bookVersions);
       const headers = {'Content-Type':'application/zip'};
       if (libraryId) headers['X-Book-Id'] = libraryId;
       const response = await fetch('/api/library/save', {method:'POST', credentials:'same-origin', headers, body: project});
@@ -346,6 +367,23 @@
     try { data = await response.json(); } catch (e) {}
     if (!response.ok) throw Error(data.error || L('The translation could not be made.', 'Terjemahan tidak bisa dibuat.'));
     return data.pages || {};
+  }
+  // Original pages, then each translated edition's pictures (see FlipbookExport.versionImages).
+  function allPictures(data) {
+    return imageUrls.concat(FlipbookExport.versionImages(data).map(({lang, page}) => bookVersions[lang][page]));
+  }
+  // The whole book in another language, layout unchanged (assets/pdf-translate.js).
+  async function translateBook(lang, report) {
+    if (!pdf) throw Error(L('Open a PDF first.', 'Buka PDF dulu.'));
+    const book = pdf, made = await PdfTranslate.book(book, {target: lang, translate: translatePages, maxPx: 1100,
+      onProgress: (stage, done, total) => report(`🌐 ${done} / ${total}`)});
+    if (book !== pdf) throw Error('cancelled');               // another PDF was opened meanwhile
+    const pages = {};
+    Object.keys(made).forEach(index => { pages[index] = URL.createObjectURL(made[index]); });
+    if (!Object.keys(pages).length) throw Error(L('This book has no text to translate (a scan? run OCR first).', 'Buku ini tidak punya teks untuk diterjemahkan (hasil scan? jalankan OCR dulu).'));
+    Object.values(bookVersions[lang] || {}).forEach(url => URL.revokeObjectURL(url));
+    bookVersions[lang] = pages;
+    if (libraryId) archiveBook();                              // keep My Library up to date
   }
   // Short AI summary of one highlighted passage (Summarize tool in the preview).
   async function highlightSummary(text) {
@@ -517,7 +555,7 @@
     try {
       const project = await FlipbookExport.readProject(file);
       exporting = false;
-      await openPdf(project.pdf, project.data.title + '.pdf', project.data);
+      await openPdf(project.pdf, project.data.title + '.pdf', project.data, project.versions);
     } catch(cause) { error(L('The project could not be opened: ', 'Proyek gagal dibuka: ') + cause.message); }
     finally { exporting = false; exportState(); $('#pdf-file').disabled=false; $('#overlay-fields').disabled=!book; }
   });
@@ -573,7 +611,7 @@
       const saveHandle = await FlipbookExport.chooseSave(outputName);
       status(L('Preparing the export…', 'Menyiapkan ekspor…')); progress(0);
       if (target === 'project') {
-        const blob = await FlipbookExport.saveProject(data, sourcePdf, (message, fraction) => { status(message); step(0, .9)(fraction); });
+        const blob = await FlipbookExport.saveProject(data, sourcePdf, (message, fraction) => { status(message); step(0, .9)(fraction); }, bookVersions);
         status(L('Saving the project…', 'Menyimpan proyek…'));
         const saved = await FlipbookExport.saveBlob(blob, outputName, saveHandle); progress(1);
         status(saved?L('Project saved where you chose.','Proyek tersimpan di lokasi pilihanmu.'):L('Project sent to the browser downloads.','Proyek dikirim ke download browser.'));
@@ -583,7 +621,7 @@
       const native = target === 'apk' || target === 'exe';
       if (!native) {
         // One file named after the book: pages and data encrypted inside.
-        const single = await FlipbookExport.packageSingleHtml(data, imageUrls, (message, fraction) => { status(message); if (fraction !== undefined) step(0, .95)(fraction); });
+        const single = await FlipbookExport.packageSingleHtml(data, allPictures(data), (message, fraction) => { status(message); if (fraction !== undefined) step(0, .95)(fraction); });
         status(L('Saving the HTML…', 'Menyimpan HTML…'));
         const saved = await FlipbookExport.saveBlob(single, outputName, saveHandle); progress(1);
         archiveExport('html', single, outputName);
@@ -592,7 +630,7 @@
         return;
       }
       const pack = step(0, .12);
-      const bundle = await FlipbookExport.packageBook(data, imageUrls, (message, fraction) => { status(message); if (fraction !== undefined) pack(fraction); });
+      const bundle = await FlipbookExport.packageBook(data, allPictures(data), (message, fraction) => { status(message); if (fraction !== undefined) pack(fraction); });
       const capabilities=await fetch('/api/capabilities',{cache:'no-store'});
       if(!capabilities.ok)throw Error(L('The local build service is not available. Run python server.py.', 'Layanan build lokal tidak tersedia. Jalankan python server.py.'));
       buildConfig=await capabilities.json();
@@ -657,7 +695,7 @@
         if (!response.ok) throw Error(((await response.json().catch(() => ({}))).error) || L('The book could not be opened from My Library.', 'Buku tidak bisa dibuka dari My Library.'));
         const project = await FlipbookExport.readProject(await response.blob());
         openingLibraryId = fromLibrary;
-        await openPdf(project.pdf, project.data.title + '.pdf', project.data);
+        await openPdf(project.pdf, project.data.title + '.pdf', project.data, project.versions);
         history.replaceState(null, '', location.pathname);
       } catch (cause) { openingLibraryId = null; archiveNote(cause.message, true); error(cause.message); }
     })();

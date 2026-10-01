@@ -167,7 +167,36 @@ def validate_manifest(data):
                 text=validate_text(data.get('text', {}), words),
                 **({'podcast': podcast} if (podcast := validate_podcast(data.get('podcast'))) else {}),
                 **({'translations': tr} if (tr := validate_translations(data.get('translations'), count)) else {}),
-                **({'summary': sm} if (sm := validate_summary(data.get('summary'))) else {}))
+                **({'summary': sm} if (sm := validate_summary(data.get('summary'))) else {}),
+                **({'lang': data['lang']} if data.get('lang') in BOOK_LANGS else {}),
+                **({'versions': vs} if data.get('lang') in BOOK_LANGS and (vs := validate_versions(data.get('versions'), count, data['lang'])) else {}))
+
+
+BOOK_LANGS = ('id-ID', 'en-US', 'ms-MY')
+
+
+def validate_versions(versions, count, lang):
+    """Translated editions ("ID | EN"): {lang: [page indices with a translated
+    picture]}. Their pictures follow the original pages in a package."""
+    if versions is None:
+        return None
+    if not isinstance(versions, dict):
+        raise ValueError('Data edisi terjemahan tidak valid.')
+    out = {}
+    for code, pages in versions.items():
+        if code not in BOOK_LANGS or code == lang or not isinstance(pages, list):
+            raise ValueError('Bahasa edisi terjemahan tidak valid.')
+        clean = sorted(set(pages))
+        if any(type(i) is not int or not 0 <= i < count for i in clean):
+            raise ValueError('Halaman edisi terjemahan tidak valid.')
+        if clean:
+            out[code] = clean
+    return out or None
+
+
+def version_images(data):
+    """[(lang, page)] in the order translated pictures follow the originals."""
+    return [(lang, page) for lang in sorted(data.get('versions') or {}) for page in data['versions'][lang]]
 
 
 def validate_words(words, count):
@@ -485,10 +514,11 @@ def unpack_book(archive, destination):
         if package.getinfo('book.json').file_size > 16 * 1024 * 1024:   # word positions can be large
             raise ValueError('Metadata buku terlalu besar.')
         data = validate_manifest(json.loads(package.read('book.json')))
-        if data['pageCount'] > len(names):
+        total = data['pageCount'] + len(version_images(data))    # originals, then translated editions
+        if total > len(names):
             raise ValueError('Gambar halaman tidak lengkap.')
         pages = []
-        for index in range(1, data['pageCount'] + 1):
+        for index in range(1, total + 1):
             page = package.read(f'pages/{index}.jpg')
             if not page.startswith(b'\xff\xd8\xff'):
                 raise ValueError(f'Gambar halaman {index} bukan JPEG.')

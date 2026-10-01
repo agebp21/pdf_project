@@ -2092,6 +2092,69 @@
 // Translation: the book's text translated with AI in the editor (stored as
 // translations {lang: {page: text}}), shown beside the book for the pages on
 // screen and following the page turns. ES2018.
+// Translated editions ("ID | EN"): the same book with every page's text in
+// another language, layout unchanged (pictures made by assets/pdf-translate.js).
+// The button shows the languages, the one on screen in bold; a press moves to
+// the next. ES2018 for old Android WebViews.
+(typeof self!=='undefined'?self:global).FlipbookEditions = {
+  CODES: {'id-ID': 'ID', 'en-US': 'EN', 'ms-MY': 'MS'},
+  NAMES: {'id-ID': 'Indonesian', 'en-US': 'English', 'ms-MY': 'Malay'},
+  /* options: {button, original (lang), ready() → [langs with pictures],
+     offer: [langs that can still be made] (editor), apply(lang) swaps the pages,
+     make(lang, progress(text)) → Promise (editor: translate the book),
+     confirm(lang) → Promise<boolean> before making, onError(message)} */
+  bind(options) {
+    const self = this, button = options.button;
+    let current = options.original, busy = false;
+    const ready = () => (options.ready ? options.ready() : []).filter(l => l !== options.original);
+    const list = () => {
+      const out = [options.original];
+      ready().concat(options.offer || []).forEach(l => { if (self.CODES[l] && out.indexOf(l) < 0) out.push(l); });
+      return out;
+    };
+    function paint(text) {
+      if (!button) return;
+      const langs = list();
+      button.hidden = !options.original || langs.length < 2;
+      while (button.firstChild) button.removeChild(button.firstChild);
+      if (text) { button.textContent = text; return; }
+      langs.forEach((l, i) => {
+        if (i) button.appendChild(document.createTextNode(' | '));
+        const code = document.createElement('span'); code.textContent = self.CODES[l];
+        if (l === current) code.className = 'is-current';
+        button.appendChild(code);
+      });
+      const next = langs[(langs.indexOf(current) + 1) % langs.length];
+      button.title = 'Book language: ' + self.NAMES[current] + ' · press for ' + self.NAMES[next];
+      button.setAttribute('aria-label', button.title);
+      button.classList.toggle('is-translated', current !== options.original);
+    }
+    function show(lang) { current = lang; if (options.apply) options.apply(lang); paint(); }
+    async function press() {
+      if (busy) return;
+      const langs = list(), next = langs[(langs.indexOf(current) + 1) % langs.length];
+      if (next === options.original || ready().indexOf(next) >= 0 || !options.make) { show(next); return; }
+      if (options.confirm && !(await options.confirm(next))) return;
+      busy = true;
+      try {
+        await options.make(next, text => paint(text));
+        show(next);
+      } catch (cause) {
+        paint();
+        if (cause && cause.message !== 'cancelled' && options.onError) options.onError(cause.message);
+      } finally { busy = false; paint(); }
+    }
+    if (button) button.onclick = press;
+    paint();
+    return {
+      current: () => current, busy: () => busy,
+      show, refresh() { paint(); },
+      // Back to the book's own language (a new PDF, a closed edition).
+      reset() { current = options.original; paint(); }
+    };
+  },
+};
+
 (typeof self!=='undefined'?self:global).FlipbookTranslate = {
   NAMES: {'id-ID': 'Bahasa Indonesia', 'en-US': 'English', 'ms-MY': 'Bahasa Melayu'},
   /* options: {translations (object, or a function returning it),

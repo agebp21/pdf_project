@@ -37,6 +37,9 @@ EXACT = {
     'Teks buku kosong atau terlalu besar.': 'The book text is empty or too large.',
     'Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR dulu.': 'This book has almost no text (a scan?). Run OCR first.',
     'Paket buku kosong.': 'The book package is empty.',
+    'Data edisi terjemahan tidak valid.': 'Invalid translated edition data.',
+    'Bahasa edisi terjemahan tidak valid.': 'Invalid translated edition language.',
+    'Halaman edisi terjemahan tidak valid.': 'Invalid translated edition page.',
     # --- AI
     'AI tidak menghasilkan ringkasan. Coba lagi.': 'The AI did not produce a summary. Try again.',
     'Teks yang distabilo kosong.': 'The highlighted text is empty.',

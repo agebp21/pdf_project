@@ -88,6 +88,30 @@
     }
     return Object.keys(out).length ? out : null;
   }
+  // Translated editions ("ID | EN"): the book's language and, per other
+  // language, the pages that have a translated picture. Those pictures follow
+  // the original pages in every package: originals 1…N, then each language
+  // (in name order) with its pages in order — see versionImages().
+  const LANGS = ['id-ID', 'en-US', 'ms-MY'];
+  function validLang(lang) { return LANGS.includes(lang) ? lang : null; }
+  function validVersions(versions, pageCount, lang) {
+    if (versions === undefined || versions === null) return null;
+    if (typeof versions !== 'object' || Array.isArray(versions)) throw Error('Data edisi terjemahan tidak valid.');
+    const out = {};
+    for (const [code, pages] of Object.entries(versions)) {
+      if (!LANGS.includes(code) || code === lang || !Array.isArray(pages)) throw Error('Bahasa edisi terjemahan tidak valid.');
+      const clean = [...new Set(pages)].sort((a, b) => a - b);
+      if (clean.some(i => !Number.isInteger(i) || i < 0 || i >= pageCount)) throw Error('Halaman edisi terjemahan tidak valid.');
+      if (clean.length) out[code] = clean;
+    }
+    return Object.keys(out).length ? out : null;
+  }
+  // [{lang, page}] in the order their pictures follow the original pages.
+  function versionImages(data) {
+    const out = [];
+    Object.keys(data.versions || {}).sort().forEach(lang => data.versions[lang].forEach(page => out.push({lang, page})));
+    return out;
+  }
   // Summary: {lang, text} (an overview and key points written with AI).
   function validSummary(summary) {
     if (summary === undefined || summary === null) return null;
@@ -105,7 +129,8 @@
     }
     const words=validWords(data.words,data.pageCount);
     const podcast=validPodcast(data.podcast), translations=validTranslations(data.translations,data.pageCount), summary=validSummary(data.summary);
-    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words),...(podcast?{podcast}:{}),...(translations?{translations}:{}),...(summary?{summary}:{})};
+    const lang=validLang(data.lang), versions=lang?validVersions(data.versions,data.pageCount,lang):null;
+    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words),...(podcast?{podcast}:{}),...(translations?{translations}:{}),...(summary?{summary}:{}),...(lang?{lang}:{}),...(versions?{versions}:{})};
   }
   const scriptData = data => 'window.FLIPBOOK_DATA = ' + JSON.stringify(validate(data)).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029') + ';\n';
   async function asset(path) {
@@ -114,7 +139,7 @@
   // onProgress(message, fraction 0..1) — fraction is optional.
   async function packageBook(model, imageUrls, onProgress = () => {}) {
     const data = validate(model);
-    if(imageUrls.length!==data.pageCount)throw Error('Jumlah gambar dan halaman tidak cocok.');
+    if(imageUrls.length!==data.pageCount+versionImages(data).length)throw Error('Jumlah gambar dan halaman tidak cocok.');
     const zip = new JSZip();
     for(const name of ['index.html','viewer.css','book-effects.css','layout.js','viewer.js'])zip.file(name,await asset('assets/export/'+name));
     zip.file('page-flip.browser.js',await asset('assets/vendor/page-flip.browser.js'));
@@ -134,7 +159,7 @@
   async function packageSingleHtml(model, imageUrls, onProgress = () => {}) {
     if (!globalThis.BookSeal) throw Error('Modul enkripsi buku tidak tersedia. Muat ulang halaman.');
     const data = validate(model);
-    if (imageUrls.length !== data.pageCount) throw Error('Jumlah gambar dan halaman tidak cocok.');
+    if (imageUrls.length !== data.pageCount + versionImages(data).length) throw Error('Jumlah gambar dan halaman tidak cocok.');
     const names = ['index.html','viewer.css','book-effects.css','book-seal.js','layout.js','viewer.js'];
     const [template, viewerCss, effectsCss, seal, layout, viewer] = await Promise.all(names.map(name => asset('assets/export/' + name)));
     const engine = await asset('assets/vendor/page-flip.browser.js');
@@ -151,15 +176,35 @@
   }
   // A file name from the book title, as readable as the OS allows.
   const titleFile = title => String(title).replace(/[\\/:*?"<>|\u0000-\u001f]+/g, '-').replace(/\s+/g, ' ').trim().replace(/^[.-]+|[.-]+$/g, '').slice(0, 80) || 'flipbook';
-  async function saveProject(model, sourcePdf, onProgress = () => {}) {
-    const zip=new JSZip();zip.file('project.json',JSON.stringify(validate(model),null,2));zip.file('source.pdf',await sourcePdf.arrayBuffer());
+  // versionPictures: {lang: {page: Blob|URL}} for the pages listed in model.versions.
+  async function saveProject(model, sourcePdf, onProgress = () => {}, versionPictures = {}) {
+    const data=validate(model);
+    const zip=new JSZip();zip.file('project.json',JSON.stringify(data,null,2));zip.file('source.pdf',await sourcePdf.arrayBuffer());
+    for(const {lang,page} of versionImages(data)){
+      let picture=(versionPictures[lang]||{})[page];
+      if(typeof picture==='string')picture=await (await fetch(picture)).blob();
+      if(!picture)throw Error('Gambar edisi terjemahan tidak lengkap.');
+      zip.file(`versions/${lang}/${page+1}.jpg`,await picture.arrayBuffer());
+    }
     return zip.generateAsync({type:'blob',compression:'STORE'},meta=>onProgress('Menyusun proyek…',meta.percent/100));
   }
   async function readProject(file) {
     const zip=await JSZip.loadAsync(await file.arrayBuffer());
     if(!zip.file('project.json')||!zip.file('source.pdf'))throw Error('Pilih file proyek .smflipbook, bukan ZIP hasil HTML.');
     const data=validate(JSON.parse(await zip.file('project.json').async('string')));
-    return {data,pdf:new Blob([await zip.file('source.pdf').async('arraybuffer')],{type:'application/pdf'})};
+    // Translated pictures; a project missing some keeps only the complete languages.
+    const versions={};
+    for(const lang of Object.keys(data.versions||{})){
+      const pictures={};
+      for(const page of data.versions[lang]){
+        const entry=zip.file(`versions/${lang}/${page+1}.jpg`);
+        if(!entry){delete data.versions[lang];break;}
+        pictures[page]=new Blob([await entry.async('arraybuffer')],{type:'image/jpeg'});
+      }
+      if(data.versions&&data.versions[lang])versions[lang]=pictures;
+    }
+    if(data.versions&&!Object.keys(data.versions).length)delete data.versions;
+    return {data,pdf:new Blob([await zip.file('source.pdf').async('arraybuffer')],{type:'application/pdf'}),versions};
   }
   function download(blob,name) {
     const url=URL.createObjectURL(blob),a=document.createElement('a');a.href=url;a.download=name;document.body.append(a);a.click();a.remove();setTimeout(()=>URL.revokeObjectURL(url),60000);
@@ -224,5 +269,5 @@
     });
   }
   const filename = title => (title.replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-|-$/g,'').slice(0,80)||'flipbook');
-  globalThis.FlipbookExport={validate,scriptData,packageBook,packageSingleHtml,titleFile,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,upload,HOW_TO_OPEN};
+  globalThis.FlipbookExport={validate,versionImages,LANGS,scriptData,packageBook,packageSingleHtml,titleFile,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,upload,HOW_TO_OPEN};
 })();

@@ -116,6 +116,18 @@
     book.on('flip', () => translation.pageChanged());
     // Summary of the book (made in the editor).
     FlipbookSummary.bind({summary: data.summary, button: $('#summary')});
+    // Translated editions ("ID | EN"): their pictures follow the original
+    // pages in the package (languages in name order, pages in order).
+    const extra = {};
+    let slot = data.pageCount;
+    Object.keys(data.versions || {}).sort().forEach(lang => { extra[lang] = {}; data.versions[lang].forEach(page => { extra[lang][page] = slot++; }); });
+    const pictureUrl = (index, done) => { if (window.FLIPBOOK_PAGE_URL) window.FLIPBOOK_PAGE_URL(index, done); else done(`pages/${index + 1}.jpg`); };
+    FlipbookEditions.bind({button: $('#edition'), original: data.lang, ready: () => Object.keys(extra),
+      apply: lang => elements.forEach((page, index) => {
+        const image = page.querySelector('img');
+        const at = lang !== data.lang && extra[lang] && extra[lang][index] !== undefined ? extra[lang][index] : index;
+        pictureUrl(at, url => { image.src = url; });
+      })});
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };

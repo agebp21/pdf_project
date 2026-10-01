@@ -172,3 +172,9 @@ body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl
 .book-summary .book-translate-body li{margin:0 0 6px}
 #summary.is-on{background:#1a3c34;border-color:#1a3c34;color:#fff}
 #summary[hidden]{display:none}
+/* Book language ("ID | EN"): the language on screen in bold; translated pages tinted. */
+#edition[hidden]{display:none}
+#edition{font-weight:700;letter-spacing:.02em;white-space:nowrap}
+#edition span{opacity:.55}
+#edition span.is-current{opacity:1;font-weight:900;text-decoration:underline;text-underline-offset:3px}
+#edition.is-translated{background:#e9e4ff}
