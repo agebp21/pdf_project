@@ -19,7 +19,7 @@
   const zoomBox = document.createElement('div'); zoomBox.id = 'pdf-zoom';
   // A title handed over with ?link= (e.g. from journal search) names the book.
   let pendingTitle = '';
-  // Arsipku: the archived copy of the open book (members only).
+  // My Library: the archived copy of the open book (members only).
   let libraryId = null, openingLibraryId = null, archiveUser;
   function exportState() {
     $('#export-fields').disabled = !sourcePdf || opening || exporting;
@@ -204,7 +204,7 @@
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');
       updatePage();
       libraryId = openingLibraryId; openingLibraryId = null;
-      if (libraryId) archiveNote('☁ Dibuka dari Arsipku'); else archiveBook();
+      if (libraryId) archiveNote('☁ Dibuka dari My Library'); else archiveBook();
       return true;
     } catch (cause) {
       if (installed) sourcePdf = null;
@@ -222,7 +222,7 @@
       exportState();
     }
   }
-  // ---------- Arsipku: every book a member opens or exports is kept in their
+  // ---------- My Library: every book a member opens or exports is kept in their
   // personal archive on the server (project, cover, latest exports).
   async function archiveMember() {
     if (archiveUser === undefined) {
@@ -249,9 +249,9 @@
   }
   // Save (or update) the open book in the member's archive. Never blocks the editor.
   async function archiveBook() {
-    if (!sourcePdf || !(await archiveMember())) { if (archiveUser === null) archiveNote('Masuk untuk menyimpan otomatis ke Arsipku.'); return null; }
+    if (!sourcePdf || !(await archiveMember())) { if (archiveUser === null) archiveNote('Masuk untuk menyimpan otomatis ke My Library.'); return null; }
     try {
-      archiveNote('☁ Menyimpan ke Arsipku…');
+      archiveNote('☁ Menyimpan ke My Library…');
       const project = await FlipbookExport.saveProject(model(), sourcePdf);
       const headers = {'Content-Type':'application/zip'};
       if (libraryId) headers['X-Book-Id'] = libraryId;
@@ -264,9 +264,9 @@
         const cover = await coverJpeg();
         if (cover) await fetch(`/api/library/${libraryId}/cover`, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'image/jpeg'}, body: cover});
       }
-      archiveNote('☁ Tersimpan di Arsipku');
+      archiveNote('☁ Tersimpan di My Library');
       return libraryId;
-    } catch (cause) { archiveNote('Arsipku: ' + cause.message, true); return null; }
+    } catch (cause) { archiveNote('My Library: ' + cause.message, true); return null; }
   }
   async function archiveExport(kind, blob, filename) {
     if (!(await archiveBook())) return;
@@ -275,8 +275,8 @@
         headers:{'Content-Type':'application/octet-stream', 'X-Kind': kind, 'X-Filename': encodeURIComponent(filename)}, body: blob});
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw Error(result.error || 'Gagal menyimpan hasil ekspor.');
-      archiveNote('☁ Buku + hasil ' + kind.toUpperCase() + ' tersimpan di Arsipku');
-    } catch (cause) { archiveNote('Arsipku: ' + cause.message, true); }
+      archiveNote('☁ Buku + hasil ' + kind.toUpperCase() + ' tersimpan di My Library');
+    } catch (cause) { archiveNote('My Library: ' + cause.message, true); }
   }
 
   // ---------- Add source: upload (PDF, Office, images), a link or Google Drive.
@@ -620,9 +620,9 @@
   if (/^[0-9a-f]{32}$/.test(fromLibrary || '')) {
     (async () => {
       try {
-        archiveNote('☁ Membuka dari Arsipku…');
+        archiveNote('☁ Membuka dari My Library…');
         const response = await fetch(`/api/library/${fromLibrary}/project`, {credentials:'same-origin'});
-        if (!response.ok) throw Error(((await response.json().catch(() => ({}))).error) || 'Buku tidak bisa dibuka dari Arsipku.');
+        if (!response.ok) throw Error(((await response.json().catch(() => ({}))).error) || 'Buku tidak bisa dibuka dari My Library.');
         const project = await FlipbookExport.readProject(await response.blob());
         openingLibraryId = fromLibrary;
         await openPdf(project.pdf, project.data.title + '.pdf', project.data);

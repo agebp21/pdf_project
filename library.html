@@ -5,7 +5,7 @@
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="assets/img/favicon.png?v=green">
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=green">
-<title>Arsipku — MyFlipbook</title>
+<title>My Library — MyFlipbook</title>
 <link rel="stylesheet" href="assets/ui-clay.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -50,11 +50,11 @@
     <div class="nav-right"><span data-auth-slot></span><a href="flipbook.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">＋ Buku baru</a></div>
   </nav>
 
-  <h1 class="clay-h">📚 Arsipku</h1>
+  <h1 class="clay-h">📚 My Library</h1>
   <p class="lead">Semua flipbook yang kamu buat tersimpan otomatis di sini — terenkripsi di server, hanya kamu yang bisa membukanya.</p>
 
   <div id="login" class="clay-panel empty" hidden>
-    <p>Masuk dulu untuk melihat arsip bukumu.</p>
+    <p>Masuk dulu untuk melihat My Library-mu.</p>
     <a class="clay-btn clay-btn-primary" href="login.html?next=library.html">Masuk</a>
   </div>
   <div id="usage" class="clay-panel usage" hidden>
@@ -107,9 +107,9 @@
     const files = el('div', {className: 'files'});
     book.exports.forEach(e => files.append(el('a', {className: 'file', href: `/api/library/${book.id}/exports/${e.id}`, title: `${e.filename} · ${size(e.size)} · ${when(e.createdAt)}`, textContent: KIND[e.kind] || e.kind})));
     files.append(el('a', {className: 'file', href: `/api/library/${book.id}/project`, title: 'Proyek (.smflipbook) — bisa diedit lagi', textContent: '🗂 Proyek'}));
-    const remove = el('button', {type: 'button', className: 'delete', textContent: '🗑', title: 'Hapus dari Arsipku', ariaLabel: 'Hapus ' + book.title});
+    const remove = el('button', {type: 'button', className: 'delete', textContent: '🗑', title: 'Hapus dari My Library', ariaLabel: 'Hapus ' + book.title});
     remove.onclick = async () => {
-      if (!await MFDialog.confirm({title: `Hapus "${book.title}"?`, message: 'Buku ini dihapus dari Arsipku, termasuk proyek dan semua hasil ekspornya. Tidak bisa dibatalkan.',
+      if (!await MFDialog.confirm({title: `Hapus "${book.title}"?`, message: 'Buku ini dihapus dari My Library, termasuk proyek dan semua hasil ekspornya. Tidak bisa dibatalkan.',
         ok: 'Hapus', cancel: 'Batal', danger: true})) return;
       remove.disabled = true;
       try { await api('POST', `/api/library/${book.id}/delete`); load(); } catch (e) { notice(e.message); remove.disabled = false; }
@@ -130,7 +130,7 @@
       notice('');
     } catch (e) {
       if (e.status === 401) { $('#login').hidden = false; $('#usage').hidden = true; return; }
-      notice('Arsip tidak bisa dimuat: ' + e.message);
+      notice('My Library tidak bisa dimuat: ' + e.message);
     }
   }
   load();

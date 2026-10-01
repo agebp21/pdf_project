@@ -1,4 +1,4 @@
-"""Member archive (Arsipku): per-member storage of projects, covers and
+"""Member archive (My Library): per-member storage of projects, covers and
 exports; encrypted at rest; plan quotas; owners only."""
 import http.cookiejar
 import io

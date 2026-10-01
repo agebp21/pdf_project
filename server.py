@@ -1581,11 +1581,11 @@ class Handler(SimpleHTTPRequestHandler):
         scheme = 'https' if CONFIG['secure'] else 'http'
         return f'{scheme}://{self.headers.get("Host", "")}'
 
-    # ---- member archive (Arsipku) -------------------------------------------
+    # ---- member archive (My Library) -------------------------------------------
     def member(self):
         user = self.current_user()
         if not user:
-            raise accounts.AccountError(401, 'Silakan masuk dulu untuk memakai Arsipku.')
+            raise accounts.AccountError(401, 'Silakan masuk dulu untuk memakai My Library.')
         return user
 
     def read_raw(self, limit):

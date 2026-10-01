@@ -1,4 +1,4 @@
-"""Member archive ("Arsipku"): every signed-in member's flipbooks, kept on
+"""Member archive ("My Library"): every signed-in member's flipbooks, kept on
 the server — the editable project (source PDF + book settings), a cover
 thumbnail and the latest export of each kind (HTML / APK / EXE).
 
@@ -164,10 +164,10 @@ class Library:
         use = self.usage(user)
         if new_book and use['maxBooks'] is not None and use['books'] >= use['maxBooks']:
             raise AccountError(402, f"Arsip penuh: paket {user['planName']} menyimpan {use['maxBooks']} buku. "
-                                    'Hapus buku lama di Arsipku atau upgrade paket.')
+                                    'Hapus buku lama di My Library atau upgrade paket.')
         if use['bytes'] + max(0, extra_bytes) > use['maxBytes']:
             raise AccountError(402, f"Ruang arsip paket {user['planName']} penuh ({use['maxBytes'] // MB} MB). "
-                                    'Hapus buku lama di Arsipku atau upgrade paket.')
+                                    'Hapus buku lama di My Library atau upgrade paket.')
 
     def _own(self, db, user, book_id):
         book = db.execute('SELECT * FROM library_books WHERE id=? AND user_id=?', (book_id, user['id'])).fetchone()

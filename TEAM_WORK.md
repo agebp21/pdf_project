@@ -883,3 +883,7 @@ Owner (screenshot panduan logo): stabilo paragraf kiri ikut menandai kolom kanan
 - `select()`: hanya potongan yang sekolom (tumpang tindih > 50%) dengan rentang horizontal potongan awal & akhir seretan; seret dari satu kolom ke kolom lain tetap mengambil keduanya.
 - `locate()`: memilih baris terdekat dengan memperhitungkan jarak samping (dy + 0.5·dx), sehingga ujung seretan di atas kolom kiri tidak tersangkut baris kolom kanan yang setinggi.
 Tes: highlights.test.cjs (kasus dua kolom selang-seling: kiri saja, ujung sejajar baris kanan, kanan saja, lintas kolom; ekspektasi lama yang memasukkan kata kolom samping diganti). E2E Chromium dengan PDF dua kolom buatan pdf-lib: note hanya berisi paragraf kiri.
+
+### 1 Oktober 2026 - "Arsipku" diganti "My Library"
+
+Owner: Arsipku jadi My Library. Semua teks yang terlihat pengguna diganti (editor: "☁ Tersimpan di My Library", tautan "📚 My Library"; halaman library.html judul/tab/hapus/konfirmasi/"Masuk dulu untuk melihat My Library-mu"; nav account.html & journals.html; pesan kuota library.py; pesan login server.py; privacy.html & terms.html ID/EN) plus komentar kode. Nama file/route tetap (`library.html`, `/api/library/*`, `library.py`), jadi tautan lama tetap jalan. Catatan: entri lama di handoff ini masih menyebut "Arsipku" = fitur yang sama.
