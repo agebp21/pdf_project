@@ -54,25 +54,6 @@
           <button id="export-html" class="primary apply" type="button">Save offline HTML as…</button>
           <button id="export-apk" class="secondary" type="button" disabled>Build Android APK</button>
           <button id="export-exe" class="secondary" type="button" disabled>Build Windows EXE (.zip)</button>
-          <div class="podcast-box">
-            <button id="podcast-make" class="secondary" type="button">🎙 Buat podcast (AI)</button>
-            <textarea id="podcast-script" rows="9" hidden aria-label="Naskah podcast" spellcheck="false"></textarea>
-            <div id="podcast-tools" class="podcast-tools" hidden><button id="podcast-listen" class="secondary" type="button">▶ Dengar</button><button id="podcast-clear" class="secondary" type="button">Hapus podcast</button></div>
-            <p id="podcast-status" class="muted">Dua penyiar (Rina &amp; Bima) membahas isi buku ini. Nama podcast = <b>Book title</b> di atas, jadi isi judulnya dulu. Naskah bisa diedit; ikut tersimpan di proyek dan semua ekspor.</p>
-          </div>
-          <div class="podcast-box translate-box">
-            <label class="ai-lang" for="translate-target"><span>Terjemahkan ke</span><select id="translate-target"><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
-            <button id="translate-make" class="secondary" type="button">🌐 Terjemahkan (AI)</button>
-            <button id="translate-clear" class="secondary" type="button" hidden>Hapus terjemahan</button>
-            <p id="translate-status" class="muted">Terjemahan tiap halaman (AI), tampil di tombol 🌐 Translate pada buku. Ikut tersimpan di proyek dan semua ekspor.</p>
-          </div>
-          <div class="podcast-box summary-box">
-            <label class="ai-lang" for="summary-lang"><span>Bahasa ringkasan</span><select id="summary-lang"><option value="">Ikut buku</option><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
-            <button id="summary-make" class="secondary" type="button">📝 Buat ringkasan (AI)</button>
-            <textarea id="summary-text" rows="9" hidden aria-label="Ringkasan" spellcheck="false"></textarea>
-            <button id="summary-clear" class="secondary" type="button" hidden>Hapus ringkasan</button>
-            <p id="summary-status" class="muted">Intisari + poin penting buku ini (AI), tampil di tombol 📋 Summary pada buku. Bisa diedit; ikut tersimpan di proyek dan semua ekspor.</p>
-          </div>
         </fieldset>
         <button id="open-project" class="secondary" type="button" onclick="document.getElementById('project-file').click()">Open project… (.smflipbook)</button>
         <input id="project-file" type="file" accept=".smflipbook,.sm-flipbook" hidden>

@@ -60,7 +60,7 @@ PAGES = {'index.html', 'converter.html', 'workflow.html', 'library.html', 'journ
          'login.html', 'account.html', 'coming-soon.html'}
 # Unreleased features: on a normal run (paywall on) these pages show the
 # coming-soon page; --no-paywall keeps them usable internally.
-SOON_PAGES = {'notebook.html': 'Notebook PDF', 'animation.html': 'Flipbook Animation'}
+SOON_PAGES = {'animation.html': 'Flipbook Animation'}
 # public_hosts: domains served in hosting mode (login + entitlements enforced).
 # secure: Secure cookies (HTTPS). base_url: absolute URL for payment callbacks.
 # paywall: exports/builds need a paid plan. Off when imported (tests),

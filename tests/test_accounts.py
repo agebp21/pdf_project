@@ -424,11 +424,15 @@ class PaywallTests(AccountsBase):
         self.assertEqual(guest.call('POST', '/api/convert/word-to-pdf', {}, headers=headers)[0], 400)
 
     def test_unreleased_pages_show_coming_soon(self):
-        for page, name in (('notebook.html', 'Notebook PDF'), ('animation.html', 'Flipbook Animation')):
+        for page, name in (('animation.html', 'Flipbook Animation'),):
             status, body, _ = Client(self.base).call('GET', '/' + page)
             self.assertEqual(status, 200)
             self.assertIn(f'data-feature="{name}"', body.decode())
             self.assertNotIn('ae-app', body.decode())
+        # Notebook PDF is released (AI summary / translation / podcast).
+        status, body, _ = Client(self.base).call('GET', '/notebook.html')
+        self.assertEqual(status, 200)
+        self.assertNotIn('data-feature=', body.decode()); self.assertIn('Notebook PDF', body.decode())
         server.CONFIG['paywall'] = False
         self.assertIn(b'ae-app', Client(self.base).call('GET', '/animation.html')[1], '--no-paywall keeps the editor')
 

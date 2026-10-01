@@ -13,7 +13,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, translating = false, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.
   const zoomBox = document.createElement('div'); zoomBox.id = 'pdf-zoom';
@@ -183,15 +183,14 @@
         onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
         onRecolor: (index, said, color) => notes.tint(index, said, color)});
       podcastView?.close();
+      // Podcast / translation / summary are made in Notebook PDF now; a project
+      // that already carries them still plays them in the preview.
       podcastView = FlipbookPodcast.bind({podcast: () => bookPodcast, button: $('#podcast'), onStart: () => speech?.stop()});
-      showPodcast();
       translateView?.close();
       translateView = FlipbookTranslate.bind({translations: () => bookTranslations, visible: visiblePages, button: $('#translate')});
       book.on('flip', () => translateView.pageChanged());
-      showTranslation(true);
       summaryView?.close();
       summaryView = FlipbookSummary.bind({summary: () => bookSummary, button: $('#summary')});
-      showSummary();
       speech?.close();
       speech = FlipbookSpeech.bind({text: bookText, words: bookWords, pages: newElements, visible: visiblePages, button: $('#speak'),
         busy: () => highlights.active(), onStart: () => podcastView?.stop(), notice: message => { $('#load-status').textContent = message; },
@@ -221,193 +220,6 @@
       exportState();
     }
   }
-  // ---------- Podcast: an AI-written talk between two hosts about the book
-  // (server: /api/podcast/script via Sumopod). Editable; saved with the project.
-  function podcastStatus(text, bad = false) { $('#podcast-status').textContent = text; $('#podcast-status').classList.toggle('error', bad); }
-  function showPodcast() {
-    const has = !!(bookPodcast && bookPodcast.lines && bookPodcast.lines.length);
-    $('#podcast-script').hidden = !has; $('#podcast-tools').hidden = !has;
-    if (has && document.activeElement !== $('#podcast-script')) $('#podcast-script').value = FlipbookPodcast.format(bookPodcast);
-    $('#podcast-make').textContent = has ? '🎙 Buat ulang naskah (AI)' : '🎙 Buat podcast (AI)';
-    podcastView?.refresh();
-  }
-  $('#podcast-make').addEventListener('click', async () => {
-    if (!pageElements.length) return;
-    if (bookPodcast && !confirm('Buat ulang? Naskah sekarang (termasuk editanmu) akan diganti.')) return;
-    const all = Object.keys(bookText).map(k => bookText[k].join(' ')).join(' ');
-    if (all.split(/\s+/).length < 40) { podcastStatus('Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR di Converter dulu.', true); return; }
-    const button = $('#podcast-make');
-    button.classList.add('is-busy'); button.disabled = true;
-    podcastStatus('Menulis naskah podcast… 20-60 detik; buku tebal dibaca dulu per bagian, bisa 1-3 menit.');
-    try {
-      const caps = await serverCaps();
-      const response = await fetch('/api/podcast/script', {method:'POST', credentials:'same-origin',
-        headers:{'Content-Type':'application/json', 'X-Build-Token': caps.token},
-        body: JSON.stringify({title: $('#export-title').value.trim() || 'Buku', text: bookText, lang: FlipbookSpeech.lang(all.slice(0, 20000))})});
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw Error(result.error || 'Naskah gagal dibuat.');
-      bookPodcast = {lines: result.lines, hosts: result.hosts, lang: result.lang};
-      showPodcast();
-      podcastStatus(`Naskah siap: ${result.lines.length} giliran bicara. Dengarkan dengan 🎙 Podcast di pratinjau, edit bila perlu.`);
-      archiveBook();
-    } catch (cause) { podcastStatus(cause.message, true); }
-    finally { button.classList.remove('is-busy'); button.disabled = false; }
-  });
-  let podcastTimer = 0;
-  $('#podcast-script').addEventListener('input', () => {
-    clearTimeout(podcastTimer);
-    podcastTimer = setTimeout(() => {
-      const parsed = FlipbookPodcast.parse($('#podcast-script').value, bookPodcast && bookPodcast.hosts);
-      if (!parsed.lines.length) { podcastStatus('Naskah kosong: tiap baris diawali nama penyiar, mis. "RINA: …".', true); return; }
-      podcastView?.stop();
-      bookPodcast = {lines: parsed.lines, hosts: parsed.hosts, lang: (bookPodcast && bookPodcast.lang) || 'id-ID'};
-      podcastView?.refresh();
-      podcastStatus(`Editan tersimpan: ${parsed.lines.length} giliran bicara.`);
-    }, 500);
-  });
-  $('#podcast-listen').addEventListener('click', () => { if (!$('#podcast').hidden) { if ($('.book-podcast')) podcastView.playFrom(0); else $('#podcast').click(); } });
-  $('#podcast-clear').addEventListener('click', () => {
-    if (!confirm('Hapus podcast dari buku ini?')) return;
-    podcastView?.close(); bookPodcast = null; $('#podcast-script').value = ''; showPodcast();
-    podcastStatus('Podcast dihapus.');
-  });
-
-  // ---------- Translation: every page's text translated with AI, a few pages
-  // per request (/api/translate); stops can be resumed (done pages are kept).
-  const LANG_NAMES = {'id-ID': 'Bahasa Indonesia', 'en-US': 'English', 'ms-MY': 'Bahasa Melayu'};
-  function translateStatus(text, bad = false) { $('#translate-status').textContent = text; $('#translate-status').classList.toggle('error', bad); }
-  const textPages = () => Object.keys(bookText).map(Number).sort((a, b) => a - b).filter(i => (bookText[i] || []).join(' ').trim());
-  // PDF lines → paragraphs: a line runs on into the next unless it ends a
-  // sentence or is clearly short (a heading, the last line of a paragraph).
-  function paragraphs(lines) {
-    const clean = (lines || []).map(l => String(l).replace(/\s+/g, ' ').trim()).filter(Boolean);
-    const lengths = clean.map(l => l.length).sort((a, b) => a - b), typical = lengths[Math.floor(lengths.length / 2)] || 0;
-    return clean.reduce((out, line, i) => {
-      if (!i) return line;
-      const prev = clean[i - 1];
-      if (/[.!?:;"'\u201d)]$/.test(prev) || prev.length < typical * 0.6) return out + '\n' + line;
-      return /[A-Za-z]-$/.test(prev) && /^[a-z]/.test(line) ? out + line : out + ' ' + line;   // teman- / teman
-    }, '');
-  }
-  function showTranslation(fresh) {
-    const done = Object.keys(bookTranslations);
-    if (fresh) {
-      // Default target: English books into Indonesian, others into English.
-      const all = Object.keys(bookText).map(k => bookText[k].join(' ')).join(' ').slice(0, 20000);
-      $('#translate-target').value = done[0] || (FlipbookSpeech.lang(all) === 'en-US' ? 'id-ID' : 'en-US');
-    }
-    const target = $('#translate-target').value, have = Object.keys(bookTranslations[target] || {}).length, total = textPages().length;
-    $('#translate-clear').hidden = !done.length;
-    if (!translating) {
-      $('#translate-make').textContent = have && have < total ? '🌐 Lanjutkan terjemahan' : have ? '🌐 Terjemahkan ulang' : '🌐 Terjemahkan (AI)';
-      if (fresh || have) translateStatus(have ? `${LANG_NAMES[target]}: ${have} / ${total} halaman diterjemahkan.` + (done.length > 1 ? ' Juga: ' + done.filter(l => l !== target).map(l => LANG_NAMES[l]).join(', ') + '.' : '')
-        : 'Terjemahan tiap halaman (AI), tampil di tombol 🌐 Translate pada buku. Ikut tersimpan di proyek dan semua ekspor.');
-    }
-    translateView?.refresh();
-  }
-  $('#translate-target').addEventListener('change', () => showTranslation(false));
-  $('#translate-make').addEventListener('click', async () => {
-    if (translating) { translating = false; return; }           // ⏹ stop after the current request
-    const target = $('#translate-target').value, pages = textPages();
-    if (!pages.length) { translateStatus('Buku ini tidak punya teks (hasil scan?). Jalankan OCR di Converter dulu.', true); return; }
-    const have = bookTranslations[target] || {};
-    if (Object.keys(have).length >= pages.length) {
-      if (!confirm(`Terjemahkan ulang ke ${LANG_NAMES[target]}? Terjemahan sekarang akan diganti.`)) return;
-      delete bookTranslations[target];
-    }
-    const todo = pages.filter(i => !(bookTranslations[target] || {})[String(i)]);
-    // Pieces of at most ~8000 characters / 12 pages per request.
-    const batches = [];
-    let batch = {}, size = 0;
-    todo.forEach(i => {
-      const text = paragraphs(bookText[i]).slice(0, 20000);
-      if (Object.keys(batch).length && (size + text.length > 8000 || Object.keys(batch).length >= 12)) { batches.push(batch); batch = {}; size = 0; }
-      batch[String(i)] = text; size += text.length;
-    });
-    if (Object.keys(batch).length) batches.push(batch);
-    translating = true;
-    $('#translate-make').textContent = '⏹ Berhenti';
-    try {
-      const caps = await serverCaps();
-      for (let n = 0; n < batches.length && translating; n++) {
-        const done = Object.keys(bookTranslations[target] || {}).length;
-        translateStatus(`Menerjemahkan ke ${LANG_NAMES[target]}… ${done} / ${pages.length} halaman`);
-        const response = await fetch('/api/translate', {method:'POST', credentials:'same-origin',
-          headers:{'Content-Type':'application/json', 'X-Build-Token': caps.token},
-          body: JSON.stringify({pages: batches[n], target, title: $('#export-title').value.trim() || 'Buku'})});
-        const result = await response.json().catch(() => ({}));
-        if (!response.ok) throw Error(result.error || 'Terjemahan gagal.');
-        bookTranslations[target] = Object.assign(bookTranslations[target] || {}, result.pages);
-        translateView?.refresh();
-      }
-      const done = Object.keys(bookTranslations[target] || {}).length;
-      translating = false;
-      showTranslation(false);
-      translateStatus(done >= pages.length ? `Terjemahan ${LANG_NAMES[target]} siap: ${done} halaman. Lihat dengan 🌐 Translate di pratinjau.` : `Berhenti: ${done} / ${pages.length} halaman. Klik lagi untuk melanjutkan.`);
-      archiveBook();
-    } catch (cause) {
-      translating = false;
-      showTranslation(false);
-      const done = Object.keys(bookTranslations[target] || {}).length;
-      translateStatus(cause.message + (done ? ` (${done} / ${pages.length} halaman sudah tersimpan; klik lagi untuk melanjutkan.)` : ''), true);
-    }
-  });
-  $('#translate-clear').addEventListener('click', () => {
-    const target = $('#translate-target').value;
-    if (!bookTranslations[target]) { translateStatus(`Belum ada terjemahan ${LANG_NAMES[target]}.`); return; }
-    if (!confirm(`Hapus terjemahan ${LANG_NAMES[target]}?`)) return;
-    delete bookTranslations[target];
-    showTranslation(false); translateStatus(`Terjemahan ${LANG_NAMES[target]} dihapus.`);
-  });
-
-  // ---------- Summary: overview + key points written with AI (/api/summary); editable.
-  function summaryStatus(text, bad = false) { $('#summary-status').textContent = text; $('#summary-status').classList.toggle('error', bad); }
-  function showSummary() {
-    const has = !!(bookSummary && bookSummary.text);
-    $('#summary-text').hidden = !has; $('#summary-clear').hidden = !has;
-    if (has && document.activeElement !== $('#summary-text')) $('#summary-text').value = bookSummary.text;
-    $('#summary-make').textContent = has ? '📝 Buat ulang ringkasan' : '📝 Buat ringkasan (AI)';
-    summaryView?.refresh();
-  }
-  $('#summary-make').addEventListener('click', async () => {
-    if (!pageElements.length) return;
-    if (bookSummary && !confirm('Buat ulang? Ringkasan sekarang (termasuk editanmu) akan diganti.')) return;
-    const all = Object.keys(bookText).map(k => bookText[k].join(' ')).join(' ');
-    if (all.split(/\s+/).length < 40) { summaryStatus('Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR di Converter dulu.', true); return; }
-    const lang = $('#summary-lang').value || FlipbookSpeech.lang(all.slice(0, 20000));
-    const button = $('#summary-make');
-    button.classList.add('is-busy'); button.disabled = true;
-    summaryStatus('Membuat ringkasan… 15-60 detik (buku tebal bisa lebih lama).');
-    try {
-      const caps = await serverCaps();
-      const response = await fetch('/api/summary', {method:'POST', credentials:'same-origin',
-        headers:{'Content-Type':'application/json', 'X-Build-Token': caps.token},
-        body: JSON.stringify({title: $('#export-title').value.trim() || 'Buku', text: bookText, lang})});
-      const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw Error(result.error || 'Ringkasan gagal dibuat.');
-      bookSummary = {lang: result.lang, text: result.text};
-      showSummary();
-      summaryStatus('Ringkasan siap. Lihat dengan 📋 Summary di pratinjau, edit bila perlu.');
-      archiveBook();
-    } catch (cause) { summaryStatus(cause.message, true); }
-    finally { button.classList.remove('is-busy'); button.disabled = false; }
-  });
-  let summaryTimer = 0;
-  $('#summary-text').addEventListener('input', () => {
-    clearTimeout(summaryTimer);
-    summaryTimer = setTimeout(() => {
-      const text = $('#summary-text').value.trim();
-      bookSummary = text ? {lang: (bookSummary && bookSummary.lang) || 'id-ID', text} : null;
-      summaryView?.refresh();
-      summaryStatus(text ? 'Editan ringkasan tersimpan.' : 'Ringkasan kosong: tidak ikut ke buku.');
-    }, 500);
-  });
-  $('#summary-clear').addEventListener('click', () => {
-    if (!confirm('Hapus ringkasan dari buku ini?')) return;
-    summaryView?.close(); bookSummary = null; $('#summary-text').value = ''; showSummary();
-    summaryStatus('Ringkasan dihapus.');
-  });
-
   // ---------- Arsipku: every book a member opens or exports is kept in their
   // personal archive on the server (project, cover, latest exports).
   async function archiveMember() {
