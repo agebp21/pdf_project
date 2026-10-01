@@ -1157,6 +1157,19 @@ def verification_mail(to, name, link):
 
 # ---------- Sign in with Google: the browser gets an ID token from Google
 # Identity Services; the server checks it with Google before trusting it.
+def drive_picker_config():
+    """Google Picker settings for "Add source → Google Drive", or None.
+    GOOGLE_CLIENT_ID (same OAuth client as sign-in) + GOOGLE_API_KEY (browser key,
+    Picker API, restricted by referrer). The app id is the Cloud project number —
+    the client id's numeric prefix — unless GOOGLE_APP_ID says otherwise."""
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+    api_key = os.environ.get('GOOGLE_API_KEY', '').strip()
+    if not client_id or not api_key:
+        return None
+    app_id = os.environ.get('GOOGLE_APP_ID', '').strip() or client_id.split('-', 1)[0]
+    return dict(clientId=client_id, apiKey=api_key, appId=app_id if app_id.isdigit() else '')
+
+
 def google_claims(credential):
     """Verified claims of a Google ID token for our client id."""
     client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
@@ -1885,7 +1898,7 @@ class Handler(SimpleHTTPRequestHandler):
             token = TOKEN if not hosted() or user else None
             self.send_json(200, dict(apk=flutter, exe=flutter and os.name == 'nt', office=office, html=html, token=token,
                                      loginRequired=hosted(), paywall=CONFIG['paywall'],
-                                     entitlements=user['entitlements'] if user else None))
+                                     entitlements=user['entitlements'] if user else None, drive=drive_picker_config()))
             return
         match = re.fullmatch(r'/api/jobs/([a-f0-9]{32})(?:/(download|log))?', path)
         if match:

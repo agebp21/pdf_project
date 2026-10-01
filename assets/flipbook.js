@@ -277,7 +277,7 @@
     } catch (cause) { archiveNote('Arsipku: ' + cause.message, true); }
   }
 
-  // ---------- Add file: upload (PDF, Office, images), a link or Google Drive.
+  // ---------- Add source: upload (PDF, Office, images), a link or Google Drive.
   const OFFICE_ROUTE = {docx:'word', doc:'word', xlsx:'excel', xls:'excel', csv:'excel', pptx:'pptx', ppt:'pptx'};
   const OFFICE_TYPE = {docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document', doc:'application/msword',
     xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', xls:'application/vnd.ms-excel', csv:'text/csv',
@@ -293,7 +293,27 @@
       addStatus(''); $('#add-drive-help').hidden = true;
       $('#add-url').placeholder = 'Paste a link: PDF, web page or Google Drive';
       setTimeout(() => $('#add-url').focus(), 0);
+      loadDriveConfig();
     }
+  }
+  // Google Drive picker settings (null until the server has GOOGLE_CLIENT_ID +
+  // GOOGLE_API_KEY); Google's scripts load as the dialog opens so the
+  // sign-in pop-up opens straight from the click.
+  let driveConfig = null;
+  async function loadDriveConfig() {
+    try {
+      const r = await fetch('/api/capabilities', {cache:'no-store'});
+      driveConfig = r.ok ? (await r.json()).drive || null : null;
+      if (driveConfig && window.DrivePicker) DrivePicker.preload().catch(() => {});
+    } catch (e) { driveConfig = null; }
+  }
+  async function fromDrive() {
+    try {
+      const file = await DrivePicker.pick(driveConfig, text => addStatus(text));
+      if (!file) return;
+      pendingTitle = file.name.replace(/\.[^.]+$/, '').slice(0, 200);
+      await openSources([file]);
+    } catch (cause) { addStatus(cause.message, true); }
   }
   async function serverCaps() {
     let caps = null;
@@ -383,7 +403,9 @@
     const source = button.dataset.source;
     if (source === 'upload') { $('#pdf-file').click(); return; }
     if (source === 'drive') {
-      // No Drive login here: open Drive, the reader shares the file publicly and pastes its link.
+      if (driveConfig && window.DrivePicker) { fromDrive(); return; }
+      // Drive picking not set up on this server: open Drive, the reader shares
+      // the file publicly and pastes its link.
       window.open('https://drive.google.com/drive/my-drive', '_blank', 'noopener');
       $('#add-url').placeholder = 'Paste the Google Drive share link here';
       $('#add-drive-help').hidden = false;
@@ -597,7 +619,7 @@
     })();
   }
   // flipbook.html?link=<public PDF>&title=… (journal search): fetch it like
-  // "Add file → paste a link" and open it as a book.
+  // "Add source → paste a link" and open it as a book.
   const handedLink = new URLSearchParams(location.search).get('link');
   if (handedLink && /^https?:\/\//i.test(handedLink)) {
     pendingTitle = (new URLSearchParams(location.search).get('title') || '').slice(0, 200);

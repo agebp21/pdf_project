@@ -19,6 +19,7 @@
   <script defer src="assets/export/book-seal.js"></script>
   <script defer src="assets/pdf-links.js"></script>
   <script defer src="assets/pdf-words.js"></script>
+  <script defer src="assets/drive-picker.js"></script>
   <script defer src="assets/flipbook.js"></script>
   <script defer src="assets/auth.js"></script>
 </head>
@@ -29,7 +30,7 @@
     <div class="workspace">
       <aside>
         <div class="panel-heading"><span class="step">01</span><h2>Choose document</h2></div>
-        <button id="add-file" class="primary add-file" type="button" aria-haspopup="dialog">＋ Add file</button>
+        <button id="add-file" class="primary add-file" type="button" aria-haspopup="dialog">＋ Add source</button>
         <input id="pdf-file" type="file" accept="application/pdf,.pdf,.docx,.doc,.xlsx,.xls,.csv,.pptx,.ppt,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,image/*" multiple hidden>
         <p class="muted">PDF, Word, Excel, PowerPoint or images — or a link / Google Drive.</p>
         <p id="load-status" class="feedback" role="status">No document yet.</p>
@@ -85,7 +86,7 @@
         <button type="button" data-source="drive"><span class="add-drive" aria-hidden="true"></span> Google Drive</button>
       </div>
       <ol id="add-drive-help" class="add-drive-help" hidden>
-        <li>Google Drive opened in a new tab — find your file.</li>
+        <li>Google Drive opened in a new tab — find your file. <i>(Picking straight from Drive needs GOOGLE_CLIENT_ID + GOOGLE_API_KEY on the server.)</i></li>
         <li>Click <b>Share</b> → General access: <b>Anyone with the link</b>.</li>
         <li>Click <b>Copy link</b>, come back and paste it in the box above → press <b>→</b>.</li>
       </ol>
