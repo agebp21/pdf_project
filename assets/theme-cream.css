@@ -25,6 +25,8 @@ button.primary.apply:hover,.primary:hover{transform:translate(-1px,-1px);box-sha
 .preview-top{background:var(--pine)!important;color:#FFF7EA!important;font-weight:800;letter-spacing:.12em}
 .controls button{background:#FFFDF6;border:1.5px solid var(--ink);border-radius:999px;font-weight:800;box-shadow:2px 2px 0 var(--ink)}
 .controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:3px 3px 0 var(--ink)}
+/* Bookmark / notes / highlighter buttons get their label when a book opens: hide the empty pills until then. */
+.controls button:empty{display:none}
 #empty-book h2{font-family:'Fraunces',serif!important;color:var(--pine)!important}
 .feedback{background:#EFF6EC;border:1.5px dashed var(--pine);border-radius:12px;padding:10px}
 .export-progress{display:flex;align-items:center;gap:10px;margin:10px 0 6px}

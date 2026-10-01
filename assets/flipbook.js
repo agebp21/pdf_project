@@ -187,11 +187,16 @@
         // ✨ Summarize: the server's AI turns a highlight into a short note.
         summarize: true, onSummary: (index, said, color) => notes.summary(index, said, color, highlightSummary)});
       podcastView?.close();
-      // Podcast / translation / summary are made in Notebook PDF now; a project
-      // that already carries them still plays them in the preview.
+      // Podcast / summary are made in Notebook PDF; a project that already
+      // carries them still plays them in the preview.
       podcastView = FlipbookPodcast.bind({podcast: () => bookPodcast, button: $('#podcast'), onStart: () => speech?.stop()});
       translateView?.close();
-      translateView = FlipbookTranslate.bind({translations: () => bookTranslations, visible: visiblePages, button: $('#translate')});
+      // 🌐 Translate in the toolbar: the pages on screen are translated by the
+      // server's AI when needed and kept in the project, so exports carry them.
+      translateView = FlipbookTranslate.bind({translations: () => bookTranslations, visible: visiblePages, button: $('#translate'),
+        translate: translatePages, text: pageParagraphs,
+        save: (lang, pages) => { bookTranslations[lang] = Object.assign(bookTranslations[lang] || {}, pages); },
+        preferred: () => FlipbookSpeech.lang(Object.values(bookText).slice(0, 6).map(lines => (lines || []).join(' ')).join(' ').slice(0, 8000)) === 'en-US' ? 'id-ID' : 'en-US'});
       book.on('flip', () => translateView.pageChanged());
       summaryView?.close();
       summaryView = FlipbookSummary.bind({summary: () => bookSummary, button: $('#summary')});
@@ -318,6 +323,29 @@
       pendingTitle = file.name.replace(/\.[^.]+$/, '').slice(0, 200);
       await openSources([file]);
     } catch (cause) { addStatus(cause.message, true); }
+  }
+  // A page's PDF lines as paragraphs (a line runs on unless it ends a sentence,
+  // is short, or starts a list item) — what the translator reads.
+  function pageParagraphs(index) {
+    const lines = (bookText[String(index)] || []).map(l => String(l).replace(/\s+/g, ' ').trim()).filter(Boolean);
+    const lengths = lines.map(l => l.length).sort((a, b) => a - b), typical = lengths[Math.floor(lengths.length / 2)] || 0;
+    return lines.reduce((out, line, i) => {
+      if (!i) return line;
+      const prev = lines[i - 1];
+      if (/[.!?:;"'”)]$/.test(prev) || prev.length < typical * 0.6 || FlipbookHighlights.item(line)) return out + '\n' + line;
+      return /[A-Za-z]-$/.test(prev) && /^[a-z]/.test(line) ? out + line : out + ' ' + line;
+    }, '');
+  }
+  // AI translation of some pages ({index: text}) through the server.
+  async function translatePages(pages, target) {
+    const caps = await serverCaps();
+    const response = await fetch('/api/translate', {method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Build-Token': caps.token || ''},
+      body: JSON.stringify({pages, target, title: $('#export-title').value.trim() || 'Book'})});
+    let data = {};
+    try { data = await response.json(); } catch (e) {}
+    if (!response.ok) throw Error(data.error || L('The translation could not be made.', 'Terjemahan tidak bisa dibuat.'));
+    return data.pages || {};
   }
   // Short AI summary of one highlighted passage (Summarize tool in the preview).
   async function highlightSummary(text) {

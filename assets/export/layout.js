@@ -2095,26 +2095,52 @@
 (typeof self!=='undefined'?self:global).FlipbookTranslate = {
   NAMES: {'id-ID': 'Bahasa Indonesia', 'en-US': 'English', 'ms-MY': 'Bahasa Melayu'},
   /* options: {translations (object, or a function returning it),
-     visible(): page indices on screen, button} */
+     visible(): page indices on screen, button,
+     translate(pages {index: text}, lang) → Promise<{index: translation}>
+       (optional: pages are then translated when they come on screen),
+     text(index): the page's text (with translate), save(lang, pages) to keep results,
+     preferred(): the language to start with} */
   bind(options) {
     const self = this;
     const get = () => (typeof options.translations === 'function' ? options.translations() : options.translations) || {};
     const langs = () => Object.keys(get()).filter(l => self.NAMES[l] && Object.keys(get()[l] || {}).length);
-    let panel = null, body = null, pick = null, lang = null;
+    const live = typeof options.translate === 'function';
+    const choices = () => live ? Object.keys(self.NAMES) : langs();
+    let panel = null, body = null, pick = null, lang = null, failed = '';
+    const pending = {};          // "lang:index" being translated
+    let asked = {};              // "lang:index" asked since the page / language changed (no endless retries)
     const button = options.button;
     function paint() {
       if (!button) return;
-      button.hidden = !langs().length;
+      button.hidden = !live && !langs().length;
       button.textContent = '🌐 Translate';
-      button.title = 'Translation of the pages on screen';
+      button.title = live ? 'Translate the pages on screen' : 'Translation of the pages on screen';
       button.classList.toggle('is-on', !!panel);
       button.setAttribute('aria-expanded', String(!!panel));
     }
+    function note(text) { const p = document.createElement('p'); p.className = 'book-marks-empty'; p.textContent = text; body.appendChild(p); }
+    // Pages on screen that still need a translation into lang.
+    function request(lang) {
+      if (!live) return;
+      const have = get()[lang] || {}, want = {};
+      options.visible().forEach(index => {
+        const text = String((options.text && options.text(index)) || '').trim();
+        if (text && !have[String(index)] && !pending[lang + ':' + index] && !asked[lang + ':' + index]) want[index] = text;
+      });
+      const indices = Object.keys(want);
+      if (!indices.length) return;
+      indices.forEach(i => { pending[lang + ':' + i] = true; asked[lang + ':' + i] = true; });
+      failed = '';
+      Promise.resolve().then(() => options.translate(want, lang)).then(done => {
+        if (options.save) options.save(lang, done || {});
+      }, cause => { failed = (cause && cause.message) || 'The translation failed.'; })
+        .then(() => { indices.forEach(i => { delete pending[lang + ':' + i]; }); fill(); paint(); });
+    }
     function fill() {
       if (!panel) return;
-      const all = langs();
+      const all = choices();
       if (!all.length) { close(); return; }
-      if (all.indexOf(lang) < 0) lang = all[0];
+      if (all.indexOf(lang) < 0) lang = all.indexOf(options.preferred && options.preferred()) >= 0 ? options.preferred() : all[0];
       if (pick) {
         while (pick.firstChild) pick.removeChild(pick.firstChild);
         all.forEach(l => { const o = document.createElement('option'); o.value = l; o.textContent = self.NAMES[l]; pick.appendChild(o); });
@@ -2122,21 +2148,28 @@
       }
       while (body.firstChild) body.removeChild(body.firstChild);
       const pages = get()[lang] || {};
-      let any = false;
+      let any = false, waiting = false;
       options.visible().forEach(index => {
         const text = pages[String(index)];
-        if (!text) return;
-        any = true;
         const head = document.createElement('p'); head.className = 'book-translate-page';
         head.textContent = index === 0 ? 'Cover' : 'Page ' + (index + 1);
+        if (!text) {
+          if (live && pending[lang + ':' + index]) { body.appendChild(head); note('Translating…'); waiting = true; any = true; }
+          else if (live && !String((options.text && options.text(index)) || '').trim()) { body.appendChild(head); note('This page has no text to translate.'); any = true; }
+          else if (live && asked[lang + ':' + index] && !failed) { body.appendChild(head); note('No translation came back for this page. Turn the page or pick the language again to retry.'); any = true; }
+          return;
+        }
+        any = true;
         body.appendChild(head);
         text.split(/\n+/).forEach(para => {
           if (!para.trim()) return;
           const p = document.createElement('p'); p.textContent = para.trim(); body.appendChild(p);
         });
       });
-      if (!any) { const none = document.createElement('p'); none.className = 'book-marks-empty'; none.textContent = 'No translation for the pages on screen.'; body.appendChild(none); }
+      if (failed && !waiting) note('⚠ ' + failed);
+      else if (!any) note(live ? 'Translating…' : 'No translation for the pages on screen.');
       body.scrollTop = 0;
+      if (!waiting && !failed) request(lang);
     }
     function close() { if (panel) { panel.remove(); panel = body = pick = null; } paint(); }
     function open() {
@@ -2146,20 +2179,21 @@
       const head = document.createElement('div'); head.className = 'book-translate-head';
       const title = document.createElement('p'); title.className = 'book-marks-title'; title.textContent = '🌐 Translation';
       pick = document.createElement('select'); pick.setAttribute('aria-label', 'Language');
-      pick.onchange = () => { lang = pick.value; fill(); };
+      pick.onchange = () => { lang = pick.value; failed = ''; asked = {}; fill(); };
       const shut = document.createElement('button'); shut.type = 'button'; shut.className = 'book-podcast-close'; shut.textContent = '✕';
       shut.setAttribute('aria-label', 'Close translation'); shut.onclick = close;
       head.appendChild(title); head.appendChild(pick); head.appendChild(shut);
       body = document.createElement('div'); body.className = 'book-translate-body';
       panel.appendChild(head); panel.appendChild(body);
       document.body.appendChild(panel);
+      failed = ''; asked = {};
       fill(); paint();
     }
     if (button) button.onclick = () => { if (panel) close(); else open(); };
     paint();
     return {
       open, close, active: () => !!panel,
-      pageChanged() { fill(); },
+      pageChanged() { failed = ''; asked = {}; fill(); },
       refresh() { if (panel) fill(); paint(); }
     };
   },
