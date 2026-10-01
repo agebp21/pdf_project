@@ -18,10 +18,16 @@ function page(){
   const dom=new JSDOM(fs.readFileSync('converter.html','utf8'),{url:'http://127.0.0.1:8080/converter.html?tool=pdf-to-word',runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window;
   w.console.log=()=>{};w.scrollTo=()=>{};w.Blob=Blob;w.Uint8Array=Uint8Array;w.ArrayBuffer=ArrayBuffer;
   w.URL.createObjectURL=()=> 'blob:qa';w.URL.revokeObjectURL=()=>{};
-  w.HTMLCanvasElement.prototype.getContext=function(){if(!this.native||this.native.width!==this.width||this.native.height!==this.height)this.native=canvas.createCanvas(Math.max(1,this.width),Math.max(1,this.height));return this.native.getContext('2d')};
+  w.HTMLCanvasElement.prototype.getContext=function(){
+    if(!this.native||this.native.width!==this.width||this.native.height!==this.height)this.native=canvas.createCanvas(Math.max(1,this.width),Math.max(1,this.height));
+    const ctx=this.native.getContext('2d');
+    // Drawing one DOM canvas onto another (picture copies) uses the native canvas behind it.
+    if(!ctx.qaUnwrap){const draw=ctx.drawImage;ctx.drawImage=function(src,...rest){return draw.call(this,src&&src.native?src.native:src,...rest)};ctx.qaUnwrap=true;}
+    return ctx;
+  };
   w.HTMLCanvasElement.prototype.toDataURL=function(type,quality){return this.native.toDataURL(type||'image/png',quality)};
   w.pdfjsLib={Util:pdfjs.Util,OPS:pdfjs.OPS,GlobalWorkerOptions:{},getDocument:o=>pdfjs.getDocument({...o,disableFontFace:false,verbosity:0,canvasFactory:new class{create(a,b){const c=canvas.createCanvas(a,b);return {canvas:c,context:c.getContext('2d')}}reset(o,a,b){o.canvas.width=a;o.canvas.height=b}destroy(o){o.canvas.width=0;o.canvas.height=0}}})};
-  w.docx=require(R+'docx');w.PptxGenJS=require(R+'pptxgenjs');w.ExcelJS=require(R+'exceljs');
+  w.JSZip=JSZip;w.docx=require(R+'docx');w.PptxGenJS=require(R+'pptxgenjs');w.ExcelJS=require(R+'exceljs');
   w.eval(fs.readFileSync('assets/pdf-edit.js','utf8'));
   w.eval(fs.readFileSync('assets/pdf-layout.js','utf8'));
   const script=[...w.document.scripts].find(s=>s.textContent.includes('const TOOLS')).textContent;
@@ -57,6 +63,49 @@ async function main(){
     assert.equal(w.PdfLayout.hexColor('rgb(255, 0, 16)'),'FF0010');
     const merged=w.PdfLayout.mergeRuns([{text:'Hel',x:0,y:0,w:10,h:12,size:10,baseline:10,bold:false,italic:false},{text:'lo',x:10,y:0,w:8,h:12,size:10,baseline:10,bold:false,italic:false},{text:'Col2',x:200,y:0,w:20,h:12,size:10,baseline:10,bold:false,italic:false},{text:'Hel',x:0.5,y:0,w:10,h:12,size:10,baseline:10.2,bold:false,italic:false}]);
     assert.deepEqual(Array.from(merged,r=>r.text).sort(),['Col2','Hello'],'adjacent runs join, columns stay apart, shadows dedupe');
+    const mixed=w.PdfLayout.mergeRuns([{text:'Objective',x:0,y:0,w:50,h:12,size:10,baseline:10,bold:true,italic:false,color:'000000',font:'Arial'},
+      {text:':',x:50,y:0,w:3,h:12,size:10,baseline:10,bold:false,italic:false,color:'000000',font:'Arial'},
+      {text:'Hero  video',x:56,y:0,w:40,h:12,size:10,baseline:10,bold:false,italic:false,color:'000000',font:'Arial'}]);
+    assert.equal(mixed.length,1);assert.equal(mixed[0].text,'Objective: Hero video');
+    assert.deepEqual(Array.from(mixed[0].parts,p=>[p.text,p.bold]),[['Objective',true],[': Hero video',false]],'mixed styles stay as pieces');
+  }
+
+  // --- Pictures lift out only when the page shows them untouched; ":" right
+  // after a bold word is kept (as its own regular-weight piece).
+  {
+    const L=require('../assets/vendor/pdf-lib.min.js');
+    const doc=await PDFDocument.create();const png=await doc.embedPng(fs.readFileSync('.build/qa-office/banner.png'));
+    const pg=doc.addPage([600,400]);
+    pg.drawImage(png,{x:20,y:220,width:160,height:120});                      // free: lifted
+    pg.drawImage(png,{x:220,y:220,width:160,height:120});                     // covered by a box: stays
+    pg.drawRectangle({x:260,y:250,width:80,height:60,color:L.rgb(0.9,0.1,0.1)});
+    pg.pushOperators(L.pushGraphicsState(),L.moveTo(420,220),L.lineTo(580,220),L.lineTo(500,340),L.closePath(),L.clip(),L.endPath());
+    pg.drawImage(png,{x:420,y:220,width:160,height:120});                     // clipped to a triangle: stays
+    pg.pushOperators(L.popGraphicsState());
+    const bold=await doc.embedFont(L.StandardFonts.HelveticaBold),regular=await doc.embedFont(L.StandardFonts.Helvetica);
+    pg.drawText('Objective',{x:40,y:120,size:20,font:bold});
+    pg.drawText(': Hero video',{x:40+bold.widthOfTextAtSize('Objective',20),y:120,size:20,font:regular});
+    const bytes=await doc.save();
+    const {w,outputs}=page();
+    const pdf=await w.pdfjsLib.getDocument({data:new Uint8Array(bytes)}).promise;
+    const layout=await w.PdfLayout.layoutPage(await pdf.getPage(1),{images:true});
+    assert.equal(layout.images.length,1,'only the untouched picture is lifted out');
+    const [im]=layout.images;
+    assert.ok(Math.abs(im.x-20)<1.5&&Math.abs(im.y-60)<1.5&&Math.abs(im.w-160)<1.5&&Math.abs(im.h-120)<1.5,'picture keeps its place and size');
+    assert.ok(im.b64.length>500);
+    const line=layout.runs.find(r=>r.text.startsWith('Objective'));
+    assert.equal(line&&line.text,'Objective: Hero video','the colon is not lost');
+    assert.deepEqual(Array.from(line.parts,p=>[p.text,p.bold]),[['Objective',true],[': Hero video',false]]);
+    assert.equal((await w.PdfLayout.layoutPage(await pdf.getPage(1))).images,undefined,'Word layout is unchanged (no picture lifting)');
+    // In PowerPoint: the picture is its own shape, the line has two runs and one paragraph-props block.
+    w.qaFiles([file(bytes,'pictures.pdf')]);await w.pdfToPpt();
+    const slide=await zipText(outputs[0].blob,'ppt/slides/slide1.xml');
+    assert.equal((slide.match(/<p:pic>/g)||[]).length,2,'background + lifted picture');
+    const para=slide.match(/<a:p>(?:(?!<\/a:p>).)*Objective(?:(?!<\/a:p>).)*<\/a:p>/)[0];
+    assert.equal((para.match(/<a:pPr/g)||[]).length,1,'one <a:pPr>, first in the paragraph (no PowerPoint repair prompt)');
+    assert.match(para,/b="1"[^>]*>(?:(?!<a:t>).)*<a:t>Objective<\/a:t>/);
+    assert.match(para,/<a:t>: Hero video<\/a:t>/);
+    fs.writeFileSync(path.join(OUT,'pictures.pptx'),Buffer.from(await outputs[0].blob.arrayBuffer()));
   }
 
   // --- Word, keep-original-look mode.
@@ -140,6 +189,6 @@ async function main(){
     assert.match(w.document.querySelector('#comingSoon').textContent,/Sign PDF — coming soon/);
     assert.equal(w.document.querySelector('#toolBadge').textContent,'Coming soon');
   }
-  console.log('PASS layout model, Word keep-look/flow/scan, PPT text boxes/ratio/OCR notes, Excel Data sheet + numbers, flipbook source, coming-soon');
+  console.log('PASS layout model, PPT pictures lifted (free only) + mixed-style colon, Word keep-look/flow/scan, PPT text boxes/ratio/OCR notes, Excel Data sheet + numbers, flipbook source, coming-soon');
 }
 main().catch(e=>{console.error(e);process.exit(1)});

@@ -1056,12 +1056,12 @@ async function wordToPdf(){
 // Layout pages shared by Word ("keep look") and PowerPoint: text-free page
 // background + positioned editable text runs. Pages without paintable text
 // (scans) keep the full page image and get OCR lines instead.
-async function pdfLayoutPages(pdf, progress){
+async function pdfLayoutPages(pdf, progress, options={}){
   const pages=[];
   for(let i=1;i<=pdf.numPages;i++){
     progress(`Rebuilding page ${i}/${pdf.numPages}...`);
     const page=await pdf.getPage(i);
-    const layout=await PdfLayout.layoutPage(page, {maxPx:1800});
+    const layout=await PdfLayout.layoutPage(page, {maxPx:1800, images:!!options.images});
     layout.ocr=[];
     if(!layout.runs.length){
       try{
@@ -1138,7 +1138,7 @@ async function pdfToWord(){
             width:Math.round(Math.min(pg.width-r.x, r.w*1.12+r.size*0.6)*20), height:Math.round(r.h*20),
             rule:D.HeightRule.ATLEAST, anchor:{horizontal:D.FrameAnchorType.PAGE, vertical:D.FrameAnchorType.PAGE}},
           spacing:{before:0, after:0, line:240},
-          children:[new TextRun({text:r.text, font:r.font, size:Math.max(2, Math.round(r.size*2)), color:r.color, bold:r.bold||undefined, italics:r.italic||undefined})]
+          children:(r.parts&&r.parts.length?r.parts:[r]).map(p=>new TextRun({text:p.text, font:p.font, size:Math.max(2, Math.round(r.size*2)), color:p.color, bold:p.bold||undefined, italics:p.italic||undefined}))
         }));
       });
       sections.push({properties:{type:D.SectionType.NEXT_PAGE, page:{size:{width:Math.round(pg.width*20), height:Math.round(pg.height*20)}, margin:{top:0,right:0,bottom:0,left:0,header:0,footer:0}}}, children});
@@ -1738,6 +1738,18 @@ async function convertOfficeToPdf(tool, extensions){
 async function pptToPdf(){
   return convertOfficeToPdf('ppt-to-pdf', ['pptx','ppt']);
 }
+// PptxGenJS 4.0.1 writes an <a:pPr> before every run of a mixed-style line;
+// only one is allowed, first in the paragraph, or PowerPoint asks to repair.
+function dropExtraParagraphProps(xml){
+  return xml.replace(/(<\/a:r>|<a:br\/>)<a:pPr\b[^>]*?(?:\/>|>[\s\S]*?<\/a:pPr>)/g, '$1');
+}
+async function fixPptxParagraphs(bytes){
+  if(!window.JSZip) return bytes;
+  const zip=await JSZip.loadAsync(bytes);
+  const slides=Object.keys(zip.files).filter(n=>/^ppt\/slides\/slide\d+\.xml$/.test(n));
+  for(const name of slides) zip.file(name, dropExtraParagraphProps(await zip.file(name).async('string')));
+  return zip.generateAsync({type:'arraybuffer', compression:'DEFLATE'});
+}
 async function pdfToPpt(){
   if(!window.pdfjsLib) throw new Error('pdf.js not loaded');
   await ensurePptx();
@@ -1745,7 +1757,7 @@ async function pdfToPpt(){
   const buf=await source.arrayBuffer();
   const pdf=await pdfjsLib.getDocument({data:buf, disableWorker: location.protocol==='file:'}).promise;
   log('PDFtoPpt pages='+pdf.numPages);
-  const pages=await pdfLayoutPages(pdf, (m)=>{ $('#progress').textContent=m; });
+  const pages=await pdfLayoutPages(pdf, (m)=>{ $('#progress').textContent=m; }, {images:true});
   if(!pages.length) throw new Error('Nothing could be read from this PDF. It may be blank or damaged.');
   const pptx=new window.PptxGenJS();
   // Slide size follows the first page (PowerPoint allows 1–56 in per side).
@@ -1761,17 +1773,25 @@ async function pdfToPpt(){
     const s=Math.min(SW/(pg.width/72), SH/(pg.height/72));
     const ox=(SW-pg.width/72*s)/2, oy=(SH-pg.height/72*s)/2;
     slide.addImage({data:'image/jpeg;base64,'+pg.background.b64, x:ox, y:oy, w:pg.width/72*s, h:pg.height/72*s});
+    // Photos as their own pictures: move, crop or replace them in PowerPoint.
+    (pg.images||[]).forEach((im,n)=>{
+      slide.addImage({data:`image/${im.type};base64,`+im.b64, x:ox+im.x/72*s, y:oy+im.y/72*s, w:im.w/72*s, h:im.h/72*s, altText:`Picture ${n+1}`});
+    });
     pg.runs.forEach(r=>{
-      slide.addText(r.text, {x:ox+r.x/72*s, y:oy+r.y/72*s, w:Math.min(pg.width-r.x, r.w*1.12+r.size*0.6)/72*s, h:r.h/72*s,
+      // Mixed styles in one line ("Objective" bold + ": ..." regular) stay mixed.
+      const text=r.parts&&r.parts.length>1
+        ?r.parts.map(p=>({text:p.text, options:{bold:p.bold, italic:p.italic, color:p.color, fontFace:p.font}}))
+        :r.text;
+      slide.addText(text, {x:ox+r.x/72*s, y:oy+r.y/72*s, w:Math.min(pg.width-r.x, r.w*1.12+r.size*0.6)/72*s, h:r.h/72*s,
         fontSize:Math.max(1, Math.round(r.size*s*2)/2), fontFace:r.font, color:r.color, bold:r.bold, italic:r.italic,
         margin:0, valign:'top', wrap:false, fit:'none'});
     });
     const notes=pg.runs.length?pg.runs.map(r=>r.text):pg.ocr.map(t=>'[OCR] '+t);
     slide.addNotes(notes.length?notes.join('\n'):'(No editable text on this page — pure artwork.)');
-    log(`Slide ${idx+1}: ${pg.runs.length} text boxes`);
+    log(`Slide ${idx+1}: ${pg.runs.length} text boxes, ${(pg.images||[]).length} pictures`);
   });
   $('#progress').textContent='Building presentation...';
-  const presBytes=await pptx.write({outputType:'arraybuffer'});
+  const presBytes=await fixPptxParagraphs(await pptx.write({outputType:'arraybuffer'}));
   const blob=new Blob([presBytes], {type:'application/vnd.openxmlformats-officedocument.presentationml.presentation'});
   $('#progress').textContent='Done.';
   downloadBlob(blob, source.name.replace(/\.pdf$/i,'')+'.pptx', {flipbookSource:source});
