@@ -955,3 +955,7 @@ Owner: Arsipku jadi My Library. Semua teks yang terlihat pengguna diganti (edito
 ### 1 Oktober 2026 - Ringkasan stabilo berupa kalimat (tanpa butir)
 
 Owner: ringkasan di note pakai kalimat, jangan bullet. `summarize_highlight()`: prompt meminta PARAGRAF kalimat utuh, tanpa butir/penomoran walau teks asli berupa daftar (poin digabung jadi kalimat); jaga-jaga: baris yang masih diawali "- • * 1." dibersihkan dan digabung jadi satu paragraf (titik ditambahkan bila perlu). Contoh nyata (ntt hal 2, 79 kata): 55 kata, 2 kalimat runtut, semua poin masuk. Format "✨ Summary" + "•" di klien praktis tidak terpakai lagi (tetap aman bila muncul).
+
+### 1 Oktober 2026 - Tombol My Library di editor jadi tombol penuh di tengah
+
+Owner: link "📚 My Library" (pojok kanan baris status) dibuat di tengah dan sama dengan tombol lain. flipbook.html: status My Library (`#archive-status`) baris sendiri rata tengah (disembunyikan saat kosong), lalu `<a class="secondary archive-link">📚 My Library</a>` selebar panel seperti "Save project as…" (pill putih bergaris, hover terangkat). CSS di assets/theme-cream.css (`.archive-line`, `.archive-link`). Dicek Chromium: posisi & lebar sama persis dengan #save-project (75 px / 237 px), radius 999px.

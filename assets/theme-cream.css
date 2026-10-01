@@ -54,11 +54,12 @@ body.is-panning #reader-stage{cursor:grabbing}
 #zoom.is-zoomed{background:var(--ink,#1a3c34)!important;color:#fff!important}
 
 /* My Library status in the editor */
-.archive-line{display:flex;align-items:center;justify-content:space-between;gap:8px;margin:6px 2px 0;font-size:12.5px}
+.archive-line{margin:6px 2px 0;font-size:12.5px;text-align:center}
+.archive-line:empty,.archive-line:has(.archive-status:empty){display:none}
 .archive-status{color:var(--pine);font-weight:600}
 .archive-status.is-error{color:#b3121a}
-.archive-link{margin-left:auto;font-weight:800;color:var(--ink);text-decoration:none;white-space:nowrap}
-.archive-link:hover{color:var(--tang)}
+/* My Library: a full-width button like the others in the panel. */
+.archive-link{display:block;box-sizing:border-box;text-align:center;text-decoration:none;white-space:nowrap}
 
 /* Add file: button + source picker dialog */
 .add-file{display:block;width:100%;margin:6px 0 10px;padding:13px 16px;font-size:15px!important;cursor:pointer}
