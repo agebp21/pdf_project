@@ -44,6 +44,7 @@ except ImportError:          # optional: pip install truststore
 import accounts
 import library
 import messages_en
+import free_translate
 import book_seal
 import invoice
 
@@ -1916,8 +1917,12 @@ class Handler(SimpleHTTPRequestHandler):
             return
         self.send_json(200, {'summary': summary})
 
-    def translate_route(self):
-        """POST {pages: {page: text}, target, title} -> {pages: {page: translation}}."""
+    def translate_route(self, free=False):
+        """POST {pages: {page: text}, target, title} -> {pages: {page: translation}}.
+        free: the offline Argos translator (whole-book editions, no AI credit)."""
+        if free and not free_translate.available():
+            self.send_json(503, {'error': 'Penerjemah gratis belum dipasang di server (pip install argostranslate, lalu python free_translate.py --install).'})
+            return
         try:
             size = int(self.headers.get('Content-Length', '0'))
             if not 0 < size <= 2 * 1024 * 1024:
@@ -1944,7 +1949,14 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
             return
         try:
-            self.send_json(200, {'pages': translate_pages(clean, target, title), 'target': target})
+            if free:
+                if target not in free_translate.LANGS:
+                    raise ValueError('Bahasa tujuan tidak didukung penerjemah gratis.')
+                self.send_json(200, {'pages': free_translate.translate_texts(clean, target), 'target': target, 'engine': 'free'})
+            else:
+                self.send_json(200, {'pages': translate_pages(clean, target, title), 'target': target})
+        except ValueError as cause:
+            self.send_json(400, {'error': str(cause)})
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
 
@@ -2226,7 +2238,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(cause.status, {'error': str(cause)})
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
-        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'export' if self.path in ('/api/podcast/script', '/api/translate', '/api/summary', '/api/highlight-summary') else match[1] if match else None
+        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'export' if self.path in ('/api/podcast/script', '/api/translate', '/api/translate-free', '/api/summary', '/api/highlight-summary') else match[1] if match else None
         denied = feature and self.entitlement_error(feature)
         if denied:
             self.send_json(denied[0], {'error': denied[1]})
@@ -2245,6 +2257,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == '/api/translate':
             self.translate_route()
+            return
+        if self.path == '/api/translate-free':
+            self.translate_route(free=True)
             return
         if self.path == '/api/summary':
             self.summary_route()

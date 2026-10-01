@@ -67,8 +67,11 @@
       var p0 = first.parts && first.parts[0];
       b.label = !!(p0 && p0.bold && !first.bold && /:\s*$/.test(p0.text + (first.parts[1] ? first.parts[1].text.slice(0, 1) : '')));
       var centres = b.lines.map(function (l) { return l.x + l.w / 2; }), lefts = b.lines.map(function (l) { return l.x; });
-      b.center = b.lines.length > 1 && Math.max.apply(null, centres) - Math.min.apply(null, centres) < b.size * 0.8 &&
-        Math.max.apply(null, lefts) - Math.min.apply(null, lefts) > b.size;
+      // Centred: lines sharing a centre but not a left edge, or short lines whose
+      // centre is the page's middle (a title, one line or a few).
+      var shared = Math.max.apply(null, centres) - Math.min.apply(null, centres) < b.size * 0.8;
+      var middle = pageWidth && b.x > pageWidth * 0.15 && Math.abs(centres[0] - pageWidth / 2) < pageWidth * 0.04;
+      b.center = !b.bullet && ((b.lines.length > 1 && shared && Math.max.apply(null, lefts) - Math.min.apply(null, lefts) > b.size * 0.4) || (shared && middle));
     });
     return out.filter(function (b) { return /[A-Za-zÀ-ɏ]{2}/.test(b.text); });
   }
@@ -109,7 +112,11 @@
     var k = image.width / layout.width;
     items.forEach(function (item) {
       var b = item.block, text = item.text;
-      var width = Math.max((b.x + b.w - b.textX) * 1.04, b.lines.length === 1 && !b.center ? b.roomRight - b.textX : 0);
+      // Centred blocks may widen evenly on both sides (up to 70% of the page);
+      // one-line left-aligned blocks into the empty room on their right.
+      var width = Math.max((b.x + b.w - b.textX) * 1.04,
+        b.center ? Math.min(layout.width * 0.7, Math.min(b.x + b.w / 2, layout.width - (b.x + b.w / 2)) * 2 * 0.85)
+          : b.lines.length === 1 ? b.roomRight - b.textX : 0);
       var room = b.roomBottom - b.y, size = b.size, rows = [], step = b.step;
       for (var tries = 0; tries < 14; tries++) {
         ctx.font = fontOf(b, size * k);

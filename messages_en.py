@@ -49,6 +49,8 @@ EXACT = {
     'Teks kosong atau terlalu panjang.': 'The text is empty or too long.',
     'Teks kosong atau terlalu besar.': 'The text is empty or too large.',
     'Bahasa tujuan tidak didukung.': 'That target language is not supported.',
+    'Bahasa tujuan tidak didukung penerjemah gratis.': "The free translator doesn't support that language.",
+    'Penerjemah gratis belum dipasang di server (pip install argostranslate, lalu python free_translate.py --install).': 'The free translator is not installed on the server (pip install argostranslate, then python free_translate.py --install).',
     'Halaman tidak valid (maks 40 per permintaan).': 'Invalid pages (max 40 per request).',
     'Halaman tidak valid.': 'Invalid page.',
     'Halaman ini tidak punya teks.': 'This page has no text.',

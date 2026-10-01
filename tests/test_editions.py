@@ -59,5 +59,75 @@ class EditionTests(unittest.TestCase):
                 server.unpack_book(archive, Path(tmp) / 'book')
 
 
+class FreeTranslatorTests(unittest.TestCase):
+    """The free (Argos) translator's guards, with a stand-in engine."""
+
+    def setUp(self):
+        import free_translate
+        self.ft = free_translate
+        self.seen = []
+        outer = self
+
+        class Engine:
+            @staticmethod
+            def translate(text, src, dst):
+                outer.seen.append(text)
+                return '<' + text.upper() + '>'
+        self.engine = Engine
+        self.patch = unittest.mock.patch.object(free_translate, '_translate_module', return_value=Engine)
+        self.patch.start()
+
+    def tearDown(self):
+        self.patch.stop()
+
+    def test_guards(self):
+        ft = self.ft
+        # Already in the target language: left alone.
+        self.assertEqual(ft.translate_text('Overall Storyline', 'en-US'), 'Overall Storyline')
+        # Names and codes masked, restored after.
+        out = ft.translate_text('Hero video dimulai setelah Activation Ceremony di JKT2A selesai.', 'en-US')
+        self.assertIn('Activation Ceremony', out); self.assertIn('JKT2A', out)
+        self.assertTrue(any('Z0Q' in s for s in self.seen), 'masked before translating')
+        # Pieces at ": " translated one by one; an English theme kept.
+        out = ft.translate_text('Video ditutup dengan tema: Beyond Connected', 'en-US')
+        self.assertTrue(out.endswith(': Beyond Connected'))
+        # Unsupported language.
+        with self.assertRaises(ValueError):
+            ft.translate_text('teks', 'ms-MY')
+        self.assertEqual(ft.translate_texts({'0': '  ', '1': 'Selamat pagi semuanya.'}, 'en-US'), {'1': '<SELAMAT PAGI SEMUANYA.>'})
+
+    def test_lost_mask_falls_back(self):
+        class Dropper:
+            @staticmethod
+            def translate(text, src, dst):
+                return text.replace('Z0Q', '') if 'Z0Q' in text else 'plain: ' + text
+        with unittest.mock.patch.object(self.ft, '_translate_module', return_value=Dropper):
+            self.assertEqual(self.ft.translate_text('Hari ini di Mega Mendung kami bermain.', 'en-US'), 'plain: Hari ini di Mega Mendung kami bermain.')
+
+    def test_route(self):
+        import threading, urllib.request, urllib.error
+        httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True); thread.start()
+        try:
+            def post(body, available=True):
+                request = urllib.request.Request(f'http://127.0.0.1:{httpd.server_port}/api/translate-free', data=json.dumps(body).encode(), method='POST',
+                                                 headers={'Content-Type': 'application/json', 'X-Build-Token': server.TOKEN})
+                with unittest.mock.patch.object(self.ft, 'available', return_value=available):
+                    try:
+                        with urllib.request.build_opener(urllib.request.ProxyHandler({})).open(request) as r:
+                            return r.status, json.loads(r.read())
+                    except urllib.error.HTTPError as e:
+                        with e:
+                            return e.code, json.loads(e.read())
+            status, body = post({'pages': {'0': 'Selamat pagi semuanya.'}, 'target': 'en-US'})
+            self.assertEqual((status, body['engine'], body['pages']), (200, 'free', {'0': '<SELAMAT PAGI SEMUANYA.>'}))
+            self.assertEqual(post({'pages': {'0': 'x y'}, 'target': 'ms-MY'})[0], 400)
+            self.assertEqual(post({'pages': {'0': 'teks'}, 'target': 'en-US'}, available=False)[0], 503)
+        finally:
+            httpd.shutdown(); httpd.server_close(); thread.join()
+
+
+import unittest.mock  # noqa: E402  (used by FreeTranslatorTests)
+
 if __name__ == '__main__':
     unittest.main()

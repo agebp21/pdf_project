@@ -214,8 +214,8 @@
           if (image) image.src = (lang !== bookLang && bookVersions[lang] && bookVersions[lang][index]) || imageUrls[index];
         }),
         confirm: lang => MFDialog.confirm({title: L(`Translate the whole book into ${FlipbookEditions.NAMES[lang]}?`, `Terjemahkan seluruh buku ke ${FlipbookEditions.NAMES[lang] === 'English' ? 'bahasa Inggris' : FlipbookEditions.NAMES[lang] === 'Malay' ? 'bahasa Melayu' : 'bahasa Indonesia'}?`),
-          message: L(`Every page keeps its look; only the text changes. ${pageElements.length} pages · about ${Math.max(1, Math.round(pageElements.length * 4 / 60))} min · uses AI (Pro plan). The translation is saved with the project and goes into exports.`,
-            `Tampilan tiap halaman tetap; hanya teksnya yang berganti. ${pageElements.length} halaman · sekitar ${Math.max(1, Math.round(pageElements.length * 4 / 60))} menit · memakai AI (paket Pro). Terjemahan disimpan bersama proyek dan ikut diekspor.`),
+          message: L(`Every page keeps its look; only the text changes. ${pageElements.length} pages · a minute or a few · free machine translation (no AI credit). The translation is saved with the project and goes into exports.`,
+            `Tampilan tiap halaman tetap; hanya teksnya yang berganti. ${pageElements.length} halaman · satu sampai beberapa menit · mesin penerjemah gratis (tanpa kredit AI). Terjemahan disimpan bersama proyek dan ikut diekspor.`),
           ok: L('Translate', 'Terjemahkan'), cancel: L('Cancel', 'Batal'), icon: '🌐'}),
         make: translateBook,
         onError: message => error(message)});
@@ -357,10 +357,12 @@
       return /[A-Za-z]-$/.test(prev) && /^[a-z]/.test(line) ? out + line : out + ' ' + line;
     }, '');
   }
-  // AI translation of some pages ({index: text}) through the server.
-  async function translatePages(pages, target) {
+  // Translation of some pages ({index: text}) through the server: AI for the
+  // page-by-page panel, the free offline translator for whole-book editions.
+  const translateFree = (pages, target) => translatePages(pages, target, '/api/translate-free');
+  async function translatePages(pages, target, path = '/api/translate') {
     const caps = await serverCaps();
-    const response = await fetch('/api/translate', {method: 'POST',
+    const response = await fetch(path, {method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-Build-Token': caps.token || ''},
       body: JSON.stringify({pages, target, title: $('#export-title').value.trim() || 'Book'})});
     let data = {};
@@ -375,7 +377,7 @@
   // The whole book in another language, layout unchanged (assets/pdf-translate.js).
   async function translateBook(lang, report) {
     if (!pdf) throw Error(L('Open a PDF first.', 'Buka PDF dulu.'));
-    const book = pdf, made = await PdfTranslate.book(book, {target: lang, translate: translatePages, maxPx: 1100,
+    const book = pdf, made = await PdfTranslate.book(book, {target: lang, translate: translateFree, maxPx: 1100,
       onProgress: (stage, done, total) => report(`🌐 ${done} / ${total}`)});
     if (book !== pdf) throw Error('cancelled');               // another PDF was opened meanwhile
     const pages = {};
