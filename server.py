@@ -31,7 +31,7 @@ from http.cookies import CookieError, SimpleCookie
 from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler, ThreadingHTTPServer
 import urllib.error
 import urllib.request
-from urllib.parse import parse_qs, quote, unquote, urlsplit
+from urllib.parse import parse_qs, quote, unquote, urlencode, urlsplit
 
 import accounts
 import library
@@ -47,7 +47,7 @@ JOBS = {}
 BUILD_LOCK = threading.Lock()
 POSITIONS = {'top-left', 'top-right', 'bottom-left', 'bottom-right'}
 SESSION_COOKIE = 'mf_session'
-PAGES = {'index.html', 'converter.html', 'workflow.html', 'library.html', 'flipbook.html', 'animation.html', 'notebook.html',
+PAGES = {'index.html', 'converter.html', 'workflow.html', 'library.html', 'journals.html', 'flipbook.html', 'animation.html', 'notebook.html',
          'login.html', 'account.html', 'coming-soon.html'}
 # Unreleased features: on a normal run (paywall on) these pages show the
 # coming-soon page; --no-paywall keeps them usable internally.
@@ -859,6 +859,92 @@ def page_name(url):
     return re.sub(r'[^A-Za-z0-9._ -]+', '-', stem).strip(' .-')[:80] or 'page'
 
 
+# ---------- Journal search (like SINTA: a list of articles with links), from
+# OpenAlex — an open index of scholarly works, Indonesian journals with a DOI
+# included. Free without a key for light use; OPENALEX_API_KEY / OPENALEX_MAILTO
+# in .env for more. Results are cached for a while (each search has a cost).
+JOURNAL_CACHE = {}
+JOURNAL_CACHE_SECONDS = 1800
+JOURNAL_SORTS = {'relevance': None, 'cited': 'cited_by_count:desc', 'newest': 'publication_date:desc'}
+
+
+def abstract_text(inverted, limit=700):
+    """OpenAlex keeps abstracts as {word: [positions]}; back to text."""
+    if not isinstance(inverted, dict):
+        return ''
+    words = sorted((pos, word) for word, positions in inverted.items() for pos in positions)
+    text = ' '.join(word for _, word in words)
+    return text if len(text) <= limit else text[:limit].rsplit(' ', 1)[0] + '…'
+
+
+def journal_search(query, page=1, oa=True, year_from=None, year_to=None, lang=None, indonesia=False, sort='relevance'):
+    """Articles for a query: dict(total, page, results=[...])."""
+    filters = ['type:article|review']
+    if oa:
+        filters.append('is_oa:true')
+    if year_from or year_to:
+        filters.append(f'publication_year:{year_from or ""}-{year_to or ""}')
+    if lang in ('id', 'en', 'ms'):
+        filters.append(f'language:{lang}')
+    if indonesia:
+        filters.append('institutions.country_code:id')
+    # Title and abstract only: a search through full texts drifts to loosely related papers.
+    filters.append('title_and_abstract.search:' + query.replace(',', ' '))
+    params = {'filter': ','.join(filters), 'per-page': 20, 'page': page,
+              'select': 'id,display_name,publication_year,doi,cited_by_count,language,authorships,primary_location,'
+                        'best_oa_location,open_access,abstract_inverted_index'}
+    if JOURNAL_SORTS.get(sort):
+        params['sort'] = JOURNAL_SORTS[sort]
+    if os.environ.get('OPENALEX_API_KEY'):
+        params['api_key'] = os.environ['OPENALEX_API_KEY'].strip()
+    if os.environ.get('OPENALEX_MAILTO'):
+        params['mailto'] = os.environ['OPENALEX_MAILTO'].strip()
+    key = json.dumps(params, sort_keys=True)
+    hit = JOURNAL_CACHE.get(key)
+    if hit and time.time() - hit[0] < JOURNAL_CACHE_SECONDS:
+        return hit[1]
+    url = 'https://api.openalex.org/works?' + urlencode(params)
+    request = urllib.request.Request(url, headers={'User-Agent': 'MyFlipbook/1.0 (journal search)'})
+    try:
+        with urllib.request.urlopen(request, timeout=25) as response:
+            data = json.loads(response.read().decode('utf-8'))
+    except urllib.error.HTTPError as cause:
+        if cause.code == 429:
+            raise RuntimeError('Batas pencarian harian tercapai. Coba lagi besok, atau pasang OPENALEX_API_KEY di server.') from cause
+        raise RuntimeError(f'Layanan pencarian menolak permintaan ({cause.code}).') from cause
+    except (urllib.error.URLError, TimeoutError, OSError) as cause:
+        raise RuntimeError('Layanan pencarian tidak bisa dihubungi. Cek koneksi internet server.') from cause
+    results = []
+    for work in data.get('results') or []:
+        primary = work.get('primary_location') or {}
+        source = primary.get('source') or {}
+        best = work.get('best_oa_location') or {}
+        doi = work.get('doi') or ''
+        pdf = best.get('pdf_url') or ''
+        results.append(dict(
+            id=str(work.get('id', '')).rsplit('/', 1)[-1],
+            title=' '.join(str(work.get('display_name') or 'Tanpa judul').split()),
+            authors=[(a.get('author') or {}).get('display_name') for a in (work.get('authorships') or [])[:8] if (a.get('author') or {}).get('display_name')],
+            moreAuthors=max(0, len(work.get('authorships') or []) - 8),
+            journal=source.get('display_name') or '',
+            publisher=source.get('host_organization_name') or '',
+            year=work.get('publication_year'),
+            cited=work.get('cited_by_count') or 0,
+            language=work.get('language') or '',
+            doi=doi,
+            link=best.get('landing_page_url') or primary.get('landing_page_url') or doi,
+            pdf=pdf if pdf.startswith(('http://', 'https://')) else '',
+            oa=bool((work.get('open_access') or {}).get('is_oa')),
+            license=best.get('license') or '',
+            abstract=abstract_text(work.get('abstract_inverted_index')),
+        ))
+    out = dict(total=(data.get('meta') or {}).get('count') or 0, page=page, results=results)
+    if len(JOURNAL_CACHE) > 300:
+        JOURNAL_CACHE.clear()
+    JOURNAL_CACHE[key] = (time.time(), out)
+    return out
+
+
 def fetch_source(url, public_only=False):
     """Download a document from a link for the flipbook: a PDF, Office file
     or image as it is, a Google Drive/Docs share link through its download
@@ -1337,6 +1423,27 @@ class Handler(SimpleHTTPRequestHandler):
         else:
             self.send_json(404, {'error': 'Tidak ditemukan.'})
 
+    def journals_route(self):
+        """GET /api/journals?q=&page=&oa=1&from=&to=&lang=&id=1&sort= -> articles with links."""
+        query = parse_qs(urlsplit(self.path).query)
+        one = lambda name, default='': (query.get(name) or [default])[0].strip()
+        q = ' '.join(one('q').split())
+        if not 2 <= len(q) <= 200:
+            self.send_json(400, {'error': 'Tulis kata kunci 2-200 karakter.'})
+            return
+        year = lambda v: int(v) if re.fullmatch(r'(19|20)\d\d', v) else None
+        try:
+            page = max(1, min(50, int(one('page', '1') or 1)))
+        except ValueError:
+            page = 1
+        sort = one('sort', 'relevance')
+        try:
+            self.send_json(200, journal_search(q, page, oa=one('oa', '1') != '0', year_from=year(one('from')), year_to=year(one('to')),
+                                               lang=one('lang') or None, indonesia=one('id') == '1',
+                                               sort=sort if sort in JOURNAL_SORTS else 'relevance'))
+        except RuntimeError as cause:
+            self.send_json(502, {'error': str(cause)})
+
     def book_text(self, data):
         """The {page: [lines]} of a request as one text, pages in order."""
         pages = data.get('text')
@@ -1457,6 +1564,9 @@ class Handler(SimpleHTTPRequestHandler):
                 self.library_get(path)
             except accounts.AccountError as cause:
                 self.send_json(cause.status, {'error': str(cause)})
+            return
+        if path == '/api/journals':
+            self.journals_route()
             return
         if path == '/api/capabilities':
             flutter = bool(shutil.which('flutter'))

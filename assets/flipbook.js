@@ -17,6 +17,8 @@
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.
   const zoomBox = document.createElement('div'); zoomBox.id = 'pdf-zoom';
+  // A title handed over with ?link= (e.g. from journal search) names the book.
+  let pendingTitle = '';
   // Arsipku: the archived copy of the open book (members only).
   let libraryId = null, openingLibraryId = null, archiveUser;
   function exportState() {
@@ -156,7 +158,8 @@
         }});
       book.on('flip', () => zoom.reset());
       sourcePdf = blob;
-      $('#export-title').value = project ? project.title : name.replace(/\.pdf$/i,'');
+      $('#export-title').value = project ? project.title : pendingTitle || name.replace(/\.pdf$/i,'');
+      pendingTitle = '';
       if (project) for (const [index,config] of Object.entries(project.overlays)) { overlays.set(Number(index),config); renderOverlay(Number(index),config); }
       $('#build-download').hidden = true;
       $('#document-name').textContent = name;
@@ -780,6 +783,17 @@
         history.replaceState(null, '', location.pathname);
       } catch (cause) { openingLibraryId = null; archiveNote(cause.message, true); error(cause.message); }
     })();
+  }
+  // flipbook.html?link=<public PDF>&title=… (journal search): fetch it like
+  // "Add file → paste a link" and open it as a book.
+  const handedLink = new URLSearchParams(location.search).get('link');
+  if (handedLink && /^https?:\/\//i.test(handedLink)) {
+    pendingTitle = (new URLSearchParams(location.search).get('title') || '').slice(0, 200);
+    history.replaceState(null, '', location.pathname);
+    $('#add-url').value = handedLink;
+    showAdd(true);
+    addStatus('Mengambil PDF artikel…');
+    $('#add-link').requestSubmit();
   }
   const source = new URLSearchParams(location.search).get('source');
   if (source) {
