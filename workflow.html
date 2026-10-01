@@ -12,6 +12,7 @@
 <script src="assets/workflow.js"></script>
 <script src="assets/flipbook-transfer.js"></script>
 <script src="assets/auth.js" defer></script>
+<script src="assets/mf-dialog.js" defer></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="assets/ui-clay.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -201,7 +202,7 @@
       el('span', {className: 'flex-1 min-w-0'}, el('span', {className: 'block text-sm font-bold truncate', textContent: recipe.name}),
         el('span', {className: 'block text-[11px] text-[#78716C] truncate', textContent: recipe.steps.map(s => (W.STEPS[s.type] || {title: s.type}).title).join(' → ')})),
       el('button', {type: 'button', className: 'chip', textContent: 'Use', onclick: () => { useSteps(recipe.steps); $('#recipe-name').value = recipe.name; recipeStatus('Loaded "' + recipe.name + '".'); }}),
-      iconButton('Delete workflow', '✕', () => { if (confirm('Delete the workflow "' + recipe.name + '"?')) { W.recipes.remove(recipe.name); renderRecipes(); recipeStatus('Deleted "' + recipe.name + '".'); } }))));
+      iconButton('Delete workflow', '✕', async () => { if (await MFDialog.confirm({title: 'Delete "' + recipe.name + '"?', message: 'This saved workflow will be removed.', ok: 'Delete', danger: true})) { W.recipes.remove(recipe.name); renderRecipes(); recipeStatus('Deleted "' + recipe.name + '".'); } }))));
   }
   $('#save-recipe').onclick = () => {
     try { W.recipes.save($('#recipe-name').value, steps); renderRecipes(); recipeStatus('Saved "' + $('#recipe-name').value.trim() + '".'); }

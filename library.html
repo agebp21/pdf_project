@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="assets/auth.js" defer></script>
+<script src="assets/mf-dialog.js" defer></script>
 <style>
   *{box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
   body{margin:0;min-height:100dvh;background:#FBFAF7;color:#1C1917}
@@ -108,7 +109,8 @@
     files.append(el('a', {className: 'file', href: `/api/library/${book.id}/project`, title: 'Proyek (.smflipbook) — bisa diedit lagi', textContent: '🗂 Proyek'}));
     const remove = el('button', {type: 'button', className: 'delete', textContent: '🗑', title: 'Hapus dari Arsipku', ariaLabel: 'Hapus ' + book.title});
     remove.onclick = async () => {
-      if (!confirm(`Hapus "${book.title}" dari Arsipku? Proyek dan semua hasil ekspornya ikut terhapus.`)) return;
+      if (!await MFDialog.confirm({title: `Hapus "${book.title}"?`, message: 'Buku ini dihapus dari Arsipku, termasuk proyek dan semua hasil ekspornya. Tidak bisa dibatalkan.',
+        ok: 'Hapus', cancel: 'Batal', danger: true})) return;
       remove.disabled = true;
       try { await api('POST', `/api/library/${book.id}/delete`); load(); } catch (e) { notice(e.message); remove.disabled = false; }
     };
