@@ -43,6 +43,7 @@ except ImportError:          # optional: pip install truststore
 
 import accounts
 import library
+import messages_en
 import book_seal
 import invoice
 
@@ -1526,7 +1527,23 @@ class Handler(SimpleHTTPRequestHandler):
             return False
         return not origin or origin == 'http://' + host
 
+    def page_language(self):
+        """'en' or 'id': the language the site is shown in (cookie mf_lang
+        from assets/i18n.js); 'id' when there is none (other clients, tests)."""
+        for part in self.headers.get('Cookie', '').split(';'):
+            name, _, value = part.strip().partition('=')
+            if name == 'mf_lang':
+                return 'en' if value.strip() == 'en' else 'id'
+        return 'id'
+
     def send_json(self, status, body, cookie=None):
+        if isinstance(body, dict) and self.page_language() == 'en' and ('error' in body or 'errors' in body):
+            # Messages are written in Indonesian; an English page gets English.
+            body = dict(body)
+            if isinstance(body.get('error'), str):
+                body['error'] = messages_en.english(body['error'])
+            if isinstance(body.get('errors'), list):
+                body['errors'] = [messages_en.english(e) for e in body['errors']]
         encoded = json.dumps(body).encode()
         self.send_response(status)
         self.send_header('Content-Type', 'application/json')

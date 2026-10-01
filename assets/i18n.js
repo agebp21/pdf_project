@@ -292,21 +292,58 @@
     if (lang === 'id' && dict.id[key] != null) return dict.id[key];
     return fallback;
   }
+  // English or Indonesian text picked in JS: I18N.pick('Search', 'Cari').
+  function pick(en, id) {
+    return get() === 'en' ? en : id;
+  }
+  // Two languages written straight into the page: the element keeps its
+  // Indonesian text and carries the English one —
+  //   <p data-en="English <b>html</b>">Teks <b>Indonesia</b></p>
+  //   data-en-ph / data-en-title / data-en-aria for placeholder, title, aria-label;
+  //   <html data-en-doc="English page title"> for the tab title.
+  var ATTRS = [['data-en-ph', 'placeholder'], ['data-en-title', 'title'], ['data-en-aria', 'aria-label']];
+  function both(root) {
+    var en = get() === 'en', i, j, els;
+    root = root || document;
+    els = root.querySelectorAll('[data-en]');
+    for (i = 0; i < els.length; i++) {
+      if (!els[i].hasAttribute('data-id-html')) els[i].setAttribute('data-id-html', els[i].innerHTML);
+      els[i].innerHTML = en ? els[i].getAttribute('data-en') : els[i].getAttribute('data-id-html');
+    }
+    for (j = 0; j < ATTRS.length; j++) {
+      els = root.querySelectorAll('[' + ATTRS[j][0] + ']');
+      for (i = 0; i < els.length; i++) {
+        var keep = 'data-id-' + ATTRS[j][1];
+        if (!els[i].hasAttribute(keep)) els[i].setAttribute(keep, els[i].getAttribute(ATTRS[j][1]) || '');
+        els[i].setAttribute(ATTRS[j][1], en ? els[i].getAttribute(ATTRS[j][0]) : els[i].getAttribute(keep));
+      }
+    }
+    var html = document.documentElement;
+    if (root === document && html.hasAttribute('data-en-doc')) {
+      if (!html.hasAttribute('data-id-doc')) html.setAttribute('data-id-doc', document.title);
+      document.title = en ? html.getAttribute('data-en-doc') : html.getAttribute('data-id-doc');
+    }
+  }
   function apply() {
     var i, els;
     els = document.querySelectorAll('[data-i18n]');
     for (i = 0; i < els.length; i++) els[i].textContent = t(els[i].getAttribute('data-i18n'));
     els = document.querySelectorAll('[data-i18n-ph]');
     for (i = 0; i < els.length; i++) els[i].setAttribute('placeholder', t(els[i].getAttribute('data-i18n-ph')));
+    both(document);
     els = document.querySelectorAll('[data-lang-toggle]');
     // The button shows the language in use; its tooltip says what a click does.
     for (i = 0; i < els.length; i++) {
       els[i].textContent = get() === 'en' ? 'EN' : 'ID';
-      els[i].title = get() === 'en' ? 'Ganti ke Bahasa Indonesia' : 'Switch to English';
+      els[i].title = get() === 'en' ? 'Switch to Indonesian' : 'Ganti ke bahasa Inggris';
       els[i].setAttribute('aria-label', els[i].title);
     }
     try {
       document.documentElement.lang = get() === 'en' ? 'en' : 'id';
+    } catch (e) {}
+    // The server answers (errors, emails) in the same language.
+    try {
+      document.cookie = 'mf_lang=' + get() + '; path=/; max-age=31536000; SameSite=Lax';
     } catch (e) {}
   }
   function set(lang) {
@@ -324,5 +361,5 @@
   });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
   else apply();
-  window.I18N = { get: get, set: set, t: t, tool: tool, apply: apply, KEY: KEY };
+  window.I18N = { get: get, set: set, t: t, tool: tool, apply: apply, pick: pick, both: both, KEY: KEY };
 })();

@@ -1,6 +1,8 @@
 'use strict';
 (() => {
   const $ = selector => document.querySelector(selector);
+  // English or Indonesian, with the site language (assets/i18n.js).
+  const L = (en, id) => window.I18N ? I18N.pick(en, id) : en;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let book = null, pdf = null, pageElements = [], imageUrls = [], frame = 0, loadVersion = 0;
   let opening = false;
@@ -12,7 +14,7 @@
     catch(cause){preview.classList.toggle('reading-fullscreen');}
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
-  document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?'Keluar fullscreen':'Layar penuh'});
+  document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?L('Exit full screen','Keluar fullscreen'):L('Full screen','Layar penuh')});
   let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.
@@ -27,7 +29,7 @@
     $('#export-exe').disabled = !buildConfig?.exe;
     $('#project-file').disabled = opening || exporting;
   }
-  const model = () => ({version:1,title:$('#export-title').value.trim()||'Buku interaktif',pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{}),...(Object.keys(bookTranslations).length?{translations:bookTranslations}:{}),...(bookSummary?{summary:bookSummary}:{})});
+  const model = () => ({version:1,title:$('#export-title').value.trim()||L('Interactive book','Buku interaktif'),pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{}),...(Object.keys(bookTranslations).length?{translations:bookTranslations}:{}),...(bookSummary?{summary:bookSummary}:{})});
   const error = message => { $('#reader-error').textContent = message; $('#reader-error').hidden = !message; };
   // Sheets on screen (may include the blank back cover of an odd page count).
   function sheetsOnScreen() {
@@ -204,7 +206,7 @@
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');
       updatePage();
       libraryId = openingLibraryId; openingLibraryId = null;
-      if (libraryId) archiveNote('☁ Dibuka dari My Library'); else archiveBook();
+      if (libraryId) archiveNote(L('☁ Opened from My Library', '☁ Dibuka dari My Library')); else archiveBook();
       return true;
     } catch (cause) {
       if (installed) sourcePdf = null;
@@ -249,22 +251,22 @@
   }
   // Save (or update) the open book in the member's archive. Never blocks the editor.
   async function archiveBook() {
-    if (!sourcePdf || !(await archiveMember())) { if (archiveUser === null) archiveNote('Masuk untuk menyimpan otomatis ke My Library.'); return null; }
+    if (!sourcePdf || !(await archiveMember())) { if (archiveUser === null) archiveNote(L('Log in to save to My Library automatically.', 'Masuk untuk menyimpan otomatis ke My Library.')); return null; }
     try {
-      archiveNote('☁ Menyimpan ke My Library…');
+      archiveNote(L('☁ Saving to My Library…', '☁ Menyimpan ke My Library…'));
       const project = await FlipbookExport.saveProject(model(), sourcePdf);
       const headers = {'Content-Type':'application/zip'};
       if (libraryId) headers['X-Book-Id'] = libraryId;
       const response = await fetch('/api/library/save', {method:'POST', credentials:'same-origin', headers, body: project});
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw Error(result.error || 'Gagal menyimpan.');
+      if (!response.ok) throw Error(result.error || L('Saving failed.', 'Gagal menyimpan.'));
       const first = !libraryId;
       libraryId = result.id;
       if (first) {
         const cover = await coverJpeg();
         if (cover) await fetch(`/api/library/${libraryId}/cover`, {method:'POST', credentials:'same-origin', headers:{'Content-Type':'image/jpeg'}, body: cover});
       }
-      archiveNote('☁ Tersimpan di My Library');
+      archiveNote(L('☁ Saved in My Library', '☁ Tersimpan di My Library'));
       return libraryId;
     } catch (cause) { archiveNote('My Library: ' + cause.message, true); return null; }
   }
@@ -274,8 +276,8 @@
       const response = await fetch(`/api/library/${libraryId}/export`, {method:'POST', credentials:'same-origin',
         headers:{'Content-Type':'application/octet-stream', 'X-Kind': kind, 'X-Filename': encodeURIComponent(filename)}, body: blob});
       const result = await response.json().catch(() => ({}));
-      if (!response.ok) throw Error(result.error || 'Gagal menyimpan hasil ekspor.');
-      archiveNote('☁ Buku + hasil ' + kind.toUpperCase() + ' tersimpan di My Library');
+      if (!response.ok) throw Error(result.error || L('Saving the export failed.', 'Gagal menyimpan hasil ekspor.'));
+      archiveNote(L('☁ Book + ' + kind.toUpperCase() + ' saved in My Library', '☁ Buku + hasil ' + kind.toUpperCase() + ' tersimpan di My Library'));
     } catch (cause) { archiveNote('My Library: ' + cause.message, true); }
   }
 
@@ -488,7 +490,7 @@
       const project = await FlipbookExport.readProject(file);
       exporting = false;
       await openPdf(project.pdf, project.data.title + '.pdf', project.data);
-    } catch(cause) { error('Proyek gagal dibuka: ' + cause.message); }
+    } catch(cause) { error(L('The project could not be opened: ', 'Proyek gagal dibuka: ') + cause.message); }
     finally { exporting = false; exportState(); $('#pdf-file').disabled=false; $('#overlay-fields').disabled=!book; }
   });
   // Paywall (server decides; this only explains it before any work starts).
@@ -500,9 +502,10 @@
   }
   function showPaywall(plan) {
     const box = $('#export-status');
-    const link = Object.assign(document.createElement('a'), { href: 'account.html', textContent: 'Lihat paket →' });
+    const link = Object.assign(document.createElement('a'), { href: 'account.html', textContent: L('See plans →', 'Lihat paket →') });
     link.style.fontWeight = '800';
-    box.replaceChildren('Ekspor ini butuh paket ' + (plan === 'Business' ? 'Business' : 'Pro atau Business') + '. Preview dan simpan proyek tetap gratis. ', link);
+    box.replaceChildren(L('This export needs the ' + (plan === 'Business' ? 'Business' : 'Pro or Business') + ' plan. Preview and saving the project stay free. ',
+      'Ekspor ini butuh paket ' + (plan === 'Business' ? 'Business' : 'Pro atau Business') + '. Preview dan simpan proyek tetap gratis. '), link);
   }
   function markLocked() {
     for (const [id, target] of [['#export-html','html'],['#export-apk','apk'],['#export-exe','exe']]) {
@@ -540,12 +543,12 @@
       const outputName = name + EXPORT_NAMES[target];
       // Every export asks where to save first (inside the click), then runs to the end on its own.
       const saveHandle = await FlipbookExport.chooseSave(outputName);
-      status('Menyiapkan ekspor…'); progress(0);
+      status(L('Preparing the export…', 'Menyiapkan ekspor…')); progress(0);
       if (target === 'project') {
         const blob = await FlipbookExport.saveProject(data, sourcePdf, (message, fraction) => { status(message); step(0, .9)(fraction); });
-        status('Menyimpan proyek…');
+        status(L('Saving the project…', 'Menyimpan proyek…'));
         const saved = await FlipbookExport.saveBlob(blob, outputName, saveHandle); progress(1);
-        status(saved?'Proyek tersimpan di lokasi pilihanmu.':'Proyek dikirim ke download browser.');
+        status(saved?L('Project saved where you chose.','Proyek tersimpan di lokasi pilihanmu.'):L('Project sent to the browser downloads.','Proyek dikirim ke download browser.'));
         archiveBook();
         return;
       }
@@ -553,32 +556,33 @@
       if (!native) {
         // One file named after the book: pages and data encrypted inside.
         const single = await FlipbookExport.packageSingleHtml(data, imageUrls, (message, fraction) => { status(message); if (fraction !== undefined) step(0, .95)(fraction); });
-        status('Menyimpan HTML…');
+        status(L('Saving the HTML…', 'Menyimpan HTML…'));
         const saved = await FlipbookExport.saveBlob(single, outputName, saveHandle); progress(1);
         archiveExport('html', single, outputName);
-        status((saved?'HTML tersimpan di lokasi pilihanmu. ':'HTML dikirim ke download browser. ')+'Klik 2x file '+outputName+' untuk membaca bukunya.');
+        status(L((saved?'HTML saved where you chose. ':'HTML sent to the browser downloads. ')+'Double-click '+outputName+' to read the book.',
+          (saved?'HTML tersimpan di lokasi pilihanmu. ':'HTML dikirim ke download browser. ')+'Klik 2x file '+outputName+' untuk membaca bukunya.'));
         return;
       }
       const pack = step(0, .12);
       const bundle = await FlipbookExport.packageBook(data, imageUrls, (message, fraction) => { status(message); if (fraction !== undefined) pack(fraction); });
       const capabilities=await fetch('/api/capabilities',{cache:'no-store'});
-      if(!capabilities.ok)throw Error('Layanan build lokal tidak tersedia. Jalankan python server.py.');
+      if(!capabilities.ok)throw Error(L('The local build service is not available. Run python server.py.', 'Layanan build lokal tidak tersedia. Jalankan python server.py.'));
       buildConfig=await capabilities.json();
-      if(!buildConfig[target])throw Error('Build '+target.toUpperCase()+' belum tersedia di komputer ini.');
-      status('Mengirim buku ke layanan build…');
+      if(!buildConfig[target])throw Error(L(target.toUpperCase()+' builds are not available on this computer yet.', 'Build '+target.toUpperCase()+' belum tersedia di komputer ini.'));
+      status(L('Sending the book to the build service…', 'Mengirim buku ke layanan build…'));
       // The server keeps the build in the member's archive too.
       const archived = await archiveBook();
       const buildHeaders = {'Content-Type':'application/zip','X-Build-Token':buildConfig.token};
       if (archived) buildHeaders['X-Library-Book'] = archived;
       const sent = await FlipbookExport.upload('/api/build/'+target, bundle, buildHeaders, step(.12, .2));
-      if(!sent.ok)throw Error(sent.data.error||'Build gagal dimulai.');
+      if(!sent.ok)throw Error(sent.data.error||L('The build could not start.','Build gagal dimulai.'));
       // Server reports its stage (0..1); while the compiler runs, creep
       // toward the next stage so the bar keeps moving honestly.
       const building = step(.2, .9), started = Date.now(), tau = target === 'apk' ? 45000 : 20000;
       let job = {status: 'queued', progress: 0}, stageAt = Date.now(), stage = 0;
       while (job.status !== 'done') {
         await new Promise(resolve=>setTimeout(resolve,1000));
-        const check=await fetch('/api/jobs/'+sent.data.id);if(!check.ok)throw Error('Status build tidak tersedia.');
+        const check=await fetch('/api/jobs/'+sent.data.id);if(!check.ok)throw Error(L('Build status is not available.','Status build tidak tersedia.'));
         job=await check.json();status(job.message);
         if(job.status==='failed') {
           if(job.log) { const link=$('#build-download');link.onclick=null;link.href=job.log;link.textContent='Download log build';link.hidden=false; }
@@ -589,40 +593,40 @@
         const next = reported >= .3 ? .97 : Math.min(.97, reported + .1);
         building(reported + (next - reported) * (1 - Math.exp(-(Date.now() - stageAt) / (reported >= .3 ? tau : 8000))));
       }
-      status('Menyimpan '+(target==='apk'?'APK':'EXE ZIP')+'…');
+      status(L('Saving ','Menyimpan ')+(target==='apk'?'APK':'EXE ZIP')+'…');
       const saved = await FlipbookExport.saveRemote(job.download, outputName, saveHandle, step(.9, 1));
       progress(1);
       // Keep a link to fetch the result again (e.g. another copy for a phone).
-      const link=$('#build-download');link.href=job.download;link.textContent='Simpan salinan lagi…';link.hidden=false;
+      const link=$('#build-download');link.href=job.download;link.textContent=L('Save another copy…','Simpan salinan lagi…');link.hidden=false;
       let saving=false;
       link.onclick=async event=>{
         event.preventDefault();if(saving)return;saving=true;error('');
         try {
           const again = await FlipbookExport.chooseSave(outputName);
           const ok=await FlipbookExport.saveRemote(job.download,outputName,again);
-          status(ok?'Salinan tersimpan di lokasi pilihanmu.':'File dikirim ke download browser.');
-        } catch(cause) { if(cause.name==='AbortError')status('Penyimpanan dibatalkan.');else error('Gagal menyimpan: '+cause.message); }
+          status(ok?L('Copy saved where you chose.','Salinan tersimpan di lokasi pilihanmu.'):L('File sent to the browser downloads.','File dikirim ke download browser.'));
+        } catch(cause) { if(cause.name==='AbortError')status(L('Saving cancelled.','Penyimpanan dibatalkan.'));else error(L('Saving failed: ','Gagal menyimpan: ')+cause.message); }
         finally { saving=false; }
       };
-      status((saved?(target==='apk'?'APK':'EXE ZIP')+' tersimpan di lokasi pilihanmu':'Hasil build dikirim ke download browser')+' ('+Math.round((Date.now()-started)/1000)+' detik).');
-    } catch(cause) { progress(null); if(cause.name==='AbortError')status('Ekspor dibatalkan.');else { status('Ekspor gagal: '+cause.message); error(cause.message); } }
+      status((saved?(target==='apk'?'APK':'EXE ZIP')+L(' saved where you chose',' tersimpan di lokasi pilihanmu'):L('Build sent to the browser downloads','Hasil build dikirim ke download browser'))+' ('+Math.round((Date.now()-started)/1000)+L(' seconds).',' detik).'));
+    } catch(cause) { progress(null); if(cause.name==='AbortError')status(L('Export cancelled.','Ekspor dibatalkan.'));else { status(L('Export failed: ','Ekspor gagal: ')+cause.message); error(cause.message); } }
     finally { exporting=false;exportState();$('#pdf-file').disabled=false;$('#overlay-fields').disabled=!book; }
   }
   FlipbookSound.bindButton($('#sound'));
   $('#save-project').onclick=()=>exportBook('project');$('#export-html').onclick=()=>exportBook('html');
   $('#export-apk').onclick=()=>exportBook('apk');$('#export-exe').onclick=()=>exportBook('exe');
   fetch('/api/capabilities').then(async response=>{
-    if(!response.ok)throw Error('Layanan build belum berjalan');
+    if(!response.ok)throw Error(L('The build service is not running','Layanan build belum berjalan'));
     buildConfig=await response.json();exportState();markLocked();
-    $('#build-availability').textContent=buildConfig.apk||buildConfig.exe?'Build APK/EXE memakai komputer ini. Build pertama dapat memerlukan beberapa menit dan internet untuk dependensi.':'Flutter belum tersedia. Ekspor HTML dan simpan proyek tetap bisa digunakan.';
-  }).catch(()=>{ $('#build-availability').textContent='Untuk build APK/EXE, jalankan server proyek dengan python server.py. Ekspor HTML tetap tersedia.'; });
+    $('#build-availability').textContent=buildConfig.apk||buildConfig.exe?L('APK/EXE builds use this computer. The first build can take a few minutes and needs internet for dependencies.','Build APK/EXE memakai komputer ini. Build pertama dapat memerlukan beberapa menit dan internet untuk dependensi.'):L('Flutter is not available yet. HTML export and saving projects still work.','Flutter belum tersedia. Ekspor HTML dan simpan proyek tetap bisa digunakan.');
+  }).catch(()=>{ $('#build-availability').textContent=L('For APK/EXE builds, run the project server with python server.py. HTML export still works.','Untuk build APK/EXE, jalankan server proyek dengan python server.py. Ekspor HTML tetap tersedia.'); });
   const fromLibrary = new URLSearchParams(location.search).get('library');
   if (/^[0-9a-f]{32}$/.test(fromLibrary || '')) {
     (async () => {
       try {
-        archiveNote('☁ Membuka dari My Library…');
+        archiveNote(L('☁ Opening from My Library…', '☁ Membuka dari My Library…'));
         const response = await fetch(`/api/library/${fromLibrary}/project`, {credentials:'same-origin'});
-        if (!response.ok) throw Error(((await response.json().catch(() => ({}))).error) || 'Buku tidak bisa dibuka dari My Library.');
+        if (!response.ok) throw Error(((await response.json().catch(() => ({}))).error) || L('The book could not be opened from My Library.', 'Buku tidak bisa dibuka dari My Library.'));
         const project = await FlipbookExport.readProject(await response.blob());
         openingLibraryId = fromLibrary;
         await openPdf(project.pdf, project.data.title + '.pdf', project.data);
@@ -638,7 +642,7 @@
     history.replaceState(null, '', location.pathname);
     $('#add-url').value = handedLink;
     showAdd(true);
-    addStatus('Mengambil PDF artikel…');
+    addStatus(L('Fetching the PDF…', 'Mengambil PDF artikel…'));
     $('#add-link').requestSubmit();
   }
   const source = new URLSearchParams(location.search).get('source');
@@ -646,7 +650,7 @@
     (async () => {
       try {
         const entry = await FlipbookTransfer.get(source);
-        if (!entry) throw new Error('Hasil konversi tidak ditemukan. Pilih PDF atau konversi ulang.');
+        if (!entry) throw new Error(L('The conversion result was not found. Choose a PDF or convert again.', 'Hasil konversi tidak ditemukan. Pilih PDF atau konversi ulang.'));
         if (await openPdf(entry.blob, entry.name)) {
           await FlipbookTransfer.remove(source);
           history.replaceState(null, '', location.pathname);

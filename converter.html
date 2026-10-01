@@ -10,6 +10,7 @@
 <script src="assets/pdf-edit.js"></script>
 <script src="assets/pdf-compress.js"></script>
 <script src="assets/pdf-ocr-layer.js"></script>
+<script src="assets/i18n.js"></script>
 <script src="assets/pdf-layout.js"></script>
 <script src="assets/auth.js" defer></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -138,16 +139,18 @@ const TOOLS = [
   {id:'excel-to-pdf', title:'Excel to PDF', desc:'Convert spreadsheets using their layout and print settings via local LibreOffice.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file - requires the project server and LibreOffice'},
   {id:'pdf-to-excel', title:'PDF to Excel', desc:'Data sheet first: columns split into cells, numbers become real numbers. Page images kept on a second sheet.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pages embedded as images, text/OCR on extra sheets (needs internet)'},
   {id:'html-to-pdf', title:'HTML to PDF', desc:'Print a saved web page / HTML file to PDF with its real layout, colours and images.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'.html / .htm file — printed by Edge/Chrome on the project server'},
-  {id:'merge-pdf', title:'Merge PDF', desc:'Gabungkan PDF sesuai urutan yang kamu mau.', cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, hint:'Pilih 2+ file PDF untuk digabungkan'},
-  {id:'split-pdf', title:'Split PDF', desc:'Extract halaman 1-3, split per N halaman, atau centang manual per halaman.', cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — pilih mode split di bawah'},
+  {id:'merge-pdf', title:'Merge PDF', get desc(){return L('Combine PDFs in the order you want.','Gabungkan PDF sesuai urutan yang kamu mau.')}, cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, get hint(){return L('Choose 2+ PDF files to merge','Pilih 2+ file PDF untuk digabungkan')}},
+  {id:'split-pdf', title:'Split PDF', get desc(){return L('Extract pages 1-3, split every N pages, or tick pages one by one.','Extract halaman 1-3, split per N halaman, atau centang manual per halaman.')}, cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', get hint(){return L('PDF file — pick a split mode below','File PDF — pilih mode split di bawah')}},
   {id:'compress-pdf', title:'Compress PDF', desc:'Shrink PDFs full of photos and scans: images are resized and re-encoded, text stays sharp.', cat:'Optimize PDF', icon:'⇲', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pick Light / Balanced / Strong'},
-  {id:'rotate-pdf', title:'Rotate PDF', desc:'Putar halaman PDF 90° / 180° / 270° — per halaman atau semua.', cat:'Organize PDF', icon:'↻', color:'#a855a7', bg:'#fae8ff', accept:'.pdf', hint:'File PDF — pilih sudut & halaman'},
-  {id:'organize-pdf', title:'Organize PDF', desc:'Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.', cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', hint:'File PDF — preview grid, drag untuk urutkan'},
+  {id:'rotate-pdf', title:'Rotate PDF', get desc(){return L('Rotate PDF pages 90° / 180° / 270° — some pages or all.','Putar halaman PDF 90° / 180° / 270° — per halaman atau semua.')}, cat:'Organize PDF', icon:'↻', color:'#a855a7', bg:'#fae8ff', accept:'.pdf', get hint(){return L('PDF file — pick the angle & pages','File PDF — pilih sudut & halaman')}},
+  {id:'organize-pdf', title:'Organize PDF', get desc(){return L('Reorder, delete, rotate or extract pages — drag & drop like a pro tool.','Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.')}, cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', get hint(){return L('PDF file — page grid, drag to reorder','File PDF — preview grid, drag untuk urutkan')}},
   {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Real PPTX→PDF via local LibreOffice (needs the project server).', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'PPTX/PPT file — converted on your computer via the local server + LibreOffice'},
   {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'Real .pptx: slides look like the PDF pages and every text line is an editable text box.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'PDF file — design kept, text editable on the slide (needs internet)'},
   {id:'pdf-to-md', title:'PDF to Markdown', desc:'Headings, lists, and tables detected — perfect food for AI, notes, and blogs.', cat:'Convert PDF', icon:'{ }', color:'#4C1D95', bg:'#E9E4FF', accept:'.pdf', hint:'PDF file — structure detected from fonts and columns'},
   {id:'ocr-pdf', title:'OCR PDF', desc:'Make scans searchable: the original pages stay exactly as they are, with invisible text you can search, select and copy.', cat:'Convert PDF', icon:'OCR', color:'#15803D', bg:'#DCFCE7', accept:'.pdf', hint:'PDF file — scanned pages are read with OCR (needs internet the first time)'},
 ];
+// English or Indonesian, with the site language (assets/i18n.js).
+const L = (en, id) => window.I18N ? I18N.pick(en, id) : en;
 let active = new URLSearchParams(location.search).get('tool') || 'jpg-to-pdf';
 // Honest fallback: 18 catalog cards link to tools not built yet. Instead of
 // silently opening the wrong tool, remember the request and banner it.
@@ -200,9 +203,9 @@ function renderHeader(){
   $('#fileInput').multiple=!!t.multiple;
   let html='';
   if(t.id==='jpg-to-pdf'){
-    html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Orientasi:
+    html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">${L('Orientation:','Orientasi:')}
       <select id="opt-orient" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="auto">Auto (follow each image)</option><option value="p">Portrait</option><option value="l">Landscape</option></select></label>
-      <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Ukuran:
+      <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">${L('Size:','Ukuran:')}
       <select id="opt-size" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="a4">A4</option><option value="letter">Letter</option><option value="fit">Same as image (no margin)</option></select></label>
       <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Margin:
       <select id="opt-margin" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="10">Normal</option><option value="0">None</option><option value="20">Wide</option></select></label>`;
@@ -213,7 +216,7 @@ function renderHeader(){
       <select id="opt-html-margin" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="12">Normal</option><option value="0">None</option><option value="20">Wide</option></select></label>
       <span class="text-[11px] text-gray-500 w-full text-center">Images inside the page must be embedded or online. A page's own print settings (@page) win over these.</span>`;
   }else if(t.id==='pdf-to-jpg'){
-    html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Kualitas:
+    html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">${L('Quality:','Kualitas:')}
       <select id="opt-quality" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="1.5">Standard</option><option value="2" selected>High (2x)</option><option value="3">Ultra (3x)</option></select></label>
       <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">Format:
       <select id="opt-format" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="jpg" selected>JPG (small)</option><option value="png">PNG (lossless)</option></select></label>`;
@@ -226,26 +229,26 @@ function renderHeader(){
       <span class="text-[11px] text-gray-500">Look stays identical — text becomes selectable. Slow on big files.</span>`;
   }else if(t.id==='split-pdf'){
     html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-4 shadow-sm text-left">
-      <p class="text-xs font-bold mb-2 text-center">Mode Split — pilih salah satu:</p>
+      <p class="text-xs font-bold mb-2 text-center">${L('Split mode — pick one:','Mode Split — pilih salah satu:')}</p>
       <div class="flex flex-wrap justify-center gap-2 mb-3">
-        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="select" checked class="hidden"> <span class="text-xs font-medium">☑️ Pilih halaman</span></label>
-        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="all" class="hidden"> <span class="text-xs font-medium">Semua (1 hal = 1 PDF)</span></label>
-        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-amber-50 border-amber-200 cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="range" class="hidden"> <span class="text-xs font-medium">✂️ Extract rentang</span></label>
-        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="chunk" class="hidden"> <span class="text-xs font-medium">📦 Per N halaman</span></label>
+        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="select" checked class="hidden"> <span class="text-xs font-medium">${L('☑️ Pick pages','☑️ Pilih halaman')}</span></label>
+        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="all" class="hidden"> <span class="text-xs font-medium">${L('All (1 page = 1 PDF)','Semua (1 hal = 1 PDF)')}</span></label>
+        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-amber-50 border-amber-200 cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="range" class="hidden"> <span class="text-xs font-medium">${L('✂️ Extract a range','✂️ Extract rentang')}</span></label>
+        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="chunk" class="hidden"> <span class="text-xs font-medium">${L('📦 Every N pages','📦 Per N halaman')}</span></label>
       </div>
       <div id="splitRangeBox" class="hidden flex flex-wrap justify-center items-center gap-2 bg-amber-50 border border-amber-200 rounded-xl p-3">
-        <span class="text-xs font-bold">Rentang:</span>
+        <span class="text-xs font-bold">${L('Range:','Rentang:')}</span>
         <input id="splitRange" type="text" placeholder="1-3,5,8-10" class="px-3 py-1.5 rounded-full border border-gray-300 text-xs w-48 bg-white" value="1-3">
-        <span class="text-[11px] text-gray-600">Contoh: 1-3,5 = hal 1,2,3,5</span>
+        <span class="text-[11px] text-gray-600">${L('Example: 1-3,5 = pages 1,2,3,5','Contoh: 1-3,5 = hal 1,2,3,5')}</span>
         <span id="rangeInfo" class="text-[11px] font-bold text-gray-700"></span>
       </div>
       <div id="splitChunkBox" class="hidden flex justify-center items-center gap-2 bg-gray-50 border rounded-xl p-3">
-        <span class="text-xs">Tiap file berisi</span>
+        <span class="text-xs">${L('Each file has','Tiap file berisi')}</span>
         <input id="splitChunk" type="number" min="1" value="5" class="w-20 px-3 py-1.5 rounded-full border border-gray-300 text-xs bg-white">
-        <span class="text-xs">halaman — 100 hal / 5 = 20 file</span>
+        <span class="text-xs">${L('pages — 100 pages / 5 = 20 files','halaman — 100 hal / 5 = 20 file')}</span>
       </div>
       <div id="splitSelectBox" class="hidden bg-gray-50 border rounded-xl p-3 mt-3">
-        <p class="text-[11.5px] text-gray-600 mb-2 text-center"><b>Klik gambar</b> untuk membaca halaman · <b>centang</b> halaman yang mau diambil · <button type="button" onclick="toggleAllSplit(true)" class="underline font-semibold">Pilih semua</button> · <button type="button" onclick="toggleAllSplit(false)" class="underline">Kosongkan</button> · <span id="selectCount" class="font-bold"></span></p>
+        <p class="text-[11.5px] text-gray-600 mb-2 text-center">${L('<b>Click a picture</b> to read the page · <b>tick</b> the pages you want','<b>Klik gambar</b> untuk membaca halaman · <b>centang</b> halaman yang mau diambil')} · <button type="button" onclick="toggleAllSplit(true)" class="underline font-semibold">${L('Select all','Pilih semua')}</button> · <button type="button" onclick="toggleAllSplit(false)" class="underline">${L('Clear','Kosongkan')}</button> · <span id="selectCount" class="font-bold"></span></p>
         <div id="splitGrid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[70vh] overflow-auto p-1"></div>
       </div>
     </div>`;
@@ -265,21 +268,21 @@ function renderHeader(){
         <label class="px-3.5 py-1.5 rounded-full border cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white"><input type="radio" name="rotateAngle" value="270" class="hidden"> <span class="text-xs">↻ 270°</span></label>
       </div>
       <div class="flex flex-wrap justify-center items-center gap-2">
-        <span class="text-xs">Halaman:</span>
-        <input id="rotateRange" type="text" placeholder="semua / 1-3,5" class="px-3 py-1.5 rounded-full border text-xs w-40" value="semua">
+        <span class="text-xs">${L('Pages:','Halaman:')}</span>
+        <input id="rotateRange" type="text" placeholder="${L('all / 1-3,5','semua / 1-3,5')}" class="px-3 py-1.5 rounded-full border text-xs w-40" value="${L('all','semua')}">
         <span id="rotateInfo" class="text-[11px] text-gray-500"></span>
-        <span class="text-[11px] text-gray-400">kosong = semua</span>
+        <span class="text-[11px] text-gray-400">${L('empty = all','kosong = semua')}</span>
       </div>
       <div id="rotateGrid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-40 overflow-auto hidden"></div>
     </div>`;
   }else if(t.id==='organize-pdf'){
     html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-      <p class="text-xs font-bold text-center mb-2">Organize — drag untuk urutkan, centang untuk aksi</p>
+      <p class="text-xs font-bold text-center mb-2">${L('Organize — drag to reorder, tick to act','Organize — drag untuk urutkan, centang untuk aksi')}</p>
       <div class="flex flex-wrap justify-center gap-1.5 mb-2">
         <button onclick="orgDelete()" class="px-3 py-1 rounded-full bg-red-600 text-white text-xs font-bold">🗑️ Delete selected</button>
         <button onclick="orgRotate(90)" class="px-3 py-1 rounded-full bg-white border text-xs">↻ 90°</button>
         <button onclick="orgRotate(180)" class="px-3 py-1 rounded-full bg-white border text-xs">↻ 180°</button>
-        <button onclick="orgDuplicate()" class="px-3 py-1 rounded-full bg-white border text-xs">⎘ Duplikat</button>
+        <button onclick="orgDuplicate()" class="px-3 py-1 rounded-full bg-white border text-xs">${L('⎘ Duplicate','⎘ Duplikat')}</button>
         <button onclick="toggleAllOrg(true)" class="px-3 py-1 rounded-full bg-gray-900 text-white text-xs">Select all</button>
       </div>
       <div id="organizeGrid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-2 max-h-[340px] overflow-auto p-1"></div>
@@ -340,12 +343,12 @@ function updateSplitBtn(){
     $('#btnText').textContent=`Extract ${v} →`;
   }else if(m==='chunk'){
     const n=parseInt($('#splitChunk')?.value||'5');
-    $('#btnText').textContent=`Split per ${n} hal →`;
+    $('#btnText').textContent=L(`Split every ${n} pages →`,`Split per ${n} hal →`);
   }else if(m==='select'){
-    $('#btnText').textContent=splitSelected.size ? `Ambil ${splitSelected.size} halaman terpilih →` : 'Centang halaman dulu';
-    $('#selectCount').textContent = splitSelected.size ? `(${splitSelected.size} terpilih)` : '';
+    $('#btnText').textContent=splitSelected.size ? L(`Take the ${splitSelected.size} selected pages →`,`Ambil ${splitSelected.size} halaman terpilih →`) : L('Tick pages first','Centang halaman dulu');
+    $('#selectCount').textContent = splitSelected.size ? L(`(${splitSelected.size} selected)`,`(${splitSelected.size} terpilih)`) : '';
   }else{
-    $('#btnText').textContent=`Split semua (${splitPageCount||'?'} hal) →`;
+    $('#btnText').textContent=L(`Split all (${splitPageCount||'?'} pages) →`,`Split semua (${splitPageCount||'?'} hal) →`);
   }
 }
 window.toggleAllSplit=(on)=>{
@@ -364,18 +367,18 @@ async function buildSplitPreview(){
     const doc=await PDFLib.PDFDocument.load(buf.slice(0), {ignoreEncryption:true});
     splitPageCount=doc.getPageCount();
     log('Split preview pages='+splitPageCount);
-    $('#rangeInfo').textContent=`(PDF ada ${splitPageCount} hal)`;
+    $('#rangeInfo').textContent=L(`(the PDF has ${splitPageCount} pages)`,`(PDF ada ${splitPageCount} hal)`);
     if(splitPdfDoc){ try{ await splitPdfDoc.destroy(); }catch(e){} }
     splitPdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(buf), disableWorker: location.protocol==='file:'}).promise;
     const grid=$('#splitGrid');
     if(grid){
       grid.innerHTML=Array.from({length:splitPageCount},(_,i)=>`
         <div class="split-page relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent bg-white shadow-sm" data-page="${i}">
-          <input type="checkbox" value="${i}" class="absolute top-2 right-2 w-5 h-5 z-10 cursor-pointer accent-gray-900" onchange="onSplitCheck(this)" aria-label="Pilih halaman ${i+1}">
-          <button type="button" class="split-thumb w-full aspect-[3/4] rounded-lg border bg-gray-100 grid place-items-center overflow-hidden cursor-zoom-in" onclick="openSplitViewer(${i})" title="Baca halaman ${i+1}">
-            <span class="text-[11px] text-gray-400">Hal ${i+1}</span>
+          <input type="checkbox" value="${i}" class="absolute top-2 right-2 w-5 h-5 z-10 cursor-pointer accent-gray-900" onchange="onSplitCheck(this)" aria-label="${L('Pick page','Pilih halaman')} ${i+1}">
+          <button type="button" class="split-thumb w-full aspect-[3/4] rounded-lg border bg-gray-100 grid place-items-center overflow-hidden cursor-zoom-in" onclick="openSplitViewer(${i})" title="${L('Read page','Baca halaman')} ${i+1}">
+            <span class="text-[11px] text-gray-400">${L('Page','Hal')} ${i+1}</span>
           </button>
-          <span class="text-[11px] font-semibold">Hal ${i+1}</span>
+          <span class="text-[11px] font-semibold">${L('Page','Hal')} ${i+1}</span>
         </div>`).join('');
       splitSelected=new Set();
       splitThumbObserver?.disconnect();
@@ -430,8 +433,8 @@ window.openSplitViewer=async (index)=>{
         <button type="button" data-go="-1" class="px-3 py-1 rounded-full border">←</button>
         <span id="splitViewerLabel"></span>
         <button type="button" data-go="1" class="px-3 py-1 rounded-full border">→</button>
-        <label class="flex items-center gap-1.5 ml-2 px-3 py-1 rounded-full bg-gray-900 text-white cursor-pointer"><input id="splitViewerPick" type="checkbox" class="w-4 h-4"> Pilih halaman ini</label>
-        <button type="button" data-close class="ml-2 px-3 py-1 rounded-full border" aria-label="Tutup">✕</button>
+        <label class="flex items-center gap-1.5 ml-2 px-3 py-1 rounded-full bg-gray-900 text-white cursor-pointer"><input id="splitViewerPick" type="checkbox" class="w-4 h-4"> ${L('Pick this page','Pilih halaman ini')}</label>
+        <button type="button" data-close class="ml-2 px-3 py-1 rounded-full border" aria-label="${L('Close','Tutup')}">✕</button>
       </div>
       <div id="splitViewerPage" class="flex-1 min-h-0 w-full flex items-center justify-center overflow-auto"></div>`;
     document.body.appendChild(box);
@@ -445,10 +448,10 @@ window.openSplitViewer=async (index)=>{
     });
     document.addEventListener('keydown', splitViewerKeys);
   }
-  box.querySelector('#splitViewerLabel').textContent=`Halaman ${splitViewerAt+1} / ${splitPageCount}`;
+  box.querySelector('#splitViewerLabel').textContent=L(`Page ${splitViewerAt+1} / ${splitPageCount}`,`Halaman ${splitViewerAt+1} / ${splitPageCount}`);
   box.querySelector('#splitViewerPick').checked=splitSelected.has(splitViewerAt);
   const holder=box.querySelector('#splitViewerPage');
-  holder.innerHTML='<span class="text-white/70 text-sm">Memuat…</span>';
+  holder.innerHTML='<span class="text-white/70 text-sm">'+L('Loading…','Memuat…')+'</span>';
   const want=splitViewerAt;
   const canvas=await renderSplitPage(want, Math.min(1400, window.innerWidth) * (window.devicePixelRatio||1));
   if(want!==splitViewerAt || !document.getElementById('splitViewer')) return;
@@ -478,7 +481,7 @@ async function buildRotatePreview(){
     const buf=await files[0].arrayBuffer();
     const doc=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
     const n=doc.getPageCount();
-    $('#rotateInfo').textContent=`(${n} hal)`;
+    $('#rotateInfo').textContent=L(`(${n} pages)`,`(${n} hal)`);
     log('Rotate preview '+n);
   }catch(e){ log('Rotate preview fail '+e.message); }
 }
@@ -535,9 +538,9 @@ function updateFileUI({preserveError=false}={}){
   const t=TOOLS.find(x=>x.id===active);
   if(t.id==='merge-pdf') $('#btnText').textContent = `Merge ${files.length} PDF →`;
   else if(t.id==='split-pdf'){ buildSplitPreview(); }
-  else if(t.id==='rotate-pdf'){ buildRotatePreview(); $('#btnText').textContent='Putar PDF →'; }
+  else if(t.id==='rotate-pdf'){ buildRotatePreview(); $('#btnText').textContent=L('Rotate PDF →','Putar PDF →'); }
   else if(t.id==='compress-pdf'){ $('#btnText').textContent='Compress PDF →'; }
-  else if(t.id==='organize-pdf'){ buildOrganizePreview(); $('#btnText').textContent=`Simpan Organize (${organizeOrder.length||'?'} hal) →`; }
+  else if(t.id==='organize-pdf'){ buildOrganizePreview(); $('#btnText').textContent=L(`Save organized PDF (${organizeOrder.length||'?'} pages) →`,`Simpan Organize (${organizeOrder.length||'?'} hal) →`); }
   else $('#btnText').textContent = `Convert now →`;
   $('#convertBtn').disabled = files.length===0;
   if(!preserveError)$('#error').classList.add('hidden');
@@ -882,12 +885,12 @@ async function mergePdf(){
     try{ pdf=await PDFDocument.load(buf, {ignoreEncryption:true}); }
     catch(e){ log('Load fail try without option: '+e.message); pdf=await PDFDocument.load(buf); }
     log(`File ${i+1}: ${pdf.getPageCount()} pages`);
-    if(pdf.getPageCount()===0) throw new Error(`File ${files[i].name} tidak ada halaman`);
+    if(pdf.getPageCount()===0) throw new Error(L(`File ${files[i].name} has no pages`,`File ${files[i].name} tidak ada halaman`));
     const pages=await merged.copyPages(pdf, pdf.getPageIndices());
     pages.forEach(p=>merged.addPage(p));
     log(`Copied ${pages.length} pages from file ${i+1}`);
   }
-  if(merged.getPageCount()===0) throw new Error('Hasil merge kosong — cek file input');
+  if(merged.getPageCount()===0) throw new Error(L('The merged PDF is empty — check the input files','Hasil merge kosong — cek file input'));
   const bytes=await merged.save();
   log('Merged done bytes='+bytes.length+' pages='+merged.getPageCount());
   downloadBlob(new Blob([bytes],{type:'application/pdf'}), `merged-${Date.now()}.pdf`);
@@ -899,12 +902,12 @@ function parseRange(str, max){
     if(!part) return;
     if(part.includes('-')){
       const [a,b]=part.split('-').map(n=>parseInt(n.trim()));
-      if(isNaN(a)||isNaN(b)) throw new Error(`Rentang salah: ${part}`);
+      if(isNaN(a)||isNaN(b)) throw new Error(L(`Wrong range: ${part}`,`Rentang salah: ${part}`));
       const s=Math.min(a,b), e=Math.max(a,b);
       for(let i=s;i<=e;i++) if(i>=1&&i<=max) out.add(i-1);
     }else{
       const n=parseInt(part);
-      if(isNaN(n)) throw new Error(`Halaman salah: ${part}`);
+      if(isNaN(n)) throw new Error(L(`Wrong page: ${part}`,`Halaman salah: ${part}`));
       if(n>=1&&n<=max) out.add(n-1);
     }
   });
@@ -922,7 +925,7 @@ async function splitPdf(){
   if(mode==='all'){
     const zip=new JSZip();
     for(let i=0;i<total;i++){
-      $('#progress').textContent=`Split halaman ${i+1}/${total}...`;
+      $('#progress').textContent=L(`Splitting page ${i+1}/${total}...`,`Split halaman ${i+1}/${total}...`);
       const out=await PDFDocument.create();
       const [p]=await out.copyPages(src,[i]);
       out.addPage(p);
@@ -935,17 +938,17 @@ async function splitPdf(){
   }else if(mode==='range'){
     const str=document.getElementById('splitRange')?.value?.trim()||'1-3';
     const idxs=parseRange(str, total);
-    if(idxs.length===0) throw new Error('Rentang kosong / halaman tidak ada. Contoh: 1-3,5');
+    if(idxs.length===0) throw new Error(L('Empty range / no such pages. Example: 1-3,5','Rentang kosong / halaman tidak ada. Contoh: 1-3,5'));
     log('Range '+str+' -> idxs '+idxs.map(i=>i+1).join(','));
     const out=await PDFDocument.create();
     const pages=await out.copyPages(src, idxs);
     pages.forEach(p=>out.addPage(p));
     const bytes=await out.save();
     downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'')+`-extract-${str.replace(/[^0-9,-]/g,'_')}.pdf`);
-    $('#resultPreview').innerHTML=`<p class="text-center py-4">✅ Extract <b>${idxs.length} halaman</b> (${idxs.map(i=>i+1).join(', ')})<br><span class="text-gray-500">Dari ${total} halaman • rentang ${str}</span></p>` + $('#resultPreview').innerHTML;
+    $('#resultPreview').innerHTML=L(`<p class="text-center py-4">✅ Extracted <b>${idxs.length} pages</b> (${idxs.map(i=>i+1).join(', ')})<br><span class="text-gray-500">From ${total} pages • range ${str}</span></p>`,`<p class="text-center py-4">✅ Extract <b>${idxs.length} halaman</b> (${idxs.map(i=>i+1).join(', ')})<br><span class="text-gray-500">Dari ${total} halaman • rentang ${str}</span></p>`) + $('#resultPreview').innerHTML;
   }else if(mode==='chunk'){
     const n=parseInt(document.getElementById('splitChunk')?.value||'5');
-    if(n<1) throw new Error('N harus >=1');
+    if(n<1) throw new Error(L('N must be 1 or more','N harus >=1'));
     const chunks=Math.ceil(total/n);
     log(`Chunk N=${n} chunks=${chunks}`);
     const zip=new JSZip();
@@ -962,7 +965,7 @@ async function splitPdf(){
     const zipBlob=await zip.generateAsync({type:'blob'});
     log('ZIP chunk '+zipBlob.size);
     downloadBlob(zipBlob, files[0].name.replace(/\.pdf$/i,'')+`-split-per${n}.zip`);
-    $('#resultPreview').innerHTML=`<p class="text-center py-4">✅ Split per ${n} hal → <b>${chunks} file</b><br><span class="text-gray-500">${total} hal → ${chunks} file ZIP</span></p>` + $('#resultPreview').innerHTML;
+    $('#resultPreview').innerHTML=L(`<p class="text-center py-4">✅ Split every ${n} pages → <b>${chunks} files</b><br><span class="text-gray-500">${total} pages → ${chunks} files in a ZIP</span></p>`,`<p class="text-center py-4">✅ Split per ${n} hal → <b>${chunks} file</b><br><span class="text-gray-500">${total} hal → ${chunks} file ZIP</span></p>`) + $('#resultPreview').innerHTML;
   }else if(mode==='select'){
     if(splitSelected.size===0) throw new Error('Tick at least 1 page!');
     const idxs=[...splitSelected].sort((a,b)=>a-b);
@@ -984,8 +987,8 @@ async function splitPdf(){
     const zipBlob=await zip.generateAsync({type:'blob'});
     // tambahin link kedua
     const url2=URL.createObjectURL(zipBlob);
-    $('#resultPreview').innerHTML = `<div class="text-center py-2"><a href="${url2}" download="${files[0].name.replace(/\.pdf$/i,'')}-selected-zip.zip" class="inline-block mt-2 px-4 py-2 rounded-full bg-white border text-xs font-semibold">⬇ Download juga sebagai ZIP per halaman (${idxs.length} file)</a></div>` + $('#resultPreview').innerHTML;
-    $('#resultPreview').innerHTML = `<p class="text-center pt-4">✅ Extract <b>${idxs.length} hal terpilih</b> (${idxs.map(i=>i+1).join(', ')})</p>` + $('#resultPreview').innerHTML;
+    $('#resultPreview').innerHTML = `<div class="text-center py-2"><a href="${url2}" download="${files[0].name.replace(/\.pdf$/i,'')}-selected-zip.zip" class="inline-block mt-2 px-4 py-2 rounded-full bg-white border text-xs font-semibold">${L(`⬇ Also download as a ZIP, one file per page (${idxs.length} files)`,`⬇ Download juga sebagai ZIP per halaman (${idxs.length} file)`)}</a></div>` + $('#resultPreview').innerHTML;
+    $('#resultPreview').innerHTML = L(`<p class="text-center pt-4">✅ Extracted <b>${idxs.length} selected pages</b> (${idxs.map(i=>i+1).join(', ')})</p>`,`<p class="text-center pt-4">✅ Extract <b>${idxs.length} hal terpilih</b> (${idxs.map(i=>i+1).join(', ')})</p>`) + $('#resultPreview').innerHTML;
   }
 }
 async function compressPdf(){
@@ -1012,15 +1015,15 @@ async function compressPdf(){
 async function rotatePdf(){
   if(!window.PDFLib) throw new Error('pdf-lib not loaded');
   const angle=parseInt(document.querySelector('input[name="rotateAngle"]:checked')?.value||'90');
-  const rangeStr=document.getElementById('rotateRange')?.value?.trim()||'semua';
+  const rangeStr=document.getElementById('rotateRange')?.value?.trim()||'all';
   log('Rotate angle='+angle+' range='+rangeStr);
   const buf=await files[0].arrayBuffer();
   const doc=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
   const n=doc.getPageCount();
   let idxs;
-  if(rangeStr.toLowerCase()==='semua' || !rangeStr) idxs=Array.from({length:n},(_,i)=>i);
+  if(['semua','all'].includes(rangeStr.toLowerCase()) || !rangeStr) idxs=Array.from({length:n},(_,i)=>i);
   else idxs=parseRange(rangeStr, n);
-  if(idxs.length===0) throw new Error('Range kosong');
+  if(idxs.length===0) throw new Error(L('Empty range','Range kosong'));
   log('Rotate idxs '+idxs.map(i=>i+1).join(','));
   for(const i of idxs){
     const page=doc.getPage(i);
@@ -1029,12 +1032,12 @@ async function rotatePdf(){
   }
   const bytes=await doc.save();
   downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,`-rotated-${angle}.pdf`));
-  $('#resultPreview').innerHTML=`<p class="text-center py-2">🔄 Putar <b>${angle}°</b> untuk ${idxs.length} hal (${idxs.map(i=>i+1).join(', ')})<br><span class="text-xs text-gray-500">Dari ${n} hal</span></p>`+$('#resultPreview').innerHTML;
+  $('#resultPreview').innerHTML=L(`<p class="text-center py-2">🔄 Rotated <b>${angle}°</b> for ${idxs.length} pages (${idxs.map(i=>i+1).join(', ')})<br><span class="text-xs text-gray-500">Out of ${n} pages</span></p>`,`<p class="text-center py-2">🔄 Putar <b>${angle}°</b> untuk ${idxs.length} hal (${idxs.map(i=>i+1).join(', ')})<br><span class="text-xs text-gray-500">Dari ${n} hal</span></p>`)+$('#resultPreview').innerHTML;
 }
 async function organizePdf(){
   if(!window.PDFLib) throw new Error('pdf-lib not loaded');
-  if(organizeOrder.length===0) throw new Error('Upload PDF dulu');
-  if(organizeOrder.length===0) throw new Error('Tidak ada halaman');
+  if(organizeOrder.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
+  if(organizeOrder.length===0) throw new Error(L('No pages','Tidak ada halaman'));
   log('Organize order '+organizeOrder.map(i=>i+1).join(',')+' rotations '+JSON.stringify(organizeRotations));
   const buf=await files[0].arrayBuffer();
   const src=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
@@ -1048,7 +1051,7 @@ async function organizePdf(){
   });
   const bytes=await out.save();
   downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'-organized.pdf'));
-  $('#resultPreview').innerHTML=`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} hal tersimpan<br><span class="text-xs text-gray-500">Urutan: ${organizeOrder.map(i=>i+1).join(' → ')}</span></p>`+$('#resultPreview').innerHTML;
+  $('#resultPreview').innerHTML=L(`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} pages saved<br><span class="text-xs text-gray-500">Order: ${organizeOrder.map(i=>i+1).join(' → ')}</span></p>`,`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} hal tersimpan<br><span class="text-xs text-gray-500">Urutan: ${organizeOrder.map(i=>i+1).join(' → ')}</span></p>`)+$('#resultPreview').innerHTML;
 }
 async function wordToPdf(){
   return convertOfficeToPdf('word-to-pdf', ['docx','doc']);
@@ -1797,6 +1800,8 @@ async function pdfToPpt(){
   downloadBlob(blob, source.name.replace(/\.pdf$/i,'')+'.pptx', {flipbookSource:source});
 }
 renderToolList(); renderHeader(); updateFileUI();
+// Language switched on another page or tab: redraw the texts.
+document.addEventListener('langchange', () => { renderToolList(); renderHeader(); updateFileUI(); });
 log('Ready. Style sudah sama kaya index.html — blob + card rounded-xl.');
 </script>
 </body>

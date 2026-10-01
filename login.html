@@ -131,7 +131,7 @@
         catch(error){showError(error.message);}
       }});
       window.google.accounts.id.renderButton($('google'),{theme:'outline',size:'large',shape:'pill',text:'continue_with',width:320,
-        locale:(document.documentElement.lang||'id').slice(0,2)});
+        locale:window.I18N?I18N.get():(document.documentElement.lang||'en').slice(0,2)});
       $('googleBox').hidden=false;
     };
     document.head.appendChild(s);

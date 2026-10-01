@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-en-doc="Journal & Ebook Search — MyFlipbook">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="assets/ui-clay.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="assets/i18n.js"></script>
 <script src="assets/auth.js" defer></script>
 <style>
   *{box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
@@ -17,6 +18,7 @@
     background:radial-gradient(700px 420px at 50% 0%,#EDF3E4 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
   .wrap{max-width:980px;margin:0 auto;padding:12px 16px 56px}
   .nav-right{display:flex;align-items:center;gap:8px}
+  .lang{border:1px solid #E8E2D4;background:#E9E4FF;border-radius:999px;padding:7px 12px;font-weight:800;font-size:12px;cursor:pointer}
   h1{margin:32px 0 6px;font-size:32px}
   .lead{margin:0 0 18px;color:#57534E;font-size:14px}
   .search{padding:16px 18px}
@@ -65,50 +67,54 @@
 <div class="wrap">
   <nav class="clay-nav">
     <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=green" alt="MyFlipbook" width="128" height="34"></a>
-    <div class="nav-right"><span data-auth-slot></span><a href="library.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">📚 My Library</a></div>
+    <div class="nav-right"><span data-auth-slot></span><a href="library.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">📚 My Library</a><button type="button" class="lang" data-lang-toggle>EN</button></div>
   </nav>
 
   <h1 class="clay-h" id="heading">🔎 Cari Jurnal</h1>
-  <p class="lead" id="lead-journal">Jurnal ilmiah Indonesia dan internasional (data OpenAlex). Artikel <b>open access</b> bisa langsung dijadikan flipbook.</p>
-  <p class="lead" id="lead-ebook" hidden>Buku lengkap yang <b>gratis dan legal</b>: buku akademik open access (OAPEN) dan buku berlisensi bebas di Internet Archive. Langsung jadikan flipbook.</p>
+  <p class="lead" id="lead-journal" data-en="Indonesian and international scholarly journals (OpenAlex data). <b>Open-access</b> articles can be turned into a flipbook straight away.">Jurnal ilmiah Indonesia dan internasional (data OpenAlex). Artikel <b>open access</b> bisa langsung dijadikan flipbook.</p>
+  <p class="lead" id="lead-ebook" hidden data-en="Complete books that are <b>free and legal</b>: open-access academic books (OAPEN) and freely licensed books on Internet Archive. Turn them into a flipbook straight away.">Buku lengkap yang <b>gratis dan legal</b>: buku akademik open access (OAPEN) dan buku berlisensi bebas di Internet Archive. Langsung jadikan flipbook.</p>
   <div class="tabs" role="tablist">
-    <button type="button" role="tab" id="tab-journal" aria-selected="true">📄 Jurnal</button>
+    <button type="button" role="tab" id="tab-journal" aria-selected="true" data-en="📄 Journals">📄 Jurnal</button>
     <button type="button" role="tab" id="tab-ebook" aria-selected="false">📚 Ebook</button>
   </div>
 
   <form id="search" class="clay-panel search" role="search">
     <div class="search-row">
-      <input id="q" type="search" placeholder="Kata kunci, judul, atau topik — mis. filsafat Jawa, rice yield" aria-label="Kata kunci" autocomplete="off" maxlength="200">
-      <button class="clay-btn clay-btn-primary" type="submit">Cari</button>
+      <input id="q" type="search" placeholder="Kata kunci, judul, atau topik — mis. filsafat Jawa, rice yield" aria-label="Kata kunci" data-en-aria="Keywords" autocomplete="off" maxlength="200">
+      <button class="clay-btn clay-btn-primary" type="submit" data-en="Search">Cari</button>
     </div>
     <div class="filters" id="filters-journal">
-      <label><input id="oa" type="checkbox" checked> Hanya open access</label>
-      <label><input id="indonesia" type="checkbox"> Penulis dari Indonesia</label>
-      <label>Bahasa <select id="lang"><option value="">Semua</option><option value="id">Indonesia</option><option value="en">English</option><option value="ms">Melayu</option></select></label>
-      <label>Tahun <input id="from" type="number" min="1900" max="2100" placeholder="dari"> – <input id="to" type="number" min="1900" max="2100" placeholder="sampai"></label>
-      <label>Urutkan <select id="sort"><option value="relevance">Paling relevan</option><option value="cited">Paling banyak dikutip</option><option value="newest">Terbaru</option></select></label>
+      <label><input id="oa" type="checkbox" checked> <span data-en="Open access only">Hanya open access</span></label>
+      <label><input id="indonesia" type="checkbox"> <span data-en="Authors from Indonesia">Penulis dari Indonesia</span></label>
+      <label><span data-en="Language">Bahasa</span> <select id="lang"><option value="" data-en="All">Semua</option><option value="id">Indonesia</option><option value="en">English</option><option value="ms">Melayu</option></select></label>
+      <label><span data-en="Year">Tahun</span> <input id="from" type="number" min="1900" max="2100" placeholder="dari" data-en-ph="from"> – <input id="to" type="number" min="1900" max="2100" placeholder="sampai" data-en-ph="to"></label>
+      <label><span data-en="Sort">Urutkan</span> <select id="sort"><option value="relevance" data-en="Most relevant">Paling relevan</option><option value="cited" data-en="Most cited">Paling banyak dikutip</option><option value="newest" data-en="Newest">Terbaru</option></select></label>
     </div>
     <div class="filters" id="filters-ebook" hidden>
-      <label>Bahasa <select id="book-lang"><option value="">Semua</option><option value="id">Indonesia</option><option value="en">English</option><option value="ms">Melayu</option></select></label>
-      <label>Sumber <select id="book-src"><option value="all">Semua</option><option value="oapen">OAPEN (buku akademik)</option><option value="archive">Internet Archive</option></select></label>
+      <label><span data-en="Language">Bahasa</span> <select id="book-lang"><option value="" data-en="All">Semua</option><option value="id">Indonesia</option><option value="en">English</option><option value="ms">Melayu</option></select></label>
+      <label><span data-en="Source">Sumber</span> <select id="book-src"><option value="all" data-en="All">Semua</option><option value="oapen" data-en="OAPEN (academic books)">OAPEN (buku akademik)</option><option value="archive">Internet Archive</option></select></label>
     </div>
-    <p id="also" class="also" hidden>Cari juga di: <a id="also-scholar" target="_blank" rel="noopener noreferrer">Google Scholar</a> · <a id="also-scopus" target="_blank" rel="noopener noreferrer">Scopus</a> · <a id="also-garuda" target="_blank" rel="noopener noreferrer">Garuda</a></p>
+    <p id="also" class="also" hidden><span data-en="Also search on:">Cari juga di:</span> <a id="also-scholar" target="_blank" rel="noopener noreferrer">Google Scholar</a> · <a id="also-scopus" target="_blank" rel="noopener noreferrer">Scopus</a> · <a id="also-garuda" target="_blank" rel="noopener noreferrer">Garuda</a></p>
   </form>
 
   <div id="notice" class="notice" role="alert" hidden></div>
   <p id="meta" class="meta-line" role="status"></p>
   <div id="list" class="list"></div>
-  <button id="more" class="clay-btn clay-btn-ghost load-more" type="button" hidden>Muat lebih banyak</button>
+  <button id="more" class="clay-btn clay-btn-ghost load-more" type="button" hidden data-en="Load more">Muat lebih banyak</button>
   <div id="empty" class="clay-panel empty" hidden><p>Tidak ada artikel yang cocok. Coba kata kunci lain atau matikan “Hanya open access”.</p></div>
 
-  <p class="rights" id="rights-ebook" hidden>Buku dari <a href="https://library.oapen.org" target="_blank" rel="noopener noreferrer">OAPEN Library</a> (buku akademik open access, lisensi diperiksa OAPEN) dan <a href="https://archive.org" target="_blank" rel="noopener noreferrer">Internet Archive</a> (hanya buku yang diberi lisensi Creative Commons / domain publik oleh pengunggahnya; buku pinjaman tidak ditampilkan). Lisensi Internet Archive adalah <b>klaim pengunggah</b> — cek dulu sebelum dipakai untuk hal komersial, dan hormati lisensinya (mis. BY wajib mencantumkan penulis, NC bukan untuk komersial, ND tidak boleh diubah). Flipbook bisa dibuat dari PDF hingga 60 MB.</p>
-  <p class="rights" id="rights-journal">Data artikel dari <a href="https://openalex.org" target="_blank" rel="noopener noreferrer">OpenAlex</a> (CC0). Hanya artikel open access dengan berkas PDF publik yang bisa dijadikan flipbook; hormati lisensi tiap artikel (mis. CC-BY wajib mencantumkan penulis dan sumber). Artikel tertutup tetap bisa dibuka di situs penerbitnya.</p>
+  <p class="rights" id="rights-ebook" hidden data-en="Books from <a href=&quot;https://library.oapen.org&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;>OAPEN Library</a> (open-access academic books, licences checked by OAPEN) and <a href=&quot;https://archive.org&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;>Internet Archive</a> (only books their uploader released under a Creative Commons / public-domain licence; lending-only books are not shown). Internet Archive licences are <b>the uploader&#39;s claim</b> — check before commercial use, and respect the licence (e.g. BY: credit the author, NC: not for commercial use, ND: no changes). Flipbooks can be made from PDFs up to 60 MB.">Buku dari <a href="https://library.oapen.org" target="_blank" rel="noopener noreferrer">OAPEN Library</a> (buku akademik open access, lisensi diperiksa OAPEN) dan <a href="https://archive.org" target="_blank" rel="noopener noreferrer">Internet Archive</a> (hanya buku yang diberi lisensi Creative Commons / domain publik oleh pengunggahnya; buku pinjaman tidak ditampilkan). Lisensi Internet Archive adalah <b>klaim pengunggah</b> — cek dulu sebelum dipakai untuk hal komersial, dan hormati lisensinya (mis. BY wajib mencantumkan penulis, NC bukan untuk komersial, ND tidak boleh diubah). Flipbook bisa dibuat dari PDF hingga 60 MB.</p>
+  <p class="rights" id="rights-journal" data-en="Article data from <a href=&quot;https://openalex.org&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;>OpenAlex</a> (CC0). Only open-access articles with a public PDF can be turned into a flipbook; respect each article&#39;s licence (e.g. CC-BY: credit the authors and source). Closed articles can still be opened on the publisher&#39;s site.">Data artikel dari <a href="https://openalex.org" target="_blank" rel="noopener noreferrer">OpenAlex</a> (CC0). Hanya artikel open access dengan berkas PDF publik yang bisa dijadikan flipbook; hormati lisensi tiap artikel (mis. CC-BY wajib mencantumkan penulis dan sumber). Artikel tertutup tetap bisa dibuka di situs penerbitnya.</p>
 </div>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
+  const L = (en, id) => window.I18N ? I18N.pick(en, id) : id;
   const el = (tag, props, ...children) => { const n = Object.assign(document.createElement(tag), props || {}); children.forEach(c => c != null && n.append(c)); return n; };
   const LANG = {id: 'Indonesia', en: 'English', ms: 'Melayu', jv: 'Jawa', su: 'Sunda'};
+  const LANG_EN = {id: 'Indonesian', en: 'English', ms: 'Malay', jv: 'Javanese', su: 'Sundanese'};
+  const langName = code => (L(LANG_EN, LANG))[code];
+  const locale = () => L('en-US', 'id-ID');
   const SOURCE = {oapen: 'OAPEN', archive: 'Internet Archive'};
   let mode = 'journal', page = 1, busy = false;
   function notice(text) { $('#notice').textContent = text || ''; $('#notice').hidden = !text; }
@@ -118,14 +124,15 @@
     const ebook = mode === 'ebook';
     $('#tab-journal').setAttribute('aria-selected', String(!ebook));
     $('#tab-ebook').setAttribute('aria-selected', String(ebook));
-    $('#heading').textContent = ebook ? '📚 Cari Ebook' : '🔎 Cari Jurnal';
-    document.title = (ebook ? 'Cari Ebook' : 'Cari Jurnal') + ' — MyFlipbook';
+    $('#heading').textContent = ebook ? L('📚 Ebook Search', '📚 Cari Ebook') : L('🔎 Journal Search', '🔎 Cari Jurnal');
+    document.title = (ebook ? L('Ebook Search', 'Cari Ebook') : L('Journal Search', 'Cari Jurnal')) + ' — MyFlipbook';
     $('#lead-journal').hidden = ebook; $('#lead-ebook').hidden = !ebook;
     $('#filters-journal').hidden = ebook; $('#filters-ebook').hidden = !ebook;
     $('#rights-journal').hidden = ebook; $('#rights-ebook').hidden = !ebook;
-    $('#q').placeholder = ebook ? 'Judul, penulis, atau topik — mis. sejarah Jawa, climate change' : 'Kata kunci, judul, atau topik — mis. filsafat Jawa, rice yield';
-    $('#empty p').textContent = ebook ? 'Tidak ada buku yang cocok. Coba kata kunci lain, bahasa lain, atau sumber “Semua”.'
-                                      : 'Tidak ada artikel yang cocok. Coba kata kunci lain atau matikan “Hanya open access”.';
+    $('#q').placeholder = ebook ? L('Title, author or topic — e.g. Javanese history, climate change', 'Judul, penulis, atau topik — mis. sejarah Jawa, climate change')
+                                : L('Keywords, title or topic — e.g. Javanese philosophy, rice yield', 'Kata kunci, judul, atau topik — mis. filsafat Jawa, rice yield');
+    $('#empty p').textContent = ebook ? L('No matching books. Try other keywords, another language, or source “All”.', 'Tidak ada buku yang cocok. Coba kata kunci lain, bahasa lain, atau sumber “Semua”.')
+                                      : L('No matching articles. Try other keywords or turn off “Open access only”.', 'Tidak ada artikel yang cocok. Coba kata kunci lain atau matikan “Hanya open access”.');
     $('#list').replaceChildren(); $('#meta').textContent = ''; $('#empty').hidden = true; $('#more').hidden = true; notice('');
     if (run && $('#q').value.trim().length >= 2) search(false); else history.replaceState(null, '', '?' + params());
   }
@@ -153,28 +160,28 @@
   }
   function abstract(text) {
     const p = el('p', {className: 'abstract', textContent: text});
-    const more = el('button', {type: 'button', className: 'more', textContent: 'Selengkapnya'});
-    more.onclick = () => { const open = p.classList.toggle('open'); more.textContent = open ? 'Ringkas' : 'Selengkapnya'; };
+    const more = el('button', {type: 'button', className: 'more', textContent: L('Show more', 'Selengkapnya')});
+    more.onclick = () => { const open = p.classList.toggle('open'); more.textContent = open ? L('Show less', 'Ringkas') : L('Show more', 'Selengkapnya'); };
     return [p, more];
   }
   function card(a) {
     const authors = a.authors.join(', ') + (a.moreAuthors ? ` +${a.moreAuthors}` : '');
     const title = el('h3', null, a.link ? el('a', {href: a.link, target: '_blank', rel: 'noopener noreferrer', textContent: a.title}) : a.title);
-    const who = el('div', {className: 'who'}, authors || 'Penulis tidak tercantum', a.year ? ' · ' + a.year : '', a.journal ? ' · ' : '', a.journal ? el('b', {textContent: a.journal}) : '');
+    const who = el('div', {className: 'who'}, authors || L('No authors listed', 'Penulis tidak tercantum'), a.year ? ' · ' + a.year : '', a.journal ? ' · ' : '', a.journal ? el('b', {textContent: a.journal}) : '');
     const badges = el('div', {className: 'badges'},
-      el('span', {className: 'badge ' + (a.oa ? 'oa' : 'closed'), textContent: a.oa ? '🔓 Open access' : '🔒 Tertutup'}),
+      el('span', {className: 'badge ' + (a.oa ? 'oa' : 'closed'), textContent: a.oa ? '🔓 Open access' : L('🔒 Closed', '🔒 Tertutup')}),
       a.license ? el('span', {className: 'badge', textContent: a.license.toUpperCase()}) : null,
-      el('span', {className: 'badge', textContent: `${a.cited.toLocaleString('id-ID')} kutipan`}),
-      LANG[a.language] ? el('span', {className: 'badge', textContent: LANG[a.language]}) : null);
+      el('span', {className: 'badge', textContent: a.cited.toLocaleString(locale()) + L(' citations', ' kutipan')}),
+      langName(a.language) ? el('span', {className: 'badge', textContent: langName(a.language)}) : null);
     const nodes = [title, who, badges];
     if (a.abstract) nodes.push(...abstract(a.abstract));
     const actions = el('div', {className: 'actions'});
     if (a.pdf) {
       const q = new URLSearchParams({link: a.pdf, title: a.title.slice(0, 200)});
-      actions.append(el('a', {className: 'clay-btn clay-btn-primary', href: 'flipbook.html?' + q, textContent: '📖 Jadikan Flipbook'}),
+      actions.append(el('a', {className: 'clay-btn clay-btn-primary', href: 'flipbook.html?' + q, textContent: L('📖 Make a flipbook', '📖 Jadikan Flipbook')}),
                      el('a', {className: 'clay-btn clay-btn-ghost', href: a.pdf, target: '_blank', rel: 'noopener noreferrer', textContent: '📄 PDF'}));
     }
-    if (a.link) actions.append(el('a', {className: 'clay-btn clay-btn-ghost', href: a.link, target: '_blank', rel: 'noopener noreferrer', textContent: '🔗 Buka artikel'}));
+    if (a.link) actions.append(el('a', {className: 'clay-btn clay-btn-ghost', href: a.link, target: '_blank', rel: 'noopener noreferrer', textContent: L('🔗 Open article', '🔗 Buka artikel')}));
     nodes.push(actions);
     return el('article', {className: 'clay-panel item'}, ...nodes);
   }
@@ -182,17 +189,17 @@
   function licence(text) {
     const cc = /creativecommons\.org\/(licenses|publicdomain)\/([a-z-]+)(?:\/([\d.]+))?/i.exec(text || '');
     if (!cc) return text || '';
-    if (cc[1] === 'publicdomain') return cc[2] === 'zero' ? 'CC0 (domain publik)' : 'Domain publik';
+    if (cc[1] === 'publicdomain') return cc[2] === 'zero' ? L('CC0 (public domain)', 'CC0 (domain publik)') : L('Public domain', 'Domain publik');
     return 'CC ' + cc[2].toUpperCase() + (cc[3] ? ' ' + cc[3] : '');
   }
-  const megabytes = bytes => (bytes / 1048576).toLocaleString('id-ID', {maximumFractionDigits: 1}) + ' MB';
+  const megabytes = bytes => (bytes / 1048576).toLocaleString(locale(), {maximumFractionDigits: 1}) + ' MB';
   // The PDF of a book is looked up when it's needed (keeps the search fast).
   const pdfs = new Map();
   async function bookPdf(b) {
     const key = b.source + ':' + b.id;
     if (!pdfs.has(key)) {
       pdfs.set(key, fetch('/api/ebooks/pdf?' + new URLSearchParams({src: b.source, id: b.id}), {headers: {Accept: 'application/json'}})
-        .then(async r => { const data = await r.json().catch(() => ({})); if (!r.ok) throw Error(data.error || 'PDF tidak bisa diambil.'); return data; })
+        .then(async r => { const data = await r.json().catch(() => ({})); if (!r.ok) throw Error(data.error || L('The PDF could not be fetched.', 'PDF tidak bisa diambil.')); return data; })
         .catch(cause => { pdfs.delete(key); throw cause; }));
     }
     return pdfs.get(key);
@@ -201,25 +208,26 @@
     const cover = b.cover ? el('img', {className: 'cover', src: b.cover, alt: '', loading: 'lazy', referrerPolicy: 'no-referrer'}) : el('div', {className: 'cover', textContent: '📘'});
     if (b.cover) cover.onerror = () => cover.replaceWith(el('div', {className: 'cover', textContent: '📘'}));
     const title = el('h3', null, b.link ? el('a', {href: b.link, target: '_blank', rel: 'noopener noreferrer', textContent: b.title}) : b.title);
-    const who = el('div', {className: 'who'}, b.authors.join(', ') || 'Penulis tidak tercantum', b.year ? ' · ' + b.year : '',
+    const who = el('div', {className: 'who'}, b.authors.join(', ') || L('No authors listed', 'Penulis tidak tercantum'), b.year ? ' · ' + b.year : '',
       b.publisher ? ' · ' : '', b.publisher ? el('b', {textContent: b.publisher}) : '');
     const badges = el('div', {className: 'badges'},
       el('span', {className: 'badge oa', textContent: '📚 ' + (SOURCE[b.source] || b.source)}),
-      b.license ? el('span', {className: 'badge' + (b.licenseByUploader ? ' warn' : ''), textContent: licence(b.license) + (b.licenseByUploader ? ' · menurut pengunggah' : ''),
-        title: b.licenseByUploader ? 'Lisensi ini dinyatakan oleh pengunggah di Internet Archive, belum tentu oleh pemegang hak cipta.' : ''}) : null,
-      LANG[b.language] ? el('span', {className: 'badge', textContent: LANG[b.language]}) : b.language ? el('span', {className: 'badge', textContent: b.language}) : null,
-      b.pages ? el('span', {className: 'badge', textContent: b.pages + ' hlm'}) : null);
+      b.license ? el('span', {className: 'badge' + (b.licenseByUploader ? ' warn' : ''), textContent: licence(b.license) + (b.licenseByUploader ? L(' · per the uploader', ' · menurut pengunggah') : ''),
+        title: b.licenseByUploader ? L('This licence was stated by the uploader on Internet Archive, not necessarily by the copyright holder.', 'Lisensi ini dinyatakan oleh pengunggah di Internet Archive, belum tentu oleh pemegang hak cipta.') : ''}) : null,
+      langName(b.language) ? el('span', {className: 'badge', textContent: langName(b.language)}) : b.language ? el('span', {className: 'badge', textContent: b.language}) : null,
+      b.pages ? el('span', {className: 'badge', textContent: b.pages + L(' pages', ' hlm')}) : null);
     const body = el('div', {className: 'body'}, title, who, badges);
     if (b.abstract) body.append(...abstract(b.abstract));
-    const make = el('button', {type: 'button', className: 'clay-btn clay-btn-primary', textContent: '📖 Jadikan Flipbook'});
+    const make = el('button', {type: 'button', className: 'clay-btn clay-btn-primary', textContent: L('📖 Make a flipbook', '📖 Jadikan Flipbook')});
     const open = el('button', {type: 'button', className: 'clay-btn clay-btn-ghost', textContent: '📄 PDF'});
     const status = el('span', {className: 'who'});
     make.onclick = async () => {
-      make.disabled = true; status.textContent = 'Menyiapkan PDF…';
+      make.disabled = true; status.textContent = L('Getting the PDF…', 'Menyiapkan PDF…');
       try {
         const found = await bookPdf(b);
         if (found.size > found.maxBytes) {
-          status.textContent = `PDF ini ${megabytes(found.size)} — terlalu besar untuk flipbook (maks ${megabytes(found.maxBytes)}). Unduh lewat tombol PDF.`;
+          status.textContent = L(`This PDF is ${megabytes(found.size)} — too big for a flipbook (max ${megabytes(found.maxBytes)}). Download it with the PDF button.`,
+                                 `PDF ini ${megabytes(found.size)} — terlalu besar untuk flipbook (maks ${megabytes(found.maxBytes)}). Unduh lewat tombol PDF.`);
           return;
         }
         location.href = 'flipbook.html?' + new URLSearchParams({link: found.pdf, title: b.title.slice(0, 200)});
@@ -234,7 +242,7 @@
         status.textContent = found.size ? 'PDF ' + megabytes(found.size) : '';
       } catch (cause) { if (tab) tab.close(); status.textContent = cause.message; }
     };
-    body.append(el('div', {className: 'actions'}, make, open, b.link ? el('a', {className: 'clay-btn clay-btn-ghost', href: b.link, target: '_blank', rel: 'noopener noreferrer', textContent: '🔗 Halaman buku'}) : null, status));
+    body.append(el('div', {className: 'actions'}, make, open, b.link ? el('a', {className: 'clay-btn clay-btn-ghost', href: b.link, target: '_blank', rel: 'noopener noreferrer', textContent: L('🔗 Book page', '🔗 Halaman buku')}) : null, status));
     return el('article', {className: 'clay-panel item book'}, cover, body);
   }
   async function search(next) {
@@ -245,36 +253,38 @@
     const p = params(); p.set('page', String(page));
     if (!next) {
       $('#list').replaceChildren(); $('#empty').hidden = true; $('#more').hidden = true;
-      $('#meta').textContent = 'Mencari…';
+      $('#meta').textContent = L('Searching…', 'Mencari…');
       history.replaceState(null, '', '?' + params());
       also(q);
-    } else $('#more').textContent = 'Memuat…';
+    } else $('#more').textContent = L('Loading…', 'Memuat…');
     const ebook = mode === 'ebook';
     try {
       const response = await fetch((ebook ? '/api/ebooks?' : '/api/journals?') + p, {headers: {Accept: 'application/json'}});
       const data = await response.json().catch(() => ({}));
-      if (!response.ok) throw Error(data.error || 'Pencarian gagal.');
+      if (!response.ok) throw Error(data.error || L('Search failed.', 'Pencarian gagal.'));
       if (ebook !== (mode === 'ebook')) return;        // switched tab meanwhile
       data.results.forEach(a => $('#list').append(ebook ? bookCard(a) : card(a)));
       const shown = $('#list').children.length;
       if (ebook) {
-        $('#meta').textContent = shown ? `Menampilkan ${shown} buku` : '';
-        if (data.errors && data.errors.length) notice('Sebagian sumber tidak menjawab: ' + data.errors.join(' '));
+        $('#meta').textContent = shown ? L(`Showing ${shown} books`, `Menampilkan ${shown} buku`) : '';
+        if (data.errors && data.errors.length) notice(L('Some sources did not answer: ', 'Sebagian sumber tidak menjawab: ') + data.errors.join(' '));
         $('#empty').hidden = shown > 0;
         $('#more').hidden = !data.more || page >= 50;
       } else {
-        $('#meta').textContent = data.total ? `${data.total.toLocaleString('id-ID')} artikel ditemukan · menampilkan ${shown}` : '';
+        $('#meta').textContent = data.total ? L(`${data.total.toLocaleString('en-US')} articles found · showing ${shown}`, `${data.total.toLocaleString('id-ID')} artikel ditemukan · menampilkan ${shown}`) : '';
         $('#empty').hidden = data.total > 0;
         $('#more').hidden = shown >= data.total || !data.results.length || page >= 50;
       }
     } catch (cause) { notice(cause.message); if (!next) $('#meta').textContent = ''; }
-    finally { busy = false; $('#more').textContent = 'Muat lebih banyak'; }
+    finally { busy = false; $('#more').textContent = L('Load more', 'Muat lebih banyak'); }
   }
   $('#search').addEventListener('submit', event => { event.preventDefault(); search(false); });
   ['#sort', '#oa', '#indonesia', '#lang', '#book-lang', '#book-src'].forEach(s => $(s).addEventListener('change', () => { if ($('#q').value.trim().length >= 2) search(false); }));
   $('#more').addEventListener('click', () => search(true));
   $('#tab-journal').addEventListener('click', () => { if (mode !== 'journal') setMode('journal', true); });
   $('#tab-ebook').addEventListener('click', () => { if (mode !== 'ebook') setMode('ebook', true); });
+  // Language switched: redo the page texts and the results.
+  document.addEventListener('langchange', () => setMode(mode, true));
   // A shared search link (?q=…, ?type=ebook) runs straight away.
   const start = new URLSearchParams(location.search);
   if (start.get('type') === 'ebook') {

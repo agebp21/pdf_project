@@ -9,6 +9,7 @@
 <link rel="stylesheet" href="assets/ui-clay.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="assets/i18n.js"></script>
 <script src="assets/auth.js" defer></script>
 <script src="assets/mf-dialog.js" defer></script>
 <style>
@@ -18,6 +19,7 @@
     background:radial-gradient(700px 420px at 50% 0%,#EDF3E4 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
   .wrap{max-width:1100px;margin:0 auto;padding:12px 16px 56px}
   .nav-right{display:flex;align-items:center;gap:8px}
+  .lang{border:1px solid #E8E2D4;background:#E9E4FF;border-radius:999px;padding:7px 12px;font-weight:800;font-size:12px;cursor:pointer}
   h1{margin:32px 0 6px;font-size:32px}
   .lead{margin:0 0 18px;color:#57534E;font-size:14px}
   .usage{display:flex;flex-wrap:wrap;align-items:center;gap:14px;padding:16px 18px}
@@ -47,33 +49,34 @@
 <div class="wrap">
   <nav class="clay-nav">
     <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=green" alt="MyFlipbook" width="128" height="34"></a>
-    <div class="nav-right"><span data-auth-slot></span><a href="flipbook.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">＋ Buku baru</a></div>
+    <div class="nav-right"><span data-auth-slot></span><a href="flipbook.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px" data-en="＋ New book">＋ Buku baru</a><button type="button" class="lang" data-lang-toggle>EN</button></div>
   </nav>
 
   <h1 class="clay-h">📚 My Library</h1>
-  <p class="lead">Semua flipbook yang kamu buat tersimpan otomatis di sini — terenkripsi di server, hanya kamu yang bisa membukanya.</p>
+  <p class="lead" data-en="Every flipbook you make is saved here automatically — encrypted on the server, only you can open it.">Semua flipbook yang kamu buat tersimpan otomatis di sini — terenkripsi di server, hanya kamu yang bisa membukanya.</p>
 
   <div id="login" class="clay-panel empty" hidden>
-    <p>Masuk dulu untuk melihat My Library-mu.</p>
-    <a class="clay-btn clay-btn-primary" href="login.html?next=library.html">Masuk</a>
+    <p data-en="Log in to see your library.">Masuk dulu untuk melihat My Library-mu.</p>
+    <a class="clay-btn clay-btn-primary" href="login.html?next=library.html" data-en="Log in">Masuk</a>
   </div>
   <div id="usage" class="clay-panel usage" hidden>
     <b id="usage-books"></b><div class="meter" id="meter"><span></span></div><small id="usage-bytes"></small>
-    <a class="clay-btn clay-btn-ghost" href="account.html" style="padding:7px 14px;font-size:12px" id="upgrade" hidden>Tambah ruang</a>
+    <a class="clay-btn clay-btn-ghost" href="account.html" style="padding:7px 14px;font-size:12px" id="upgrade" hidden data-en="More space">Tambah ruang</a>
   </div>
   <div id="notice" class="notice" role="alert" hidden></div>
   <div id="grid" class="grid"></div>
   <div id="empty" class="clay-panel empty" hidden>
-    <p>Belum ada buku. Buat flipbook pertamamu — otomatis tersimpan di sini.</p>
-    <a class="clay-btn clay-btn-primary" href="flipbook.html">＋ Buat flipbook</a>
+    <p data-en="No books yet. Make your first flipbook — it's saved here automatically.">Belum ada buku. Buat flipbook pertamamu — otomatis tersimpan di sini.</p>
+    <a class="clay-btn clay-btn-primary" href="flipbook.html" data-en="＋ Make a flipbook">＋ Buat flipbook</a>
   </div>
 </div>
 <script>
 (() => {
   const $ = s => document.querySelector(s);
+  const L = (en, id) => window.I18N ? I18N.pick(en, id) : id;
   const el = (tag, props, ...children) => { const n = Object.assign(document.createElement(tag), props || {}); children.forEach(c => c != null && n.append(c)); return n; };
   const size = n => n >= 1073741824 ? (n / 1073741824).toFixed(1) + ' GB' : n >= 1048576 ? (n / 1048576).toFixed(1) + ' MB' : Math.max(1, Math.round(n / 1024)) + ' KB';
-  const when = t => new Date(t * 1000).toLocaleString('id-ID', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'});
+  const when = t => new Date(t * 1000).toLocaleString(L('en-GB', 'id-ID'), {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'});
   const KIND = {html: '🌐 HTML', apk: '🤖 APK', exe: '🪟 EXE'};
   const covers = [];
   function notice(text) { $('#notice').textContent = text || ''; $('#notice').hidden = !text; }
@@ -85,11 +88,11 @@
   }
   function renderUsage(u) {
     $('#usage').hidden = false;
-    $('#usage-books').textContent = u.maxBooks == null ? `${u.books} buku` : `${u.books} / ${u.maxBooks} buku`;
+    $('#usage-books').textContent = (u.maxBooks == null ? u.books : `${u.books} / ${u.maxBooks}`) + L(' books', ' buku');
     const fraction = Math.max(u.maxBooks == null ? 0 : u.books / u.maxBooks, u.bytes / u.maxBytes);
     $('#meter').firstElementChild.style.width = Math.min(100, Math.round(fraction * 100)) + '%';
     $('#meter').classList.toggle('full', fraction >= 0.9);
-    $('#usage-bytes').textContent = `${size(u.bytes)} dari ${size(u.maxBytes)} · paket ${u.plan}`;
+    $('#usage-bytes').textContent = L(`${size(u.bytes)} of ${size(u.maxBytes)} · ${u.plan} plan`, `${size(u.bytes)} dari ${size(u.maxBytes)} · paket ${u.plan}`);
     $('#upgrade').hidden = u.plan === 'business';
   }
   async function cover(book, box) {
@@ -106,19 +109,20 @@
     cover(book, box);
     const files = el('div', {className: 'files'});
     book.exports.forEach(e => files.append(el('a', {className: 'file', href: `/api/library/${book.id}/exports/${e.id}`, title: `${e.filename} · ${size(e.size)} · ${when(e.createdAt)}`, textContent: KIND[e.kind] || e.kind})));
-    files.append(el('a', {className: 'file', href: `/api/library/${book.id}/project`, title: 'Proyek (.smflipbook) — bisa diedit lagi', textContent: '🗂 Proyek'}));
-    const remove = el('button', {type: 'button', className: 'delete', textContent: '🗑', title: 'Hapus dari My Library', ariaLabel: 'Hapus ' + book.title});
+    files.append(el('a', {className: 'file', href: `/api/library/${book.id}/project`, title: L('Project (.smflipbook) — can be edited again', 'Proyek (.smflipbook) — bisa diedit lagi'), textContent: L('🗂 Project', '🗂 Proyek')}));
+    const remove = el('button', {type: 'button', className: 'delete', textContent: '🗑', title: L('Delete from My Library', 'Hapus dari My Library'), ariaLabel: L('Delete ', 'Hapus ') + book.title});
     remove.onclick = async () => {
-      if (!await MFDialog.confirm({title: `Hapus "${book.title}"?`, message: 'Buku ini dihapus dari My Library, termasuk proyek dan semua hasil ekspornya. Tidak bisa dibatalkan.',
-        ok: 'Hapus', cancel: 'Batal', danger: true})) return;
+      if (!await MFDialog.confirm({title: L(`Delete "${book.title}"?`, `Hapus "${book.title}"?`),
+        message: L('This book is removed from My Library, with its project and every export. This can\'t be undone.', 'Buku ini dihapus dari My Library, termasuk proyek dan semua hasil ekspornya. Tidak bisa dibatalkan.'),
+        ok: L('Delete', 'Hapus'), cancel: L('Cancel', 'Batal'), danger: true})) return;
       remove.disabled = true;
       try { await api('POST', `/api/library/${book.id}/delete`); load(); } catch (e) { notice(e.message); remove.disabled = false; }
     };
     return el('article', {className: 'clay-panel book'},
       box, el('h3', {textContent: book.title}),
-      el('div', {className: 'meta', textContent: `${book.pageCount || '?'} halaman · ${size(book.size)} · diubah ${when(book.updatedAt)}`}),
+      el('div', {className: 'meta', textContent: L(`${book.pageCount || '?'} pages · ${size(book.size)} · changed ${when(book.updatedAt)}`, `${book.pageCount || '?'} halaman · ${size(book.size)} · diubah ${when(book.updatedAt)}`)}),
       files,
-      el('div', {className: 'actions'}, el('a', {className: 'clay-btn clay-btn-primary', href: `flipbook.html?library=${book.id}`, textContent: '✎ Buka di editor'}), remove));
+      el('div', {className: 'actions'}, el('a', {className: 'clay-btn clay-btn-primary', href: `flipbook.html?library=${book.id}`, textContent: L('✎ Open in the editor', '✎ Buka di editor')}), remove));
   }
   async function load() {
     covers.splice(0).forEach(url => URL.revokeObjectURL(url));
@@ -130,10 +134,11 @@
       notice('');
     } catch (e) {
       if (e.status === 401) { $('#login').hidden = false; $('#usage').hidden = true; return; }
-      notice('My Library tidak bisa dimuat: ' + e.message);
+      notice(L('My Library could not be loaded: ', 'My Library tidak bisa dimuat: ') + e.message);
     }
   }
   load();
+  document.addEventListener('langchange', load);
 })();
 </script>
 </body>
