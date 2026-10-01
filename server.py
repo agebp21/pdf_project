@@ -65,7 +65,7 @@ SOON_PAGES = {'animation.html': 'Flipbook Animation'}
 # secure: Secure cookies (HTTPS). base_url: absolute URL for payment callbacks.
 # paywall: exports/builds need a paid plan. Off when imported (tests),
 # on when server.py runs unless --no-paywall.
-CONFIG = dict(public_hosts=set(), secure=False, base_url='', paywall=False)
+CONFIG = dict(public_hosts=set(), secure=False, base_url='', paywall=False, verify_email=False)
 # Export-only templates: without them no offline package can be built, so
 # the paywall holds even if someone edits the page's JavaScript.
 EXPORT_TEMPLATES = {'assets/export/index.html', 'assets/export/viewer.js', 'assets/export/viewer.css'}
@@ -956,6 +956,83 @@ def journal_search(query, page=1, oa=True, year_from=None, year_to=None, lang=No
     return out
 
 
+# ---------- Email (verification links). SMTP from .env, e.g. Gmail:
+# SMTP_HOST=smtp.gmail.com SMTP_PORT=587 SMTP_USER=…@gmail.com SMTP_PASS=<app password>
+# MAIL_FROM=…@gmail.com MAIL_FROM_NAME=MyFlipbook. Without SMTP the message is
+# written to .data/outbox/ (and the console) so a local run still works.
+def send_mail(to, subject, text, html=None):
+    """'sent' through SMTP, or 'outbox' when SMTP isn't configured."""
+    import smtplib
+    from email.message import EmailMessage
+    from email.utils import formataddr
+    sender = os.environ.get('MAIL_FROM', '').strip() or os.environ.get('SMTP_USER', '').strip() or 'no-reply@myflipbook.local'
+    message = EmailMessage()
+    message['From'] = formataddr((os.environ.get('MAIL_FROM_NAME', 'MyFlipbook').strip() or 'MyFlipbook', sender))
+    message['To'] = to
+    message['Subject'] = subject
+    message.set_content(text)
+    if html:
+        message.add_alternative(html, subtype='html')
+    host = os.environ.get('SMTP_HOST', '').strip()
+    if not host:
+        outbox = DATA / 'outbox'
+        outbox.mkdir(parents=True, exist_ok=True)
+        (outbox / f'{int(time.time())}-{re.sub(r"[^A-Za-z0-9@._-]", "_", to)}.eml').write_bytes(bytes(message))
+        print(f'[mail] SMTP belum diatur; email untuk {to} disimpan di .data/outbox/\n{text}', flush=True)
+        return 'outbox'
+    port = int(os.environ.get('SMTP_PORT', '587') or 587)
+    user, password = os.environ.get('SMTP_USER', '').strip(), os.environ.get('SMTP_PASS', '').strip()
+    try:
+        if port == 465:
+            server = smtplib.SMTP_SSL(host, port, timeout=30)
+        else:
+            server = smtplib.SMTP(host, port, timeout=30)
+            server.starttls()
+        with server:
+            if user:
+                server.login(user, password)
+            server.send_message(message)
+    except (smtplib.SMTPException, OSError) as cause:
+        raise RuntimeError(f'Email gagal dikirim: {cause}') from cause
+    return 'sent'
+
+
+def verification_mail(to, name, link):
+    hello = f'Halo {name},' if name else 'Halo,'
+    text = (f'{hello}\n\nTerima kasih sudah mendaftar di MyFlipbook. Klik link ini untuk memverifikasi email dan masuk:\n\n'
+            f'{link}\n\nLink berlaku 48 jam. Abaikan email ini bila kamu tidak mendaftar.\n\n— MyFlipbook')
+    html = (f'<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#1c1917">'
+            f'<p>{hello}</p><p>Terima kasih sudah mendaftar di <b>MyFlipbook</b>. Klik tombol ini untuk memverifikasi email dan masuk:</p>'
+            f'<p style="text-align:center;margin:28px 0"><a href="{link}" style="background:#1a3c34;color:#fff;padding:12px 22px;'
+            f'border-radius:999px;text-decoration:none;font-weight:bold">Verifikasi email</a></p>'
+            f'<p style="font-size:12px;color:#78716c">Atau buka link ini: {link}<br>Link berlaku 48 jam. Abaikan email ini bila kamu tidak mendaftar.</p>'
+            f'<p>— MyFlipbook</p></div>')
+    return send_mail(to, 'Verifikasi email MyFlipbook', text, html)
+
+
+# ---------- Sign in with Google: the browser gets an ID token from Google
+# Identity Services; the server checks it with Google before trusting it.
+def google_claims(credential):
+    """Verified claims of a Google ID token for our client id."""
+    client_id = os.environ.get('GOOGLE_CLIENT_ID', '').strip()
+    if not client_id:
+        raise accounts.AccountError(503, 'Login Google belum diatur di server (GOOGLE_CLIENT_ID).')
+    if not isinstance(credential, str) or not 20 < len(credential) < 5000:
+        raise accounts.AccountError(400, 'Token Google tidak valid.')
+    url = 'https://oauth2.googleapis.com/tokeninfo?' + urlencode({'id_token': credential})
+    try:
+        with urllib.request.urlopen(urllib.request.Request(url, headers={'User-Agent': 'MyFlipbook/1.0'}), timeout=15) as response:
+            claims = json.loads(response.read().decode('utf-8'))
+    except urllib.error.HTTPError:
+        raise accounts.AccountError(401, 'Login Google ditolak. Coba lagi.')
+    except (urllib.error.URLError, TimeoutError, OSError):
+        raise accounts.AccountError(502, 'Google tidak bisa dihubungi. Cek koneksi internet server.')
+    if (claims.get('aud') != client_id or claims.get('iss') not in ('accounts.google.com', 'https://accounts.google.com')
+            or int(claims.get('exp') or 0) < time.time() or str(claims.get('email_verified')).lower() != 'true'):
+        raise accounts.AccountError(401, 'Login Google ditolak (token bukan untuk aplikasi ini atau email belum diverifikasi Google).')
+    return claims
+
+
 def fetch_source(url, public_only=False):
     """Download a document from a link for the flipbook: a PDF, Office file
     or image as it is, a Google Drive/Docs share link through its download
@@ -1361,7 +1438,24 @@ class Handler(SimpleHTTPRequestHandler):
     def account_get(self, path):
         store = get_accounts()
         if path == '/api/auth/me':
-            self.send_json(200, {'user': self.current_user(), 'loginRequired': hosted()})
+            self.send_json(200, {'user': self.current_user(), 'loginRequired': hosted(),
+                                 'googleClientId': os.environ.get('GOOGLE_CLIENT_ID', '').strip() or None})
+        elif path == '/api/auth/verify':
+            # The link in the verification email: sign in and go to the account page.
+            token = (parse_qs(urlsplit(self.path).query).get('token') or [''])[0]
+            try:
+                session = store.verify_email(token)
+            except accounts.AccountError:
+                self.send_response(302)
+                self.send_header('Location', '/login.html?verify=failed')
+                self.send_header('Cache-Control', 'no-store')
+                self.end_headers()
+                return
+            self.send_response(302)
+            self.send_header('Location', '/account.html?verified=1')
+            self.send_header('Set-Cookie', self.session_cookie(session))
+            self.send_header('Cache-Control', 'no-store')
+            self.end_headers()
         elif path == '/api/billing/methods':
             self.send_json(200, {'methods': store.payment_methods()})
         elif path == '/api/billing/plans':
@@ -1411,8 +1505,33 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(200, {'status': status})
             return
         if path == '/api/auth/register':
+            if CONFIG['verify_email']:
+                # Not signed in yet: the account opens from the link in the email.
+                user_id, token = store.register_unverified(data.get('email'), data.get('password'), data.get('name'))
+                email = str(data.get('email')).strip().lower()
+                try:
+                    sent = verification_mail(email, str(data.get('name') or '').strip(), self.base_url() + '/api/auth/verify?token=' + token)
+                except RuntimeError as cause:
+                    raise accounts.AccountError(502, str(cause))
+                self.send_json(201, {'verify': True, 'email': email, 'outbox': sent == 'outbox'})
+                return
             token = store.register(data.get('email'), data.get('password'), data.get('name'))
             self.send_json(201, {'user': store.user_for(token)}, cookie=self.session_cookie(token))
+            return
+        if path == '/api/auth/resend':
+            found = store.resend_verification(data.get('email'), self.client_ip())
+            if found:
+                user_id, token, name = found
+                try:
+                    verification_mail(str(data.get('email')).strip().lower(), name, self.base_url() + '/api/auth/verify?token=' + token)
+                except RuntimeError as cause:
+                    raise accounts.AccountError(502, str(cause))
+            self.send_json(200, {'ok': True})     # the same answer whether or not the email is registered
+            return
+        if path == '/api/auth/google':
+            claims = google_claims(data.get('credential'))
+            token = store.google_login(claims.get('sub'), claims.get('email'), claims.get('name', ''))
+            self.send_json(200, {'user': store.user_for(token)}, cookie=self.session_cookie(token))
             return
         if path == '/api/auth/login':
             token = store.login(data.get('email'), data.get('password'), self.client_ip())
@@ -1851,12 +1970,15 @@ if __name__ == '__main__':
                              'login wajib untuk fitur server, cookie Secure, pembayaran Midtrans.')
     parser.add_argument('--no-paywall', action='store_true',
                         help='Ekspor flipbook & build tanpa paket berbayar (pemakaian internal).')
+    parser.add_argument('--no-email-verify', action='store_true',
+                        help='Daftar langsung masuk tanpa verifikasi email (pemakaian internal / tes).')
     parser.add_argument('--insecure-cookies', action='store_true',
                         help='Mode hosting tanpa HTTPS (hanya untuk uji coba).')
     args = parser.parse_args()
     CONFIG['public_hosts'] = {h.strip().lower() for h in args.public_host if h.strip()}
     CONFIG['secure'] = hosted() and not args.insecure_cookies
     CONFIG['paywall'] = not args.no_paywall
+    CONFIG['verify_email'] = not args.no_email_verify
     CONFIG['base_url'] = os.environ.get('MYFLIPBOOK_BASE_URL', '')
     store = get_accounts()
     if hosted():

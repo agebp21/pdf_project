@@ -362,6 +362,19 @@ class Accounts:
             columns = {row['name'] for row in db.execute('PRAGMA table_info(orders)')}
             if 'currency' not in columns:
                 db.execute("ALTER TABLE orders ADD COLUMN currency TEXT NOT NULL DEFAULT 'IDR'")
+            # Email verification and Google sign-in. Accounts made before this
+            # (default 1) count as verified; new sign-ups are stored unverified.
+            columns = {row['name'] for row in db.execute('PRAGMA table_info(users)')}
+            if 'verified' not in columns:
+                db.execute('ALTER TABLE users ADD COLUMN verified INTEGER NOT NULL DEFAULT 1')
+            if 'google_sub' not in columns:
+                db.execute('ALTER TABLE users ADD COLUMN google_sub TEXT')
+            db.executescript('''
+                CREATE UNIQUE INDEX IF NOT EXISTS users_google ON users(google_sub) WHERE google_sub IS NOT NULL;
+                CREATE TABLE IF NOT EXISTS email_tokens(
+                    token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL);
+            ''')
 
     @contextlib.contextmanager
     def connect(self):
@@ -382,6 +395,8 @@ class Accounts:
         if plan != 'free' and (not expires or expires < time.time()):
             plan = 'free'
         return dict(id=row['id'], email=row['email'], name=row['name'], plan=plan,
+                    verified=bool(row['verified']) if 'verified' in row.keys() else True,
+                    google=bool(row['google_sub']) if 'google_sub' in row.keys() else False,
                     planName=PLANS[plan]['name'], planExpiresAt=expires if plan != 'free' else None,
                     entitlements=PLANS[plan]['entitlements'])
 
@@ -399,6 +414,81 @@ class Accounts:
                 user_id = cursor.lastrowid
         except sqlite3.IntegrityError:
             raise AccountError(409, 'Email sudah terdaftar. Silakan masuk.')
+        return self.start_session(user_id)
+
+    def register_unverified(self, email, password, name=''):
+        """A sign-up that must confirm its email first: (user_id, email token).
+        Signing up again before confirming replaces the password and sends a new link."""
+        email = (email or '').strip().lower()
+        name = (name or '').strip()[:80]
+        if not EMAIL_RE.match(email):
+            raise AccountError(400, 'Format email tidak valid.')
+        if not isinstance(password, str) or not 8 <= len(password) <= 256:
+            raise AccountError(400, 'Password minimal 8 karakter.')
+        with self.connect() as db:
+            row = db.execute('SELECT id, verified FROM users WHERE email=?', (email,)).fetchone()
+            if row and row['verified']:
+                raise AccountError(409, 'Email sudah terdaftar. Silakan masuk.')
+            if row:
+                db.execute('UPDATE users SET password_hash=?, name=? WHERE id=?', (hash_password(password), name, row['id']))
+                user_id = row['id']
+            else:
+                user_id = db.execute('INSERT INTO users(email, name, password_hash, created_at, verified) VALUES(?,?,?,?,0)',
+                                     (email, name, hash_password(password), int(time.time()))).lastrowid
+        return user_id, self.email_token(user_id)
+
+    def email_token(self, user_id, hours=48):
+        token = secrets.token_urlsafe(32)
+        now = int(time.time())
+        with self.connect() as db:
+            db.execute('DELETE FROM email_tokens WHERE user_id=? OR expires_at<?', (user_id, now))
+            db.execute('INSERT INTO email_tokens VALUES(?,?,?,?)', (token_hash(token), user_id, now, now + hours * 3600))
+        return token
+
+    def verify_email(self, token):
+        """The link in the email: marks the account verified and signs it in."""
+        if not token or len(token) > 200:
+            raise AccountError(400, 'Link verifikasi tidak valid.')
+        now = int(time.time())
+        with self.connect() as db:
+            row = db.execute('SELECT user_id FROM email_tokens WHERE token_hash=? AND expires_at>?', (token_hash(token), now)).fetchone()
+            if not row:
+                raise AccountError(400, 'Link verifikasi tidak valid atau sudah kedaluwarsa. Minta kirim ulang dari halaman masuk.')
+            db.execute('UPDATE users SET verified=1 WHERE id=?', (row['user_id'],))
+            db.execute('DELETE FROM email_tokens WHERE user_id=?', (row['user_id'],))
+        return self.start_session(row['user_id'])
+
+    def resend_verification(self, email, client='?'):
+        """(user_id, token, name) for an unverified email, else None (never says which)."""
+        email = (email or '').strip().lower()
+        key = ('resend', client, email)
+        if self._throttled(key):
+            raise AccountError(429, 'Terlalu sering. Coba lagi 15 menit lagi.')
+        self._record_failure(key)          # counts every resend toward the limit
+        with self.connect() as db:
+            row = db.execute('SELECT id, name, verified FROM users WHERE email=?', (email,)).fetchone()
+        if not row or row['verified']:
+            return None
+        return row['id'], self.email_token(row['id']), row['name']
+
+    def google_login(self, sub, email, name=''):
+        """Sign in with a Google account whose ID token the server checked:
+        the same Google account, else the account with that (Google-verified)
+        email — linked and verified — else a new verified account."""
+        email = (email or '').strip().lower()
+        if not sub or not EMAIL_RE.match(email):
+            raise AccountError(400, 'Akun Google tidak valid.')
+        with self.connect() as db:
+            row = db.execute('SELECT id FROM users WHERE google_sub=?', (sub,)).fetchone()
+            if not row:
+                row = db.execute('SELECT id FROM users WHERE email=?', (email,)).fetchone()
+                if row:
+                    db.execute('UPDATE users SET google_sub=?, verified=1 WHERE id=?', (sub, row['id']))
+            if row:
+                user_id = row['id']
+            else:
+                user_id = db.execute('INSERT INTO users(email, name, password_hash, created_at, verified, google_sub) VALUES(?,?,?,?,1,?)',
+                                     (email, (name or '').strip()[:80], hash_password(secrets.token_urlsafe(32)), int(time.time()), sub)).lastrowid
         return self.start_session(user_id)
 
     def _throttled(self, key):
@@ -426,6 +516,8 @@ class Accounts:
             raise AccountError(401, 'Email atau password salah.')
         with self._failure_lock:
             self._failures.pop(key, None)
+        if 'verified' in row.keys() and not row['verified']:
+            raise AccountError(403, 'Email belum diverifikasi. Buka link di email dari MyFlipbook, atau kirim ulang emailnya.')
         return self.start_session(row['id'])
 
     def start_session(self, user_id):

@@ -135,6 +135,11 @@
     if(action)box.append(action);
     $('notice').replaceChildren(box);
   }
+  // Arrived from the link in the verification email.
+  if(new URLSearchParams(location.search).get('verified')==='1'){
+    history.replaceState(null,'',location.pathname);
+    setTimeout(()=>notice('ok',lang()==='id-ID'?'✓ Email terverifikasi. Selamat datang di MyFlipbook!':'✓ Email verified. Welcome to MyFlipbook!'),0);
+  }
 
   function renderProfile(){
     const u=state.user;

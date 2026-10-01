@@ -29,6 +29,15 @@
   .switch button{background:none;border:0;color:#1A3C34;font-weight:800;text-decoration:underline;cursor:pointer;font-size:12.5px;padding:10px 6px}
   .error{display:none;margin-top:14px;background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C;border-radius:12px;padding:10px 12px;font-size:12.5px}
   .error.show{display:block}
+  .google{display:flex;justify-content:center;min-height:44px}
+  .or{display:flex;align-items:center;gap:10px;margin:16px 0 2px;font-size:11.5px;font-weight:700;color:#A8A29E;text-transform:uppercase;letter-spacing:.08em}
+  .or::before,.or::after{content:"";flex:1;height:1px;background:#E8E2D4}
+  .check{text-align:center}
+  .check .big{font-size:44px;margin:4px 0 8px}
+  .check p{font-size:13.5px;line-height:1.6;margin:8px 0}
+  .info{display:none;margin-top:14px;background:#EFF6EC;border:1px solid #BBD8B0;color:#1A3C34;border-radius:12px;padding:10px 12px;font-size:12.5px}
+  .info.show{display:block}
+  .link-btn{background:none;border:0;color:#1A3C34;font-weight:800;text-decoration:underline;cursor:pointer;font-size:12.5px;padding:6px}
   [hidden]{display:none!important}
 </style>
 </head>
@@ -45,6 +54,18 @@
   <main class="clay-panel card">
     <h1 class="clay-h" id="title" data-i18n="auth.titleLogin">Welcome back</h1>
     <p class="sub clay-muted" data-i18n="auth.sub">One account for your flipbooks, plan and billing.</p>
+    <div id="googleBox" hidden>
+      <div id="google" class="google"></div>
+      <p class="or" data-i18n="auth.or">or</p>
+    </div>
+    <div id="check" class="check" hidden>
+      <div class="big">📧</div>
+      <h2 class="clay-h" data-i18n="auth.checkTitle">Check your email</h2>
+      <p><span data-i18n="auth.checkBody">We sent a verification link to</span> <b id="checkEmail"></b>. <span data-i18n="auth.checkBody2">Open it to activate your account and sign in.</span></p>
+      <p class="clay-muted" style="font-size:12px" data-i18n="auth.checkSpam">Not there? Look in Spam / Promotions.</p>
+      <button type="button" class="link-btn" id="resend" data-i18n="auth.resend">Send the email again</button>
+      <p class="info" id="info" role="status"></p>
+    </div>
     <form id="form" novalidate>
       <div id="nameRow" hidden>
         <label for="name" data-i18n="auth.name">Name (optional)</label>
@@ -57,6 +78,8 @@
       <p class="hint clay-muted" id="pwHint" hidden data-i18n="auth.pwHint">At least 8 characters.</p>
       <div class="actions"><button class="clay-btn clay-btn-primary" id="submit" type="submit" data-i18n="auth.submitLogin">Log in →</button></div>
       <p class="error" id="error" role="alert"></p>
+      <p class="info" id="formInfo" role="status"></p>
+      <p style="text-align:center;margin:6px 0 0" hidden id="resendRow"><button type="button" class="link-btn" id="resendLogin" data-i18n="auth.resend">Send the email again</button></p>
     </form>
     <p class="switch"><button type="button" id="switch" data-i18n="auth.toRegister">New here? Create an account</button></p>
   </main>
@@ -81,6 +104,35 @@
     if(window.I18N)I18N.apply();
   }
   function showError(message){$('error').textContent=message;$('error').classList.toggle('show',!!message);}
+  function showInfo(id,message){$(id).textContent=message;$(id).classList.toggle('show',!!message);}
+  // After signing up: the account opens from the link in the email.
+  function showCheck(email){
+    $('form').hidden=true;$('googleBox').hidden=true;$('switch').parentNode.hidden=true;
+    $('checkEmail').textContent=email;$('check').hidden=false;
+  }
+  async function resend(email,infoId){
+    if(!email){showError(t('auth.needEmail','Type your email first.'));return;}
+    try{await MFAuth.api('POST','/api/auth/resend',{email});showInfo(infoId,t('auth.resent','If that account still needs verifying, a new link is on its way.'));}
+    catch(error){showError(error.message);}
+  }
+  $('resend').addEventListener('click',()=>resend($('checkEmail').textContent,'info'));
+  $('resendLogin').addEventListener('click',()=>resend($('email').value.trim(),'formInfo'));
+  if(params.get('verify')==='failed'){showError(t('auth.verifyFailed','That verification link is invalid or expired. Log in to get a new one.'));history.replaceState(null,'',location.pathname);}
+  // Sign in with Google (when the server has a client id).
+  function startGoogle(clientId){
+    const s=document.createElement('script');s.src='https://accounts.google.com/gsi/client';s.async=true;
+    s.onload=()=>{
+      window.google.accounts.id.initialize({client_id:clientId,callback:async response=>{
+        showError('');
+        try{await MFAuth.api('POST','/api/auth/google',{credential:response.credential});location.href=next;}
+        catch(error){showError(error.message);}
+      }});
+      window.google.accounts.id.renderButton($('google'),{theme:'outline',size:'large',shape:'pill',text:'continue_with',width:320,
+        locale:(document.documentElement.lang||'id').slice(0,2)});
+      $('googleBox').hidden=false;
+    };
+    document.head.appendChild(s);
+  }
   $('switch').addEventListener('click',()=>{mode=mode==='login'?'register':'login';showError('');render();});
   document.addEventListener('langchange',render);
   $('form').addEventListener('submit',async event=>{
@@ -88,16 +140,20 @@
     const body={email:$('email').value.trim(),password:$('password').value};
     if(mode==='register')body.name=$('name').value.trim();
     $('submit').disabled=true;
+    $('resendRow').hidden=true;showInfo('formInfo','');
     try{
-      await MFAuth.api('POST','/api/auth/'+mode,body);
+      const data=await MFAuth.api('POST','/api/auth/'+mode,body);
+      if(data&&data.verify){showCheck(data.email);return;}
       location.href=next;
     }catch(error){
       showError(error.status?error.message:t('auth.offline','Accounts need the MyFlipbook server (python server.py).'));
+      if(error.status===403)$('resendRow').hidden=false;      // not verified yet
     }finally{$('submit').disabled=false;}
   });
   MFAuth.me().then(data=>{
     if(data.user)location.replace(next);
     else if(data.offline)showError(t('auth.offline','Accounts need the MyFlipbook server (python server.py).'));
+    else if(data.googleClientId)startGoogle(data.googleClientId);
   });
   render();
 })();
