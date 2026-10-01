@@ -1243,10 +1243,14 @@
   // The word at/near point p. strict: null when p is not on text (so a
   // drag that starts in a margin draws a box instead).
   locate(lines, p, strict) {
-    let best = -1, distance = Infinity;
+    // Nearest line by height, but a line beside the point (another column at
+    // about the same height) loses to the line the point is actually over.
+    let best = -1, distance = Infinity, score = Infinity;
     lines.forEach((l, i) => {
       const d = p.y < l.y ? l.y - p.y : p.y > l.y + l.h ? p.y - (l.y + l.h) : 0;
-      if (d < distance) { distance = d; best = i; }
+      const left = l.words[0].x, right = l.words[l.words.length - 1].x + l.words[l.words.length - 1].w;
+      const side = p.x < left ? left - p.x : p.x > right ? p.x - right : 0;
+      if (d + side * 0.5 < score) { score = d + side * 0.5; distance = d; best = i; }
     });
     if (best < 0) return null;
     const line = lines[best], first = line.words[0], last = line.words[line.words.length - 1];
@@ -1258,23 +1262,42 @@
     });
     return {line: best, word};
   },
+  // A line's pieces split at wide gaps (columns side by side):
+  // [{from, to (word indexes), x, w}].
+  pieces(line) {
+    const out = [];
+    line.words.forEach((w, i) => {
+      const last = out[out.length - 1];
+      if (last && w.x - (last.x + last.w) <= line.h * 2.5) { last.to = i; last.w = w.x + w.w - last.x; }
+      else out.push({from: i, to: i, x: w.x, w: w.w});
+    });
+    return out;
+  },
   // Rectangles [x, y, w, h] covering the words from a to b in reading order,
-  // one per line (split at wide column gaps); null when a is not on text.
+  // one per line piece; null when a is not on text. Only the column(s) the
+  // drag starts and ends in are taken: text in a column beside it, even
+  // between those lines, stays out.
   select(lines, a, b) {
     let s = this.locate(lines, a, true);
     if (!s) return null;
     let e = this.locate(lines, b, false);
     if (e.line < s.line || (e.line === s.line && e.word < s.word)) { const t = s; s = e; e = t; }
+    const pieceOf = (at) => this.pieces(lines[at.line]).find(p => at.word >= p.from && at.word <= p.to);
+    const ps = pieceOf(s), pe = pieceOf(e);
+    const left = Math.min(ps.x, pe.x), right = Math.max(ps.x + ps.w, pe.x + pe.w);
+    const inColumn = p => {
+      const shared = Math.min(p.x + p.w, right) - Math.max(p.x, left);
+      return shared > 0.5 * Math.min(p.w, right - left);
+    };
     const rects = [], r = v => Math.round(v * 10000) / 10000;
     for (let li = s.line; li <= e.line; li++) {
       const line = lines[li], from = li === s.line ? s.word : 0, to = li === e.line ? e.word : line.words.length - 1;
-      let seg = null;
-      for (let wi = from; wi <= to; wi++) {
-        const w = line.words[wi];
-        if (seg && w.x - (seg.x + seg.w) > line.h * 2.5) { rects.push([r(seg.x), r(line.y), r(seg.w), r(line.h)]); seg = null; }
-        if (!seg) seg = {x: w.x, w: w.w}; else seg.w = w.x + w.w - seg.x;
-      }
-      if (seg) rects.push([r(seg.x), r(line.y), r(seg.w), r(line.h)]);
+      this.pieces(line).forEach(p => {
+        const lo = Math.max(p.from, from), hi = Math.min(p.to, to);
+        if (lo > hi || !inColumn(p)) return;
+        const x = line.words[lo].x, w = line.words[hi].x + line.words[hi].w - x;
+        rects.push([r(x), r(line.y), r(w), r(line.h)]);
+      });
     }
     return rects;
   },

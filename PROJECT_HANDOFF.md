@@ -939,3 +939,11 @@ Owner: "ringkasane sitik banget". `summarize_highlight()`: dulu maks 2 kalimat /
 ### 1 Oktober 2026 - Drive Picker: pesan error asli dari Google
 
 Owner: Add source -> Google Drive masih error padahal email sudah jadi test user. Pemeriksaan: OAuth client origins benar (`http://localhost:8080`, `http://127.0.0.1:8080`, Client ID cocok dengan .env), API key lolos cek referrer localhost dan dibatasi ke Picker (Drive API diblok untuk key = benar, unduhan memakai token OAuth). Sebelumnya setiap 403 saat ekspor Google Docs/Slides ditampilkan sebagai "terlalu besar" — menyesatkan. `assets/drive-picker.js` `download()`: membaca JSON error Google; `accessNotConfigured`/`SERVICE_DISABLED` -> "Google Drive API is not turned on … Enable"; `exportSizeLimitExceeded` -> terlalu besar; lainnya -> "refused the download (kode: pesan Google)". Tes drive-picker.test.cjs diperbarui. Penyebab pasti di sisi owner menunggu screenshot error (dugaan utama: Google Drive API belum di-Enable di project).
+
+### 1 Oktober 2026 - Stabilo tidak lagi ikut menyeleksi kolom teks di sampingnya
+
+Owner (screenshot panduan logo): stabilo paragraf kiri ikut menandai kolom kanan ("klinik mata untuk kesehatan mata.", kutipan Lorem ipsum). Penyebab: `FlipbookHighlights.select()` mengambil semua baris dari baris awal sampai baris akhir menurut urutan tinggi, termasuk baris kolom lain yang tingginya di antaranya (dan potongan kolom lain di baris yang sama).
+- `pieces(line)`: baris dipecah per potongan kolom (jarak > 2.5× tinggi baris, sama seperti sebelumnya).
+- `select()`: hanya potongan yang sekolom (tumpang tindih > 50%) dengan rentang horizontal potongan awal & akhir seretan; seret dari satu kolom ke kolom lain tetap mengambil keduanya.
+- `locate()`: memilih baris terdekat dengan memperhitungkan jarak samping (dy + 0.5·dx), sehingga ujung seretan di atas kolom kiri tidak tersangkut baris kolom kanan yang setinggi.
+Tes: highlights.test.cjs (kasus dua kolom selang-seling: kiri saja, ujung sejajar baris kanan, kanan saja, lintas kolom; ekspektasi lama yang memasukkan kata kolom samping diganti). E2E Chromium dengan PDF dua kolom buatan pdf-lib: note hanya berisi paragraf kiri.

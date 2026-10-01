@@ -1,4 +1,4 @@
-// Highlighter: word snapping line by line, column gaps, free boxes on
+// Highlighter: word snapping line by line, columns kept apart, free boxes on
 // scans, drag/tap/recolour/delete, storage, and pages turning normally when
 // the highlighter is off.
 const assert = require('node:assert/strict');
@@ -13,9 +13,35 @@ const H = global.FlipbookHighlights;
 const raw = [[1000, 300, 1000, 1000, 2200, 800, 3200, 900, 7000, 1000], [1400, 300, 1000, 1200, 2400, 700, 3300, 1100]];
 const lines = H.lines(raw);
 assert.equal(lines.length, 2); assert.equal(lines[0].words.length, 4);
-// From the 2nd word of line 1 to the 2nd word of line 2: rest of line 1 (split at the column gap) + start of line 2.
+// From the 2nd word of line 1 to the 2nd word of line 2: rest of line 1 + start of line 2;
+// the word in the column beside it (same line) stays out.
 const rects = H.select(lines, { x: 0.25, y: 0.11 }, { x: 0.27, y: 0.15 });
-assert.deepEqual(rects, [[0.22, 0.1, 0.19, 0.03], [0.7, 0.1, 0.1, 0.03], [0.1, 0.14, 0.21, 0.03]]);
+assert.deepEqual(rects, [[0.22, 0.1, 0.19, 0.03], [0.1, 0.14, 0.21, 0.03]]);
+// Two columns whose lines sit between each other (left paragraph, right
+// heading + quote): a drag down the left column takes only the left column.
+{
+  const raw = [
+    [1000, 250, 500, 1500, 2100, 1400, 3600, 900],   // left 1
+    [1100, 300, 6000, 1200, 7300, 900],                // right "klinik mata"
+    [1300, 250, 500, 1600, 2200, 1300, 3600, 900],    // left 2
+    [1450, 300, 6000, 1500, 7600, 800],                // right "kesehatan mata."
+    [1600, 250, 500, 1400, 2000, 1500, 3600, 900],    // left 3
+    [1750, 200, 6000, 2400],                           // right "Lorem ipsum"
+    [1900, 250, 500, 1200, 1800, 1100],                // left 4 (short last line)
+  ];
+  const text = ['Ruang Kosong Minimum', 'klinik mata', 'pedoman minimum dan', 'kesehatan mata.', 'kosong di sekitar', 'Lorem', 'Menempatkan logo'];
+  const lines = H.lines(raw, text);
+  const left = H.select(lines, { x: 0.06, y: 0.11 }, { x: 0.27, y: 0.2 });
+  assert.equal(H.quote(lines, left), 'Ruang Kosong Minimum pedoman minimum dan kosong di sekitar Menempatkan logo', 'left column only');
+  assert.ok(left.every(q => q[0] < 0.5), 'no rectangle in the right column');
+  // Ending the drag level with a right-column line but over the left column still ends in the left column.
+  assert.equal(H.quote(lines, H.select(lines, { x: 0.06, y: 0.11 }, { x: 0.4, y: 0.155 })), 'Ruang Kosong Minimum pedoman minimum dan');
+  // The right column on its own.
+  assert.equal(H.quote(lines, H.select(lines, { x: 0.61, y: 0.12 }, { x: 0.8, y: 0.16 })), 'klinik mata kesehatan mata.');
+  // A drag from one column into the other takes both (the reader asked for it).
+  const both = H.quote(lines, H.select(lines, { x: 0.06, y: 0.11 }, { x: 0.8, y: 0.16 }));
+  assert.ok(/Ruang/.test(both) && /kesehatan/.test(both));
+}
 // Dragging backwards gives the same highlight.
 assert.deepEqual(H.select(lines, { x: 0.27, y: 0.15 }, { x: 0.25, y: 0.11 }), rects);
 // Starting in the margin (no text): null → a free box instead.
@@ -43,7 +69,7 @@ assert.equal(pageFlipSaw, 1, 'highlighter on: PageFlip never sees the press');
 fire(w, 'mousemove', 270, 150); w.dispatchEvent(new w.MouseEvent('mouseup', { clientX: 270, clientY: 150 }));
 let saved = hl.store();
 assert.equal(saved['0'].length, 1); assert.equal(saved['0'][0].c, 'y'); assert.deepEqual(saved['0'][0].r, rects);
-assert.equal(pages[0].querySelectorAll('.book-highlights .book-hl').length, 3, 'drawn on the page');
+assert.equal(pages[0].querySelectorAll('.book-highlights .book-hl').length, 2, 'drawn on the page (the column beside it stays out)');
 assert.deepEqual(Object.keys(JSON.parse(localStorage.getItem(key))), ['0'], 'kept on this device');
 
 // A free box on the page without text.
@@ -52,7 +78,7 @@ assert.deepEqual(hl.store()['1'][0].r, [[0.1, 0.1, 0.3, 0.2]]);
 
 // Tap the first highlight, recolour it green, then delete it.
 fire(pages[0], 'mousedown', 300, 115); w.dispatchEvent(new w.MouseEvent('mouseup'));
-assert.equal(pages[0].querySelectorAll('.book-hl.is-selected').length, 3, 'tap selects the whole highlight');
+assert.equal(pages[0].querySelectorAll('.book-hl.is-selected').length, 2, 'tap selects the whole highlight');
 w.document.querySelector('.book-hl-swatch[title="Green"]').click();
 assert.equal(hl.store()['0'][0].c, 'g');
 w.document.querySelector('.book-hl-delete').click();
