@@ -3,7 +3,7 @@
  * Usage in any page:
  *   <p data-i18n="hero.badge">fallback text</p>
  *   <input data-i18n-ph="search.ph" placeholder="fallback">
- *   <button data-lang-toggle>...</button>   (label auto-switches ID<->EN)
+ *   <button data-lang-toggle>...</button>   (shows the language in use: EN / ID)
  *   I18N.t('key') / I18N.tool('merge-pdf', fallbackDesc) in JS.
  *
  * Language persists in localStorage ('pdf-tools-lang'), default 'en'.
@@ -299,7 +299,12 @@
     els = document.querySelectorAll('[data-i18n-ph]');
     for (i = 0; i < els.length; i++) els[i].setAttribute('placeholder', t(els[i].getAttribute('data-i18n-ph')));
     els = document.querySelectorAll('[data-lang-toggle]');
-    for (i = 0; i < els.length; i++) els[i].textContent = get() === 'en' ? 'ID' : 'EN';
+    // The button shows the language in use; its tooltip says what a click does.
+    for (i = 0; i < els.length; i++) {
+      els[i].textContent = get() === 'en' ? 'EN' : 'ID';
+      els[i].title = get() === 'en' ? 'Ganti ke Bahasa Indonesia' : 'Switch to English';
+      els[i].setAttribute('aria-label', els[i].title);
+    }
     try {
       document.documentElement.lang = get() === 'en' ? 'en' : 'id';
     } catch (e) {}

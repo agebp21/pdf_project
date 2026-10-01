@@ -960,3 +960,7 @@ Owner: ringkasan di note pakai kalimat, jangan bullet. `summarize_highlight()`: 
 
 Owner: link "📚 My Library" (pojok kanan baris status) dibuat di tengah dan sama dengan tombol lain. flipbook.html: status My Library (`#archive-status`) baris sendiri rata tengah (disembunyikan saat kosong), lalu `<a class="secondary archive-link">📚 My Library</a>` selebar panel seperti "Save project as…" (pill putih bergaris, hover terangkat). CSS di assets/theme-cream.css (`.archive-line`, `.archive-link`). Dicek Chromium: posisi & lebar sama persis dengan #save-project (75 px / 237 px), radius 999px.
 Catatan QA: setelah perubahan ini satu kali `python -m unittest discover -s tests` melaporkan FAILED (failures=1) tanpa detail tersimpan; 10 kali ulang berikutnya semua OK (89/89). Perubahan ini hanya HTML/CSS, jadi kemungkinan ada tes Python yang flaky (bergantung waktu/port). Bila muncul lagi, simpan output lengkapnya.
+
+### 1 Oktober 2026 - Tombol bahasa menampilkan bahasa yang dipakai (EN/ID)
+
+Owner: tombol bahasa harusnya "EN" (sebelumnya menampilkan bahasa tujuan: halaman Inggris -> "ID"). assets/i18n.js `apply()`: label = bahasa yang sedang dipakai (EN / ID); tooltip + aria-label menjelaskan aksi klik ("Ganti ke Bahasa Indonesia" / "Switch to English"). Label awal di HTML (index, account, login, coming-soon, privacy, terms) diganti "EN" (bahasa default) agar tidak berkedip. Dicek Chromium di 4 halaman: Inggris -> "EN", klik -> halaman Indonesia & "ID".
