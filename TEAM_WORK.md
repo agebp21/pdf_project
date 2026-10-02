@@ -992,3 +992,8 @@ Tes: tests/pdf-layout-spaced.test.cjs. E2E Routledge: hal 2–3 jadi Indonesia, 
 Tes: tests/highlight-translate.test.cjs (baru), pdf-translate.test.cjs (label). E2E Chromium: toolbar "… 🎧 Audio book | 🌐 Translate | 🔊 Sound", stabilo kalimat English -> catatan "🌐 perahu-perahu pulang dan menghitung bintang-bintang…".
 
 - 2026-10-02: tombol 🌐 Translate saat menerjemahkan diberi progress bar (FlipbookEditions.paint: teks "x / y" -> class is-busy + CSS var --edition-progress; book-effects.css gradient hijau dari kiri). Tes di pdf-translate.test.cjs.
+
+
+## 2026-10-02 — Buka cover kurang kaku
+FlipbookCurl (cover melengkung): DURATION 1250 -> 1600 ms; easing cubic in-out -> sine in-out (dulu pelan lalu "nyentak" di tengah); lengkungan mulai lebih dekat ke punggung (s^1.6, dulu s^2) dan lebih besar (1.25·sin, tetap dibatasi 0.75·sudut); perspektif lebih dekat (w·3.5, dulu w·6) jadi sampul terasa terangkat; strip overlap 1.6 px (sambungan putih). .book-shift (geser buku saat buka/tutup) 1.6 s dengan kurva sine supaya seirama. Tes qa-runtime/qa-editor: waktu pump disesuaikan (2000/2200 ms).
+Catatan: di Chromium headless kadang tampak garis putih tipis di bagian bawah sampul saat hampir tegak — cek di browser asli.

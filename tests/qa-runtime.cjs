@@ -35,7 +35,7 @@ function runtime(file,model,width=1200,height=720){
  const Original=w.St.PageFlip;w.St.PageFlip=class extends Original{constructor(...args){super(...args);w.engine=this}};
  load('assets/export/layout.js');
  if(model){w.FLIPBOOK_DATA=JSON.parse(JSON.stringify(model));load('assets/export/viewer.js')}
- const pump=(ms=1400)=>{for(let t=0;t<ms;t+=20){clock+=20;const tasks=[...frames.values()];frames.clear();tasks.forEach(fn=>fn(clock))}};
+ const pump=(ms=2000)=>{for(let t=0;t<ms;t+=20){clock+=20;const tasks=[...frames.values()];frames.clear();tasks.forEach(fn=>fn(clock))}};
  return {dom,w,errors,load,pump,resize(newWidth,newHeight){width=newWidth;height=newHeight;w.engine.update();w.dispatchEvent(new w.Event('resize'))}};
 }
 async function testViewer(count,ratio,width=1200){

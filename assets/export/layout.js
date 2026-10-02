@@ -504,7 +504,7 @@
 // ES2018 for old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookCurl = {
   STRIPS: 36,
-  DURATION: 1250,
+  DURATION: 1600,
   // Rotation of each strip (relative to the previous one, as the strips are
   // nested) for a cover turned `theta` (0..PI) about the spine. The spine
   // side turns rigidly with theta; the free edge trails by up to `bend`
@@ -515,7 +515,9 @@
     let previous = 0;
     for (let i = 0; i < n; i++) {
       const s = n > 1 ? i / (n - 1) : 0;
-      const angle = Math.max(0, Math.min(Math.PI, theta - bend * s * s));
+      // s^1.6: the bend starts nearer the spine, so the whole board curves
+      // (s^2 kept most of it flat with only the edge curling).
+      const angle = Math.max(0, Math.min(Math.PI, theta - bend * Math.pow(s, 1.6)));
       out.push(angle - previous); previous = angle;
     }
     return out;
@@ -523,7 +525,8 @@
   bind(book, root, pages, options) {
     const self = this, opts = options || {};
     let busy = false;
-    const ease = t => (t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2);
+    // Gentle in and out (sine): a cubic curve crept, then snapped over the middle.
+    const ease = t => (1 - Math.cos(Math.PI * t)) / 2;
     const src = i => { const img = pages[i] && pages[i].querySelector('img'); return img ? (img.currentSrc || img.src) : ''; };
     function ready() {
       return !opts.reduced && !busy && pages.length >= 3 && book.getOrientation() === 'landscape' &&
@@ -540,7 +543,7 @@
       stage.className = 'cover-curl';
       stage.style.left = (geo.x - geo.w) + 'px'; stage.style.top = geo.y + 'px';
       stage.style.width = geo.w * 2 + 'px'; stage.style.height = geo.h + 'px';
-      stage.style.perspective = Math.round(geo.w * 6) + 'px';
+      stage.style.perspective = Math.round(geo.w * 3.5) + 'px';   // closer eye: the board lifts toward the reader
       const width = geo.w / self.STRIPS, strips = [];
       let parent = stage;
       const face = (url, x, back) => {
@@ -557,7 +560,7 @@
         const strip = document.createElement('div');
         strip.className = 'cover-curl-strip';
         strip.style.left = (i === 0 ? geo.w : width) + 'px';
-        strip.style.width = (width + 0.7) + 'px'; strip.style.height = geo.h + 'px';
+        strip.style.width = (width + 1.6) + 'px'; strip.style.height = geo.h + 'px';   // overlap: no seams where the board bends most
         const front = face(src(0), i * width, false), back = face(src(1), geo.w - (i + 1) * width, true);
         strip.appendChild(front); strip.appendChild(back);
         parent.appendChild(strip); parent = strip;
@@ -593,7 +596,7 @@
         // more and it would rest on the book and be dragged flat across it.
         const theta = from + (to - from) * e;
         if (halfway && e >= 0.5) { halfway(); halfway = null; }
-        pose(view.strips, theta, direction * Math.min(Math.sin(Math.PI * e), 0.75 * Math.abs(theta - from)));
+        pose(view.strips, theta, direction * Math.min(1.25 * Math.sin(Math.PI * e), 0.75 * Math.abs(theta - from)));
         if (t < 1) { requestAnimationFrame(frame); return; }
         done();
         // Let the book repaint under the overlay, then fade it out so the

@@ -124,7 +124,7 @@ body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl
 .book-mark-pick.is-marked .book-mark-state{color:#fff;background:#d31d24}
 
 /* Closed book centred; slides smoothly to the open spread (see centerCover). */
-.book-shift{transition:transform 1.15s cubic-bezier(.45,.05,.25,1);will-change:transform}
+.book-shift{transition:transform 1.6s cubic-bezier(.37,0,.63,1);will-change:transform}
 .book-shift-instant{transition:none}
 @media (prefers-reduced-motion:reduce){.book-shift{transition:none}}
 

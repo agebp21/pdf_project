@@ -39,9 +39,9 @@ async function main(){
  assert.equal(w.document.querySelector('#reader-error').hidden,true,w.document.querySelector('#reader-error').textContent);
  assert.equal(w.document.querySelector('#overlay-form').hidden,true);assert.equal(w.document.querySelector('.playback').hidden,true);
  const height=w.document.querySelector('#reader-stage').style.height;
- w.document.querySelector('#next').click();test.pump(1800); // curved cover turn + fade
+ w.document.querySelector('#next').click();test.pump(2200); // curved cover turn (1.6 s) + fade
  assert.equal(w.engine.getCurrentPageIndex(),1);assert.equal(w.document.querySelector('#reader-stage').style.height,height);
- w.document.querySelector('#home').click();test.pump(1800); // the cover closes with the curved turn (~1.4 s)
+ w.document.querySelector('#home').click();test.pump(2200); // the cover closes with the curved turn (~1.8 s)
  assert.equal(w.engine.getCurrentPageIndex(),0);assert.equal(w.document.querySelector('#home').disabled,true);
  w.document.querySelector('#save-project').click();await until(test,()=>files.size===1,'save project');
  const saved=[...files.values()][0];assert.ok(saved.size>0);
