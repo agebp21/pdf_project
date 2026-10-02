@@ -8,18 +8,27 @@
   let opening = false;
   const overlays = new Map();
   let disposeLayout = null;
+  // The whole page goes full screen and the preview fills it (class), so the
+  // tools that open on the page body (highlighter bar, notes, search, dialogs)
+  // stay visible; full-screening the preview alone hid them.
   $('#fullscreen').onclick=async()=>{
-    const preview=$('.preview');
-    try { if(document.fullscreenElement)await document.exitFullscreen();else if(preview.requestFullscreen)await preview.requestFullscreen();else preview.classList.toggle('reading-fullscreen'); }
-    catch(cause){preview.classList.toggle('reading-fullscreen');}
+    const preview=$('.preview'), root=document.documentElement;
+    if(preview.classList.contains('reading-fullscreen')){
+      preview.classList.remove('reading-fullscreen');
+      try { if(document.fullscreenElement)await document.exitFullscreen(); } catch(cause){}
+    } else {
+      preview.classList.add('reading-fullscreen');
+      try { if(root.requestFullscreen)await root.requestFullscreen(); } catch(cause){}   // no API: the class alone fills the window
+    }
     paintFullscreen();
   };
-  document.addEventListener('keydown',event=>{if(event.key==='Escape'){$('.preview').classList.remove('reading-fullscreen');paintFullscreen();}});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'&&!document.fullscreenElement){$('.preview').classList.remove('reading-fullscreen');paintFullscreen();}});
   // ⛶ in the book toolbar: the preview fills the screen (Esc or the button leaves).
-  const paintFullscreen=()=>{const on=Boolean(document.fullscreenElement)||$('.preview').classList.contains('reading-fullscreen');
+  const paintFullscreen=()=>{const on=$('.preview').classList.contains('reading-fullscreen');
     $('#fullscreen').textContent=on?L('✕ Exit full screen','✕ Keluar layar penuh'):L('⛶ Full screen','⛶ Layar penuh');
     $('#fullscreen').setAttribute('aria-pressed',String(on));$('#fullscreen').title=$('#fullscreen').textContent.slice(2);};
-  document.addEventListener('fullscreenchange',paintFullscreen);paintFullscreen();
+  // Esc / the browser leaving full screen: the preview goes back too.
+  document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)$('.preview').classList.remove('reading-fullscreen');paintFullscreen();});paintFullscreen();
   let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, bookVersionText = {}, editions = null, bookChecked = {}, bookComplete = new Set(), stopTranslating = false, liveLang = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.

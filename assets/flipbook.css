@@ -6,3 +6,6 @@ fieldset{border:0;margin:0;padding:0;min-width:0}fieldset:disabled{opacity:.45}.
 
 /* Keep book navigation centered within the preview. */
 .preview .controls{justify-content:center}
+
+body:has(.preview.reading-fullscreen){overflow:hidden}
+body:has(.preview.reading-fullscreen) .topbar{display:none}
