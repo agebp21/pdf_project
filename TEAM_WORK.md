@@ -1009,3 +1009,5 @@ Nama fitur notebook.html diganti "AI Summarizer": judul tab + h1 notebook.html, 
 
 ## 2026-10-02 — Swara flip kertas DIHAPUS
 Permintaan user: tanpa audio efek kertas. Dihapus: modul FlipbookSound (layout.js, termasuk MP3 base64), tombol #sound (flipbook.html + export index.html), panggilan attach/bindButton/play (flipbook.js, viewer.js; FlipbookCurl tanpa onTurn), assets/sounds/paper-flip.mp3, tests/flip-sound.test.cjs. localStorage mf-flip-sound di browser lama tidak dipakai lagi (tidak apa-apa). E2E: toolbar "← | Home | Open cover → | 🔍 | 🔖 Mark | ☰ | 📝 | 🖍 | 🎧 Audio book | 🌐 Translate", flip & Home tanpa error.
+
+- 2026-10-02: tombol "⛶ Full screen" sekarang di toolbar buku editor (sesudah 🌐 Translate); dulu #fullscreen ada di .playback yang tersembunyi. Saat aktif "✕ Exit full screen" (aria-pressed), Esc/tombol keluar; fallback .reading-fullscreen kalau Fullscreen API tidak ada. Viewer ekspor sudah punya tombol Fullscreen sendiri.

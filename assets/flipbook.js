@@ -12,9 +12,14 @@
     const preview=$('.preview');
     try { if(document.fullscreenElement)await document.exitFullscreen();else if(preview.requestFullscreen)await preview.requestFullscreen();else preview.classList.toggle('reading-fullscreen'); }
     catch(cause){preview.classList.toggle('reading-fullscreen');}
+    paintFullscreen();
   };
-  document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
-  document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?L('Exit full screen','Keluar fullscreen'):L('Full screen','Layar penuh')});
+  document.addEventListener('keydown',event=>{if(event.key==='Escape'){$('.preview').classList.remove('reading-fullscreen');paintFullscreen();}});
+  // ⛶ in the book toolbar: the preview fills the screen (Esc or the button leaves).
+  const paintFullscreen=()=>{const on=Boolean(document.fullscreenElement)||$('.preview').classList.contains('reading-fullscreen');
+    $('#fullscreen').textContent=on?L('✕ Exit full screen','✕ Keluar layar penuh'):L('⛶ Full screen','⛶ Layar penuh');
+    $('#fullscreen').setAttribute('aria-pressed',String(on));$('#fullscreen').title=$('#fullscreen').textContent.slice(2);};
+  document.addEventListener('fullscreenchange',paintFullscreen);paintFullscreen();
   let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, bookVersionText = {}, editions = null, bookChecked = {}, bookComplete = new Set(), stopTranslating = false, liveLang = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.
