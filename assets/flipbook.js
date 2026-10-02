@@ -8,6 +8,14 @@
   let opening = false;
   const overlays = new Map();
   let disposeLayout = null;
+  // Opening a PDF: a red bar fills the status box
+  // (pages 0–60 %, links 60–75 %, text 75–100 %). loading(null) ends it.
+  function loading(text, part) {
+    const box = $('#load-status'), on = text != null;
+    if (on) box.textContent = text + ' ' + Math.round(Math.min(1, part) * 100) + '%';
+    box.style.setProperty('--load-progress', on ? (Math.min(1, part) * 100).toFixed(1) + '%' : '0%');
+    box.classList.toggle('is-loading', on);
+  }
   // The whole page goes full screen and the preview fills it (class), so the
   // tools that open on the page body (highlighter bar, notes, search, dialogs)
   // stay visible; full-screening the preview alone hid them.
@@ -104,7 +112,7 @@
     const newUrls = [];
     let installed = false;
     try {
-      $('#load-status').textContent = 'Reading PDF…';
+      loading('Reading PDF…', 0);
       if (!window.pdfjsLib || !window.St) throw new Error('Libraries unavailable. Reload the page.');
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
       task = pdfjsLib.getDocument({data: await blob.arrayBuffer(), isEvalSupported:false});
@@ -114,7 +122,7 @@
       const natural = firstPage.getViewport({scale:1});
       const newElements = [];
       for (let i = 1; i <= newPdf.numPages; i++) {
-        $('#load-status').textContent = `Preparing page ${i} / ${newPdf.numPages}…`;
+        loading(`Preparing page ${i} / ${newPdf.numPages}…`, (i - 1) / newPdf.numPages * 0.6);
         const page = i === 1 ? firstPage : await newPdf.getPage(i);
         const original = page.getViewport({scale:1});
         const viewport = page.getViewport({scale: Math.min(1.5, 1100 / Math.max(original.width, original.height))});
@@ -131,12 +139,12 @@
       // Table of contents / cross-reference links (never blocks opening the book).
       let found = {links:{}, stats:{internal:0, external:0, toc:0}};
       try {
-        if (window.PdfLinks) found = await PdfLinks.extract(newPdf, {progress:(i, n) => { $('#load-status').textContent = `Finding links ${i} / ${n}…`; }});
+        if (window.PdfLinks) found = await PdfLinks.extract(newPdf, {progress:(i, n) => loading(`Finding links ${i} / ${n}…`, 0.6 + i / n * 0.15)});
       } catch (cause) { console.warn('Links skipped:', cause); }
       // Word positions so readers can highlight text (never blocks opening either).
       let words = {}, text = {};
       try {
-        if (window.PdfWords) ({words, text} = await PdfWords.extract(newPdf, {withText:true, progress:(i, n) => { $('#load-status').textContent = `Reading text ${i} / ${n}…`; }}));
+        if (window.PdfWords) ({words, text} = await PdfWords.extract(newPdf, {withText:true, progress:(i, n) => loading(`Reading text ${i} / ${n}…`, 0.75 + i / n * 0.25)}));
       } catch (cause) { console.warn('Words skipped:', cause); }
       if (version !== loadVersion) return false;
       if (book) { disposeLayout?.(); book.destroy(); book = null; }
@@ -254,6 +262,7 @@
       book.on('flip', () => speech.pageChanged());
       book.on('changeState', event => { if (event.data === 'read') speech.pageChanged(); });
       const linkCount = found.stats.internal + found.stats.toc + found.stats.external;
+      loading(null);
       $('#load-status').textContent = `${newElements.length} page${newElements.length === 1 ? '' : 's'} ready. The first page is the front cover.` +
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');
       updatePage();
@@ -267,6 +276,7 @@
         if (task) await task.destroy().catch(() => {});
       }
       error('Could not open this PDF. ' + (cause.message || 'Make sure the PDF is valid and not password-protected.'));
+      loading(null);
       $('#load-status').textContent = 'Failed to load the PDF. Pick another file to try again.';
       return false;
     } finally {
