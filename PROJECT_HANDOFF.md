@@ -1033,3 +1033,5 @@ E2E (suara tiruan, english8.pdf): baca EN -> terjemahkan ke ID -> saat 4/8 audio
 - layout.js FlipbookSound: synth/STYLES/setStyle (paper/crisp/thick) DIHAPUS. MP3 di-embed base64 (konstanta MP3) supaya semua ekspor offline (HTML/ZIP/APK/EXE) ikut tanpa file tambahan. Decode sekali (decodeAudioData callback + promise), flip pertama sebelum decode selesai diputar begitu siap. playbackRate 0.96–1.04, pan kanan->kiri. API: play, attach, setEnabled, bindButton, isEnabled.
 - Ganti swara: timpa assets/sounds/paper-flip.mp3 lalu embed ulang base64 ke konstanta MP3 (tes flip-sound.test.cjs memastikan isinya sama persis).
 Tes: flip-sound.test.cjs (rekaman ter-embed = file mp3, tanpa styles), Chromium asli: buffer 0.60 s mono diputar. Semua JS + Python OK.
+
+- 2026-10-02: volume swara flip diturunkan (gain 0.9 -> 0.35, kira-kira -8 dB) atas permintaan user (terlalu keras). Atur di layout.js FlipbookSound.play `gain.gain.value`.

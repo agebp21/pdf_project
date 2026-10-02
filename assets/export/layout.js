@@ -272,7 +272,7 @@
     source.buffer = buffer;
     source.playbackRate.value = 0.96 + Math.random() * 0.08;    // no two turns quite alike
     const gain = c.createGain();
-    gain.gain.value = 0.9;
+    gain.gain.value = 0.35;                                   // soft: the recording is loud
     let last = gain;
     // The sheet travels from the right-hand page to the left.
     if (c.createStereoPanner) {
