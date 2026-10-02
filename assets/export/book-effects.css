@@ -180,3 +180,9 @@ body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl
 /* Translating: a progress bar filling the button from the left. */
 #edition.is-busy{background-image:linear-gradient(90deg,rgba(45,140,100,.32) var(--edition-progress,0%),transparent var(--edition-progress,0%));font-variant-numeric:tabular-nums}
 #edition.is-translated{background:#e9e4ff}
+/* Pages are pictures: no browser selection (the blue wash over a whole page on
+   double-click / Ctrl+A / long press) and no image dragging. Note fields stay editable. */
+.book-paper,.book-paper img,.cover-curl,.stf__parent{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none;-webkit-tap-highlight-color:transparent}
+.book-paper img{-webkit-user-drag:none;user-drag:none}
+.book-paper ::selection,.book-paper::selection,.book-paper img::selection{background:transparent}
+.book-paper textarea,.book-paper input,.book-paper [contenteditable="true"]{-webkit-user-select:text;user-select:text}

@@ -1003,3 +1003,5 @@ Catatan: di Chromium headless kadang tampak garis putih tipis di bagian bawah sa
 Nama fitur notebook.html diganti "AI Summarizer": judul tab + h1 notebook.html, kartu alat di index.html (id tetap "notebook"), nav chip (i18n nav.note "✦ AI Summarizer"), stat.4, privacy.html (ID+EN), komentar flipbook.js. Kartu placeholder "AI Summarizer" (id ai-summarizer, segera hadir) yang dulu ada di bawah DIHAPUS (permintaan user, biar tidak dobel) + entri SOON + i18n tool.ai-summarizer. test_accounts.py menyesuaikan.
 
 - 2026-10-02: fitur jurnal diganti nama "Find Journal & Ebook" (sama di ID & EN): kartu index.html, nav chip (i18n nav.journals), tombol di notebook.html, judul tab + h1 journals.html (satu nama untuk tab Jurnal & Ebook; dulu heading ganti "Cari Jurnal"/"Cari Ebook").
+
+- 2026-10-02: halaman buku tidak lagi jadi biru saat terseleksi (dobel-klik, Ctrl+A, tekan lama di HP). book-effects.css: .book-paper/.cover-curl/.stf__parent user-select:none, ::selection transparan, gambar tidak bisa di-drag, tap highlight mati; textarea/input catatan tetap bisa diseleksi.
