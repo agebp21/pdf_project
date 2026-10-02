@@ -1035,3 +1035,11 @@ E2E (suara tiruan, english8.pdf): baca EN -> terjemahkan ke ID -> saat 4/8 audio
 Tes: flip-sound.test.cjs (rekaman ter-embed = file mp3, tanpa styles), Chromium asli: buffer 0.60 s mono diputar. Semua JS + Python OK.
 
 - 2026-10-02: volume swara flip diturunkan (gain 0.9 -> 0.35, kira-kira -8 dB) atas permintaan user (terlalu keras). Atur di layout.js FlipbookSound.play `gain.gain.value`.
+
+
+## 2026-10-02 — Terjemahan buku: lanjut setelah Stop, angka progres, judul huruf renggang
+Laporan (Routledge Companion to Aesthetics, 600 hal): "54 / 600" tapi hal 2–3 tetap English, audio book membaca Indonesia.
+- flipbook.js translateBook: saat dilanjutkan setelah Stop, halaman yang sudah jadi langsung ditampilkan terjemahannya lagi (dulu tetap asli sampai selesai 600) + `speech.editionChanged()`.
+- Angka progres sekarang = halaman SELESAI diterjemahkan (stage read diabaikan); dulu = halaman yang baru dibaca, jadi "54" padahal belum ada yang tampil.
+- pdf-layout.js `spacedWords()`: judul huruf renggang ("T H E R O U T L E D G E") dari pdf.js disatukan lagi jadi kata. Font dengan kode private-use: glyph spasi kata ikut dilukis -> dicari glyph yang jumlahnya pas dan pemetaan huruf konsisten; font biasa: celah lebih lebar dari biasanya = spasi. Diekspor `PdfLayout.spacedWords`.
+Tes: tests/pdf-layout-spaced.test.cjs. E2E Routledge: hal 2–3 jadi Indonesia, Stop -> asli, Lanjutkan -> langsung Indonesia lagi. Judul huruf kapital tetap English (Argos menganggap nama) — wajar.

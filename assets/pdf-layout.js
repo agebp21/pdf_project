@@ -56,6 +56,48 @@
     return '000000';
   }
 
+  // Letter-spaced titles ("T H E  R O U T L E D G E") often come with one
+  // space between every letter: the words only show in the wider gaps. Put
+  // the words back from where the letters were painted.
+  function spacedWords(text, painted) {
+    var tokens = text.trim().split(/ +/);
+    if (!painted || tokens.length < 5 || tokens.filter(function (t) { return t.length === 1; }).length < tokens.length * 0.8 ||
+        tokens.some(function (t) { return t.length > 2; })) return text;
+    var letters = text.replace(/ /g, '');
+    var marks = painted.slice().sort(function (a, b) { return a.x - b.x; });
+    // Fonts with their own codes (pdf.js paints private-use characters): the
+    // painted glyphs only line up with the letters once the word spaces, which
+    // are painted too, are taken out. Find the one glyph that fills that gap.
+    var keep = marks.filter(function (g) { return g.text.trim(); }), space = null;
+    if (keep.length !== letters.length) {
+      var counts = {};
+      keep.forEach(function (g) { counts[g.text] = (counts[g.text] || 0) + 1; });
+      var extra = keep.length - letters.length;
+      var candidates = Object.keys(counts).filter(function (c) { return counts[c] === extra; });
+      for (var c = 0; c < candidates.length && !space; c++) {
+        var rest = keep.filter(function (g) { return g.text !== candidates[c]; }), seen = {}, fits = rest.length === letters.length;
+        for (var r = 0; fits && r < rest.length; r++) {
+          if (seen[rest[r].text] && seen[rest[r].text] !== letters[r]) fits = false;
+          seen[rest[r].text] = letters[r];
+        }
+        if (fits) space = candidates[c];
+      }
+      if (!space) return text;
+      var out = '', k = 0;
+      keep.forEach(function (g) { if (g.text === space) { if (out && !/ $/.test(out)) out += ' '; } else out += letters[k++]; });
+      return out.trim();
+    }
+    // Plain letters: the words show in the wider room after a letter.
+    var gaps = [], width = 0;
+    for (var i = 1; i < keep.length; i++) gaps.push(keep[i].x - (keep[i - 1].x + keep[i - 1].w));
+    keep.forEach(function (g) { width += g.w; });
+    var usual = gaps.slice().sort(function (a, b) { return a - b; })[Math.floor(gaps.length / 2)];
+    var more = Math.max(width / keep.length * 0.2, Math.abs(usual) * 0.6);
+    var out2 = letters[0];
+    for (var j = 1; j < keep.length; j++) out2 += (gaps[j - 1] > usual + more ? ' ' : '') + letters[j];
+    return out2;
+  }
+
   // Join same-baseline runs that sit next to each other into one text box,
   // so a line is one editable box instead of dozens of fragments. A wide gap
   // (table column) starts a new box so columns stay where they were.
@@ -152,7 +194,7 @@
     var canvas = document.createElement('canvas');
     canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
     var ctx = canvas.getContext('2d');
-    var captured = new Map();
+    var captured = new Map(), glyphs = new Map();
     // The run a painted glyph belongs to. When runs touch ("Objective" + ":"),
     // the glyph goes to the one starting closest on its left, so the colon isn't
     // swallowed by the word before it (and then lost from both text and image).
@@ -184,6 +226,7 @@
             var px = (m.a * x + m.c * y + m.e) / scale, py = (m.b * x + m.d * y + m.f) / scale;
             var it = match(px, py);
             if (it) {
+              if (key === 'fillText') (glyphs.get(it) || glyphs.set(it, []).get(it)).push({ x: px, w: target.measureText(String(text)).width * Math.hypot(m.a, m.b) / scale, text: String(text) });
               if (key === 'fillText' || !captured.has(it)) captured.set(it, { color: key === 'fillText' ? target.fillStyle : target.strokeStyle, font: target.font });
               return;
             }
@@ -208,7 +251,7 @@
       var realName = '';
       try { realName = (page.commonObjs.get(it.item.fontName) || {}).name || ''; } catch (e) {}
       var fontString = realName + ' ' + (paint.font || '');
-      runs.push({ text: it.text, x: it.x, y: it.baseline - it.ascent, w: it.w, h: it.size * 1.2, size: it.size,
+      runs.push({ text: spacedWords(it.text, glyphs.get(it)), x: it.x, y: it.baseline - it.ascent, w: it.w, h: it.size * 1.2, size: it.size,
         baseline: it.baseline, color: hexColor(paint.color), font: fontFace(realName, it.generic),
         bold: /bold|black|heavy|semibold|demi/i.test(fontString), italic: /italic|oblique/i.test(fontString) });
     });
@@ -296,5 +339,5 @@
     });
   }
 
-  root.PdfLayout = { layoutPage: layoutPage, mergeRuns: mergeRuns, fontFace: fontFace, hexColor: hexColor };
+  root.PdfLayout = { layoutPage: layoutPage, mergeRuns: mergeRuns, spacedWords: spacedWords, fontFace: fontFace, hexColor: hexColor };
 })(typeof window !== 'undefined' ? window : globalThis);

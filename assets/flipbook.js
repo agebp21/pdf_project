@@ -405,10 +405,13 @@
     const say = done => report(L(`🌐 ${Math.min(total, before + done)} / ${total} · Stop`, `🌐 ${Math.min(total, before + done)} / ${total} · Berhenti`));
     const original = () => pageElements.forEach((page, index) => { const image = page.querySelector('img'); if (image) image.src = imageUrls[index]; });
     say(0);
+    // Carrying on after a stop: the pages done before show translated again right away.
+    Object.entries(pages).forEach(([index, url]) => { const image = pageElements[index] && pageElements[index].querySelector('img'); if (image) image.src = url; });
+    if (Object.keys(pages).length) speech?.editionChanged();
     try {
       await PdfTranslate.book(book, {target: lang, translate: translateFree, maxPx: 1100, pages: todo,
         isCancelled: () => stopTranslating || book !== pdf,
-        onProgress: (stage, done) => say(done),
+        onProgress: (stage, done) => { if (stage !== 'read') say(done); },   // pages finished, not just read
         onPage: (index, blob, said) => {
           if (book !== pdf) return;
           if (pages[index]) URL.revokeObjectURL(pages[index]);
