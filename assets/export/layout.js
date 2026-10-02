@@ -1303,7 +1303,13 @@
     try { const saved = localStorage.getItem('mf-highlight-color'); if (self.COLORS[saved]) color = saved; } catch (e) {}
     const lineCache = {};
     const texts = options.text || {};
-    const linesOf = index => (lineCache[index] || (lineCache[index] = self.lines(words[String(index)], texts[String(index)])));
+    // A translated edition on screen (options.edition() → {lang, words: {page: {w, t}}}):
+    // its pages snap to (and quote) the translation that is drawn there.
+    const linesOf = index => {
+      const ed = options.edition ? options.edition() : null, page = ed && ed.words && ed.words[String(index)];
+      const key = (page ? ed.lang + ':' : '') + index;
+      return lineCache[key] || (lineCache[key] = page ? self.lines(page.w, page.t) : self.lines(words[String(index)], texts[String(index)]));
+    };
     const said = (index, h) => self.quote(linesOf(index), h.r);
     // Colour bar shown in highlighter mode.
     const bar = document.createElement('div');
@@ -1608,7 +1614,7 @@
       },
       close() { setMode(false); bar.remove(); },
       // A page got its text later (OCR): forget what was worked out without it.
-      refreshText(index) { delete lineCache[index]; render(index); },
+      refreshText(index) { Object.keys(lineCache).forEach(k => { if (k === String(index) || k.split(':')[1] === String(index)) delete lineCache[k]; }); render(index); },
       bar: () => bar,
       store: () => JSON.parse(JSON.stringify(store)),
       ink: () => JSON.parse(JSON.stringify(ink)),

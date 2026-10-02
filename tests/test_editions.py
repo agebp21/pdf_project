@@ -31,6 +31,13 @@ class EditionTests(unittest.TestCase):
             'en-US': {'1': [[0.1, 0.2, 0.5, 0.1, 'Hello.'], [0, 0, 2, 1, 'bad'], [0, 0, 1, 1, ' ']], '2': [[0, 0, 1, 1, 'not in edition']]},
             'ms-MY': {'1': [[0, 0, 1, 1, 'no such edition']]}}))['versionText']
         self.assertEqual(said, {'en-US': {'1': [[0.1, 0.2, 0.5, 0.1, 'Hello.']]}})
+        # Word positions of the translated pages (highlighter): bad entries dropped.
+        words = server.validate_manifest(manifest(lang='id-ID', versions={'en-US': [1]}, versionWords={
+            'en-US': {'1': {'w': [[100, 50, 200, 300, 600, 100]], 't': ['Hello world']}, '2': {'w': [[1, 1, 1, 1]], 't': ['x']}},
+            'ms-MY': {'1': {'w': [[1, 1, 1, 1]], 't': ['x']}}}))['versionWords']
+        self.assertEqual(words, {'en-US': {'1': {'w': [[100, 50, 200, 300, 600, 100]], 't': ['Hello world']}}})
+        self.assertNotIn('versionWords', server.validate_manifest(manifest(lang='id-ID', versions={'en-US': [1]},
+                                                                           versionWords={'en-US': {'1': {'w': [[1, 2, 3]], 't': []}}})))
         for bad in ({'id-ID': [0]}, {'en-US': [3]}, {'en-US': ['0']}, {'fr-FR': [0]}, ['en-US']):
             with self.assertRaises(ValueError):
                 server.validate_manifest(manifest(lang='id-ID', versions=bad))

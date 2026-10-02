@@ -37,7 +37,7 @@
     $('#fullscreen').setAttribute('aria-pressed',String(on));$('#fullscreen').title=$('#fullscreen').textContent.slice(2);};
   // Esc / the browser leaving full screen: the preview goes back too.
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)$('.preview').classList.remove('reading-fullscreen');paintFullscreen();});paintFullscreen();
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, bookVersionText = {}, editions = null, bookChecked = {}, bookComplete = new Set(), stopTranslating = false, liveLang = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, bookVersionText = {}, bookVersionWords = {}, editions = null, bookChecked = {}, bookComplete = new Set(), stopTranslating = false, liveLang = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.
   const zoomBox = document.createElement('div'); zoomBox.id = 'pdf-zoom';
@@ -51,7 +51,7 @@
     $('#export-exe').disabled = !buildConfig?.exe;
     $('#project-file').disabled = opening || exporting;
   }
-  const model = () => ({version:1,title:$('#export-title').value.trim()||L('Interactive book','Buku interaktif'),pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{}),...(Object.keys(bookTranslations).length?{translations:bookTranslations}:{}),...(bookSummary?{summary:bookSummary}:{}),...(bookLang?{lang:bookLang}:{}),...(Object.keys(bookVersions).length?{versions:Object.fromEntries(Object.entries(bookVersions).map(([lang,pages])=>[lang,Object.keys(pages).map(Number).sort((a,b)=>a-b)]))}:{}),...(Object.keys(bookVersionText).length?{versionText:bookVersionText}:{})});
+  const model = () => ({version:1,title:$('#export-title').value.trim()||L('Interactive book','Buku interaktif'),pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{}),...(Object.keys(bookTranslations).length?{translations:bookTranslations}:{}),...(bookSummary?{summary:bookSummary}:{}),...(bookLang?{lang:bookLang}:{}),...(Object.keys(bookVersions).length?{versions:Object.fromEntries(Object.entries(bookVersions).map(([lang,pages])=>[lang,Object.keys(pages).map(Number).sort((a,b)=>a-b)]))}:{}),...(Object.keys(bookVersionText).length?{versionText:bookVersionText}:{}),...(Object.keys(bookVersionWords).length?{versionWords:bookVersionWords}:{})});
   const error = message => { $('#reader-error').textContent = message; $('#reader-error').hidden = !message; };
   // Sheets on screen (may include the blank back cover of an odd page count).
   function sheetsOnScreen() {
@@ -167,6 +167,7 @@
       });
       bookComplete = new Set(Object.keys(bookVersions)); bookChecked = {}; stopTranslating = true;
       bookVersionText = JSON.parse(JSON.stringify((project && project.versionText) || {}));
+      bookVersionWords = JSON.parse(JSON.stringify((project && project.versionWords) || {}));
       // Odd page counts get a blank back cover so the book can close.
       const sheets = FlipbookLayout.withBackCover(newElements, 'pdf-page');
       const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...sheets);
@@ -219,6 +220,8 @@
       highlights?.close();
       highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(name, newElements.length, ratio),
         pages: newElements, words: bookWords, text: bookText, button: $('#highlight'),
+        // On a translated edition the highlighter takes the translated words.
+        edition: () => { const shown = editions?.current(), lang = shown && shown !== bookLang ? shown : liveLang; return lang && bookVersionWords[lang] ? {lang, words: bookVersionWords[lang]} : null; },
         onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
         onRecolor: (index, said, color) => notes.tint(index, said, color),
         // ✨ Summarize: the server's AI turns a highlight into a short note.
@@ -441,11 +444,13 @@
       await PdfTranslate.book(book, {target: lang, translate: translateFree, maxPx: 1100, pages: todo,
         isCancelled: () => stopTranslating || book !== pdf,
         onProgress: (stage, done) => { if (stage !== 'read') say(done); },   // pages finished, not just read
-        onPage: (index, blob, said) => {
+        onPage: (index, blob, said, drawn) => {
           if (book !== pdf) return;
           if (pages[index]) URL.revokeObjectURL(pages[index]);
           pages[index] = URL.createObjectURL(blob);
           (bookVersionText[lang] || (bookVersionText[lang] = {}))[index] = said || [];   // read aloud by the audio book
+          if (drawn && drawn.lines.length) (bookVersionWords[lang] || (bookVersionWords[lang] = {}))[index] = {w: boxedLines(drawn.lines, drawn.ratio), t: drawn.text};   // the highlighter snaps to it
+          highlights?.refreshText(index);
           const image = pageElements[index] && pageElements[index].querySelector('img');
           if (image) image.src = pages[index];                  // the page changes language right away
           if (visiblePages().includes(index)) speech?.editionChanged();   // and the audio book follows
@@ -470,6 +475,16 @@
     liveLang = null;                                           // editions.show(lang) takes over
     bookComplete.add(lang);
     if (libraryId) archiveBook();                              // keep My Library up to date
+  }
+  // Word lines in page fractions → the book page box (pages shaped unlike page 1
+  // sit letterboxed in it, like PdfWords does for the original text).
+  function boxedLines(lines, ratio) {
+    let sx = 1, sy = 1;
+    if (ratio < bookRatio) sx = ratio / bookRatio; else if (ratio > bookRatio) sy = bookRatio / ratio;
+    if (sx === 1 && sy === 1) return lines;
+    const ox = (1 - sx) / 2 * 10000, oy = (1 - sy) / 2 * 10000;
+    return lines.map(line => line.map((v, i) => i === 0 ? Math.round(oy + v * sy) : i === 1 ? Math.max(1, Math.round(v * sy))
+      : i % 2 === 0 ? Math.round(ox + v * sx) : Math.max(1, Math.round(v * sx))));
   }
   // Editions made before the audio book read them (no text kept): translate
   // the pages' text once more (free translator) so they are read in that language.

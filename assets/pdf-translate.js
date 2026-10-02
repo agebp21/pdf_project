@@ -8,7 +8,8 @@
  * (fewer AI calls, consistent terms), and each translation is drawn back into
  * its block — wrapped, growing into empty room, shrunk a little if needed.
  *
- *   PdfTranslate.book(pdf, {target, translate, maxPx, pages?, onProgress, onPage(index, blob, said), isCancelled})
+ *   PdfTranslate.book(pdf, {target, translate, maxPx, pages?, onProgress, onPage(index, blob, said, words), isCancelled})
+ *   (words: {lines: PdfWords lines of the drawn text, text: their strings, ratio: page width / height})
  *     → Promise<{index: Blob (JPEG)}>   (pages without text are left out)
  *   translate(blocks {key: text}, target) → Promise<{key: translation}>
  */
@@ -107,7 +108,8 @@
   // Returns the canvas and, for reading aloud, what each block now says with
   // the box it fills: said = [[x, y, w, h, text]] in fractions of the page.
   function draw(layout, image, items) {
-    var said = [];
+    var said = [], rowsOut = [], rowText = [];
+    var U = function (v) { return Math.round(Math.max(0, Math.min(1, v)) * 10000); };
     var canvas = document.createElement('canvas');
     canvas.width = image.width; canvas.height = image.height;
     var ctx = canvas.getContext('2d');
@@ -136,6 +138,15 @@
       rows.forEach(function (row, i) {
         var x = b.textX * k, y = (top + i * step) * k;
         if (b.center) x = (b.x + b.w / 2) * k - ctx.measureText(row).width / 2;
+        // Where each word of this row lands (PdfWords lines: [y, h, x0, w0, ...]
+        // in 1/10000 of the page), so the highlighter snaps to the translation.
+        var line = [U((top + i * step - size * 0.82) / layout.height), Math.max(1, U(size * 1.05 / layout.height))], words = [];
+        var re = /\S+/g, m;
+        while ((m = re.exec(row)) && line.length < 600) {
+          var x0 = x + ctx.measureText(row.slice(0, m.index)).width, w = ctx.measureText(m[0]).width;
+          line.push(U(x0 / k / layout.width), Math.max(1, U(w / k / layout.width))); words.push(m[0]);
+        }
+        if (words.length) { rowsOut.push(line); rowText.push(words.join(' ')); }
         if (i === 0 && label && row.indexOf(label[0]) === 0) {
           var plain = ctx.font;
           ctx.font = fontOf(b, size * k, true);
@@ -152,6 +163,7 @@
       said.push([r(left / layout.width), r(b.y / layout.height), r((b.center ? width : Math.max(b.w, width - (b.textX - b.x))) / layout.width), r(used / layout.height), text]);
     });
     canvas.said = said;
+    canvas.words = {lines: rowsOut, text: rowText, ratio: layout.width / layout.height};
     return canvas;
   }
 
@@ -202,7 +214,7 @@
         var items = page.list.map(function (b) { return {block: b, text: String(answer[b.key] || b.text).replace(/\s+/g, ' ').trim()}; });
         var image = await loadImage(page.layout.background.b64);
         var canvas = draw(page.layout, image, items);
-        done[page.index] = await toBlob(canvas); onPage(page.index, done[page.index], canvas.said);
+        done[page.index] = await toBlob(canvas); onPage(page.index, done[page.index], canvas.said, canvas.words);
         canvas.width = canvas.height = 0;
         finished++;
         progress('draw', finished, total);
@@ -243,7 +255,7 @@
       var items = page.list.map(function (b) { return {block: b, text: String(answer[b.key] || b.text).replace(/\s+/g, ' ').trim()}; });
       var image = await loadImage(page.layout.background.b64);
       var canvas = draw(page.layout, image, items);
-      done[page.index] = await toBlob(canvas); onPage(page.index, done[page.index], canvas.said);
+      done[page.index] = await toBlob(canvas); onPage(page.index, done[page.index], canvas.said, canvas.words);
       canvas.width = canvas.height = 0;
       finished++;
       progress('draw', finished, total);

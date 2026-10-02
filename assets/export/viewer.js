@@ -98,6 +98,7 @@
     // Highlighter ("stabilo"): snaps to the words read from the PDF.
     const highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(data.title, data.pageCount, data.ratio),
       pages: elements, words: data.words || {}, text: data.text || {}, button: $('#highlight'),
+      edition: () => { const shown = editions && editions.current(); return shown && shown !== data.lang && data.versionWords && data.versionWords[shown] ? {lang: shown, words: data.versionWords[shown]} : null; },
       // Highlighted text becomes a note on the page edge (and goes when erased).
       onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
       onRecolor: (index, said, color) => notes.tint(index, said, color)});

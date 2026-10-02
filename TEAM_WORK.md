@@ -1030,3 +1030,20 @@ Halaman yang cuma gambar (scan, iklan majalah) sekarang dibaca teksnya otomatis 
 - Bug yang sempat masuk lalu diperbaiki sebelum commit: `all` di FlipbookSpeech jadi fungsi (`all()`).
 Tes: tests/pdf-ocr-words.test.cjs. E2E majalah Grand Designs (212 hal, 29 halaman gambar): audio book membaca iklan hal 2–3 "Over 50 Styles Up To 40% OFF … templeandwebster.com.au/grand". Judul tipis putih di atas foto ("LOVE YOUR WALLS") bisa terlewat OCR.
 Belum: terjemahan buku penuh untuk halaman gambar (PdfTranslate memakai teks PDF; halaman gambar dilewati).
+
+
+## 2026-10-02 — Badge "coming soon" kartu menu jadi abang teks putih
+
+Permintaan user: badge coming soon di kartu menu (`index.html` cardHTML soon) yang tadinya abu-abu (`#E7E5E4` + teks `#57534E`) diganti background abang `#DC2626` + teks putih. Satu baris inline style; tidak menyentuh label i18n (`card.coming`) maupun kartu horde.
+Tes: `node --check` inline script index.html lolos, `git diff --check` bersih, HTTP 200 dan string badge merah terverifikasi tersaji dari server lokal. Bukan QA visual browser. File disentuh: `index.html` saja. Belum commit/push (menunggu arahan user).
+
+
+## 2026-10-02 — Stabilo di edisi terjemahan pakai teks terjemahan
+Dulu stabilo di halaman edisi ID tetap memakai posisi/teks kata PDF asli (English), jadi catatannya English.
+- pdf-translate.js draw(): mencatat posisi tiap kata yang digambar per baris (format PdfWords [y,h,x0,w0,…] /10000 halaman) -> `canvas.words {lines, text, ratio}`; onPage(index, blob, said, words).
+- flipbook.js: `bookVersionWords[lang][page] = {w, t}` (di-letterbox ke kotak halaman buku via `boxedLines`), ikut model/proyek/My Library/ekspor sebagai `versionWords`; highlights `edition()` -> {lang, words}; `highlights.refreshText(i)` saat halaman terjemahan jadi.
+- layout.js FlipbookHighlights: opsi `edition()`; linesOf memakai kata edisi bila ada (cache per bahasa).
+- viewer.js (ekspor): edition() dari data.versionWords.
+- Validator: JS `validVersionWords`, Python `validate_version_words` (hanya bahasa/halaman yang ada di versions; entri rusak dibuang).
+- Edisi yang dibuat sebelum ini belum punya versionWords -> stabilo masih teks asli sampai diterjemahkan ulang.
+Tes: test_editions.py (versionWords). E2E: english8 -> ID, stabilo kalimat -> catatan "pulang dan menghitung bintang-bintang di atas laut yang tenang.", sorotan pas di kata Indonesia.

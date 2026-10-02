@@ -1094,3 +1094,14 @@ Halaman yang cuma gambar (scan, iklan majalah) sekarang dibaca teksnya otomatis 
 - Bug yang sempat masuk lalu diperbaiki sebelum commit: `all` di FlipbookSpeech jadi fungsi (`all()`).
 Tes: tests/pdf-ocr-words.test.cjs. E2E majalah Grand Designs (212 hal, 29 halaman gambar): audio book membaca iklan hal 2–3 "Over 50 Styles Up To 40% OFF … templeandwebster.com.au/grand". Judul tipis putih di atas foto ("LOVE YOUR WALLS") bisa terlewat OCR.
 Belum: terjemahan buku penuh untuk halaman gambar (PdfTranslate memakai teks PDF; halaman gambar dilewati).
+
+
+## 2026-10-02 — Stabilo di edisi terjemahan pakai teks terjemahan
+Dulu stabilo di halaman edisi ID tetap memakai posisi/teks kata PDF asli (English), jadi catatannya English.
+- pdf-translate.js draw(): mencatat posisi tiap kata yang digambar per baris (format PdfWords [y,h,x0,w0,…] /10000 halaman) -> `canvas.words {lines, text, ratio}`; onPage(index, blob, said, words).
+- flipbook.js: `bookVersionWords[lang][page] = {w, t}` (di-letterbox ke kotak halaman buku via `boxedLines`), ikut model/proyek/My Library/ekspor sebagai `versionWords`; highlights `edition()` -> {lang, words}; `highlights.refreshText(i)` saat halaman terjemahan jadi.
+- layout.js FlipbookHighlights: opsi `edition()`; linesOf memakai kata edisi bila ada (cache per bahasa).
+- viewer.js (ekspor): edition() dari data.versionWords.
+- Validator: JS `validVersionWords`, Python `validate_version_words` (hanya bahasa/halaman yang ada di versions; entri rusak dibuang).
+- Edisi yang dibuat sebelum ini belum punya versionWords -> stabilo masih teks asli sampai diterjemahkan ulang.
+Tes: test_editions.py (versionWords). E2E: english8 -> ID, stabilo kalimat -> catatan "pulang dan menghitung bintang-bintang di atas laut yang tenang.", sorotan pas di kata Indonesia.

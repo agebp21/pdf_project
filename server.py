@@ -172,7 +172,9 @@ def validate_manifest(data):
                 **({'lang': data['lang']} if data.get('lang') in BOOK_LANGS else {}),
                 **({'versions': vs} if data.get('lang') in BOOK_LANGS and (vs := validate_versions(data.get('versions'), count, data['lang'])) else {}),
                 **({'versionText': vt} if data.get('lang') in BOOK_LANGS and (vt := validate_version_text(
-                    data.get('versionText'), validate_versions(data.get('versions'), count, data['lang'])) ) else {}))
+                    data.get('versionText'), validate_versions(data.get('versions'), count, data['lang'])) ) else {}),
+                **({'versionWords': vw} if data.get('lang') in BOOK_LANGS and (vw := validate_version_words(
+                    data.get('versionWords'), validate_versions(data.get('versions'), count, data['lang'])) ) else {}))
 
 
 BOOK_LANGS = ('id-ID', 'en-US', 'ms-MY')
@@ -214,6 +216,32 @@ def validate_version_text(texts, versions):
                     if isinstance(b, list) and len(b) == 5 and all(unit(v) for v in b[:4]) and isinstance(b[4], str) and b[4].strip()][:300]
             if good:
                 clean[str(key)] = good
+        if clean:
+            out[lang] = clean
+    return out or None
+
+
+def validate_version_words(all_words, versions):
+    """Where the words of each translated page are (highlighter):
+    {lang: {page: {w: [[y, h, x0, w0, ...]], t: [line text]}}}; bad entries dropped."""
+    if not isinstance(all_words, dict) or not versions:
+        return None
+    out = {}
+    for lang, pages in all_words.items():
+        if lang not in versions or not isinstance(pages, dict):
+            continue
+        clean = {}
+        for key, page in pages.items():
+            if (not re.fullmatch(r'0|[1-9][0-9]*', str(key)) or int(key) not in versions[lang] or not isinstance(page, dict)
+                    or not isinstance(page.get('w'), list) or not isinstance(page.get('t'), list)):
+                continue
+            w = page['w'][:400]
+            t = page['t'][:len(w)]
+            if not w or not all(isinstance(line, list) and 4 <= len(line) <= 602 and len(line) % 2 == 0
+                                and all(type(v) is int and 0 <= v <= 10000 for v in line) for line in w) \
+                    or not all(isinstance(line, str) for line in t):
+                continue
+            clean[str(key)] = {'w': w, 't': [line[:4000] for line in t]}
         if clean:
             out[lang] = clean
     return out or None
