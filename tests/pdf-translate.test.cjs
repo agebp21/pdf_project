@@ -48,12 +48,14 @@ const line = (text, x, y, w, size = 10, extra = {}) => ({ text, x, y, w, h: size
 
   // The 🌐 Translate button: original, ready editions, editions that can be made.
   const button = w.document.getElementById('ed');
-  let applied = [], made = [], ready = [];
+  let applied = [], made = [], ready = [], seen = null;
   const ed = ED.bind({ button, original: 'id-ID', ready: () => ready, offer: ['en-US'], apply: l => applied.push(l),
-    confirm: async () => true, make: async (l, progress) => { progress('🌐 1 / 2'); made.push(l); ready = [l]; } });
+    confirm: async () => true, make: async (l, progress) => { progress('🌐 1 / 4 · Stop'); seen = [button.classList.contains('is-busy'), button.style.getPropertyValue('--edition-progress')]; made.push(l); ready = [l]; } });
   assert.equal(button.hidden, false); assert.equal(button.textContent, '🌐 Translate');
   assert.equal(button.querySelector('.is-current'), null, 'the original: just "Translate"');
   button.click(); await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
+  assert.deepEqual(seen, [true, '25%'], 'progress bar while making');
+  assert.ok(!button.classList.contains('is-busy'), 'bar gone when done');
   assert.deepEqual(made, ['en-US'], 'not ready: made first'); assert.deepEqual(applied, ['en-US']);
   assert.equal(button.textContent, '🌐 Translate · EN'); assert.ok(button.classList.contains('is-translated'));
   button.click(); await new Promise(r => setTimeout(r, 0));

@@ -2235,6 +2235,10 @@
       const langs = list();
       button.hidden = !options.original || langs.length < 2;
       while (button.firstChild) button.removeChild(button.firstChild);
+      // While making: "🌐 12 / 600 · Stop" with a bar filling the button.
+      const count = text && /(\d+)\s*\/\s*(\d+)/.exec(text);
+      button.classList.toggle('is-busy', !!text);
+      button.style.setProperty('--edition-progress', count && +count[2] ? Math.min(100, Math.round(+count[1] / +count[2] * 1000) / 10) + '%' : '0%');
       if (text) { button.textContent = text; return; }
       // "🌐 Translate"; on a translated edition it also says which ("🌐 Translate · ID").
       button.appendChild(document.createTextNode('\ud83c\udf10 Translate'));
