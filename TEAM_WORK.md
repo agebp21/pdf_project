@@ -1071,3 +1071,10 @@ Tes: pdf-translate.test.cjs (kasus majalah). Visual majalah Grand Designs hal 17
 E2E (member di-mock): mulai "Open My Library" -> buka PDF "Save My Library", 0 simpan otomatis -> klik -> 1 simpan.
 
 - 2026-10-02: sesudah 💾 Save My Library berhasil, tombol kembali "📚 Open My Library" (buku sudah di arsip -> libraryId ada; klik = buka library.html). Buku yang dibuka dari My Library juga langsung "Open". Status: "☁ Saved in My Library".
+
+
+## 2026-10-02 — Buka buku cepat (terutama dari My Library / proyek)
+- Halaman digambar bertahap: hanya 6 halaman pertama (`FIRST_PAGES`) sebelum buku tampil; sisanya `drawRest(version)` di belakang (halaman yang sedang tampil didahulukan), pengganti putih seukuran halaman (`blankPage` SVG data URL) sampai gambarnya jadi. Status + bar merah "Preparing pages x / n"; selesai -> "n pages ready." `pagesReady` (promise) ditunggu oleh ekspor HTML/APK/EXE; OCR halaman gambar mulai setelah semua halaman tergambar. `renderPageImage(page)` dipisah.
+- Proyek (My Library, .smflipbook) yang membawa words/text/links: tidak membaca ulang link & teks seluruh PDF (dipakai dari proyek).
+- Ukur (Routledge 600 hal): PDF baru bisa dibaca ±10 s (dulu menunggu semua halaman digambar); proyek ±0,4 s. Halaman yang dibuka langsung tergambar.
+- Catatan: proyek lama memakai teks dari proyek (perbaikan ekstraksi baru seperti judul huruf renggang tidak berlaku sampai PDF dibuka ulang sebagai PDF baru).

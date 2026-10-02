@@ -5,6 +5,11 @@
   const L = (en, id) => window.I18N ? I18N.pick(en, id) : en;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
   let book = null, pdf = null, pageElements = [], imageUrls = [], frame = 0, loadVersion = 0;
+  // Pages are drawn a few at a time: the book opens once the first ones are
+  // ready and the rest follow in the background (pagesReady resolves then).
+  const FIRST_PAGES = 6;
+  let pagesReady = Promise.resolve(), blankPage = '';
+  const isBlank = url => !url || url === blankPage;
   let opening = false;
   const overlays = new Map();
   let disposeLayout = null;
@@ -120,30 +125,33 @@
       if (project && project.pageCount !== newPdf.numPages) throw Error('Project page count differs from the saved PDF.');
       const firstPage = await newPdf.getPage(1);
       const natural = firstPage.getViewport({scale:1});
-      const newElements = [];
-      for (let i = 1; i <= newPdf.numPages; i++) {
-        loading(`Preparing page ${i} / ${newPdf.numPages}…`, (i - 1) / newPdf.numPages * 0.6);
-        const page = i === 1 ? firstPage : await newPdf.getPage(i);
-        const original = page.getViewport({scale:1});
-        const viewport = page.getViewport({scale: Math.min(1.5, 1100 / Math.max(original.width, original.height))});
-        const canvas = document.createElement('canvas'); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
-        await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
-        const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.86));
-        if (!imageBlob) throw new Error('Could not render the page image.');
-        const url = URL.createObjectURL(imageBlob); newUrls.push(url);
+      const newElements = [], total = newPdf.numPages, first = Math.min(total, FIRST_PAGES);
+      // A white page of the book's shape stands in until a page is drawn.
+      const blank = 'data:image/svg+xml,' + encodeURIComponent(`<svg xmlns="http://www.w3.org/2000/svg" width="${Math.round(natural.width)}" height="${Math.round(natural.height)}"><rect width="100%" height="100%" fill="#fff"/></svg>`);
+      for (let i = 1; i <= total; i++) {
+        let url = blank;
+        if (i <= first) {
+          loading(`Preparing page ${i} / ${total}…`, (i - 1) / first * 0.6);
+          url = await renderPageImage(i === 1 ? firstPage : await newPdf.getPage(i));
+        }
+        newUrls.push(url);
         const element = document.createElement('article'); element.className = 'pdf-page';
         const image = document.createElement('img'); image.src = url; image.alt = `Page ${i}`;
         element.append(image); newElements.push(element);
-        page.cleanup(); canvas.width = canvas.height = 0;
       }
+      // A project (My Library, .smflipbook) already carries its links and text:
+      // no need to read the whole PDF again.
+      const saved = project && project.words && typeof project.words === 'object' && project.text && typeof project.text === 'object';
       // Table of contents / cross-reference links (never blocks opening the book).
       let found = {links:{}, stats:{internal:0, external:0, toc:0}};
-      try {
+      if (saved) found = {links: project.links || {}, stats: {internal: Object.values(project.links || {}).reduce((n, list) => n + (list || []).length, 0), external: 0, toc: 0}};
+      else try {
         if (window.PdfLinks) found = await PdfLinks.extract(newPdf, {progress:(i, n) => loading(`Finding links ${i} / ${n}…`, 0.6 + i / n * 0.15)});
       } catch (cause) { console.warn('Links skipped:', cause); }
       // Word positions so readers can highlight text (never blocks opening either).
       let words = {}, text = {};
-      try {
+      if (saved) { words = JSON.parse(JSON.stringify(project.words)); text = JSON.parse(JSON.stringify(project.text)); }
+      else try {
         if (window.PdfWords) ({words, text} = await PdfWords.extract(newPdf, {withText:true, progress:(i, n) => loading(`Reading text ${i} / ${n}…`, 0.75 + i / n * 0.25)}));
       } catch (cause) { console.warn('Words skipped:', cause); }
       if (version !== loadVersion) return false;
@@ -155,8 +163,8 @@
       });
       if (book) { disposeLayout?.(); book.destroy(); book = null; }
       if (pdf) await pdf.destroy();
-      imageUrls.forEach(url => URL.revokeObjectURL(url));
-      imageUrls = newUrls; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links; bookWords = words; bookText = text; bookPodcast = (project && project.podcast) || null; bookTranslations = (project && project.translations) || {}; bookSummary = (project && project.summary) || null;
+      imageUrls.forEach(url => { if (!isBlank(url)) URL.revokeObjectURL(url); });
+      imageUrls = newUrls; blankPage = blank; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links; bookWords = words; bookText = text; bookPodcast = (project && project.podcast) || null; bookTranslations = (project && project.translations) || {}; bookSummary = (project && project.summary) || null;
       // Translated editions ("ID | EN"): the book's language and the pictures kept in the project.
       Object.values(bookVersions).forEach(pages => Object.values(pages).forEach(url => URL.revokeObjectURL(url)));
       bookVersions = {};
@@ -279,7 +287,8 @@
       // A new book goes into My Library only when the member presses 💾 Save My Library.
       archiveNote(libraryId ? L('☁ Opened from My Library', '☁ Dibuka dari My Library') : '');
       paintLibraryButton();
-      readPictures(version);                                   // picture pages: their text by OCR, in the background
+      pagesReady = drawRest(version);                          // the other pages, in the background
+      pagesReady.then(() => readPictures(version));            // picture pages: their text by OCR, in the background
       return true;
     } catch (cause) {
       if (installed) sourcePdf = null;
@@ -540,6 +549,45 @@
     const target = FlipbookSpeech.lang(text) === 'en-US' ? 'id-ID' : 'en-US';
     const out = await translatePages({0: text}, target);
     return out['0'] || out[0];
+  }
+  // One page as a JPEG picture (object URL).
+  async function renderPageImage(page) {
+    const original = page.getViewport({scale:1});
+    const viewport = page.getViewport({scale: Math.min(1.5, 1100 / Math.max(original.width, original.height))});
+    const canvas = document.createElement('canvas'); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
+    try {
+      await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
+      const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.86));
+      if (!imageBlob) throw new Error('Could not render the page image.');
+      return URL.createObjectURL(imageBlob);
+    } finally { page.cleanup(); canvas.width = canvas.height = 0; }
+  }
+  // The pages not drawn yet, after the book has opened: the ones on screen
+  // first, then onward in order. A page showing its blank stand-in gets its
+  // picture at once (a translated edition on screen keeps its own picture).
+  async function drawRest(version) {
+    const doc = pdf, total = pageElements.length;
+    const left = () => imageUrls.map((url, index) => index).filter(index => isBlank(imageUrls[index]));
+    if (!left().length) return;
+    const gone = () => version !== loadVersion || doc !== pdf;
+    let done = total - left().length;
+    try {
+      while (!gone()) {
+        const todo = left();
+        if (!todo.length) break;
+        const index = visiblePages().find(i => todo.includes(i)) ?? todo[0];
+        const url = await renderPageImage(await doc.getPage(index + 1));
+        if (gone()) { URL.revokeObjectURL(url); return; }
+        imageUrls[index] = url; done++;
+        const image = pageElements[index] && pageElements[index].querySelector('img');
+        if (image && image.src === blankPage) image.src = url;
+        loading(L(`Preparing pages ${done} / ${total}…`, `Menyiapkan halaman ${done} / ${total}…`), done / total);
+      }
+    } catch (cause) {
+      console.warn('Pages skipped:', cause);
+    } finally {
+      if (!gone()) { loading(null); $('#load-status').textContent = L(`${total} pages ready.`, `${total} halaman siap.`); }
+    }
   }
   // Pages that are only a picture (scans, magazine spreads): read their text
   // with OCR in the background, from the page being read onward, so the
@@ -813,6 +861,7 @@
       const native = target === 'apk' || target === 'exe';
       if (!native) {
         // One file named after the book: pages and data encrypted inside.
+        status(L('Preparing the pages…', 'Menyiapkan halaman…')); await pagesReady;
         const single = await FlipbookExport.packageSingleHtml(data, allPictures(data), (message, fraction) => { status(message); if (fraction !== undefined) step(0, .95)(fraction); });
         status(L('Saving the HTML…', 'Menyimpan HTML…'));
         const saved = await FlipbookExport.saveBlob(single, outputName, saveHandle); progress(1);
@@ -822,6 +871,7 @@
         return;
       }
       const pack = step(0, .12);
+      status(L('Preparing the pages…', 'Menyiapkan halaman…')); await pagesReady;
       const bundle = await FlipbookExport.packageBook(data, allPictures(data), (message, fraction) => { status(message); if (fraction !== undefined) pack(fraction); });
       const capabilities=await fetch('/api/capabilities',{cache:'no-store'});
       if(!capabilities.ok)throw Error(L('The local build service is not available. Run python server.py.', 'Layanan build lokal tidak tersedia. Jalankan python server.py.'));
