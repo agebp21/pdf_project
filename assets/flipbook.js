@@ -195,18 +195,17 @@
         onQuote: (index, said, color) => notes.quote(index, said, color), onUnquote: (index, said) => notes.unquote(index, said),
         onRecolor: (index, said, color) => notes.tint(index, said, color),
         // ✨ Summarize: the server's AI turns a highlight into a short note.
-        summarize: true, onSummary: (index, said, color) => notes.summary(index, said, color, highlightSummary)});
+        summarize: true, onSummary: (index, said, color) => notes.summary(index, said, color, highlightSummary),
+        // 🌐 Translate (AI): only the highlighted text, into a note.
+        translate: true, onTranslate: (index, said, color) => notes.translation(index, said, color, highlightTranslate)});
       podcastView?.close();
       // Podcast / summary are made in Notebook PDF; a project that already
       // carries them still plays them in the preview.
       podcastView = FlipbookPodcast.bind({podcast: () => bookPodcast, button: $('#podcast'), onStart: () => speech?.stop()});
       translateView?.close();
-      // 🌐 Translate in the toolbar: the pages on screen are translated by the
-      // server's AI when needed and kept in the project, so exports carry them.
-      translateView = FlipbookTranslate.bind({translations: () => bookTranslations, visible: visiblePages, button: $('#translate'),
-        translate: translatePages, text: pageParagraphs,
-        save: (lang, pages) => { bookTranslations[lang] = Object.assign(bookTranslations[lang] || {}, pages); },
-        preferred: () => FlipbookSpeech.lang(Object.values(bookText).slice(0, 6).map(lines => (lines || []).join(' ')).join(' ').slice(0, 8000)) === 'en-US' ? 'id-ID' : 'en-US'});
+      // Page translations made earlier with AI (older projects) still show;
+      // new AI translations are made from highlights (Translate tool).
+      translateView = FlipbookTranslate.bind({translations: () => bookTranslations, visible: visiblePages, button: $('#translate')});
       book.on('flip', () => translateView.pageChanged());
       // 🌐 ID | EN: the whole book in another language, layout unchanged.
       editions = FlipbookEditions.bind({button: $('#edition'), original: bookLang, ready: () => [...bookComplete],
@@ -462,6 +461,13 @@
     } catch (cause) {
       // Not fatal: those pages are read from the original text.
     } finally { filling.delete(lang); }
+  }
+  // AI translation of one highlighted passage (Translate tool in the highlighter):
+  // English text into Indonesian, anything else into English.
+  async function highlightTranslate(text) {
+    const target = FlipbookSpeech.lang(text) === 'en-US' ? 'id-ID' : 'en-US';
+    const out = await translatePages({0: text}, target);
+    return out['0'] || out[0];
   }
   // Short AI summary of one highlighted passage (Summarize tool in the preview).
   async function highlightSummary(text) {

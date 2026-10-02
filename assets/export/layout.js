@@ -883,7 +883,7 @@
         // q: the highlighted text a summary note stands for (links it to its highlight).
         if (typeof n.q === 'string' && n.q.trim()) {
           note.q = n.q.slice(0, max);
-          if (note.text === this.SUMMARIZING) note.text = '\u201c' + note.q + '\u201d';   // closed mid-summary: back to the quote
+          if (note.text === this.SUMMARIZING || note.text === this.TRANSLATING) note.text = '\u201c' + note.q + '\u201d';   // closed mid-way: back to the quote
         }
         return note;
       };
@@ -897,8 +897,9 @@
     } catch (e) { return {}; }
   },
   save(key, notes) { try { localStorage.setItem(key, JSON.stringify(notes)); return true; } catch (e) { return false; } },
-  // Shown while the AI summary of a highlight is on its way.
+  // Shown while the AI summary / translation of a highlight is on its way.
   SUMMARIZING: '\u2728 Summarizing\u2026',
+  TRANSLATING: '\ud83c\udf10 Translating\u2026',
   /* options: {key, title, pages (elements), goPage(i), open (button),
      bookmark(index, on) → true when it changed the page's bookmark,
      blank: false → no ✎ / ＋ tab at all (notes come from highlights),
@@ -1206,28 +1207,41 @@
     // It stays linked to its highlight. If the summary fails the note becomes
     // the plain quote, and the returned promise rejects with the reason.
     function summary(index, said, color, fn) {
+      return aiNote(index, said, color, fn, self.SUMMARIZING, text => {
+        // "- " list lines become "\u2022 " like quoted lists; a list gets its own heading line.
+        text = FlipbookHighlights.tidy(String(text || '').replace(/^\s*[-*]\s+/gm, '\u2022 '));
+        return text && (/^\u2022 /.test(text) ? '\u2728 Summary\n' : '\u2728 ') + text;
+      });
+    }
+    // Highlight in translate mode: the same, with the AI translation of the text.
+    function translation(index, said, color, fn) {
+      return aiNote(index, said, color, fn, self.TRANSLATING, text => {
+        text = FlipbookHighlights.tidy(String(text || ''));
+        return text && '\ud83c\udf10 ' + text;
+      });
+    }
+    function aiNote(index, said, color, fn, pending, format) {
       said = FlipbookHighlights.tidy(said);
       if (!said) return Promise.resolve(-1);
       let items = notes[index] ? notes[index].items : [];
       if (items.some(note => note.q === said)) { if (color) tint(index, said, color); return Promise.resolve(-1); }
       let item = items.findIndex(note => note.text === '\u201c' + said + '\u201d');
       if (item < 0 && items.length >= self.PER_PAGE) return Promise.resolve(-1);
-      item = store(index, item, self.SUMMARIZING, color, said);
+      item = store(index, item, pending, color, said);
       flash(index, item);
       const settle = text => {
         items = notes[index] ? notes[index].items : [];
-        const i = items.findIndex(note => note.q === said && note.text === self.SUMMARIZING);
+        const i = items.findIndex(note => note.q === said && note.text === pending);
         if (i >= 0) store(index, i, text);       // gone or edited meanwhile: leave it
         return i;
       };
-      return Promise.resolve().then(() => fn(said)).then(text => {
-        // "- " list lines become "\u2022 " like quoted lists; a list gets its own heading line.
-        text = FlipbookHighlights.tidy(String(text || '').replace(/^\s*[-*]\s+/gm, '\u2022 '));
-        if (!text) throw new Error('No summary came back.');
-        return settle((/^\u2022 /.test(text) ? '\u2728 Summary\n' : '\u2728 ') + text);
+      return Promise.resolve().then(() => fn(said)).then(answer => {
+        const text = format(answer);
+        if (!text) throw new Error('Nothing came back.');
+        return settle(text);
       }, cause => { settle('\u201c' + said + '\u201d'); throw cause; });
     }
-    return {refresh, text, quote, unquote, tint, summary, editing: () => !!editing, close() { closeEditor(); closeReader(); closeList(); }, notes: () => JSON.parse(JSON.stringify(notes))};
+    return {refresh, text, quote, unquote, tint, summary, translation, editing: () => !!editing, close() { closeEditor(); closeReader(); closeList(); }, notes: () => JSON.parse(JSON.stringify(notes))};
   },
 };
 
@@ -1242,6 +1256,8 @@
     // Highlighter pen.
     brush: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><g transform="rotate(45 12 12)"><path d="M10 1.5h4a1.5 1.5 0 0 1 1.5 1.5v11h-7V3A1.5 1.5 0 0 1 10 1.5z"/><path d="M8.5 14h7l-1.2 3h-4.6z" fill="currentColor"/><path d="M10.2 17h3.6l-.9 4.4-2.7-1.2z"/></g></svg>',
     eraser: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H8a2 2 0 0 1-1.4-.6l-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l6 6a2 2 0 0 1 0 2.8L12.8 21"/><path d="m5.1 11.1 8.8 8.8"/></svg>',
+    // Globe: highlights become an AI translation note.
+    translate: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg>',
     // Sparkles: highlights become a short AI summary note.
     summary: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.7 4.6L18 9.3l-4.3 1.7L12 15.6l-1.7-4.6L6 9.3l4.3-1.7z"/><path d="M19 15l.8 2.2L22 18l-2.2.8L19 21l-.8-2.2L16 18l2.2-.8z"/><path d="M5 3.5l.6 1.4L7 5.5l-1.4.6L5 7.5l-.6-1.4L3 5.5l1.4-.6z"/></svg>'
   },
@@ -1423,10 +1439,11 @@
   /* options: {key, pages (elements), words ({page: lines}), button,
      onQuote/onUnquote/onRecolor (notes), summarize: true + onSummary(index,
      said, color) → Promise (Summarize tool; only where a server can make
-     summaries)} */
+     summaries), translate: true + onTranslate(index, said, color) → Promise
+     (Translate tool: the highlighted text becomes an AI translation note)} */
   bind(options) {
     const self = this, pages = options.pages, words = options.words || {};
-    let store = self.load(options.key), mode = false, selected = null, drag = null, erasing = false, summarizing = false, notice = '', noticeTimer = 0;
+    let store = self.load(options.key), mode = false, selected = null, drag = null, erasing = false, summarizing = false, translating = false, notice = '', noticeTimer = 0;
     let color = 'y';
     try { const saved = localStorage.getItem('mf-highlight-color'); if (self.COLORS[saved]) color = saved; } catch (e) {}
     const lineCache = {};
@@ -1473,7 +1490,7 @@
     // Highlighter pen: back to highlighting (the colour dots pick its colour).
     const brush = document.createElement('button'); brush.type = 'button'; brush.className = 'book-hl-brush';
     brush.innerHTML = self.ICONS.brush; brush.title = 'Highlighter: drag over text'; brush.setAttribute('aria-label', 'Highlighter');
-    brush.onclick = () => { erasing = false; summarizing = false; paintBar(); };
+    brush.onclick = () => { erasing = false; summarizing = false; translating = false; paintBar(); };
     const tools = document.createElement('div'); tools.className = 'book-hl-tools';
     tools.appendChild(brush); tools.appendChild(eraser);
     // Summarize: new highlights become a short AI summary note instead of the quote.
@@ -1481,11 +1498,21 @@
     summarize.innerHTML = self.ICONS.summary; summarize.title = 'Summarize: highlighted text becomes a short summary note';
     summarize.setAttribute('aria-label', 'Summarize highlights');
     summarize.onclick = () => {
-      summarizing = !summarizing; erasing = false;
+      summarizing = !summarizing; translating = false; erasing = false;
       if (selected) { const page = selected.page; selected = null; render(page); }
       paintBar();
     };
     if (options.summarize && options.onSummary) tools.appendChild(summarize);
+    // Translate: new highlights become an AI translation note (only the highlighted text).
+    const translateTool = document.createElement('button'); translateTool.type = 'button'; translateTool.className = 'book-hl-translate';
+    translateTool.innerHTML = self.ICONS.translate; translateTool.title = 'Translate: highlighted text becomes a translation note';
+    translateTool.setAttribute('aria-label', 'Translate highlights');
+    translateTool.onclick = () => {
+      translating = !translating; summarizing = false; erasing = false;
+      if (selected) { const page = selected.page; selected = null; render(page); }
+      paintBar();
+    };
+    if (options.translate && options.onTranslate) tools.appendChild(translateTool);
     bar.insertBefore(tools, bar.firstChild);
     const done = document.createElement('button'); done.type = 'button'; done.className = 'book-hl-done'; done.textContent = 'Done';
     done.onclick = () => setMode(false);
@@ -1508,14 +1535,16 @@
     function paintBar() {
       Object.keys(swatches).forEach(c => swatches[c].setAttribute('aria-pressed', String(!erasing && (selected ? store[selected.page][selected.index].c === c : c === color))));
       eraser.setAttribute('aria-pressed', String(erasing));
-      brush.setAttribute('aria-pressed', String(!erasing && !summarizing));
+      brush.setAttribute('aria-pressed', String(!erasing && !summarizing && !translating));
       summarize.setAttribute('aria-pressed', String(summarizing && !erasing));
+      translateTool.setAttribute('aria-pressed', String(translating && !erasing));
       brush.style.setProperty('--hl-color', self.COLORS[selected ? store[selected.page][selected.index].c : color]);
       document.body.style.setProperty('--hl-cursor', self.cursor(erasing ? 'eraser' : 'brush', self.COLORS[color]));
       document.body.classList.toggle('is-erasing', mode && erasing);
       remove.hidden = !selected;
       hint.textContent = notice || (erasing ? 'Drag over highlights to erase them' : selected ? 'Pick a colour or delete'
-        : summarizing ? 'Drag over text: its note becomes a short summary' : 'Drag over text to highlight');
+        : summarizing ? 'Drag over text: its note becomes a short summary'
+        : translating ? 'Drag over text: its note becomes a translation' : 'Drag over text to highlight');
       bar.title = hint.textContent;
       placeBar();
     }
@@ -1598,6 +1627,12 @@
               clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice = ''; paintBar(); }, 6000);
               paintBar();
             });
+          } else if (translating && options.translate && options.onTranslate) {
+            Promise.resolve(options.onTranslate(index, said(index, made), self.COLORS[made.c])).catch(cause => {
+              notice = 'Translation failed: ' + ((cause && cause.message) || 'try again') + ' (kept the quote)';
+              clearTimeout(noticeTimer); noticeTimer = setTimeout(() => { notice = ''; paintBar(); }, 6000);
+              paintBar();
+            });
           } else if (options.onQuote) options.onQuote(index, said(index, made), self.COLORS[made.c]);
         }
       }
@@ -1633,7 +1668,7 @@
       else {
         document.removeEventListener('keydown', escape);
         if (selected) { const page = selected.page; selected = null; render(page); }
-        erasing = false; summarizing = false;
+        erasing = false; summarizing = false; translating = false;
       }
       paintBar();
     }
@@ -2201,12 +2236,12 @@
       button.hidden = !options.original || langs.length < 2;
       while (button.firstChild) button.removeChild(button.firstChild);
       if (text) { button.textContent = text; return; }
-      langs.forEach((l, i) => {
-        if (i) button.appendChild(document.createTextNode(' | '));
-        const code = document.createElement('span'); code.textContent = self.CODES[l];
-        if (l === current) code.className = 'is-current';
+      // "🌐 Translate"; on a translated edition it also says which ("🌐 Translate · ID").
+      button.appendChild(document.createTextNode('\ud83c\udf10 Translate'));
+      if (current !== options.original) {
+        const code = document.createElement('span'); code.className = 'is-current'; code.textContent = ' \u00b7 ' + self.CODES[current];
         button.appendChild(code);
-      });
+      }
       const next = langs[(langs.indexOf(current) + 1) % langs.length];
       button.title = 'Book language: ' + self.NAMES[current] + ' · press for ' + self.NAMES[next];
       button.setAttribute('aria-label', button.title);

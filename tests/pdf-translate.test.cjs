@@ -46,16 +46,16 @@ const line = (text, x, y, w, size = 10, extra = {}) => ({ text, x, y, w, h: size
   // Nothing to translate: no letters.
   assert.deepEqual(T.blocks([line('12 / 34', 50, 50, 40)], 600), []);
 
-  // The ID | EN button: original, ready editions, editions that can be made.
+  // The 🌐 Translate button: original, ready editions, editions that can be made.
   const button = w.document.getElementById('ed');
   let applied = [], made = [], ready = [];
   const ed = ED.bind({ button, original: 'id-ID', ready: () => ready, offer: ['en-US'], apply: l => applied.push(l),
     confirm: async () => true, make: async (l, progress) => { progress('🌐 1 / 2'); made.push(l); ready = [l]; } });
-  assert.equal(button.hidden, false); assert.equal(button.textContent, 'ID | EN');
-  assert.equal(button.querySelector('.is-current').textContent, 'ID');
+  assert.equal(button.hidden, false); assert.equal(button.textContent, '🌐 Translate');
+  assert.equal(button.querySelector('.is-current'), null, 'the original: just "Translate"');
   button.click(); await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
   assert.deepEqual(made, ['en-US'], 'not ready: made first'); assert.deepEqual(applied, ['en-US']);
-  assert.equal(button.querySelector('.is-current').textContent, 'EN'); assert.ok(button.classList.contains('is-translated'));
+  assert.equal(button.textContent, '🌐 Translate · EN'); assert.ok(button.classList.contains('is-translated'));
   button.click(); await new Promise(r => setTimeout(r, 0));
   assert.deepEqual(applied, ['en-US', 'id-ID'], 'back to the original'); assert.equal(made.length, 1, 'no second translation');
   // Reader: no maker, nothing ready → no button; a book without a language → no button.
@@ -68,7 +68,7 @@ const line = (text, x, y, w, size = 10, extra = {}) => ({ text, x, y, w, h: size
   ED.bind({ button: b3, original: 'en-US', offer: ['id-ID'], ready: () => [], confirm: async () => true,
     make: async () => { throw new Error('Budget has been exceeded'); }, onError: m => { said = m; } });
   b3.click(); await new Promise(r => setTimeout(r, 0)); await new Promise(r => setTimeout(r, 0));
-  assert.equal(said, 'Budget has been exceeded'); assert.equal(b3.querySelector('.is-current').textContent, 'EN');
+  assert.equal(said, 'Budget has been exceeded'); assert.equal(b3.textContent, '🌐 Translate', 'still the original');
 
   // Book format: lang + versions (sorted, unique, not the book's own language), picture order.
   const model = { version: 1, title: 'Buku', pageCount: 5, ratio: 0.7, overlays: {}, lang: 'id-ID', versions: { 'en-US': [3, 1, 1], 'ms-MY': [0] } };
@@ -82,5 +82,5 @@ const line = (text, x, y, w, size = 10, extra = {}) => ({ text, x, y, w, h: size
   const readText = X.validate({ ...model, versionText: { 'en-US': { '1': [[0.1, 0.2, 0.5, 0.1, 'Hello.'], [0.1, 0.2, 2, 0.1, 'bad box'], [0, 0, 1, 1, '  ']], '2': [[0, 0, 1, 1, 'not in the edition']] }, 'ms-MY': 'x', 'fr-FR': {} } }).versionText;
   assert.deepEqual(readText, { 'en-US': { '1': [[0.1, 0.2, 0.5, 0.1, 'Hello.']] } });
   assert.equal(X.validate({ ...model, versions: undefined, versionText: { 'en-US': { '1': [[0, 0, 1, 1, 'x']] } } }).versionText, undefined, 'no edition: nothing to read');
-  console.log('PASS pdf-translate: blocks (paragraphs, bullets, labels, table rows, centred), room, ID | EN button (make once, back, refusal), lang/versions format + picture order');
+  console.log('PASS pdf-translate: blocks (paragraphs, bullets, labels, table rows, centred), room, Translate button (make once, back, refusal), lang/versions format + picture order');
 })().catch(error => { console.error(error); process.exit(1); });
