@@ -135,13 +135,104 @@
   }
 };
 
-// Paper page-turn sound, synthesised with Web Audio (no audio file, works
-// offline, no licensing). Shared by the preview and every exported reader.
+// Paper page-turn sound: one real recording (assets/sounds/paper-flip.mp3,
+// 0.6 s mono), embedded so every exported reader plays it offline.
+// Shared by the preview and every exported reader.
 // ES2018 only: exported books must run in old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookSound = (function () {
   const KEY = 'mf-flip-sound';
-  let ctx = null, enabled = true, style = 'paper';
-  const cache = {};
+  const MP3 = [
+    'SUQzBAAAAAABDlRYWFgAAAASAAADbWFqb3JfYnJhbmQAaXNvbQBUWFhYAAAAEwAAA21pbm9yX3ZlcnNpb24ANTEyAFRYWFgAAAAoAAADY29tcGF0aWJsZV9i',
+    'cmFuZHMAaXNvbWlzbzZpc28yYXZjMW1wNDEAVFNTRQAAAA8AAANMYXZmNjIuMTIuMTAyAAAAAAAAAAAAAAD/+3DAAAAAAAAAAAAAAAAAAAAAAABJbmZvAAAA',
+    'DwAAABgAAB6cABQUFBQeHh4eKCgoKDMzMzM9PT09R0dHR1FRUVFRXFxcXGZmZmZwcHBwenp6eoWFhYWPj4+Pj5mZmZmjo6Ojrq6urri4uLjCwsLCzMzMzMzX',
+    '19fX4eHh4evr6+v19fX1/////wAAAABMYXZjNjIuMjgAAAAAAAAAAAAAAAAkAmQAAAAAAAAenCFOqzcAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    'AAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAAA',
+    'AAAAAAAAAAAAAAAAAAAA//twxAAADyk24hQWAApjL6m/HtABAsYxj/GMeZmZpTtpSb/NO1inbe97zt5mZmZmc6b3vi/2FnNmZ/AJZ/hweObf27zM7f6L75Tm',
+    'zM/gM1bBhEdiGT0IEx3gEgmMksnwA3J9jAwibX4Zr/pTtvl/yktr1+Hb+LKNnZ/hmvCBAfDPEZnz////xx//HD8zwB2iJiKSaRpJpK5BCQBAMCjVx69iLGVv',
+    'SPPlDG+HHI2S6BMbxgi+aklUw8BHAwual50FpjEE4DmABIW5gXU3QaeFgPUScYMuoqdvegYGhw4S6JkpjrNtePAdCGmiYOaoadXT3zNM2KRxJA2WgtJlOtSP',
+    '/zU+SZW6kC4o6bJKNkjOXHSNP//MyTKaBNLS4cIpsxqbMfTe9vhnjyeqeHdFKkEBEsUbMo/xlTWp6P/7csQJABIhj0ndhIAKTrNo+PMmMLS+jcendqpCIblp',
+    'jXCYnAUJB9eLUdWpqEWk9MTDGpsS/n1tl04JVGpvn4QtdS+snsqbt6J6LozDTTc2/BHOHpTKbLpRUaQrIL80CDF3rycmiJP7egWUwn86kpmY2nBXL2L571Kn',
+    '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',
+    'di5QuRQ5s8xrVp9F7YHqtKMuZ3R2E7BdVcGaPQcCFFiLsnjXWU4eSLOHCsJueBpHMMJcKVDmUsMpgEOPIT4eRAUmSUHKcC0cRemcjQ4lS6OsnhplyRi0XpDD',
+    'jQlvLCMIkynHMxC5HMnixMVNa/+d5+AZtkyNsrIt+7OfxcpMVbu8qJSdhtmyEUmo3EofKTVMowRKNLLuTlnbQkRpXAqOFKr/+3LE74PToZzkAwHrgkGznEB3',
+    'm2DIb////9DPmv0MYxvwyXmMCocXz3Kpi0lPatLkqldCe2ZhdxdCe1WtOycol1jpGVTI6fCUsrl1xJXiSe1THzMBktKxaWwRrT2lHkpNa1gy9nrWta3zsa8A',
+    'hV4zM2qtSa/qzVe9Wqqw4GMMf5ecFNm4qkxBTUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+    'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+    'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqv/7cMTrA1WhntQjvTsB0K/ZQCYPYaqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+    'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+    'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+    'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo='
+  ].join('');
+  let ctx = null, enabled = true, buffer = null, decoding = false, waiting = false;
   try { enabled = localStorage.getItem(KEY) !== 'off'; } catch (e) {}
   const buttons = [];
 
@@ -151,102 +242,49 @@
     if (!AC) return null;
     if (!ctx) { try { ctx = new AC(); } catch (e) { return null; } }
     if (ctx.state === 'suspended' && ctx.resume) ctx.resume().catch(() => {});
+    decode(ctx);
     return ctx;
   }
-  // A real page turn has three parts: tiny crinkles while the sheet lifts
-  // and bends, an air "swoosh" while it swings over, and a soft slap when it
-  // lands. Rendered sample by sample (deterministic per seed) and cached.
-  const STYLES = {
-    paper: { dur: 0.62, crinkle: 0.6, grain: [2500, 7000], swoosh: 0.45, sweep: [700, 2600, 900], flap: 0.35, thump: 110 },
-    crisp: { dur: 0.52, crinkle: 1.0, grain: [3500, 9500], swoosh: 0.3, sweep: [1200, 4200, 1500], flap: 0.5, thump: 150 },
-    thick: { dur: 0.74, crinkle: 0.3, grain: [1500, 4500], swoosh: 0.65, sweep: [400, 1500, 600], flap: 0.6, thump: 80 },
-  };
-  function random(seed) {
-    let x = (seed >>> 0) || 1;
-    return () => { x ^= x << 13; x ^= x >>> 17; x ^= x << 5; return (x >>> 0) / 4294967296; };
+  // The recording, decoded once (callback form: old Safari has no promise).
+  function decode(c) {
+    if (buffer || decoding || !c.decodeAudioData) return;
+    decoding = true;
+    let bytes;
+    try {
+      const raw = atob(MP3);
+      bytes = new Uint8Array(raw.length);
+      for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
+    } catch (e) { decoding = false; return; }
+    const ok = decoded => { buffer = decoded; decoding = false; if (waiting) { waiting = false; play(); } };
+    const fail = () => { decoding = false; waiting = false; };
+    try {
+      const result = c.decodeAudioData(bytes.buffer, ok, fail);
+      if (result && result.catch) result.catch(fail);
+    } catch (e) { fail(); }
   }
-  // Smooth rise/fall between a and b with its peak at m (0 outside).
-  function hump(t, a, m, b) {
-    if (t <= a || t >= b) return 0;
-    const v = t < m ? Math.sin((t - a) / (m - a) * Math.PI / 2) : Math.cos((t - m) / (b - m) * Math.PI / 2);
-    return v * v;
-  }
-  function synth(name, rate, seed) {
-    const st = STYLES[name] || STYLES.paper, T = st.dur, n = Math.floor(rate * T);
-    const out = new Float32Array(n), rnd = random(seed);
-    // Swoosh: noise through a state-variable bandpass whose centre sweeps.
-    let low = 0, band = 0;
-    for (let i = 0; i < n; i++) {
-      const t = i / rate, p = Math.min(1, t / (T * 0.8));
-      const f = p < 0.5 ? st.sweep[0] + (st.sweep[1] - st.sweep[0]) * p * 2 : st.sweep[1] + (st.sweep[2] - st.sweep[1]) * (p - 0.5) * 2;
-      const k = 2 * Math.sin(Math.PI * Math.min(f, rate / 6) / rate);
-      low += k * band; band += k * ((rnd() * 2 - 1) - low - 0.9 * band);
-      out[i] += band * st.swoosh * hump(t, 0, T * 0.3, T * 0.82);
-    }
-    // Crinkle: sparse micro-bursts (random clicks), densest while the sheet bends.
-    for (let t = 0; t < T * 0.75;) {
-      const shape = hump(t, 0.01, T * 0.25, T * 0.75);
-      t += -Math.log(1 - rnd()) / (60 + 320 * shape * st.crinkle);
-      const at = Math.floor(t * rate), len = Math.floor(rate * (0.0015 + rnd() * 0.004));
-      const amp = (0.25 + rnd() * 0.75) * st.crinkle * (0.15 + shape);
-      const fc = st.grain[0] + rnd() * (st.grain[1] - st.grain[0]), a = Math.exp(-2 * Math.PI * fc / rate);
-      let lp = 0;
-      for (let j = 0; j < len && at + j < n; j++) {
-        const x = (rnd() * 2 - 1) * Math.exp(-j / (len * 0.35));
-        lp = lp * a + x * (1 - a);
-        out[at + j] += (x - lp) * amp * 0.6;
-      }
-    }
-    // Landing: low thump plus a short, dull slap.
-    const land = Math.floor(T * 0.78 * rate);
-    let dull = 0;
-    for (let j = 0; j < rate * 0.09 && land + j < n; j++) {
-      const t = j / rate;
-      dull += ((rnd() * 2 - 1) - dull) * 0.25;
-      out[land + j] += (Math.sin(2 * Math.PI * st.thump * t) * Math.exp(-t / 0.018) * 0.7 + dull * Math.exp(-t / 0.012) * 1.2) * st.flap;
-    }
-    let peak = 0;
-    for (let i = 0; i < n; i++) peak = Math.max(peak, Math.abs(out[i]));
-    const gain = peak ? 0.6 / peak : 0;
-    for (let i = 0; i < n; i++) out[i] *= gain * Math.min(1, i / (rate * 0.005), (n - i) / (rate * 0.02));
-    return out;
-  }
-  // Three pre-rendered variations per style and sample rate, picked at random.
-  function buffers(c) {
-    const key = style + '@' + c.sampleRate;
-    if (!cache[key]) {
-      cache[key] = [11, 23, 37].map(seed => {
-        const data = synth(style, c.sampleRate, seed + style.length * 101);
-        const buffer = c.createBuffer(1, data.length, c.sampleRate);
-        buffer.getChannelData(0).set(data);
-        return buffer;
-      });
-    }
-    return cache[key];
-  }
-  // `target` lets tests render the sound offline (OfflineAudioContext).
+  // `target` lets tests use their own audio context.
   function play(target) {
     if (!enabled) return false;
     const c = target || context();
     if (!c) return false;
-    const list = buffers(c), source = c.createBufferSource();
-    source.buffer = list[Math.floor(Math.random() * list.length)];
-    source.playbackRate.value = 0.94 + Math.random() * 0.12;
+    if (!buffer) { waiting = true; decode(c); return false; }   // the first turn plays once it is decoded
+    const source = c.createBufferSource();
+    source.buffer = buffer;
+    source.playbackRate.value = 0.96 + Math.random() * 0.08;    // no two turns quite alike
     const gain = c.createGain();
     gain.gain.value = 0.9;
     let last = gain;
     // The sheet travels from the right-hand page to the left.
     if (c.createStereoPanner) {
       const pan = c.createStereoPanner(), t = c.currentTime;
-      pan.pan.setValueAtTime(0.45, t);
-      pan.pan.linearRampToValueAtTime(-0.45, t + STYLES[style].dur);
+      pan.pan.setValueAtTime(0.35, t);
+      pan.pan.linearRampToValueAtTime(-0.35, t + (buffer.duration || 0.6));
       gain.connect(pan); last = pan;
     }
     source.connect(gain); last.connect(c.destination);
     source.start();
     return true;
   }
-  function setStyle(name) { if (STYLES[name]) style = name; }
   function render(button) {
     button.textContent = enabled ? '🔊 Sound' : '🔇 Muted';
     button.setAttribute('aria-pressed', String(enabled));
@@ -278,7 +316,7 @@
     const unlock = () => { if (enabled) context(); document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); };
     document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
   }
-  return { play, attach, setEnabled, bindButton, setStyle, synth, styles: Object.keys(STYLES), isEnabled: () => enabled };
+  return { play, attach, setEnabled, bindButton, isEnabled: () => enabled };
 })();
 
 // Clickable links on pages (table of contents, cross references, URLs).

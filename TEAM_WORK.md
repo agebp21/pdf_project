@@ -962,3 +962,10 @@ Laporan: habis diterjemahkan ke ID, audio book tetap membaca English.
 - `fillVersionText(lang)`: edisi lama tanpa versionText (dibuat sebelum fitur audio book edisi) -> saat edisi dipilih, teks halaman diterjemahkan ulang lewat /api/translate-free (blok tanpa kotak, per paragraf) lalu dibaca bahasa edisi; disimpan ke My Library.
 - Masih mungkin English: perangkat tanpa suara Indonesia (muncul notice di status). Chrome: Google Bahasa Indonesia; Edge: Gadis.
 E2E (suara tiruan, english8.pdf): baca EN -> terjemahkan ke ID -> saat 4/8 audio book sudah id-ID; setelah selesai id-ID. Tes: semua JS + 97 Python OK.
+
+
+## 2026-10-02 — Swara flip: siji rekaman asli, sintesis dibuang
+- Sumber: "Paper slide.mp4" (Downloads user) -> ffmpeg: buang hening awal, potong 0.6 s, fade-out 0.1 s, mono, limiter -> assets/sounds/paper-flip.mp3 (8 KB, 96k).
+- layout.js FlipbookSound: synth/STYLES/setStyle (paper/crisp/thick) DIHAPUS. MP3 di-embed base64 (konstanta MP3) supaya semua ekspor offline (HTML/ZIP/APK/EXE) ikut tanpa file tambahan. Decode sekali (decodeAudioData callback + promise), flip pertama sebelum decode selesai diputar begitu siap. playbackRate 0.96–1.04, pan kanan->kiri. API: play, attach, setEnabled, bindButton, isEnabled.
+- Ganti swara: timpa assets/sounds/paper-flip.mp3 lalu embed ulang base64 ke konstanta MP3 (tes flip-sound.test.cjs memastikan isinya sama persis).
+Tes: flip-sound.test.cjs (rekaman ter-embed = file mp3, tanpa styles), Chromium asli: buffer 0.60 s mono diputar. Semua JS + Python OK.
