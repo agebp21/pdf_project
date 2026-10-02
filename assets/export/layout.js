@@ -1687,6 +1687,16 @@
       String(line || '').split(/\s+/).forEach((t, wi) => { if (t) out.push({t, line: li, word: wi, box: null}); }));
     return out;
   },
+  // Voices spell out words in capitals as if they were abbreviations
+  // ("ROUTLEDGE" → R-O-U-T…). Capital words are read as words: always from
+  // 4 letters, and shorter ones too in a heading set all in capitals. Short
+  // abbreviations in ordinary text ("PDF", "USA") stay as they are.
+  speakable(text) {
+    const caps = /^[A-ZÀ-ÖØ-Þ]{2,}$/;
+    const words = String(text).match(/[A-Za-zÀ-ÖØ-öø-ÿ]+/g) || [];
+    const heading = words.length > 1 && words.filter(w => caps.test(w) || w.length === 1).length >= words.length * 0.8;
+    return String(text).replace(/[A-Za-zÀ-ÖØ-öø-ÿ]+/g, w => (caps.test(w) && (w.length >= 4 || heading)) ? w[0] + w.slice(1).toLowerCase() : w);
+  },
   // Words → pieces of whole sentences of at most MAX characters (browsers
   // cut long utterances short): {text, boxes: one rectangle per line}.
   // Table-of-contents dot leaders are not read.
@@ -1966,7 +1976,7 @@
         if (!queue.length) { turn(mine); return; }
         const next = queue.shift();
         mark(next.page, next.piece);
-        engine.speak(next.piece.text, next.lang || lang, ok => {
+        engine.speak(self.speakable(next.piece.text), next.lang || lang, ok => {
           if (!on || mine !== run) return;
           if (ok) { fails = 0; step(); return; }
           // A voice hiccup (network, engine busy): this piece once more, then

@@ -21,6 +21,10 @@ const sleep = ms => new Promise(r => setTimeout(r, ms));
   const speech = S.bind({ text: original, pages, visible: () => [0, 1], button: w.document.getElementById('speak'), engine,
     next: () => false, edition: () => shown });
   assert.equal(speech.lang(), 'en-US');
+  // Capital words are read as words, not spelt out; short abbreviations in text stay.
+  assert.equal(S.speakable('ROUTLEDGE COMPANIONS TO PHILOSOPHY'), 'Routledge Companions To Philosophy');
+  assert.equal(S.speakable('Saya pakai PDF dan USA.'), 'Saya pakai PDF dan USA.');
+  assert.equal(S.speakable('Bab 1 TENTANG KAMI'), 'Bab 1 Tentang Kami');
 
   // Original book: English, in English.
   speech.start(); await sleep(40);
