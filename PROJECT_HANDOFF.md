@@ -1078,3 +1078,8 @@ Permintaan user: tanpa audio efek kertas. Dihapus: modul FlipbookSound (layout.j
 
 - 2026-10-02: fullscreen editor — toolbar stabilo/catatan/dialog dulu tidak muncul (yang full screen cuma .preview, panel-panel itu ditempel di body). Sekarang document.documentElement yang full screen + .preview.reading-fullscreen mengisi layar; header situs (.topbar) disembunyikan & body overflow hidden saat itu; Esc/keluar fullscreen browser melepas class. E2E: bar stabilo visible, stabilo jalan, dialog Translate visible.
 - Catatan tes: test_library.test_archive_flow_encryption_quota_and_ownership kadang gagal saat seluruh suite jalan (1 dari ~4 run), selalu lulus kalau dijalankan sendiri (15x). Kemungkinan interferensi antar-tes (server/waktu bersama), bukan regresi; perlu diselidiki kapan-kapan.
+
+
+## 2026-10-02 — Spidol (marker) untuk corat-coret di halaman
+Highlighter bar: alat baru ✏ `.book-hl-pen` (sesudah stabilo, sebelum penghapus). Mode `drawing`: seret = garis bebas, tap = titik; warna dari bulatan warna yang sama tapi tinta lebih pekat (`FlipbookHighlights.INK` y/g/p/b). Disimpan per buku di localStorage `<key highlight>:ink` = {page: [{c, p:[x,y,…] 0..1]}] (maks 1500 titik/garis, 300 garis/hal; `loadInk` membuang data rusak). Digambar sebagai SVG `.book-ink-layer` (path dihaluskan `inkPath`, 3px non-scaling, z-index 4), live stroke `.book-ink-live`. Penghapus juga menghapus garis yang disentuh (`eraseInk`). Spidol tidak membuat stabilo/catatan. Berlaku di editor + viewer ekspor (FlipbookHighlights sama). API `highlights.ink()`.
+Tes: tests/highlight-pen.test.cjs. E2E Chromium fullscreen: gambar lingkaran pink + garis biru, 2 path.

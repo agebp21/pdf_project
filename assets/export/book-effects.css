@@ -97,7 +97,7 @@ body.is-highlighting .book-link{pointer-events:none}
 .book-hl-delete[hidden]{display:none}
 .book-hl-done{border:1px solid #1a3c34;background:#1a3c34;color:#fff}
 .book-hl-tools{display:flex;flex-direction:column;gap:6px;padding-bottom:8px;border-bottom:1px solid #efe9dc}
-.book-hl-brush,.book-hl-eraser,.book-hl-summary,.book-hl-translate{display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:1px solid #d6cfbf;border-radius:12px;background:#fff;color:#57534e;cursor:pointer}
+.book-hl-brush,.book-hl-pen,.book-hl-eraser,.book-hl-summary,.book-hl-translate{display:flex;align-items:center;justify-content:center;width:36px;height:36px;padding:0;border:1px solid #d6cfbf;border-radius:12px;background:#fff;color:#57534e;cursor:pointer}
 .book-hl-icon{display:block;width:20px;height:20px;pointer-events:none}
 .book-hl-brush[aria-pressed="true"]{color:#1c1917;background:var(--hl-color,#ffd43b);border-color:#1c1917;box-shadow:0 0 0 2px #1c1917}
 .book-hl-eraser[aria-pressed="true"]{color:#b3121a;background:#fde2e2;border-color:#b3121a;box-shadow:0 0 0 2px #b3121a}
@@ -115,7 +115,7 @@ body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl
 .book-hl-bar.is-popup::after{content:"";position:absolute;left:var(--hl-arrow,50%);bottom:-7px;width:12px;height:12px;margin-left:-6px;background:#fffdf8;border-right:1px solid #e4ded0;border-bottom:1px solid #e4ded0;transform:rotate(45deg)}
 .book-hl-bar.is-popup.is-below::after{bottom:auto;top:-7px;transform:rotate(225deg)}
 .book-hl-bar.is-popup .book-hl-tools{flex-direction:row;padding:0 8px 0 0;border-bottom:0;border-right:1px solid #efe9dc}
-.book-hl-bar.is-popup .book-hl-brush,.book-hl-bar.is-popup .book-hl-eraser,.book-hl-bar.is-popup .book-hl-summary,.book-hl-bar.is-popup .book-hl-translate{width:32px;height:32px;border-radius:10px}
+.book-hl-bar.is-popup .book-hl-brush,.book-hl-bar.is-popup .book-hl-eraser,.book-hl-bar.is-popup .book-hl-pen,.book-hl-bar.is-popup .book-hl-summary,.book-hl-bar.is-popup .book-hl-translate{width:32px;height:32px;border-radius:10px}
 .book-hl-bar.is-popup .book-hl-icon{width:18px;height:18px}
 .book-hl-bar.is-popup .book-hl-swatch{width:26px;height:26px}
 .book-note-download{display:block;width:100%;margin-top:10px;padding:9px;border:1px dashed #d6cfbf;border-radius:10px;background:#fff;font:600 13px system-ui,sans-serif;color:#1a3c34;cursor:pointer}
@@ -186,3 +186,8 @@ body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl
 .book-paper img{-webkit-user-drag:none;user-drag:none}
 .book-paper ::selection,.book-paper::selection,.book-paper img::selection{background:transparent}
 .book-paper textarea,.book-paper input,.book-paper [contenteditable="true"]{-webkit-user-select:text;user-select:text}
+
+/* Marker drawings: an SVG over the page (page units 0..1), strokes keep their width when zoomed. */
+.book-ink{position:absolute;top:0;left:0;width:100%;height:100%;z-index:4;pointer-events:none;overflow:visible}
+.book-ink path{fill:none;stroke-width:3px;stroke-linecap:round;stroke-linejoin:round;vector-effect:non-scaling-stroke}
+.book-hl-pen[aria-pressed="true"]{color:#fff;background:var(--hl-color,#1971c2);border-color:var(--hl-color,#1971c2);box-shadow:0 0 0 2px var(--hl-color,#1971c2)}

@@ -1075,6 +1075,8 @@
     // Highlighter pen.
     brush: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"><g transform="rotate(45 12 12)"><path d="M10 1.5h4a1.5 1.5 0 0 1 1.5 1.5v11h-7V3A1.5 1.5 0 0 1 10 1.5z"/><path d="M8.5 14h7l-1.2 3h-4.6z" fill="currentColor"/><path d="M10.2 17h3.6l-.9 4.4-2.7-1.2z"/></g></svg>',
     eraser: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 21H8a2 2 0 0 1-1.4-.6l-4-4a2 2 0 0 1 0-2.8l10-10a2 2 0 0 1 2.8 0l6 6a2 2 0 0 1 0 2.8L12.8 21"/><path d="m5.1 11.1 8.8 8.8"/></svg>',
+    // Marker pen: free drawing on the page.
+    pen: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L8 18l-4 1 1-4z"/><path d="M14.5 5.5l3 3"/><path d="M3 22c3-1.5 5.5-1.5 8 0s5 1.5 8 0"/></svg>',
     // Globe: highlights become an AI translation note.
     translate: '<svg class="book-hl-icon" viewBox="0 0 24 24" aria-hidden="true" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="12" cy="12" r="9"/><path d="M3 12h18"/><path d="M12 3a14 14 0 0 1 0 18a14 14 0 0 1 0-18z"/></svg>',
     // Sparkles: highlights become a short AI summary note.
@@ -1096,6 +1098,38 @@
     return 'url("data:image/svg+xml,' + encodeURIComponent(svg) + '") ' + hotspot + ', ' + (kind === 'eraser' ? 'crosshair' : 'text');
   },
   COLORS: {y: '#ffd43b', g: '#69db7c', p: '#f783ac', b: '#4dabf7'},
+  // Marker ink: the same four colours, strong enough to draw with.
+  INK: {y: '#f08c00', g: '#2f9e44', p: '#d6336c', b: '#1971c2'},
+  INK_POINTS: 1500, INK_STROKES: 300,
+  // Drawings: {page: [{c, p: [x, y, x, y, ...] (0..1 of the page)}]}.
+  loadInk(key) {
+    try {
+      const raw = JSON.parse(localStorage.getItem(key) || '{}'), out = {}, colors = this.INK;
+      const unit = v => typeof v === 'number' && v >= 0 && v <= 1;
+      Object.keys(raw || {}).forEach(k => {
+        if (!/^\d+$/.test(k) || !Array.isArray(raw[k])) return;
+        const list = raw[k].filter(s => s && colors[s.c] && Array.isArray(s.p) && s.p.length >= 4 && s.p.length % 2 === 0 &&
+          s.p.length <= this.INK_POINTS * 2 && s.p.every(unit)).slice(0, this.INK_STROKES);
+        if (list.length) out[k] = list.map(s => ({c: s.c, p: s.p}));
+      });
+      return out;
+    } catch (e) { return {}; }
+  },
+  // SVG path of a stroke, smoothed through the midpoints (page units 0..1).
+  inkPath(p) {
+    if (p.length < 4) return '';
+    let d = 'M' + p[0] + ' ' + p[1];
+    if (p.length === 4) return d + 'L' + p[2] + ' ' + p[3];
+    for (let i = 2; i < p.length - 2; i += 2) {
+      d += 'Q' + p[i] + ' ' + p[i + 1] + ' ' + ((p[i] + p[i + 2]) / 2).toFixed(4) + ' ' + ((p[i + 1] + p[i + 3]) / 2).toFixed(4);
+    }
+    return d + 'L' + p[p.length - 2] + ' ' + p[p.length - 1];
+  },
+  // Strokes the eraser touches: any point inside the region (grown a little).
+  eraseInk(list, region) {
+    const m = 0.012, x0 = region[0] - m, y0 = region[1] - m, x1 = region[0] + region[2] + m, y1 = region[1] + region[3] + m;
+    return list.filter(s => { for (let i = 0; i < s.p.length; i += 2) if (s.p[i] >= x0 && s.p[i] <= x1 && s.p[i + 1] >= y0 && s.p[i + 1] <= y1) return false; return true; });
+  },
   NAMES: {y: 'Yellow', g: 'Green', p: 'Pink', b: 'Blue'},
   key(title, pageCount, ratio) {
     return FlipbookBookmarks.key(title, pageCount, ratio).replace('mf-bookmarks:', 'mf-highlights:');
@@ -1262,7 +1296,9 @@
      (Translate tool: the highlighted text becomes an AI translation note)} */
   bind(options) {
     const self = this, pages = options.pages, words = options.words || {};
-    let store = self.load(options.key), mode = false, selected = null, drag = null, erasing = false, summarizing = false, translating = false, notice = '', noticeTimer = 0;
+    let store = self.load(options.key), mode = false, selected = null, drag = null, erasing = false, summarizing = false, translating = false, drawing = false, notice = '', noticeTimer = 0;
+    const inkKey = options.key + ':ink';
+    let ink = self.loadInk(inkKey);
     let color = 'y';
     try { const saved = localStorage.getItem('mf-highlight-color'); if (self.COLORS[saved]) color = saved; } catch (e) {}
     const lineCache = {};
@@ -1309,15 +1345,23 @@
     // Highlighter pen: back to highlighting (the colour dots pick its colour).
     const brush = document.createElement('button'); brush.type = 'button'; brush.className = 'book-hl-brush';
     brush.innerHTML = self.ICONS.brush; brush.title = 'Highlighter: drag over text'; brush.setAttribute('aria-label', 'Highlighter');
-    brush.onclick = () => { erasing = false; summarizing = false; translating = false; paintBar(); };
+    brush.onclick = () => { erasing = false; summarizing = false; translating = false; drawing = false; paintBar(); };
+    // Marker: draw freely on the page (the colour dots pick the ink).
+    const pen = document.createElement('button'); pen.type = 'button'; pen.className = 'book-hl-pen';
+    pen.innerHTML = self.ICONS.pen; pen.title = 'Marker: draw on the page'; pen.setAttribute('aria-label', 'Marker');
+    pen.onclick = () => {
+      drawing = !(drawing && !erasing); erasing = false; summarizing = false; translating = false;
+      if (selected) { const page = selected.page; selected = null; render(page); }
+      paintBar();
+    };
     const tools = document.createElement('div'); tools.className = 'book-hl-tools';
-    tools.appendChild(brush); tools.appendChild(eraser);
+    tools.appendChild(brush); tools.appendChild(pen); tools.appendChild(eraser);
     // Summarize: new highlights become a short AI summary note instead of the quote.
     const summarize = document.createElement('button'); summarize.type = 'button'; summarize.className = 'book-hl-summary';
     summarize.innerHTML = self.ICONS.summary; summarize.title = 'Summarize: highlighted text becomes a short summary note';
     summarize.setAttribute('aria-label', 'Summarize highlights');
     summarize.onclick = () => {
-      summarizing = !summarizing; translating = false; erasing = false;
+      summarizing = !summarizing; translating = false; erasing = false; drawing = false;
       if (selected) { const page = selected.page; selected = null; render(page); }
       paintBar();
     };
@@ -1327,7 +1371,7 @@
     translateTool.innerHTML = self.ICONS.translate; translateTool.title = 'Translate: highlighted text becomes a translation note';
     translateTool.setAttribute('aria-label', 'Translate highlights');
     translateTool.onclick = () => {
-      translating = !translating; summarizing = false; erasing = false;
+      translating = !translating; summarizing = false; erasing = false; drawing = false;
       if (selected) { const page = selected.page; selected = null; render(page); }
       paintBar();
     };
@@ -1354,14 +1398,17 @@
     function paintBar() {
       Object.keys(swatches).forEach(c => swatches[c].setAttribute('aria-pressed', String(!erasing && (selected ? store[selected.page][selected.index].c === c : c === color))));
       eraser.setAttribute('aria-pressed', String(erasing));
-      brush.setAttribute('aria-pressed', String(!erasing && !summarizing && !translating));
+      brush.setAttribute('aria-pressed', String(!erasing && !summarizing && !translating && !drawing));
+      pen.setAttribute('aria-pressed', String(drawing && !erasing));
+      pen.style.setProperty('--hl-color', self.INK[color]);
       summarize.setAttribute('aria-pressed', String(summarizing && !erasing));
       translateTool.setAttribute('aria-pressed', String(translating && !erasing));
       brush.style.setProperty('--hl-color', self.COLORS[selected ? store[selected.page][selected.index].c : color]);
-      document.body.style.setProperty('--hl-cursor', self.cursor(erasing ? 'eraser' : 'brush', self.COLORS[color]));
+      document.body.style.setProperty('--hl-cursor', self.cursor(erasing ? 'eraser' : 'brush', drawing ? self.INK[color] : self.COLORS[color]));
       document.body.classList.toggle('is-erasing', mode && erasing);
       remove.hidden = !selected;
-      hint.textContent = notice || (erasing ? 'Drag over highlights to erase them' : selected ? 'Pick a colour or delete'
+      hint.textContent = notice || (erasing ? 'Drag over highlights or drawings to erase them' : selected ? 'Pick a colour or delete'
+        : drawing ? 'Draw on the page with the marker'
         : summarizing ? 'Drag over text: its note becomes a short summary'
         : translating ? 'Drag over text: its note becomes a translation' : 'Drag over text to highlight');
       bar.title = hint.textContent;
@@ -1381,8 +1428,34 @@
         mark.style.background = self.COLORS[h.c];
         layer.appendChild(mark);
       }));
+      renderInk(index);
+    }
+    const SVG = 'http://www.w3.org/2000/svg';
+    function inkLayer(page, className) {
+      let svg = page.querySelector('.' + className);
+      if (!svg) {
+        svg = document.createElementNS(SVG, 'svg'); svg.setAttribute('class', 'book-ink ' + className);
+        svg.setAttribute('viewBox', '0 0 1 1'); svg.setAttribute('preserveAspectRatio', 'none'); svg.setAttribute('aria-hidden', 'true');
+        page.appendChild(svg);
+      }
+      return svg;
+    }
+    function strokeEl(points, c) {
+      const path = document.createElementNS(SVG, 'path');
+      path.setAttribute('d', self.inkPath(points)); path.setAttribute('stroke', self.INK[c]);
+      return path;
+    }
+    function renderInk(index) {
+      const page = pages[index];
+      if (!page) return;
+      const list = ink[index] || [], old = page.querySelector('.book-ink-layer');
+      if (!list.length) { if (old) old.remove(); return; }
+      const svg = inkLayer(page, 'book-ink-layer');
+      while (svg.firstChild) svg.removeChild(svg.firstChild);
+      list.forEach(s => svg.appendChild(strokeEl(s.p, s.c)));
     }
     function persist(index) { self.save(options.key, store); render(index); }
+    function persistInk(index) { self.save(inkKey, ink); renderInk(index); }
     function preview(index, rects) {
       const page = pages[index];
       let layer = page.querySelector('.book-hl-preview');
@@ -1405,6 +1478,16 @@
       if (!drag) return;
       if (event.cancelable) event.preventDefault();
       drag.b = point(event, pages[drag.page]);
+      if (drag.ink) {
+        const p = drag.ink, x = Math.max(0, Math.min(1, drag.b.x)), y = Math.max(0, Math.min(1, drag.b.y));
+        if (Math.abs(x - p[p.length - 2]) + Math.abs(y - p[p.length - 1]) > 0.002 && p.length < self.INK_POINTS * 2) {
+          p.push(Math.round(x * 10000) / 10000, Math.round(y * 10000) / 10000); drag.moved = true;
+          const svg = inkLayer(pages[drag.page], 'book-ink-live');
+          while (svg.firstChild) svg.removeChild(svg.firstChild);
+          svg.appendChild(strokeEl(p, color));
+        }
+        return;
+      }
       if (Math.abs(drag.b.x - drag.a.x) + Math.abs(drag.b.y - drag.a.y) > 0.008) drag.moved = true;
       if (drag.moved) preview(drag.page, erasing ? self.box(drag.a, drag.b) : rectsFor(drag.page, drag.a, drag.b));
     }
@@ -1415,8 +1498,19 @@
       const index = drag.page, a = drag.a, b = drag.moved ? drag.b : a;
       preview(index, null);
       if (event && event.cancelable) event.preventDefault();
+      if (drag.ink) {
+        const live = pages[index].querySelector('.book-ink-live');
+        if (live) live.remove();
+        const p = drag.ink.length >= 4 ? drag.ink : drag.ink.concat([drag.ink[0] + 0.001, drag.ink[1]]);   // a tap: a dot
+        const list = ink[index] || (ink[index] = []);
+        if (list.length < self.INK_STROKES) { list.push({c: color, p}); persistInk(index); }
+        drag = null; paintBar();
+        return;
+      }
       if (erasing) {
         const region = (drag.moved && self.box(a, b)) ? self.box(a, b)[0] : [a.x, a.y, 0, 0];
+        const inkBefore = ink[index] || [], inkLeft = self.eraseInk(inkBefore, region);
+        if (inkLeft.length !== inkBefore.length) { if (inkLeft.length) ink[index] = inkLeft; else delete ink[index]; persistInk(index); }
         const old = store[index] || [], left = self.erase(old, region);
         if (left.length !== old.length) {
           if (left.length) store[index] = left; else delete store[index];
@@ -1462,6 +1556,7 @@
       event.stopPropagation(); if (event.cancelable) event.preventDefault();
       drag = {page: index, a: point(event, pages[index]), moved: false};
       drag.b = drag.a;
+      if (drawing && !erasing) drag.ink = [Math.round(Math.max(0, Math.min(1, drag.a.x)) * 10000) / 10000, Math.round(Math.max(0, Math.min(1, drag.a.y)) * 10000) / 10000];
       // Capture phase: the page stops mousemove from bubbling (no corner
       // fold under the highlighter), so listen before it gets there.
       window.addEventListener('mousemove', move, true); window.addEventListener('mouseup', up, true);
@@ -1487,7 +1582,7 @@
       else {
         document.removeEventListener('keydown', escape);
         if (selected) { const page = selected.page; selected = null; render(page); }
-        erasing = false; summarizing = false; translating = false;
+        erasing = false; summarizing = false; translating = false; drawing = false;
       }
       paintBar();
     }
@@ -1514,6 +1609,7 @@
       close() { setMode(false); bar.remove(); },
       bar: () => bar,
       store: () => JSON.parse(JSON.stringify(store)),
+      ink: () => JSON.parse(JSON.stringify(ink)),
     };
   },
 };
