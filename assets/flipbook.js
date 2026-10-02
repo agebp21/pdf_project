@@ -151,7 +151,6 @@
       FlipbookLayout.decorate(sheets);
       book = new St.PageFlip(container, {width, height:Math.round(width / ratio), size:'stretch', minWidth:230, maxWidth:500, minHeight:115, maxHeight:760, autoSize:true, usePortrait:true, startPage:0, showCover:true, ...FlipbookLayout.motion(reduced)});
       book.on('flip', updatePage); book.on('changeOrientation', () => { updatePage(); animate(true); });
-      FlipbookSound.attach(book);
       book.on('changeState', event => {
         if (event.data === 'read') { updatePage(); animate(true); }
         else { stopAnimation(); $('#home').disabled = $('#prev').disabled = $('#next').disabled = true; }
@@ -159,7 +158,7 @@
       book.loadFromHTML(sheets);
       disposeLayout=FlipbookLayout.bind(book,$('#reader-stage'),ratio,{compact:true});
       FlipbookLayout.centerCover(book, container, reduced);
-      curl = FlipbookCurl.bind(book, container, sheets, {reduced, onTurn: () => FlipbookSound.play()});
+      curl = FlipbookCurl.bind(book, container, sheets, {reduced});
       if (!zoom) zoom = FlipbookZoom.bind($('#reader-stage'), zoomBox, {button: $('#zoom'),
         // The pages on screen: pan no further than the book.
         content: () => {
@@ -762,7 +761,6 @@
     } catch(cause) { progress(null); if(cause.name==='AbortError')status(L('Export cancelled.','Ekspor dibatalkan.'));else { status(L('Export failed: ','Ekspor gagal: ')+cause.message); error(cause.message); } }
     finally { exporting=false;exportState();$('#pdf-file').disabled=false;$('#overlay-fields').disabled=!book; }
   }
-  FlipbookSound.bindButton($('#sound'));
   $('#save-project').onclick=()=>exportBook('project');$('#export-html').onclick=()=>exportBook('html');
   $('#export-apk').onclick=()=>exportBook('apk');$('#export-exe').onclick=()=>exportBook('exe');
   fetch('/api/capabilities').then(async response=>{

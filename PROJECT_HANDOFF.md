@@ -1069,3 +1069,7 @@ Nama fitur notebook.html diganti "AI Summarizer": judul tab + h1 notebook.html, 
 - 2026-10-02: fitur jurnal diganti nama "Find Journal & Ebook" (sama di ID & EN): kartu index.html, nav chip (i18n nav.journals), tombol di notebook.html, judul tab + h1 journals.html (satu nama untuk tab Jurnal & Ebook; dulu heading ganti "Cari Jurnal"/"Cari Ebook").
 
 - 2026-10-02: halaman buku tidak lagi jadi biru saat terseleksi (dobel-klik, Ctrl+A, tekan lama di HP). book-effects.css: .book-paper/.cover-curl/.stf__parent user-select:none, ::selection transparan, gambar tidak bisa di-drag, tap highlight mati; textarea/input catatan tetap bisa diseleksi.
+
+
+## 2026-10-02 — Swara flip kertas DIHAPUS
+Permintaan user: tanpa audio efek kertas. Dihapus: modul FlipbookSound (layout.js, termasuk MP3 base64), tombol #sound (flipbook.html + export index.html), panggilan attach/bindButton/play (flipbook.js, viewer.js; FlipbookCurl tanpa onTurn), assets/sounds/paper-flip.mp3, tests/flip-sound.test.cjs. localStorage mf-flip-sound di browser lama tidak dipakai lagi (tidak apa-apa). E2E: toolbar "← | Home | Open cover → | 🔍 | 🔖 Mark | ☰ | 📝 | 🖍 | 🎧 Audio book | 🌐 Translate", flip & Home tanpa error.

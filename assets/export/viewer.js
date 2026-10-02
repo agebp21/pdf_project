@@ -77,7 +77,6 @@
       // doesn't turn it (double-tap zooms); swipes and corner taps still do.
       disableFlipByClick:matchMedia('(hover: none)').matches});
     book.on('flip',update);book.on('changeOrientation',()=>{update();animate()});
-    FlipbookSound.attach(book);
     // Skip pages already on screen; a hovered corner (fold_corner) may still flip.
     // Touch devices set disableFlipByClick (a tap on a page must not turn it),
     // but PageFlip applies that to flipNext/flipPrev/flip too: buttons, links
@@ -137,10 +136,9 @@
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };
     reserveBar(); addEventListener('resize', reserveBar);
-    FlipbookSound.bindButton($('#sound'));
     FlipbookLayout.bind(book,$('#stage'),data.ratio);
     FlipbookLayout.centerCover(book, $('#book'), reduced);
-    const curl = FlipbookCurl.bind(book, $('#book'), sheets, {reduced, onTurn: () => FlipbookSound.play()});
+    const curl = FlipbookCurl.bind(book, $('#book'), sheets, {reduced});
     $('#fullscreen').onclick=async()=>{
       try { if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen(); }
       catch(cause){$('#error').hidden=false;$('#error').textContent='Fullscreen is not available on this device.';}
