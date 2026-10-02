@@ -43,6 +43,29 @@ const line = (text, x, y, w, size = 10, extra = {}) => ({ text, x, y, w, h: size
   T.rooms(row, 600, 800);
   assert.ok(row[0].roomRight <= 400 - 10 + 0.01 && row[0].roomRight > 150, 'stops before the block beside it');
 
+  // Magazine page: three columns sharing baselines join into one paragraph each
+  // (not table rows), a ragged paragraph with an indented first line in the
+  // middle column is not "centred", a drop cap goes back into its paragraph,
+  // and a right-aligned caption stays one right-aligned block that cannot
+  // grow into the next column.
+  const mag = [line('D', 40, 300, 22, 40)];
+  for (let i = 0; i < 6; i++) {
+    const y = 300 + i * 12;
+    mag.push(line(i ? 'column one text that keeps going on' : 'o you remember the day we met there', i < 3 ? 66 : 40, y, i < 3 ? 104 : 130, 9));
+    mag.push(line(i ? 'middle column words of the story go' : 'Middle column paragraph begins here', i ? 220 : 230, y, 120 + (i % 3) * 6, 9));
+    mag.push(line('third column with more of the text', 380, y, 130, 9));
+  }
+  mag.push(line('Universal Insert 850', 340 - 200, 100, 71, 9), line('open wood fireplace from', 322 - 200, 111.5, 89, 9), line('Jetmaster. jetmaster.com.au', 313 - 200, 123, 98, 9));
+  const magBlocks = T.blocks(mag, 600);
+  T.rooms(magBlocks, 600, 800);
+  const find = start => magBlocks.find(b => b.text.startsWith(start));
+  assert.ok(find('Do you remember'), 'the drop cap goes back into its paragraph'); assert.equal(magBlocks.some(b => b.text === 'D'), false);
+  assert.equal(find('Middle column').lines.length, 6); assert.equal(find('Middle column').center, false, 'indented ragged paragraph is not centred');
+  assert.equal(find('third column').lines.length, 6);
+  const caption = find('Universal Insert');
+  assert.equal(caption.lines.length, 3); assert.equal(caption.right, true, 'right-aligned caption');
+  assert.ok(find('Do you remember').roomRight <= 220, 'column one cannot grow into column two');
+
   // Nothing to translate: no letters.
   assert.deepEqual(T.blocks([line('12 / 34', 50, 50, 40)], 600), []);
 

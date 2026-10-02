@@ -1049,3 +1049,16 @@ Dulu stabilo di halaman edisi ID tetap memakai posisi/teks kata PDF asli (Englis
 Tes: test_editions.py (versionWords). E2E: english8 -> ID, stabilo kalimat -> catatan "pulang dan menghitung bintang-bintang di atas laut yang tenang.", sorotan pas di kata Indonesia.
 
 - 2026-10-02: tombol "📚 My Library" (link) di editor diganti tombol `#save-library` "💾 Save My Library": klik = buku yang terbuka langsung disimpan ke arsip (archiveBook) + status "☁ Saved in My Library · Open My Library →"; belum login -> pesan minta masuk; belum ada buku -> buka library.html. E2E (member di-mock): 1 simpan per klik.
+
+
+## 2026-10-02 — Terjemahan buku: tata letak ikut kolom (majalah)
+Laporan: hasil translate numpuk & melebar, tidak ikut kolom.
+pdf-translate.js:
+- Baris tabel: dulu baris yang berbagi baseline dengan baris "pendek" (< 25 % lebar halaman) dianggap tabel -> di majalah 3 kolom SEMUA baris jadi blok satu baris lalu melebar ke kolom sebelah. Sekarang tabel hanya kalau sel kiri pendek relatif lebar baris tipikal, kanan dekat (< 4×size), ukuran huruf sama, dan bukan bagian tumpukan rata kanan (caption).
+- Ruang: roomRight/roomLeft memperhitungkan blok di samping sepanjang tinggi yang bisa diisi; blok tengah & satu baris tidak boleh lewat kolom sebelah.
+- Tengah: butuh >= 2 baris (>= 40 %) yang mulai lebih ke dalam + kanan tidak rata (paragraf ragged dengan indent bukan "centred"); aturan tengah-halaman hanya untuk judul (lebih besar dari teks badan atau < 30 huruf).
+- Rata kanan (caption foto): baris digabung walau baris pertama pendek, digambar rata kanan (`b.right`).
+- Ukuran: blok mempertahankan jumlah barisnya dengan huruf sedikit lebih kecil (>= 80 %) dulu; kalau tidak muat, bungkus dan perkecil sampai 50 % (dulu 60 %, lalu meluber). Kata terlalu panjang baru dipotong paling akhir.
+- Drop cap (huruf besar awal paragraf) digabung kembali ke paragrafnya sebelum diterjemahkan ("D"+"o you…").
+- Bullet: ■ □ ▫ ▸ ► ✓ dikenali.
+Tes: pdf-translate.test.cjs (kasus majalah). Visual majalah Grand Designs hal 17, 19, 96, 172: kolom rapi, tidak tumpang tindih, caption rata kanan.
