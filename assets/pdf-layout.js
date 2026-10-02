@@ -59,10 +59,13 @@
   // Letter-spaced titles ("T H E  R O U T L E D G E") often come with one
   // space between every letter: the words only show in the wider gaps. Put
   // the words back from where the letters were painted.
+  function looksSpaced(text) {
+    var tokens = String(text || '').trim().split(/ +/);
+    return tokens.length >= 5 && tokens.filter(function (t) { return t.length === 1; }).length >= tokens.length * 0.8 &&
+      !tokens.some(function (t) { return t.length > 2; });
+  }
   function spacedWords(text, painted) {
-    var tokens = text.trim().split(/ +/);
-    if (!painted || tokens.length < 5 || tokens.filter(function (t) { return t.length === 1; }).length < tokens.length * 0.8 ||
-        tokens.some(function (t) { return t.length > 2; })) return text;
+    if (!painted || !looksSpaced(text)) return text;
     var letters = text.replace(/ /g, '');
     var marks = painted.slice().sort(function (a, b) { return a.x - b.x; });
     // Fonts with their own codes (pdf.js paints private-use characters): the
@@ -178,7 +181,7 @@
     var content = await page.getTextContent();
     var styles = content.styles || {};
     var items = [];
-    content.items.forEach(function (item) {
+    content.items.forEach(function (item, index) {
       if (!item.str || !item.str.trim() || !item.transform) return;
       var tx = pdfjs.Util.transform(base.transform, item.transform);
       var angle = Math.atan2(tx[1], tx[0]);
@@ -187,7 +190,7 @@
       if (!(size > 0)) return;
       var style = styles[item.fontName] || {};
       var ascent = Number.isFinite(style.ascent) ? style.ascent : Number.isFinite(style.descent) ? 1 + style.descent : 0.8;
-      items.push({ item: item, text: item.str, x: tx[4], baseline: tx[5], size: size, ascent: ascent * size,
+      items.push({ item: item, index: index, text: item.str, x: tx[4], baseline: tx[5], size: size, ascent: ascent * size,
         w: Math.max(item.width || 0, size * 0.3), generic: style.fontFamily || 'sans-serif' });
     });
 
@@ -244,18 +247,21 @@
     var background = { w: canvas.width, h: canvas.height, b64: canvas.toDataURL('image/jpeg', 0.88).split(',')[1] };
     canvas.width = canvas.height = 0;
 
-    var runs = [];
+    var runs = [], spaced = {};
     items.forEach(function (it) {
       var paint = captured.get(it);
       if (!paint) return;
       var realName = '';
       try { realName = (page.commonObjs.get(it.item.fontName) || {}).name || ''; } catch (e) {}
       var fontString = realName + ' ' + (paint.font || '');
-      runs.push({ text: spacedWords(it.text, glyphs.get(it)), x: it.x, y: it.baseline - it.ascent, w: it.w, h: it.size * 1.2, size: it.size,
+      var words = spacedWords(it.text, glyphs.get(it));
+      if (words !== it.text) spaced[it.index] = words;
+      runs.push({ text: words, x: it.x, y: it.baseline - it.ascent, w: it.w, h: it.size * 1.2, size: it.size,
         baseline: it.baseline, color: hexColor(paint.color), font: fontFace(realName, it.generic),
         bold: /bold|black|heavy|semibold|demi/i.test(fontString), italic: /italic|oblique/i.test(fontString) });
     });
-    var layout = { width: base.width, height: base.height, background: background, runs: mergeRuns(runs) };
+    // spaced: {text item index: its words} for letter-spaced titles (PdfWords uses it).
+    var layout = { width: base.width, height: base.height, background: background, runs: mergeRuns(runs), spaced: spaced };
     if (options.images) layout.images = images;
     return layout;
   }
@@ -339,5 +345,5 @@
     });
   }
 
-  root.PdfLayout = { layoutPage: layoutPage, mergeRuns: mergeRuns, spacedWords: spacedWords, fontFace: fontFace, hexColor: hexColor };
+  root.PdfLayout = { layoutPage: layoutPage, mergeRuns: mergeRuns, spacedWords: spacedWords, looksSpaced: looksSpaced, fontFace: fontFace, hexColor: hexColor };
 })(typeof window !== 'undefined' ? window : globalThis);

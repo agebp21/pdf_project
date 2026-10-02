@@ -23,8 +23,17 @@
     const Util = root.pdfjsLib && root.pdfjsLib.Util;
     if (!Util) return none;
     const unit = Math.hypot(viewport.transform[0], viewport.transform[1]) || 1;
+    // Letter-spaced titles ("T H E  R O U T L E D G E"): the words come back
+    // from where the letters are painted (assets/pdf-layout.js), so they are
+    // read aloud and noted as words, not spelt out.
+    let spaced = {};
+    const Layout = root.PdfLayout;
+    if (Layout && Layout.looksSpaced && content.items.some(item => Layout.looksSpaced(item.str))) {
+      try { spaced = (await Layout.layoutPage(page, { maxPx: 900 })).spaced || {}; } catch (e) {}
+    }
     const boxes = [];
-    for (const item of content.items) {
+    for (let index = 0; index < content.items.length; index++) {
+      const item = content.items[index];
       if (!item.str || !item.str.trim() || !(item.width > 0)) continue;
       const tx = Util.transform(viewport.transform, item.transform);
       if (Math.abs(tx[1]) > Math.abs(tx[0]) * 0.1) continue;   // rotated text: not supported
@@ -32,7 +41,7 @@
       if (!(size > 0)) continue;
       const width = item.width * unit, left = tx[4], top = tx[5] - size * 0.82, height = size * 1.05;
       // Split the run into words, sharing its width by character count.
-      const text = item.str, n = text.length, words = /\S+/g;
+      const text = spaced[index] || item.str, n = text.length, words = /\S+/g;
       let m;
       while ((m = words.exec(text))) {
         const x = left + width * m.index / n, w = width * m[0].length / n;
