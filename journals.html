@@ -1,11 +1,11 @@
 <!DOCTYPE html>
-<html lang="id" data-en-doc="Journal & Ebook Search — MyFlipbook">
+<html lang="id" data-en-doc="Find Journal & Ebook — MyFlipbook">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="icon" type="image/png" href="assets/img/favicon.png?v=green">
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=green">
-<title>Cari Jurnal & Ebook — MyFlipbook</title>
+<title>Find Journal & Ebook — MyFlipbook</title>
 <link rel="stylesheet" href="assets/ui-clay.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -70,7 +70,7 @@
     <div class="nav-right"><span data-auth-slot></span><a href="library.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">📚 My Library</a><button type="button" class="lang" data-lang-toggle>EN</button></div>
   </nav>
 
-  <h1 class="clay-h" id="heading">🔎 Cari Jurnal</h1>
+  <h1 class="clay-h" id="heading">🔎 Find Journal & Ebook</h1>
   <p class="lead" id="lead-journal" data-en="Indonesian and international scholarly journals (OpenAlex data). <b>Open-access</b> articles can be turned into a flipbook straight away.">Jurnal ilmiah Indonesia dan internasional (data OpenAlex). Artikel <b>open access</b> bisa langsung dijadikan flipbook.</p>
   <p class="lead" id="lead-ebook" hidden data-en="Complete books that are <b>free and legal</b>: open-access academic books (OAPEN) and freely licensed books on Internet Archive. Turn them into a flipbook straight away.">Buku lengkap yang <b>gratis dan legal</b>: buku akademik open access (OAPEN) dan buku berlisensi bebas di Internet Archive. Langsung jadikan flipbook.</p>
   <div class="tabs" role="tablist">
@@ -124,8 +124,8 @@
     const ebook = mode === 'ebook';
     $('#tab-journal').setAttribute('aria-selected', String(!ebook));
     $('#tab-ebook').setAttribute('aria-selected', String(ebook));
-    $('#heading').textContent = ebook ? L('📚 Ebook Search', '📚 Cari Ebook') : L('🔎 Journal Search', '🔎 Cari Jurnal');
-    document.title = (ebook ? L('Ebook Search', 'Cari Ebook') : L('Journal Search', 'Cari Jurnal')) + ' — MyFlipbook';
+    $('#heading').textContent = '🔎 Find Journal & Ebook';      // one name for both tabs
+    document.title = 'Find Journal & Ebook — MyFlipbook';
     $('#lead-journal').hidden = ebook; $('#lead-ebook').hidden = !ebook;
     $('#filters-journal').hidden = ebook; $('#filters-ebook').hidden = !ebook;
     $('#rights-journal').hidden = ebook; $('#rights-ebook').hidden = !ebook;
