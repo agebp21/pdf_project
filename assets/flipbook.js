@@ -199,7 +199,7 @@
         // 🌐 Translate (AI): only the highlighted text, into a note.
         translate: true, onTranslate: (index, said, color) => notes.translation(index, said, color, highlightTranslate)});
       podcastView?.close();
-      // Podcast / summary are made in Notebook PDF; a project that already
+      // Podcast / summary are made in AI Summarizer (notebook.html); a project that already
       // carries them still plays them in the preview.
       podcastView = FlipbookPodcast.bind({podcast: () => bookPodcast, button: $('#podcast'), onStart: () => speech?.stop()});
       translateView?.close();

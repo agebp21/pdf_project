@@ -429,10 +429,10 @@ class PaywallTests(AccountsBase):
             self.assertEqual(status, 200)
             self.assertIn(f'data-feature="{name}"', body.decode())
             self.assertNotIn('ae-app', body.decode())
-        # Notebook PDF is released (AI summary / translation / podcast).
+        # AI Summarizer (notebook.html) is released (AI summary / translation / podcast).
         status, body, _ = Client(self.base).call('GET', '/notebook.html')
         self.assertEqual(status, 200)
-        self.assertNotIn('data-feature=', body.decode()); self.assertIn('Notebook PDF', body.decode())
+        self.assertNotIn('data-feature=', body.decode()); self.assertIn('AI Summarizer', body.decode())
         server.CONFIG['paywall'] = False
         self.assertIn(b'ae-app', Client(self.base).call('GET', '/animation.html')[1], '--no-paywall keeps the editor')
 
