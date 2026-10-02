@@ -1127,3 +1127,5 @@ Tes: pdf-translate.test.cjs (kasus majalah). Visual majalah Grand Designs hal 17
 - Buku baru TIDAK lagi otomatis masuk arsip saat dibuka, saat simpan proyek, export HTML, atau build APK/EXE. Hanya klik 💾 Save My Library yang memasukkannya. Setelah buku ada di arsip (disimpan lewat tombol atau dibuka dari My Library, libraryId ada), pembaruan otomatis tetap jalan: terjemahan, OCR, simpan proyek, export & build ikut ke buku itu.
 - Pesan belum login: "Log in to save books in My Library."
 E2E (member di-mock): mulai "Open My Library" -> buka PDF "Save My Library", 0 simpan otomatis -> klik -> 1 simpan.
+
+- 2026-10-02: sesudah 💾 Save My Library berhasil, tombol kembali "📚 Open My Library" (buku sudah di arsip -> libraryId ada; klik = buka library.html). Buku yang dibuka dari My Library juga langsung "Open". Status: "☁ Saved in My Library".

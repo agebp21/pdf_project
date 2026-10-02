@@ -345,16 +345,18 @@
       return libraryId;
     } catch (cause) { archiveNote('My Library: ' + cause.message, true); return null; }
   }
-  // 📚 Open My Library while nothing is open; 💾 Save My Library once a book
-  // (a new source) is open: the book goes into the member's archive only then.
+  // 📚 Open My Library while nothing new is open; 💾 Save My Library once a
+  // new book (a new source) is open: it goes into the member's archive only
+  // then, and the button is back to 📚 Open My Library (the book is there now,
+  // and keeps itself up to date).
   function paintLibraryButton() {
-    $('#save-library').textContent = sourcePdf ? '💾 Save My Library' : '📚 Open My Library';
+    $('#save-library').textContent = sourcePdf && !libraryId ? '💾 Save My Library' : '📚 Open My Library';
   }
   paintLibraryButton();
   // 💾 Save My Library: the open book goes into the member's archive now
   // (with a link to it); nothing open yet → the archive itself.
   $('#save-library').onclick = async () => {
-    if (!sourcePdf) { location.href = 'library.html'; return; }
+    if (!sourcePdf || libraryId) { location.href = 'library.html'; return; }
     if (!(await archiveMember())) {
       archiveNote(L('Log in first to save this book in My Library.', 'Masuk dulu untuk menyimpan buku ini ke My Library.'), true);
       return;
@@ -363,10 +365,8 @@
     button.disabled = true;
     try {
       if (!(await archiveBook())) return;
-      $('#archive-status').textContent = L('☁ Saved in My Library · ', '☁ Tersimpan di My Library · ');
-      const open = document.createElement('a'); open.href = 'library.html'; open.textContent = L('Open My Library →', 'Buka My Library →');
-      $('#archive-status').appendChild(open);
-    } finally { button.disabled = false; }
+      archiveNote(L('☁ Saved in My Library', '☁ Tersimpan di My Library'));
+    } finally { button.disabled = false; paintLibraryButton(); }
   };
   // Exports join the book in My Library only when the book is already there.
   async function archiveExport(kind, blob, filename) {
