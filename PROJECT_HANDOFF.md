@@ -1018,3 +1018,11 @@ Owner: Listen diganti nama Audio book; saat edisi terjemahan tampil audio book m
 - Format buku: `versionText: {lang: {page: [[x,y,w,h,text]]}}` (JS `validVersionText`, Python `validate_version_text`: hanya bahasa/halaman yang ada di versions, kotak 0..1, teks ≤4000, ≤300 blok/hal). Editor menyimpannya (`bookVersionText`, ikut model/proyek/My Library/ekspor); reader offline (viewer.js) & editor memberi `edition()` dan memanggil `editionChanged()`.
 - Catatan: edisi yang dibuat sebelum perubahan ini belum punya versionText -> audio book tetap membaca bahasa asli sampai edisi dibuat ulang.
 Tes: tests/speech-edition.test.cjs, tambahan format di pdf-translate.test.cjs & test_editions.py, speech.test.cjs (label). E2E Chromium dengan suara tiruan: edisi EN dibaca en-US dari teks terjemahan mulai blok yang diklik; kembali ke ID dibaca id-ID.
+
+
+## 2026-10-02 — Audio book ngikuti terjemahan sing lagi mlaku / edisi lawas
+Laporan: habis diterjemahkan ke ID, audio book tetap membaca English.
+- flipbook.js: `liveLang` di-set selama `translateBook` jalan; `edition()` memakai edisi yang tampil, atau `liveLang` kalau terjemahan sedang berjalan (halaman yang sudah ganti bahasa langsung dibaca dalam bahasa baru). Tiap halaman yang tampil berganti -> `speech.editionChanged()`. Stop/gagal -> `liveLang=null`, kembali asli + `editionChanged()`.
+- `fillVersionText(lang)`: edisi lama tanpa versionText (dibuat sebelum fitur audio book edisi) -> saat edisi dipilih, teks halaman diterjemahkan ulang lewat /api/translate-free (blok tanpa kotak, per paragraf) lalu dibaca bahasa edisi; disimpan ke My Library.
+- Masih mungkin English: perangkat tanpa suara Indonesia (muncul notice di status). Chrome: Google Bahasa Indonesia; Edge: Gadis.
+E2E (suara tiruan, english8.pdf): baca EN -> terjemahkan ke ID -> saat 4/8 audio book sudah id-ID; setelah selesai id-ID. Tes: semua JS + 97 Python OK.

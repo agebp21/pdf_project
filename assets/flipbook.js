@@ -15,7 +15,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?L('Exit full screen','Keluar fullscreen'):L('Full screen','Layar penuh')});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, bookVersionText = {}, editions = null, bookChecked = {}, bookComplete = new Set(), stopTranslating = false, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, bookVersionText = {}, editions = null, bookChecked = {}, bookComplete = new Set(), stopTranslating = false, liveLang = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.
   const zoomBox = document.createElement('div'); zoomBox.id = 'pdf-zoom';
@@ -217,6 +217,7 @@
             if (image) image.src = (lang !== bookLang && bookVersions[lang] && bookVersions[lang][index]) || imageUrls[index];
           });
           speech?.editionChanged();                             // the audio book reads on in the new language
+          if (lang !== bookLang) fillVersionText(lang);
         },
         cancel: () => { stopTranslating = true; },
         confirm: lang => (bookChecked[lang] && bookChecked[lang].size) ? MFDialog.confirm({
@@ -234,7 +235,9 @@
       speech = FlipbookSpeech.bind({text: bookText, words: bookWords, pages: newElements, visible: visiblePages, button: $('#speak'),
         busy: () => highlights.active(), onStart: () => podcastView?.stop(), notice: message => { $('#load-status').textContent = message; },
         // A translated edition on screen: read its text, in its language.
-        edition: () => { const shown = editions?.current(); return shown && shown !== bookLang && bookVersionText[shown] ? {lang: shown, pages: bookVersionText[shown]} : null; },
+        // While a translation runs, its finished pages are already on screen: read those in the new language too.
+        edition: () => { const current = editions?.current(), shown = current && current !== bookLang ? current : liveLang;
+          return shown && bookVersionText[shown] ? {lang: shown, pages: bookVersionText[shown]} : null; },
         next: () => { if ($('#next').disabled) return false; goNext(); return true; }});
       book.on('flip', () => speech.pageChanged());
       book.on('changeState', event => { if (event.data === 'read') speech.pageChanged(); });
@@ -398,7 +401,7 @@
     const todo = pageElements.map((_, index) => index).filter(index => !checked.has(index))
       .sort((a, b) => (a < from) - (b < from) || a - b);
     const before = total - todo.length;
-    stopTranslating = false;
+    stopTranslating = false; liveLang = lang;
     const say = done => report(L(`🌐 ${Math.min(total, before + done)} / ${total} · Stop`, `🌐 ${Math.min(total, before + done)} / ${total} · Berhenti`));
     const original = () => pageElements.forEach((page, index) => { const image = page.querySelector('img'); if (image) image.src = imageUrls[index]; });
     say(0);
@@ -413,12 +416,15 @@
           (bookVersionText[lang] || (bookVersionText[lang] = {}))[index] = said || [];   // read aloud by the audio book
           const image = pageElements[index] && pageElements[index].querySelector('img');
           if (image) image.src = pages[index];                  // the page changes language right away
+          if (visiblePages().includes(index)) speech?.editionChanged();   // and the audio book follows
         }});
       todo.forEach(index => checked.add(index));                // pages without text count as done too
     } catch (cause) {
       if (book === pdf) {
+        liveLang = null;
         Object.keys(pages).forEach(index => checked.add(Number(index)));
-        original();                                             // stopped / failed: back to the original until it's finished
+        original();
+        speech?.editionChanged();                                             // stopped / failed: back to the original until it's finished
         if (!Object.keys(pages).length) delete bookVersions[lang];
         else if (libraryId) archiveBook();
       }
@@ -429,8 +435,30 @@
       delete bookVersions[lang];
       throw Error(L('This book has no text to translate (a scan? run OCR first).', 'Buku ini tidak punya teks untuk diterjemahkan (hasil scan? jalankan OCR dulu).'));
     }
+    liveLang = null;                                           // editions.show(lang) takes over
     bookComplete.add(lang);
     if (libraryId) archiveBook();                              // keep My Library up to date
+  }
+  // Editions made before the audio book read them (no text kept): translate
+  // the pages' text once more (free translator) so they are read in that language.
+  const filling = new Set();
+  async function fillVersionText(lang) {
+    const said = bookVersionText[lang] || (bookVersionText[lang] = {});
+    const missing = Object.keys(bookVersions[lang] || {}).filter(index => !said[index] && pageParagraphs(Number(index)).trim());
+    if (!missing.length || filling.has(lang)) return;
+    filling.add(lang);
+    const book = pdf;
+    try {
+      const out = await translateFree(Object.fromEntries(missing.map(index => [index, pageParagraphs(Number(index))])), lang);
+      if (book !== pdf) return;
+      Object.entries(out).forEach(([index, text]) => {
+        said[index] = String(text || '').split('\n').map(t => t.trim()).filter(Boolean).map(t => [0, 0, 0, 0, t]);
+      });
+      speech?.editionChanged();
+      if (libraryId) archiveBook();
+    } catch (cause) {
+      // Not fatal: those pages are read from the original text.
+    } finally { filling.delete(lang); }
   }
   // Short AI summary of one highlighted passage (Summarize tool in the preview).
   async function highlightSummary(text) {
