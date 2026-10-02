@@ -945,3 +945,12 @@ E2E: Perahu Kertas 456 hal — 15 dtk: 10 halaman sudah berganti; Stop -> kembal
 ### 2 Oktober 2026 - Edisi ID | EN mulai dari halaman yang sedang dibaca
 
 Owner: "harus nunggu 600 dulu?" — halaman sudah berganti satu per satu (sebelumnya), tapi urut dari halaman 1. Sekarang `translateBook` mengurutkan halaman: dari halaman yang sedang tampil ke belakang dulu, lalu halaman sebelumnya. E2E Perahu Kertas: membaca hal 18–19 -> yang pertama berganti 18, 19, 20, 21…
+
+### 2 Oktober 2026 - "Listen" jadi "Audio book"; audio book membaca edisi terjemahan dalam bahasanya
+
+Owner: Listen diganti nama Audio book; saat edisi terjemahan tampil audio book masih membaca bahasa asli (harusnya bahasa terjemahan).
+- layout.js FlipbookSpeech: label "🎧 Audio book" (tooltip ikut). Opsi baru `edition()` -> null atau {lang, pages: {index: [[x,y,w,h,text]]}}: halaman edisi dibaca dari teks terjemahannya per blok (dipecah ±220 karakter per kalimat), dengan suara bahasa edisi (`engine.speak(text, lang)` per potongan), blok yang dibaca ditandai, klik/tap pada blok membaca dari situ; halaman yang tidak ada di edisi tetap dibaca asli dengan bahasa asli. `editionChanged()` dipanggil saat ID | EN diganti -> membaca lanjut dalam bahasa baru. Peringatan "tidak ada suara bahasa X" memakai bahasa edisi.
+- pdf-translate.js: `draw()` mencatat yang ditulis per blok + kotaknya (`canvas.said`), `onPage(index, blob, said)`.
+- Format buku: `versionText: {lang: {page: [[x,y,w,h,text]]}}` (JS `validVersionText`, Python `validate_version_text`: hanya bahasa/halaman yang ada di versions, kotak 0..1, teks ≤4000, ≤300 blok/hal). Editor menyimpannya (`bookVersionText`, ikut model/proyek/My Library/ekspor); reader offline (viewer.js) & editor memberi `edition()` dan memanggil `editionChanged()`.
+- Catatan: edisi yang dibuat sebelum perubahan ini belum punya versionText -> audio book tetap membaca bahasa asli sampai edisi dibuat ulang.
+Tes: tests/speech-edition.test.cjs, tambahan format di pdf-translate.test.cjs & test_editions.py, speech.test.cjs (label). E2E Chromium dengan suara tiruan: edisi EN dibaca en-US dari teks terjemahan mulai blok yang diklik; kembali ke ID dibaca id-ID.

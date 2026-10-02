@@ -170,7 +170,9 @@ def validate_manifest(data):
                 **({'translations': tr} if (tr := validate_translations(data.get('translations'), count)) else {}),
                 **({'summary': sm} if (sm := validate_summary(data.get('summary'))) else {}),
                 **({'lang': data['lang']} if data.get('lang') in BOOK_LANGS else {}),
-                **({'versions': vs} if data.get('lang') in BOOK_LANGS and (vs := validate_versions(data.get('versions'), count, data['lang'])) else {}))
+                **({'versions': vs} if data.get('lang') in BOOK_LANGS and (vs := validate_versions(data.get('versions'), count, data['lang'])) else {}),
+                **({'versionText': vt} if data.get('lang') in BOOK_LANGS and (vt := validate_version_text(
+                    data.get('versionText'), validate_versions(data.get('versions'), count, data['lang'])) ) else {}))
 
 
 BOOK_LANGS = ('id-ID', 'en-US', 'ms-MY')
@@ -192,6 +194,28 @@ def validate_versions(versions, count, lang):
             raise ValueError('Halaman edisi terjemahan tidak valid.')
         if clean:
             out[code] = clean
+    return out or None
+
+
+def validate_version_text(texts, versions):
+    """What each translated page says (audio book): {lang: {page: [[x, y, w, h, text]]}}."""
+    if not isinstance(texts, dict) or not versions:
+        return None
+    unit = lambda v: type(v) in (int, float) and math.isfinite(v) and 0 <= v <= 1
+    out = {}
+    for lang, pages in texts.items():
+        if lang not in versions or not isinstance(pages, dict):
+            continue
+        clean = {}
+        for key, blocks in pages.items():
+            if not re.fullmatch(r'0|[1-9][0-9]*', str(key)) or int(key) not in versions[lang] or not isinstance(blocks, list):
+                continue
+            good = [b[:4] + [b[4][:4000]] for b in blocks
+                    if isinstance(b, list) and len(b) == 5 and all(unit(v) for v in b[:4]) and isinstance(b[4], str) and b[4].strip()][:300]
+            if good:
+                clean[str(key)] = good
+        if clean:
+            out[lang] = clean
     return out or None
 
 

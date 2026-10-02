@@ -78,5 +78,9 @@ const line = (text, x, y, w, size = 10, extra = {}) => ({ text, x, y, w, h: size
   assert.throws(() => X.validate({ ...model, versions: { 'id-ID': [1] } }), /edisi/, "the book's own language is not an edition");
   assert.throws(() => X.validate({ ...model, versions: { 'en-US': [9] } }), /edisi/);
   assert.equal(X.validate({ ...model, lang: 'xx' }).versions, undefined, 'no language: no editions');
+  // What translated pages say (audio book): only for pages in the edition, boxes in 0..1, text kept.
+  const readText = X.validate({ ...model, versionText: { 'en-US': { '1': [[0.1, 0.2, 0.5, 0.1, 'Hello.'], [0.1, 0.2, 2, 0.1, 'bad box'], [0, 0, 1, 1, '  ']], '2': [[0, 0, 1, 1, 'not in the edition']] }, 'ms-MY': 'x', 'fr-FR': {} } }).versionText;
+  assert.deepEqual(readText, { 'en-US': { '1': [[0.1, 0.2, 0.5, 0.1, 'Hello.']] } });
+  assert.equal(X.validate({ ...model, versions: undefined, versionText: { 'en-US': { '1': [[0, 0, 1, 1, 'x']] } } }).versionText, undefined, 'no edition: nothing to read');
   console.log('PASS pdf-translate: blocks (paragraphs, bullets, labels, table rows, centred), room, ID | EN button (make once, back, refusal), lang/versions format + picture order');
 })().catch(error => { console.error(error); process.exit(1); });

@@ -15,7 +15,7 @@
   };
   document.addEventListener('keydown',event=>{if(event.key==='Escape')$('.preview').classList.remove('reading-fullscreen')});
   document.addEventListener('fullscreenchange',()=>{$('#fullscreen').textContent=document.fullscreenElement?L('Exit full screen','Keluar fullscreen'):L('Full screen','Layar penuh')});
-  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, editions = null, bookChecked = {}, bookComplete = new Set(), stopTranslating = false, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
+  let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, bookVersionText = {}, editions = null, bookChecked = {}, bookComplete = new Set(), stopTranslating = false, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null;
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.
   const zoomBox = document.createElement('div'); zoomBox.id = 'pdf-zoom';
@@ -29,7 +29,7 @@
     $('#export-exe').disabled = !buildConfig?.exe;
     $('#project-file').disabled = opening || exporting;
   }
-  const model = () => ({version:1,title:$('#export-title').value.trim()||L('Interactive book','Buku interaktif'),pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{}),...(Object.keys(bookTranslations).length?{translations:bookTranslations}:{}),...(bookSummary?{summary:bookSummary}:{}),...(bookLang?{lang:bookLang}:{}),...(Object.keys(bookVersions).length?{versions:Object.fromEntries(Object.entries(bookVersions).map(([lang,pages])=>[lang,Object.keys(pages).map(Number).sort((a,b)=>a-b)]))}:{})});
+  const model = () => ({version:1,title:$('#export-title').value.trim()||L('Interactive book','Buku interaktif'),pageCount:pageElements.length,ratio:bookRatio,overlays:Object.fromEntries(overlays),links:bookLinks,words:bookWords,text:bookText,...(bookPodcast?{podcast:bookPodcast}:{}),...(Object.keys(bookTranslations).length?{translations:bookTranslations}:{}),...(bookSummary?{summary:bookSummary}:{}),...(bookLang?{lang:bookLang}:{}),...(Object.keys(bookVersions).length?{versions:Object.fromEntries(Object.entries(bookVersions).map(([lang,pages])=>[lang,Object.keys(pages).map(Number).sort((a,b)=>a-b)]))}:{}),...(Object.keys(bookVersionText).length?{versionText:bookVersionText}:{})});
   const error = message => { $('#reader-error').textContent = message; $('#reader-error').hidden = !message; };
   // Sheets on screen (may include the blank back cover of an odd page count).
   function sheetsOnScreen() {
@@ -138,6 +138,7 @@
         if (pages.every(page => kept[page])) bookVersions[lang] = Object.fromEntries(pages.map(page => [page, URL.createObjectURL(kept[page])]));
       });
       bookComplete = new Set(Object.keys(bookVersions)); bookChecked = {}; stopTranslating = true;
+      bookVersionText = JSON.parse(JSON.stringify((project && project.versionText) || {}));
       // Odd page counts get a blank back cover so the book can close.
       const sheets = FlipbookLayout.withBackCover(newElements, 'pdf-page');
       const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...sheets);
@@ -210,10 +211,13 @@
       // 🌐 ID | EN: the whole book in another language, layout unchanged.
       editions = FlipbookEditions.bind({button: $('#edition'), original: bookLang, ready: () => [...bookComplete],
         offer: bookLang === 'en-US' ? ['id-ID'] : ['en-US'],
-        apply: lang => pageElements.forEach((page, index) => {
-          const image = page.querySelector('img');
-          if (image) image.src = (lang !== bookLang && bookVersions[lang] && bookVersions[lang][index]) || imageUrls[index];
-        }),
+        apply: lang => {
+          pageElements.forEach((page, index) => {
+            const image = page.querySelector('img');
+            if (image) image.src = (lang !== bookLang && bookVersions[lang] && bookVersions[lang][index]) || imageUrls[index];
+          });
+          speech?.editionChanged();                             // the audio book reads on in the new language
+        },
         cancel: () => { stopTranslating = true; },
         confirm: lang => (bookChecked[lang] && bookChecked[lang].size) ? MFDialog.confirm({
           title: L(`Carry on translating into ${FlipbookEditions.NAMES[lang]}?`, `Lanjutkan terjemahan?`),
@@ -229,6 +233,8 @@
       speech?.close();
       speech = FlipbookSpeech.bind({text: bookText, words: bookWords, pages: newElements, visible: visiblePages, button: $('#speak'),
         busy: () => highlights.active(), onStart: () => podcastView?.stop(), notice: message => { $('#load-status').textContent = message; },
+        // A translated edition on screen: read its text, in its language.
+        edition: () => { const shown = editions?.current(); return shown && shown !== bookLang && bookVersionText[shown] ? {lang: shown, pages: bookVersionText[shown]} : null; },
         next: () => { if ($('#next').disabled) return false; goNext(); return true; }});
       book.on('flip', () => speech.pageChanged());
       book.on('changeState', event => { if (event.data === 'read') speech.pageChanged(); });
@@ -400,10 +406,11 @@
       await PdfTranslate.book(book, {target: lang, translate: translateFree, maxPx: 1100, pages: todo,
         isCancelled: () => stopTranslating || book !== pdf,
         onProgress: (stage, done) => say(done),
-        onPage: (index, blob) => {
+        onPage: (index, blob, said) => {
           if (book !== pdf) return;
           if (pages[index]) URL.revokeObjectURL(pages[index]);
           pages[index] = URL.createObjectURL(blob);
+          (bookVersionText[lang] || (bookVersionText[lang] = {}))[index] = said || [];   // read aloud by the audio book
           const image = pageElements[index] && pageElements[index].querySelector('img');
           if (image) image.src = pages[index];                  // the page changes language right away
         }});

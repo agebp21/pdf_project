@@ -106,6 +106,26 @@
     }
     return Object.keys(out).length ? out : null;
   }
+  // What each translated page says, block by block, for the audio book:
+  // {lang: {page: [[x, y, w, h, text]]}} (fractions of the page), only for
+  // pages that are in the edition.
+  function validVersionText(texts, versions) {
+    if (!texts || typeof texts !== 'object' || Array.isArray(texts) || !versions) return null;
+    const unit = v => Number.isFinite(v) && v >= 0 && v <= 1;
+    const out = {};
+    for (const [lang, pages] of Object.entries(texts)) {
+      if (!versions[lang] || !pages || typeof pages !== 'object' || Array.isArray(pages)) continue;
+      const clean = {};
+      for (const [key, blocks] of Object.entries(pages)) {
+        if (!/^(0|[1-9]\d*)$/.test(key) || !versions[lang].includes(Number(key)) || !Array.isArray(blocks)) continue;
+        const list = blocks.filter(b => Array.isArray(b) && b.length === 5 && b.slice(0, 4).every(unit) && typeof b[4] === 'string' && b[4].trim())
+          .slice(0, 300).map(b => b.slice(0, 4).concat(b[4].slice(0, 4000)));
+        if (list.length) clean[key] = list;
+      }
+      if (Object.keys(clean).length) out[lang] = clean;
+    }
+    return Object.keys(out).length ? out : null;
+  }
   // [{lang, page}] in the order their pictures follow the original pages.
   function versionImages(data) {
     const out = [];
@@ -129,8 +149,8 @@
     }
     const words=validWords(data.words,data.pageCount);
     const podcast=validPodcast(data.podcast), translations=validTranslations(data.translations,data.pageCount), summary=validSummary(data.summary);
-    const lang=validLang(data.lang), versions=lang?validVersions(data.versions,data.pageCount,lang):null;
-    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words),...(podcast?{podcast}:{}),...(translations?{translations}:{}),...(summary?{summary}:{}),...(lang?{lang}:{}),...(versions?{versions}:{})};
+    const lang=validLang(data.lang), versions=lang?validVersions(data.versions,data.pageCount,lang):null, versionText=validVersionText(data.versionText,versions);
+    return {version:1,title:data.title.slice(0,200),pageCount:data.pageCount,ratio:data.ratio,overlays,links:validLinks(data.links,data.pageCount),words,text:validText(data.text,words),...(podcast?{podcast}:{}),...(translations?{translations}:{}),...(summary?{summary}:{}),...(lang?{lang}:{}),...(versions?{versions}:{}),...(versionText?{versionText}:{})};
   }
   const scriptData = data => 'window.FLIPBOOK_DATA = ' + JSON.stringify(validate(data)).replace(/</g,'\\u003c').replace(/\u2028/g,'\\u2028').replace(/\u2029/g,'\\u2029') + ';\n';
   async function asset(path) {

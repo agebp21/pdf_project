@@ -72,7 +72,7 @@ assert.equal(S.lang('Buku ini adalah untuk semua orang karena pemerintah bisa me
     if (page >= 5) return false;
     turns++; page += 2; setTimeout(() => speech.pageChanged(), 5); return true;   // the viewer reports the turn
   } });
-  assert.equal(button.hidden, false); assert.equal(button.textContent, '🎧 Listen'); assert.equal(speech.lang(), 'id-ID');
+  assert.equal(button.hidden, false); assert.equal(button.textContent, '🎧 Audio book'); assert.equal(speech.lang(), 'id-ID');
   button.click();
   assert.equal(speech.active(), true); assert.equal(button.textContent, '⏹ Stop');
   await sleep(30);
@@ -85,7 +85,7 @@ assert.equal(S.lang('Buku ini adalah untuk semua orang karena pemerintah bisa me
   // The last page (index 5) has no text: a short pause, then the book ends.
   assert.equal(speech.active(), true);
   await sleep(1700);
-  assert.equal(speech.active(), false, 'stops at the end of the book'); assert.equal(button.textContent, '🎧 Listen');
+  assert.equal(speech.active(), false, 'stops at the end of the book'); assert.equal(button.textContent, '🎧 Audio book');
 
   // A manual page turn while reading starts reading the new pages.
   spoken.length = 0; page = 1;

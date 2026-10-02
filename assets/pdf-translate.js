@@ -8,7 +8,7 @@
  * (fewer AI calls, consistent terms), and each translation is drawn back into
  * its block — wrapped, growing into empty room, shrunk a little if needed.
  *
- *   PdfTranslate.book(pdf, {target, translate, maxPx, pages?, onProgress, onPage, isCancelled})
+ *   PdfTranslate.book(pdf, {target, translate, maxPx, pages?, onProgress, onPage(index, blob, said), isCancelled})
  *     → Promise<{index: Blob (JPEG)}>   (pages without text are left out)
  *   translate(blocks {key: text}, target) → Promise<{key: translation}>
  */
@@ -104,7 +104,10 @@
   }
 
   // The translated page: blocks drawn on the text-free background.
+  // Returns the canvas and, for reading aloud, what each block now says with
+  // the box it fills: said = [[x, y, w, h, text]] in fractions of the page.
   function draw(layout, image, items) {
+    var said = [];
     var canvas = document.createElement('canvas');
     canvas.width = image.width; canvas.height = image.height;
     var ctx = canvas.getContext('2d');
@@ -144,7 +147,11 @@
         }
         ctx.fillText(row, x, y);
       });
+      var left = b.center ? (b.x + b.w / 2) - width / 2 : b.x, used = Math.max(size * 1.2, rows.length * step);
+      var r = function (v) { return Math.round(Math.max(0, Math.min(1, v)) * 10000) / 10000; };
+      said.push([r(left / layout.width), r(b.y / layout.height), r((b.center ? width : Math.max(b.w, width - (b.textX - b.x))) / layout.width), r(used / layout.height), text]);
     });
+    canvas.said = said;
     return canvas;
   }
 
@@ -195,7 +202,7 @@
         var items = page.list.map(function (b) { return {block: b, text: String(answer[b.key] || b.text).replace(/\s+/g, ' ').trim()}; });
         var image = await loadImage(page.layout.background.b64);
         var canvas = draw(page.layout, image, items);
-        done[page.index] = await toBlob(canvas); onPage(page.index, done[page.index]);
+        done[page.index] = await toBlob(canvas); onPage(page.index, done[page.index], canvas.said);
         canvas.width = canvas.height = 0;
         finished++;
         progress('draw', finished, total);
@@ -236,7 +243,7 @@
       var items = page.list.map(function (b) { return {block: b, text: String(answer[b.key] || b.text).replace(/\s+/g, ' ').trim()}; });
       var image = await loadImage(page.layout.background.b64);
       var canvas = draw(page.layout, image, items);
-      done[page.index] = await toBlob(canvas); onPage(page.index, done[page.index]);
+      done[page.index] = await toBlob(canvas); onPage(page.index, done[page.index], canvas.said);
       canvas.width = canvas.height = 0;
       finished++;
       progress('draw', finished, total);

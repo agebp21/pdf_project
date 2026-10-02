@@ -27,6 +27,10 @@ class EditionTests(unittest.TestCase):
         self.assertEqual(server.version_images(data), [('en-US', 0), ('en-US', 2), ('ms-MY', 1)])
         self.assertNotIn('versions', server.validate_manifest(manifest(lang='xx', versions={'en-US': [0]})), 'no language: no editions')
         self.assertNotIn('lang', server.validate_manifest(manifest()), 'older books stay as they were')
+        said = server.validate_manifest(manifest(lang='id-ID', versions={'en-US': [1]}, versionText={
+            'en-US': {'1': [[0.1, 0.2, 0.5, 0.1, 'Hello.'], [0, 0, 2, 1, 'bad'], [0, 0, 1, 1, ' ']], '2': [[0, 0, 1, 1, 'not in edition']]},
+            'ms-MY': {'1': [[0, 0, 1, 1, 'no such edition']]}}))['versionText']
+        self.assertEqual(said, {'en-US': {'1': [[0.1, 0.2, 0.5, 0.1, 'Hello.']]}})
         for bad in ({'id-ID': [0]}, {'en-US': [3]}, {'en-US': ['0']}, {'fr-FR': [0]}, ['en-US']):
             with self.assertRaises(ValueError):
                 server.validate_manifest(manifest(lang='id-ID', versions=bad))

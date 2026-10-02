@@ -3,7 +3,7 @@
   const $ = s => document.querySelector(s);
   const data = window.FLIPBOOK_DATA;
   const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  let book, frame = 0;
+  let book, frame = 0, editions = null;
   try {
     if (!data || ![1,2].includes(data.version) || (data.version===2&&!window.AnimationPlayback) || !Number.isInteger(data.pageCount) || data.pageCount < 1) throw Error('Invalid book data.');
     // ES2018 only (no ?. / ??): old Android System WebViews must run this.
@@ -105,6 +105,8 @@
     // Read aloud: speaks the pages on screen, then turns to the next ones.
     const speech = FlipbookSpeech.bind({text: data.text || {}, words: data.words || {}, pages: elements, visible, button: $('#speak'),
       busy: () => highlights.active(), onStart: () => podcast.stop(),
+      // A translated edition on screen: read its text, in its language.
+      edition: () => { const shown = editions && editions.current(); return shown && shown !== data.lang && data.versionText && data.versionText[shown] ? {lang: shown, pages: data.versionText[shown]} : null; },
       notice: message => { const tip = $('#zoom-hint'); tip.textContent = message; tip.hidden = false; setTimeout(() => { tip.hidden = true; }, 6000); },
       next: () => { if ($('#next').disabled) return false; goNext(); return true; }});
     book.on('flip', () => speech.pageChanged());
@@ -122,12 +124,15 @@
     let slot = data.pageCount;
     Object.keys(data.versions || {}).sort().forEach(lang => { extra[lang] = {}; data.versions[lang].forEach(page => { extra[lang][page] = slot++; }); });
     const pictureUrl = (index, done) => { if (window.FLIPBOOK_PAGE_URL) window.FLIPBOOK_PAGE_URL(index, done); else done(`pages/${index + 1}.jpg`); };
-    FlipbookEditions.bind({button: $('#edition'), original: data.lang, ready: () => Object.keys(extra),
-      apply: lang => elements.forEach((page, index) => {
-        const image = page.querySelector('img');
-        const at = lang !== data.lang && extra[lang] && extra[lang][index] !== undefined ? extra[lang][index] : index;
-        pictureUrl(at, url => { image.src = url; });
-      })});
+    editions = FlipbookEditions.bind({button: $('#edition'), original: data.lang, ready: () => Object.keys(extra),
+      apply: lang => {
+        elements.forEach((page, index) => {
+          const image = page.querySelector('img');
+          const at = lang !== data.lang && extra[lang] && extra[lang][index] !== undefined ? extra[lang][index] : index;
+          pictureUrl(at, url => { image.src = url; });
+        });
+        speech.editionChanged();                                // the audio book reads on in the new language
+      }});
     // Like the preview, the book ends above the control bar so the bar never
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };

@@ -1828,9 +1828,28 @@
      page, false at the end of the book, busy(): another tool owns clicks
      (highlighter), button, notice(message) (no voice in the book's
      language), engine (tests)} */
+  /* options: {text, words, pages, visible, button, next, notice, busy, onStart,
+     edition() → null or {lang, pages: {index: [[x, y, w, h, text]]}}: a translated
+     edition on screen — its pages are read in its language, block by block} */
   bind(options) {
     const self = this, text = options.text || {}, positions = options.words || {}, pages = options.pages || [];
     const engine = options.engine || self.engine();
+    const edition = () => (options.edition && options.edition()) || null;
+    // A translated block → pieces of a few sentences, marked by the block's box.
+    const editionPieces = (said, fromBlock) => {
+      const out = [];
+      (said || []).forEach((block, b) => {
+        if (fromBlock !== undefined && b < fromBlock) return;
+        const sentences = String(block[4] || '').match(/[^.!?…]+[.!?…]*\s*/g) || [];
+        let piece = '';
+        sentences.forEach(sentence => {
+          if (piece && (piece + sentence).length > 220) { out.push({text: piece.trim(), boxes: [block.slice(0, 4)]}); piece = ''; }
+          piece += sentence;
+        });
+        if (piece.trim()) out.push({text: piece.trim(), boxes: [block.slice(0, 4)]});
+      });
+      return out;
+    };
     const all = Object.keys(text).map(k => (text[k] || []).join(' ')).join(' ');
     const lang = self.lang(all.slice(0, 20000));
     let on = false, speaking = false, run = 0, shown = '', wait = 0, marked = null;
@@ -1842,8 +1861,8 @@
     function paint() {
       if (typeof document !== 'undefined' && document.body) document.body.classList.toggle('is-reading', on);
       if (!button) return;
-      button.textContent = on ? '⏹ Stop' : '🎧 Listen';
-      button.title = on ? 'Stop reading aloud · click a word on the page to read from there' : 'Read aloud: click a word to start there (turns the pages for you)';
+      button.textContent = on ? '⏹ Stop' : '🎧 Audio book';
+      button.title = on ? 'Stop the audio book · click a word on the page to read from there' : 'Audio book: click a word to start there (turns the pages for you)';
       button.setAttribute('aria-pressed', String(on));
       button.classList.toggle('is-on', on);
     }
@@ -1888,9 +1907,15 @@
       engine.stop();
       const shownPages = options.visible();
       shown = shownPages.join(',');
-      const queue = [];
+      const queue = [], ed = edition();
       shownPages.forEach(index => {
         if (from && index < from.page) return;
+        // A translated page: its text, in the edition's language.
+        const said = ed && ed.pages[String(index)];
+        if (said) {
+          editionPieces(said, from && index === from.page ? from.block : undefined).forEach(piece => queue.push({page: index, piece, lang: ed.lang}));
+          return;
+        }
         let words = wordsOf(index);
         if (from && index === from.page) words = words.filter(w => w.line > from.line || (w.line === from.line && w.word >= from.word));
         self.pieces(words).forEach(piece => queue.push({page: index, piece}));
@@ -1903,7 +1928,7 @@
         if (!queue.length) { turn(mine); return; }
         const next = queue.shift();
         mark(next.page, next.piece);
-        engine.speak(next.piece.text, lang, ok => {
+        engine.speak(next.piece.text, next.lang || lang, ok => {
           if (!on || mine !== run) return;
           if (ok) { fails = 0; step(); return; }
           // A voice hiccup (network, engine busy): this piece once more, then
@@ -1926,16 +1951,24 @@
     function start(from) {
       if (!engine) return;
       if (options.onStart) options.onStart();
-      const first = !speaking;
+      const first = !speaking, voice = (edition() || {}).lang || lang;
       on = true; speaking = true; paint(); read(from);
-      if (first && engine.has && !engine.has(lang) && options.notice) {
-        options.notice('No ' + (self.NAMES[lang.slice(0, 2)] || lang) + ' voice on this device: reading with the default voice.' +
+      if (first && engine.has && !engine.has(voice) && options.notice) {
+        options.notice('No ' + (self.NAMES[voice.slice(0, 2)] || voice) + ' voice on this device: reading with the default voice.' +
           ' Windows: Settings \u203a Time & language \u203a Speech \u203a Add voices.');
       }
     }
     // While reading, a click (or tap) on a word reads on from that word.
     function wordAt(index, clientX, clientY) {
-      const raw = positions[String(index)], page = pages[index];
+      const raw = positions[String(index)], page = pages[index], ed = edition();
+      // A translated page: the block under the finger.
+      if (ed && ed.pages[String(index)] && page) {
+        const box = page.getBoundingClientRect();
+        if (!box.width || !box.height) return null;
+        const x = (clientX - box.left) / box.width, y = (clientY - box.top) / box.height;
+        const block = ed.pages[String(index)].findIndex(b => x >= b[0] - 0.01 && x <= b[0] + b[2] + 0.01 && y >= b[1] - 0.01 && y <= b[1] + b[3] + 0.01);
+        return block >= 0 ? {page: index, block} : null;
+      }
       if (!raw || !page || typeof FlipbookHighlights === 'undefined') return null;
       const r = page.getBoundingClientRect();
       if (!r.width || !r.height) return null;
@@ -1977,6 +2010,8 @@
       readFrom: (index, line, word) => start({page: index, line, word}),
       // The viewer calls this after every page turn (by the reader or by us).
       pageChanged() { if (on && speaking && options.visible().join(',') !== shown) read(null); },
+      // The book switched language (ID | EN): read on in the new one.
+      editionChanged() { if (on && speaking) read(null); },
       close() { stop(); handlers.forEach(off => off()); }
     };
   },
