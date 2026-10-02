@@ -147,6 +147,12 @@
         if (window.PdfWords) ({words, text} = await PdfWords.extract(newPdf, {withText:true, progress:(i, n) => loading(`Reading text ${i} / ${n}…`, 0.75 + i / n * 0.25)}));
       } catch (cause) { console.warn('Words skipped:', cause); }
       if (version !== loadVersion) return false;
+      // Text read from pictures earlier (OCR) comes back with the project.
+      Object.keys((project && project.words) || {}).forEach(page => {
+        if (window.PdfOcrWords && PdfOcrWords.needs(words, page) && Array.isArray(project.words[page]) && project.text && Array.isArray(project.text[page])) {
+          words[page] = project.words[page]; text[page] = project.text[page];
+        }
+      });
       if (book) { disposeLayout?.(); book.destroy(); book = null; }
       if (pdf) await pdf.destroy();
       imageUrls.forEach(url => URL.revokeObjectURL(url));
@@ -268,6 +274,7 @@
       updatePage();
       libraryId = openingLibraryId; openingLibraryId = null;
       if (libraryId) archiveNote(L('☁ Opened from My Library', '☁ Dibuka dari My Library')); else archiveBook();
+      readPictures(version);                                   // picture pages: their text by OCR, in the background
       return true;
     } catch (cause) {
       if (installed) sourcePdf = null;
@@ -491,6 +498,42 @@
     const target = FlipbookSpeech.lang(text) === 'en-US' ? 'id-ID' : 'en-US';
     const out = await translatePages({0: text}, target);
     return out['0'] || out[0];
+  }
+  // Pages that are only a picture (scans, magazine spreads): read their text
+  // with OCR in the background, from the page being read onward, so the
+  // highlighter and the audio book work there too. The pictures stay as they
+  // are; the text is kept with the project / My Library.
+  async function readPictures(version) {
+    if (!window.PdfOcrWords || !pdf) return;
+    const book = pdf, from = Math.min(...(visiblePages().length ? visiblePages() : [0]));
+    const todo = pageElements.map((_, index) => index).filter(index => PdfOcrWords.needs(bookWords, index))
+      .sort((a, b) => (a < from) - (b < from) || a - b);
+    if (!todo.length) return;
+    const gone = () => version !== loadVersion || book !== pdf;
+    let worker = null, found = 0;
+    try {
+      loading(L(`Reading text in pictures (OCR) 0 / ${todo.length}…`, `Membaca teks di gambar (OCR) 0 / ${todo.length}…`), 0);
+      worker = await PdfOcrWords.start('eng+ind');
+      for (let n = 0; n < todo.length; n++) {
+        if (gone()) return;
+        const index = todo[n], page = await book.getPage(index + 1);
+        const got = await worker.page(page, bookRatio);
+        page.cleanup();
+        if (gone()) return;
+        if (got) {
+          bookWords[String(index)] = got.lines; bookText[String(index)] = got.text; found++;
+          highlights?.refreshText(index); speech?.refreshText();
+        }
+        loading(L(`Reading text in pictures (OCR) ${n + 1} / ${todo.length}…`, `Membaca teks di gambar (OCR) ${n + 1} / ${todo.length}…`), (n + 1) / todo.length);
+      }
+      loading(null);
+      $('#load-status').textContent = found
+        ? L(`Text found in ${found} picture page${found === 1 ? '' : 's'} (OCR): highlighter and audio book work there now.`, `Teks ditemukan di ${found} halaman gambar (OCR): stabilo dan audio book sekarang bisa dipakai di sana.`)
+        : L('No readable text in the picture pages.', 'Tidak ada teks yang terbaca di halaman gambar.');
+      if (found && libraryId) archiveBook();                   // keep it in My Library
+    } catch (cause) {
+      if (!gone()) { loading(null); $('#load-status').textContent = L('Text in pictures skipped: ', 'Teks di gambar dilewati: ') + cause.message; }
+    } finally { worker?.stop(); }
   }
   // Short AI summary of one highlighted passage (Summarize tool in the preview).
   async function highlightSummary(text) {

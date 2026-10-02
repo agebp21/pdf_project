@@ -1607,6 +1607,8 @@
         return list.length - left.length;
       },
       close() { setMode(false); bar.remove(); },
+      // A page got its text later (OCR): forget what was worked out without it.
+      refreshText(index) { delete lineCache[index]; render(index); },
       bar: () => bar,
       store: () => JSON.parse(JSON.stringify(store)),
       ink: () => JSON.parse(JSON.stringify(ink)),
@@ -1848,12 +1850,12 @@
       });
       return out;
     };
-    const all = Object.keys(text).map(k => (text[k] || []).join(' ')).join(' ');
-    const lang = self.lang(all.slice(0, 20000));
+    const all = () => Object.keys(text).map(k => (text[k] || []).join(' ')).join(' ');
+    let lang = self.lang(all().slice(0, 20000));
     let on = false, speaking = false, run = 0, shown = '', wait = 0, marked = null;
     const button = options.button, cache = {};
     // Headers, footers and page numbers are not read.
-    const furniture = self.furniture(positions, text);
+    let furniture = self.furniture(positions, text);
     const wordsOf = index => cache[index] || (cache[index] = self.words(positions[String(index)], text[String(index)])
       .filter(w => !(w.box && furniture[index + ':' + w.line])));
     function paint() {
@@ -1999,12 +2001,14 @@
     });
     if (button) {
       // Books without any text (scans) have nothing to read.
-      button.hidden = !engine || !all.trim();
+      button.hidden = !engine || !all().trim();
       button.onclick = () => { if (on) stop(); else arm(); };
     }
     paint();
     return {
       active: () => on, speaking: () => speaking, arm, start: () => start(null), stop, lang: () => lang,
+      // Pages got their text later (OCR): read them, in the language they turned out to be.
+      refreshText() { Object.keys(cache).forEach(k => { delete cache[k]; }); furniture = self.furniture(positions, text); lang = self.lang(all().slice(0, 20000)); if (button) button.hidden = !engine || !all().trim(); },
       readFrom: (index, line, word) => start({page: index, line, word}),
       // The viewer calls this after every page turn (by the reader or by us).
       pageChanged() { if (on && speaking && options.visible().join(',') !== shown) read(null); },

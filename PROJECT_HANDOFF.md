@@ -1085,3 +1085,12 @@ Highlighter bar: alat baru ✏ `.book-hl-pen` (sesudah stabilo, sebelum penghapu
 Tes: tests/highlight-pen.test.cjs. E2E Chromium fullscreen: gambar lingkaran pink + garis biru, 2 path.
 
 - 2026-10-02: buka PDF -> progress bar MERAH di kotak status kiri (#load-status.is-loading, CSS var --load-progress) + persen di teks; tahap halaman 0–60 %, link 60–75 %, teks 75–100 %; `loading(null)` saat siap/gagal. Tidak ada bar di tengah halaman (permintaan user).
+
+
+## 2026-10-02 — Teks dari halaman gambar (OCR) untuk stabilo & audio book
+Halaman yang cuma gambar (scan, iklan majalah) sekarang dibaca teksnya otomatis di belakang setelah PDF terbuka, mulai dari halaman yang sedang dibaca. Gambar TIDAK diubah, file PDF tidak disentuh.
+- assets/pdf-ocr-words.js (baru): Tesseract.js 5.1.1 (jsDelivr, dimuat hanya kalau ada halaman gambar; perlu internet pertama kali), `needs(words, i)` (< 8 kata), `start(langs)` -> worker.page(pdfPage, bookRatio) render 2200px -> `toLines` ke format PdfWords (posisi via PdfLinks.toBox). Saring: kata conf < 55, baris rata-rata < 62, huruf/angka tunggal kecuali yakin (>= 88) atau a/I/&/$/%, halaman < 3 kata -> kosong.
+- flipbook.js `readPictures(version)`: OCR eng+ind, progress bar merah di kotak status ("Reading text in pictures (OCR) x / n"), isi bookWords/bookText, `highlights.refreshText(i)` + `speech.refreshText()` (layout.js: cache dibuang, furniture & bahasa dihitung ulang, tombol Audio book muncul kalau sebelumnya tidak ada teks). Selesai -> pesan jumlah halaman; My Library di-update. Proyek: teks OCR ikut disimpan (model words/text) dan dipakai lagi saat dibuka (tidak OCR ulang).
+- Bug yang sempat masuk lalu diperbaiki sebelum commit: `all` di FlipbookSpeech jadi fungsi (`all()`).
+Tes: tests/pdf-ocr-words.test.cjs. E2E majalah Grand Designs (212 hal, 29 halaman gambar): audio book membaca iklan hal 2–3 "Over 50 Styles Up To 40% OFF … templeandwebster.com.au/grand". Judul tipis putih di atas foto ("LOVE YOUR WALLS") bisa terlewat OCR.
+Belum: terjemahan buku penuh untuk halaman gambar (PdfTranslate memakai teks PDF; halaman gambar dilewati).
