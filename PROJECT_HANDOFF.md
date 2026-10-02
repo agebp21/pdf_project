@@ -1105,3 +1105,5 @@ Dulu stabilo di halaman edisi ID tetap memakai posisi/teks kata PDF asli (Englis
 - Validator: JS `validVersionWords`, Python `validate_version_words` (hanya bahasa/halaman yang ada di versions; entri rusak dibuang).
 - Edisi yang dibuat sebelum ini belum punya versionWords -> stabilo masih teks asli sampai diterjemahkan ulang.
 Tes: test_editions.py (versionWords). E2E: english8 -> ID, stabilo kalimat -> catatan "pulang dan menghitung bintang-bintang di atas laut yang tenang.", sorotan pas di kata Indonesia.
+
+- 2026-10-02: tombol "📚 My Library" (link) di editor diganti tombol `#save-library` "💾 Save My Library": klik = buku yang terbuka langsung disimpan ke arsip (archiveBook) + status "☁ Saved in My Library · Open My Library →"; belum login -> pesan minta masuk; belum ada buku -> buka library.html. E2E (member di-mock): 1 simpan per klik.

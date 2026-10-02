@@ -1034,7 +1034,7 @@ Belum: terjemahan buku penuh untuk halaman gambar (PdfTranslate memakai teks PDF
 
 ## 2026-10-02 — Badge "coming soon" kartu menu jadi abang teks putih
 
-Permintaan user: badge coming soon di kartu menu (`index.html` cardHTML soon) yang tadinya abu-abu (`#E7E5E4` + teks `#57534E`) diganti background abang `#DC2626` + teks putih. Satu baris inline style; tidak menyentuh label i18n (`card.coming`) maupun kartu horde.
+Permintaan user: badge coming soon di kartu menu (`index.html` cardHTML soon) yang tadinya abu-abu (`#E7E5E4` + teks `#57534E`) diganti background abang `#DC2626` + teks putih, lalu disamakan dengan warna badge "New!" (`#FF5C28` + teks putih, sesuai `bgBadge` di baris cardHTML biasa). Satu baris inline style; tidak menyentuh label i18n (`card.coming`) maupun kartu horde.
 Tes: `node --check` inline script index.html lolos, `git diff --check` bersih, HTTP 200 dan string badge merah terverifikasi tersaji dari server lokal. Bukan QA visual browser. File disentuh: `index.html` saja. Belum commit/push (menunggu arahan user).
 
 
@@ -1047,3 +1047,5 @@ Dulu stabilo di halaman edisi ID tetap memakai posisi/teks kata PDF asli (Englis
 - Validator: JS `validVersionWords`, Python `validate_version_words` (hanya bahasa/halaman yang ada di versions; entri rusak dibuang).
 - Edisi yang dibuat sebelum ini belum punya versionWords -> stabilo masih teks asli sampai diterjemahkan ulang.
 Tes: test_editions.py (versionWords). E2E: english8 -> ID, stabilo kalimat -> catatan "pulang dan menghitung bintang-bintang di atas laut yang tenang.", sorotan pas di kata Indonesia.
+
+- 2026-10-02: tombol "📚 My Library" (link) di editor diganti tombol `#save-library` "💾 Save My Library": klik = buku yang terbuka langsung disimpan ke arsip (archiveBook) + status "☁ Saved in My Library · Open My Library →"; belum login -> pesan minta masuk; belum ada buku -> buka library.html. E2E (member di-mock): 1 simpan per klik.

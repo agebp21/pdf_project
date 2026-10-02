@@ -342,6 +342,23 @@
       return libraryId;
     } catch (cause) { archiveNote('My Library: ' + cause.message, true); return null; }
   }
+  // 💾 Save My Library: the open book goes into the member's archive now
+  // (with a link to it); nothing open yet → the archive itself.
+  $('#save-library').onclick = async () => {
+    if (!sourcePdf) { location.href = 'library.html'; return; }
+    if (!(await archiveMember())) {
+      archiveNote(L('Log in first to save this book in My Library.', 'Masuk dulu untuk menyimpan buku ini ke My Library.'), true);
+      return;
+    }
+    const button = $('#save-library');
+    button.disabled = true;
+    try {
+      if (!(await archiveBook())) return;
+      $('#archive-status').textContent = L('☁ Saved in My Library · ', '☁ Tersimpan di My Library · ');
+      const open = document.createElement('a'); open.href = 'library.html'; open.textContent = L('Open My Library →', 'Buka My Library →');
+      $('#archive-status').appendChild(open);
+    } finally { button.disabled = false; }
+  };
   async function archiveExport(kind, blob, filename) {
     if (!(await archiveBook())) return;
     try {
