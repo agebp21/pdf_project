@@ -1035,7 +1035,7 @@ Belum: terjemahan buku penuh untuk halaman gambar (PdfTranslate memakai teks PDF
 ## 2026-10-02 — Badge "coming soon" kartu menu jadi abang teks putih
 
 Permintaan user: badge coming soon di kartu menu (`index.html` cardHTML soon) yang tadinya abu-abu (`#E7E5E4` + teks `#57534E`) diganti background abang `#DC2626` + teks putih, lalu disamakan dengan warna badge "New!" (`#FF5C28` + teks putih, sesuai `bgBadge` di baris cardHTML biasa). Satu baris inline style; tidak menyentuh label i18n (`card.coming`) maupun kartu horde.
-Tes: `node --check` inline script index.html lolos, `git diff --check` bersih, HTTP 200 dan string badge merah terverifikasi tersaji dari server lokal. Bukan QA visual browser. File disentuh: `index.html` saja. Belum commit/push (menunggu arahan user).
+Tes: `node --check` inline script index.html lolos, `git diff --check` bersih, HTTP 200 dan string badge merah terverifikasi tersaji dari server lokal. Verifikasi visual Chromium headless (1280x3200): badge "Coming soon" oranye vivid `#FF5C28` + teks putih, podo plek karo badge "New!"; kartu soon tetep pucet (overlay putih di atas konten, badge di atas overlay via z-index). Bukan QA visual browser asli. File disentuh: `index.html` saja. Belum commit/push (menunggu arahan user).
 
 
 ## 2026-10-02 — Stabilo di edisi terjemahan pakai teks terjemahan
@@ -1062,3 +1062,10 @@ pdf-translate.js:
 - Drop cap (huruf besar awal paragraf) digabung kembali ke paragrafnya sebelum diterjemahkan ("D"+"o you…").
 - Bullet: ■ □ ▫ ▸ ► ✓ dikenali.
 Tes: pdf-translate.test.cjs (kasus majalah). Visual majalah Grand Designs hal 17, 19, 96, 172: kolom rapi, tidak tumpang tindih, caption rata kanan.
+
+
+## 2026-10-02 — My Library hanya lewat tombol (tidak otomatis lagi)
+- Tombol #save-library: "📚 Open My Library" saat belum ada buku (klik -> library.html); "💾 Save My Library" begitu buku/source baru terbuka (`paintLibraryButton()` saat buka/gagal).
+- Buku baru TIDAK lagi otomatis masuk arsip saat dibuka, saat simpan proyek, export HTML, atau build APK/EXE. Hanya klik 💾 Save My Library yang memasukkannya. Setelah buku ada di arsip (disimpan lewat tombol atau dibuka dari My Library, libraryId ada), pembaruan otomatis tetap jalan: terjemahan, OCR, simpan proyek, export & build ikut ke buku itu.
+- Pesan belum login: "Log in to save books in My Library."
+E2E (member di-mock): mulai "Open My Library" -> buka PDF "Save My Library", 0 simpan otomatis -> klik -> 1 simpan.

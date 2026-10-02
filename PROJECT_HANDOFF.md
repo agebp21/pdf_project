@@ -1120,3 +1120,10 @@ pdf-translate.js:
 - Drop cap (huruf besar awal paragraf) digabung kembali ke paragrafnya sebelum diterjemahkan ("D"+"o you…").
 - Bullet: ■ □ ▫ ▸ ► ✓ dikenali.
 Tes: pdf-translate.test.cjs (kasus majalah). Visual majalah Grand Designs hal 17, 19, 96, 172: kolom rapi, tidak tumpang tindih, caption rata kanan.
+
+
+## 2026-10-02 — My Library hanya lewat tombol (tidak otomatis lagi)
+- Tombol #save-library: "📚 Open My Library" saat belum ada buku (klik -> library.html); "💾 Save My Library" begitu buku/source baru terbuka (`paintLibraryButton()` saat buka/gagal).
+- Buku baru TIDAK lagi otomatis masuk arsip saat dibuka, saat simpan proyek, export HTML, atau build APK/EXE. Hanya klik 💾 Save My Library yang memasukkannya. Setelah buku ada di arsip (disimpan lewat tombol atau dibuka dari My Library, libraryId ada), pembaruan otomatis tetap jalan: terjemahan, OCR, simpan proyek, export & build ikut ke buku itu.
+- Pesan belum login: "Log in to save books in My Library."
+E2E (member di-mock): mulai "Open My Library" -> buka PDF "Save My Library", 0 simpan otomatis -> klik -> 1 simpan.

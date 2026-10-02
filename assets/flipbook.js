@@ -276,11 +276,14 @@
         (linkCount ? ` ${linkCount} clickable link${linkCount === 1 ? '' : 's'} found` + (found.stats.toc ? ` (${found.stats.toc} from the table of contents).` : '.') : '');
       updatePage();
       libraryId = openingLibraryId; openingLibraryId = null;
-      if (libraryId) archiveNote(L('☁ Opened from My Library', '☁ Dibuka dari My Library')); else archiveBook();
+      // A new book goes into My Library only when the member presses 💾 Save My Library.
+      archiveNote(libraryId ? L('☁ Opened from My Library', '☁ Dibuka dari My Library') : '');
+      paintLibraryButton();
       readPictures(version);                                   // picture pages: their text by OCR, in the background
       return true;
     } catch (cause) {
       if (installed) sourcePdf = null;
+      paintLibraryButton();
       if (!installed) {
         newUrls.forEach(url => URL.revokeObjectURL(url));
         if (task) await task.destroy().catch(() => {});
@@ -323,7 +326,7 @@
   }
   // Save (or update) the open book in the member's archive. Never blocks the editor.
   async function archiveBook() {
-    if (!sourcePdf || !(await archiveMember())) { if (archiveUser === null) archiveNote(L('Log in to save to My Library automatically.', 'Masuk untuk menyimpan otomatis ke My Library.')); return null; }
+    if (!sourcePdf || !(await archiveMember())) { if (archiveUser === null) archiveNote(L('Log in to save books in My Library.', 'Masuk untuk menyimpan buku ke My Library.')); return null; }
     try {
       archiveNote(L('☁ Saving to My Library…', '☁ Menyimpan ke My Library…'));
       const project = await FlipbookExport.saveProject(model(), sourcePdf, () => {}, bookVersions);
@@ -342,6 +345,12 @@
       return libraryId;
     } catch (cause) { archiveNote('My Library: ' + cause.message, true); return null; }
   }
+  // 📚 Open My Library while nothing is open; 💾 Save My Library once a book
+  // (a new source) is open: the book goes into the member's archive only then.
+  function paintLibraryButton() {
+    $('#save-library').textContent = sourcePdf ? '💾 Save My Library' : '📚 Open My Library';
+  }
+  paintLibraryButton();
   // 💾 Save My Library: the open book goes into the member's archive now
   // (with a link to it); nothing open yet → the archive itself.
   $('#save-library').onclick = async () => {
@@ -359,8 +368,9 @@
       $('#archive-status').appendChild(open);
     } finally { button.disabled = false; }
   };
+  // Exports join the book in My Library only when the book is already there.
   async function archiveExport(kind, blob, filename) {
-    if (!(await archiveBook())) return;
+    if (!libraryId || !(await archiveBook())) return;
     try {
       const response = await fetch(`/api/library/${libraryId}/export`, {method:'POST', credentials:'same-origin',
         headers:{'Content-Type':'application/octet-stream', 'X-Kind': kind, 'X-Filename': encodeURIComponent(filename)}, body: blob});
@@ -797,7 +807,7 @@
         status(L('Saving the project…', 'Menyimpan proyek…'));
         const saved = await FlipbookExport.saveBlob(blob, outputName, saveHandle); progress(1);
         status(saved?L('Project saved where you chose.','Proyek tersimpan di lokasi pilihanmu.'):L('Project sent to the browser downloads.','Proyek dikirim ke download browser.'));
-        archiveBook();
+        if (libraryId) archiveBook();                          // only books already in My Library
         return;
       }
       const native = target === 'apk' || target === 'exe';
@@ -818,8 +828,8 @@
       buildConfig=await capabilities.json();
       if(!buildConfig[target])throw Error(L(target.toUpperCase()+' builds are not available on this computer yet.', 'Build '+target.toUpperCase()+' belum tersedia di komputer ini.'));
       status(L('Sending the book to the build service…', 'Mengirim buku ke layanan build…'));
-      // The server keeps the build in the member's archive too.
-      const archived = await archiveBook();
+      // The server keeps the build with the book in My Library (when it is there).
+      const archived = libraryId ? await archiveBook() : null;
       const buildHeaders = {'Content-Type':'application/zip','X-Build-Token':buildConfig.token};
       if (archived) buildHeaders['X-Library-Book'] = archived;
       const sent = await FlipbookExport.upload('/api/build/'+target, bundle, buildHeaders, step(.12, .2));
