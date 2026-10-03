@@ -419,13 +419,19 @@
       if (driveConfig && window.DrivePicker) DrivePicker.preload().catch(() => {});
     } catch (e) { driveConfig = null; }
   }
+  // While Google's file chooser is open, the Add source dialog steps aside
+  // (it would cover the chooser); cancelling brings it back.
   async function fromDrive() {
     try {
-      const file = await DrivePicker.pick(driveConfig, text => addStatus(text));
-      if (!file) return;
+      const file = await DrivePicker.pick(driveConfig, text => {
+        if (/^Choose a file in Google Drive/.test(text)) { $('#add-dialog').hidden = true; return; }
+        addStatus(text);
+        if (text && $('#add-dialog').hidden) $('#load-status').textContent = text;   // downloading: shown beside the book
+      });
+      if (!file) { if ($('#add-dialog').hidden) showAdd(true); return; }
       pendingTitle = file.name.replace(/\.[^.]+$/, '').slice(0, 200);
       await openSources([file]);
-    } catch (cause) { addStatus(cause.message, true); }
+    } catch (cause) { showAdd(true); addStatus(cause.message, true); }
   }
   // A page's PDF lines as paragraphs (a line runs on unless it ends a sentence,
   // is short, or starts a list item) — what the translator reads.

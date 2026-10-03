@@ -418,6 +418,10 @@ Fixed exposed-but-blocked save picker: SecurityError/NotSupportedError now fall 
 
 Tests: save-location regressions; qa-editor DOM flow now includes native APK/EXE submit/status/save mocks with fresh-token assertions; actual PSJ 88-page PDF load/project/HTML flow passed; real localhost Flutter builds/downloads for both targets passed; archive integrity assertions passed; export suite, 16 Python tests, JS syntax and diff checks passed. No actual Android install or Windows app/browser UI launch verified; build success is not device-runtime QA. Files touched: assets/flipbook.js, assets/flipbook-export.js, tests/qa-editor.cjs, tests/save-location.test.cjs, handoff/team notes. No commit/push by this session.
 
+### 3 Oktober 2026 - Rencana hosting VPS myflipbookpro.com (Ubuntu)
+
+Audit: tidak perlu ubah kode untuk domain kedua. `trusted()` menerima set `public_hosts` (multi-domain OK); cookie session host-only (tanpa `Domain=`) jadi login aman lintas domain; `base_url()` ngikut Host request bila env kosong; throttle login pakai `X-Forwarded-For` di mode hosting; capabilities `exe` sudah false di non-Windows (build EXE mustahil di Linux). README bagian Hosting ditambah runbook VPS: apt (python3, caddy, ufw, libreoffice), Caddyfile reverse proxy 127.0.0.1:8080 (HTTPS otomatis), systemd unit (`--public-host myflipbookpro.com`, bind tetap loopback), ufw hanya 80/443, `.env` dari `.env.example` (jangan commit), tambah origin Google + URL callback payment untuk domain baru, satu domain kanonis di `MYFLIPBOOK_BASE_URL`. APK di Linux butuh Flutter + Android SDK (opsional). Belum dieksekusi di VPS (menunggu user); belum commit/push.
+
 ### 22 September 2026 - Server mode LAN (--host) untuk akses PC lain
 
 User mau PC lain membuka app dari server di PC ini. `server.py` sebelumnya bind 127.0.0.1 saja dan `trusted()` menolak Host non-loopback. Perubahan (file: `server.py`, `converter.html`, `tests/test_build.py`):
@@ -1136,3 +1140,17 @@ E2E (member di-mock): mulai "Open My Library" -> buka PDF "Save My Library", 0 s
 - Proyek (My Library, .smflipbook) yang membawa words/text/links: tidak membaca ulang link & teks seluruh PDF (dipakai dari proyek).
 - Ukur (Routledge 600 hal): PDF baru bisa dibaca ±10 s (dulu menunggu semua halaman digambar); proyek ±0,4 s. Halaman yang dibuka langsung tergambar.
 - Catatan: proyek lama memakai teks dari proyek (perbaikan ekstraksi baru seperti judul huruf renggang tidak berlaku sampai PDF dibuka ulang sebagai PDF baru).
+
+### 2026-10-03 — AI Summarizer dibuka untuk paket Free
+
+Permintaan user: fitur AI Summarizer (ringkasan, terjemahan, podcast di notebook.html) jangan menyalahkan/menolak user Free. Akar masalah: 5 route AI (`/api/summary`, `/api/translate`, `/api/translate-free`, `/api/highlight-summary`, `/api/podcast/script`) digate entitlement `export` (= Pro/Business), jadi user Free dapat 402 "Fitur ini butuh paket Pro atau Business".
+Perubahan: route AI pindah ke entitlement baru `ai` (`server.py` mapping); `ai` ditambahkan ke semua paket (`accounts.py` Free/Pro/Business) + fitur "AI Summarizer" di daftar paket Free (ID/EN); catatan UI notebook yang mengklaim "Fitur AI untuk paket Pro/Business" diperbarui. Login tetap wajib (anonim 401), ekspor HTML/APK/EXE tetap Pro/Business. Tes baru `test_ai_summarizer_open_for_free` (Free lolos gate di 5 route, capabilities memuat `ai`, anonim tetap 401).
+Catatan biaya jujur (keputusan owner): tiap panggil AI membakar kredit Sumopod; proteksi yang tersisa adalah wajib login + token sesi + throttle. Bila disalahgunakan, opsi berikut: batasi kuota Free per hari/akun (belum ada infrastruktur kuota).
+Verifikasi: 98 Python OK, live check Free → entitlements `['office','ai']`, POST /api/summary body kosong → 400 (lolos gate) bukan 402. Belum commit/push.
+
+### 2026-10-03 — Fitur AI dimatikan selama belum ada payment gateway
+
+Tindak lanjut keputusan owner (AI Summarizer dibuka untuk Free, tapi kredit AI terbakar sia-sia bila tidak bisa ditagih): route AI (`/api/summary`, `/api/translate`, `/api/translate-free`, `/api/highlight-summary`, `/api/podcast/script`) kini juga dicek `payments_live()` di `entitlement_error` — bila kedua provider `Disabled` (tidak ada key payment dan bukan mode Mock/dev) → 503 'Fitur AI belum aktif di server ini (pembayaran belum disiapkan).' + padanan Inggris di `messages_en.py`. Otomatis nyala lagi begitu key diisi (tanpa ubah kode). `translate-free` (Argos offline, nol biaya) ikut digate demi konsistensi satu pesan. Anonim tetap 401, ekspor tetap Pro/Business.
+Tes baru `test_ai_disabled_until_payments_exist` (5 route → 503 + kata 'pembayaran'); tes Free-lolos-gate tetap hijau (Mock dihitung aktif). 99 Python OK. Belum commit/push.
+
+- 2026-10-03: Add source -> Google Drive: dialog "Make a flipbook" disembunyikan saat jendela pemilih file Google Drive terbuka (dulu menutupi picker); batal -> dialog muncul lagi; status unduhan tampil di kotak status; error -> dialog muncul dengan pesan. (Domain live: myflipbookpro.com; API key referrer + OAuth origin sudah ditambah user, Picker jalan.)

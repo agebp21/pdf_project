@@ -360,6 +360,10 @@ Fixed exposed-but-blocked save picker: SecurityError/NotSupportedError now fall 
 
 Tests: save-location regressions; qa-editor DOM flow now includes native APK/EXE submit/status/save mocks with fresh-token assertions; actual PSJ 88-page PDF load/project/HTML flow passed; real localhost Flutter builds/downloads for both targets passed; archive integrity assertions passed; export suite, 16 Python tests, JS syntax and diff checks passed. No actual Android install or Windows app/browser UI launch verified; build success is not device-runtime QA. Files touched: assets/flipbook.js, assets/flipbook-export.js, tests/qa-editor.cjs, tests/save-location.test.cjs, handoff/team notes. No commit/push by this session.
 
+### 3 Oktober 2026 - hosting myflipbookpro.com di VPS Ubuntu (alias penuh)
+
+User mau domain myflipbookpro.com nimbrung di VPS (Ubuntu, root ada, DNS sudah). Hasil audit: nol perubahan kode — `--public-host` menerima banyak domain; cookie/session/throttle/callback aman multi-domain; EXE otomatis nonaktif di Linux (APK butuh Flutter+SDK bila mau). Yang dikerjakan sesi ini: runbook deploy VPS di README (Caddyfile, systemd unit, ufw, .env, origin Google, callback payment, domain kanonis) + catatan handoff ini. File lain milik sesi lain tidak disentuh. Belum dieksekusi di VPS; belum commit/push. Koordinasi: yang pegang README/server harap tahu bagian Hosting bertambah.
+
 ### 22 September 2026 - server --host 0.0.0.0 untuk akses LAN
 
 Tujuan: PC lain membuka app dari server PC ini. Yang dikerjakan: flag `--host` di `server.py` (default loopback tidak berubah), `trusted()` menerima IP/hostname mesin sendiri dengan port cocok + tolak nama asing/port salah (anti DNS-rebinding dipertahankan), pesan error converter pakai `location.host` dinamis, 5 tes baru `LanHostTests`, README ada panduan firewall. File milik sesi lain tidak disentuh (hanya append docs ini + handoff + README). Hasil: 21 Python OK, node --check OK, E2E LAN nyata 200 via 192.168.18.16. Belum: uji browser dari PC lain beneran, belum commit/push. Koordinasi: sesi lain yang pegang converter/server harap perhatikan `trusted()` baru bila menambah endpoint.
@@ -1078,3 +1082,39 @@ E2E (member di-mock): mulai "Open My Library" -> buka PDF "Save My Library", 0 s
 - Proyek (My Library, .smflipbook) yang membawa words/text/links: tidak membaca ulang link & teks seluruh PDF (dipakai dari proyek).
 - Ukur (Routledge 600 hal): PDF baru bisa dibaca ±10 s (dulu menunggu semua halaman digambar); proyek ±0,4 s. Halaman yang dibuka langsung tergambar.
 - Catatan: proyek lama memakai teks dari proyek (perbaikan ekstraksi baru seperti judul huruf renggang tidak berlaku sampai PDF dibuka ulang sebagai PDF baru).
+
+
+## 2026-10-03 — Akses SSH VPS: root password ditolak, login via SSH key
+
+Laporan: password root lama (`k0YMZ;...`) ditolak (`AuthenticationException`), dan user `deploy` + password yang sama juga ditolak. Bukan gangguan jaringan. Cara login deploy ada di `.md` nusantaramahayatra: root login via SSH key `C:\Users\SARVAMAYA-3\.ssh\id_ed25519` (bukan password) — `E:\Nusantara_Mahayatra_LandingPage\CODEX_VPS_GUIDE.md` bagian 1-2 (dibaca saja, tidak diubah).
+Verifikasi: login key sebagai root OK (`whoami` = root); `/opt/pdf_project` + service `myflipbook` (active) utuh. Jangan nebak password berulang (fail2ban aktif di VPS). File disentuh: tidak ada (skrip cek hanya di TEMP).
+
+
+## 2026-10-03 — myflipbookpro.com LIVE (HTTPS, certbot)
+
+User flip A record apex → `38.103.170.218` (www CNAME ngikut; email ora dinggo, Google Console ora keganggu). Google + authoritative DNS propagasi duluan; ISP lokal isih cache lawas (normal, TTL 14400).
+- `certbot --nginx -d myflipbookpro.com -d www.myflipbookpro.com` sukses (exp 2027-01-01, auto-renew terjadwal); deploy nang site file `myflipbookpro` dewe (2 situs liyo ora disentuh).
+- Verifikasi rantai penuh (SNI + chain CA sistem): sertifikat valid kanggo myflipbookpro.com, `HTTP/1.1 200 OK` + body 27 KB via nginx → Python app.
+- Sisa user: daftar origin `https://myflipbookpro.com` nang Google Console + URL callback payment; isi key Midtrans/Lemon nek paywall arep iso bayar (saiki NONAKTIF). File disentuh: tidak ada (aksi nang VPS). Belum commit/push.
+
+
+## 2026-10-03 — Login Google live OK, payment belum aktif
+
+User tambah origin `https://myflipbookpro.com` nang OAuth client sing ono (ora gawe anyar); redirect URI kosong (app popup, ora butuh). E2E live: login Google sukses, badge "✓ Verified · Google" + plan Free. Banner "Online payment is not enabled on this server yet" = bener (ora ono key Tripay/Midtrans/Lemon nang `.env` VPS). Langkah berikut: isi key payment provider + daftarke callback URL nang dashboard provider. File disentuh: tidak ada. Belum commit/push.
+
+
+## 2026-10-03 — DEPLOY.md: prosedur update myflipbookpro + cara login kanggo AI liyo
+
+Permintaan user: AI liyo (Claude, kanca-kancane) iso moco prosedur update + ora salah login. File baru `DEPLOY.md`: (1) login VPS wajib SSH key (dudu password; password lawas mati; ojo retry buta mergo fail2ban), (2) peta sing ora oleh disentuh (2 situs nginx + MySQL + PM2), (3) langkah update (git pull, restart service, verifikasi curl --resolve, certbot mung nek DNS wes pindah), (4) watesan (RAM/disk, tanpa Flutter/APK, EXE mustahil, pembayaran nonaktif). Diverifikasi sek: service active+enabled, nginx OK, `.env` 600; DNS isih nunjuk hosting lawas. File disentuh: `DEPLOY.md` (baru). Belum commit/push (menunggu arahan user).
+
+
+## 2026-10-03 — AI Summarizer dibuka untuk Free
+
+Permintaan user: fitur AI Summarizer jangan menyalahkan user Free. Akar: 5 route AI digate `export` (= Pro/Business) → Free dapat 402. Perbaikan: entitlement baru `ai` di semua paket + fitur Free di halaman akun + catatan notebook diperbarui; login tetap wajib, ekspor tetap Pro/Business. Tes baru `test_ai_summarizer_open_for_free`; 98 Python OK; live check Free → 400 bukan 402. Peringatan biaya: tiap panggil AI bakar kredit Sumopod; proteksi tinggal login+token+throttle. File disentuh: `server.py`, `accounts.py`, `notebook.html`, `tests/test_accounts.py`. Belum commit/push.
+
+
+## 2026-10-03 — AI dimatikan selama payment belum ada
+
+Tindak lanjut: proteksi agar kredit AI tidak terbakar saat server tidak bisa menagih. `payments_live()` (provider IDR/USD ada yang bukan `Disabled`; Mock/dev dihitung aktif) + gate di `entitlement_error` → 503 pesan jelas ID/EN bila keduanya `Disabled`. Berlaku untuk 5 route AI sekaligus (termasuk translate-free yang gratis, demi satu pesan konsisten). Tes baru `test_ai_disabled_until_payments_exist`; 99 Python OK. File disentuh: `server.py`, `messages_en.py`, `tests/test_accounts.py`. Belum commit/push.
+
+- 2026-10-03: Add source -> Google Drive: dialog "Make a flipbook" disembunyikan saat jendela pemilih file Google Drive terbuka (dulu menutupi picker); batal -> dialog muncul lagi; status unduhan tampil di kotak status; error -> dialog muncul dengan pesan. (Domain live: myflipbookpro.com; API key referrer + OAuth origin sudah ditambah user, Picker jalan.)
