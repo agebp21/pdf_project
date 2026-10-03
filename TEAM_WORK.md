@@ -1118,3 +1118,16 @@ Permintaan user: fitur AI Summarizer jangan menyalahkan user Free. Akar: 5 route
 Tindak lanjut: proteksi agar kredit AI tidak terbakar saat server tidak bisa menagih. `payments_live()` (provider IDR/USD ada yang bukan `Disabled`; Mock/dev dihitung aktif) + gate di `entitlement_error` → 503 pesan jelas ID/EN bila keduanya `Disabled`. Berlaku untuk 5 route AI sekaligus (termasuk translate-free yang gratis, demi satu pesan konsisten). Tes baru `test_ai_disabled_until_payments_exist`; 99 Python OK. File disentuh: `server.py`, `messages_en.py`, `tests/test_accounts.py`. Belum commit/push.
 
 - 2026-10-03: Add source -> Google Drive: dialog "Make a flipbook" disembunyikan saat jendela pemilih file Google Drive terbuka (dulu menutupi picker); batal -> dialog muncul lagi; status unduhan tampil di kotak status; error -> dialog muncul dengan pesan. (Domain live: myflipbookpro.com; API key referrer + OAuth origin sudah ditambah user, Picker jalan.)
+
+
+## 2026-10-03 — Panel admin (backend terpisah)
+- admin_server.py (BARU, proses sendiri, default 127.0.0.1:8091) + admin/index.html. Login admin sendiri, bukan akun member: ADMIN_USERNAME + ADMIN_PASSWORD_HASH di .env (`python admin_server.py --hash-password` -> cetak baris hash; password >= 12 karakter). Sesi di memori 12 jam, cookie mf_admin HttpOnly SameSite=Strict (+Secure lewat --secure atau --proxy + X-Forwarded-Proto https), 5 gagal / 15 menit per IP -> 429, POST wajib JSON + header X-Admin: 1, CSP/X-Frame-Options DENY, noindex.
+- Hanya MEMBACA database (SQLite mode=ro): Ringkasan (member, berbayar aktif, baru 7/30 hari, verifikasi, pendapatan per mata uang, paket, status order, buku & ukuran arsip, ekspor, pengunjung), Member (cari, halaman 50, detail: buku, order, sesi aktif, kunjungan), Upload (buku My Library semua member: judul, pemilik, halaman, ukuran, ekspor — isi buku tidak dibuka), Pengunjung (7/30/90/365 hari: per hari, halaman, asal, perangkat), Server (kunci .env terisi/belum tanpa isi, disk, ukuran DB/arsip).
+- visits.py (BARU) + server.py `count_visit`: setiap buka halaman PAGES dicatat di .data/visits.sqlite3 (waktu, halaman, perangkat, host asal, id member bila login). TANPA IP/UA: pengunjung = hash(IP+UA+rahasia harian) 16 hex; bot tidak dihitung; data > 400 hari dihapus. privacy.html (ID+EN) diberi poin "Statistik kunjungan".
+- Tes: tests/test_admin.py (login wajib & terpisah, password member ditolak, X-Admin, throttle, angka, read-only, tidak ada IP/kunci bocor, situs menghitung kunjungan & abaikan bot).
+Pasang di VPS (belum dilakukan, butuh akses VPS):
+  1) .env: ADMIN_USERNAME=... dan ADMIN_PASSWORD_HASH=... (dari --hash-password di VPS).
+  2) systemd service kedua: `python admin_server.py --port 8091 --proxy` (WorkingDirectory sama dengan MyFlipbook, user sama supaya bisa baca .data).
+  3) nginx: server_name admin.myflipbookpro.com -> proxy_pass http://127.0.0.1:8091 dengan X-Forwarded-For/Proto + SSL (certbot). Opsional: batasi IP (allow/deny) atau basic auth tambahan.
+  4) DNS: A record admin.myflipbookpro.com -> IP VPS.
+  Alternatif tanpa subdomain: SSH tunnel `ssh -L 8091:127.0.0.1:8091 root@vps` lalu buka http://localhost:8091.

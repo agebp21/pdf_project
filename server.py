@@ -47,6 +47,7 @@ import messages_en
 import free_translate
 import book_seal
 import invoice
+import visits
 
 ROOT = Path(__file__).resolve().parent
 BUILD = ROOT / '.build'
@@ -73,6 +74,7 @@ EXPORT_TEMPLATES = {'assets/export/index.html', 'assets/export/viewer.js', 'asse
 ACCOUNTS = None
 ACCOUNTS_LOCK = threading.Lock()
 LIBRARY = None
+VISITS = None
 
 
 def load_env(path):
@@ -99,6 +101,26 @@ def load_env(path):
 
 def hosted():
     return bool(CONFIG['public_hosts'])
+
+
+def payments_live():
+    """True bila minimal satu gateway pembayaran aktif (asli atau Mock dev).
+
+    Fitur AI membakar kredit API per panggil, jadi dimatikan selama server
+    tidak bisa menagih (kedua provider Disabled) — otomatis nyala lagi
+    begitu key payment diisi, tanpa ubah kode.
+    """
+    try:
+        store = get_accounts()
+    except Exception:
+        return False
+    for currency in accounts.CURRENCIES:
+        try:
+            if store.provider_for(currency).name != 'none':
+                return True
+        except Exception:
+            continue
+    return False
 
 
 def get_accounts():
@@ -142,6 +164,16 @@ def get_library():
         if LIBRARY is None or LIBRARY.store is not store:
             LIBRARY = library.Library(store, store.path.parent)
         return LIBRARY
+
+
+def get_visits():
+    """Page-view statistics for the admin panel, next to the account database."""
+    global VISITS
+    folder = get_accounts().path.parent
+    with ACCOUNTS_LOCK:
+        if VISITS is None or VISITS.path.parent != folder:
+            VISITS = visits.Visits(folder / 'visits.sqlite3')
+        return VISITS
 
 
 def validate_manifest(data):
@@ -1656,6 +1688,15 @@ class Handler(SimpleHTTPRequestHandler):
         secure = '; Secure' if CONFIG['secure'] else ''
         return f'{SESSION_COOKIE}={token or ""}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}{secure}'
 
+    def count_visit(self, page):
+        """One page view for the admin statistics (never stops the page)."""
+        try:
+            user = self.current_user() if self.session_token() else None
+            get_visits().record('/' + page, self.client_ip(), self.headers.get('User-Agent', ''), self.headers.get('Referer', ''),
+                                user['id'] if user else None, own_hosts=CONFIG['public_hosts'] | {'localhost', '127.0.0.1'})
+        except Exception:
+            pass
+
     def client_ip(self):
         forwarded = self.headers.get('X-Forwarded-For', '') if hosted() else ''
         return forwarded.split(',')[0].strip() or self.client_address[0]
@@ -2044,6 +2085,8 @@ class Handler(SimpleHTTPRequestHandler):
         user = self.current_user()
         if not user:
             return 401, 'Silakan masuk dulu untuk memakai fitur ini.'
+        if feature == 'ai' and not payments_live():
+            return 503, 'Fitur AI belum aktif di server ini (pembayaran belum disiapkan).'
         if feature not in user['entitlements']:
             plan = 'Business' if feature == 'exe' else 'Pro atau Business'
             return 402, f'Fitur ini butuh paket {plan}. Upgrade di halaman Harga/Akun.'
@@ -2146,6 +2189,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(page)
             return
+        if relative in PAGES and relative not in SOON_PAGES:
+            self.count_visit(relative)
         if relative in EXPORT_TEMPLATES:
             denied = self.entitlement_error('export')
             if denied:
@@ -2290,7 +2335,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(cause.status, {'error': str(cause)})
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
-        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'export' if self.path in ('/api/podcast/script', '/api/translate', '/api/translate-free', '/api/summary', '/api/highlight-summary') else match[1] if match else None
+        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'ai' if self.path in ('/api/podcast/script', '/api/translate', '/api/translate-free', '/api/summary', '/api/highlight-summary') else match[1] if match else None
         denied = feature and self.entitlement_error(feature)
         if denied:
             self.send_json(denied[0], {'error': denied[1]})

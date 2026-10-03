@@ -1,0 +1,241 @@
+<!doctype html>
+<html lang="id">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex, nofollow">
+<title>MyFlipbook Admin</title>
+<style>
+  :root{--bg:#f6f1e7;--card:#fffdf8;--ink:#1f2a26;--muted:#6b756f;--line:#e4dccb;--pine:#1a3c34;--accent:#ff5a1f;--good:#2f9e44;--warn:#e8590c}
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--ink);font:14px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif}
+  header{display:flex;align-items:center;gap:16px;padding:14px 24px;background:var(--pine);color:#fff}
+  header b{font-size:16px;letter-spacing:.02em}
+  header nav{display:flex;gap:4px;flex-wrap:wrap;flex:1}
+  header nav button{background:transparent;border:0;color:#cfe3dc;padding:8px 12px;border-radius:8px;cursor:pointer;font:inherit}
+  header nav button[aria-current="true"]{background:#ffffff1f;color:#fff;font-weight:600}
+  header .out{background:#ffffff1a;border:1px solid #ffffff33;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit}
+  main{max-width:1200px;margin:0 auto;padding:24px 16px 60px}
+  h2{margin:0 0 14px;font-size:20px}
+  .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:22px}
+  .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
+  .card .n{font-size:26px;font-weight:700;color:var(--pine)}
+  .card .l{color:var(--muted);font-size:12.5px}
+  .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px;overflow-x:auto}
+  .panel h3{margin:0 0 10px;font-size:15px}
+  table{border-collapse:collapse;width:100%;font-size:13px}
+  th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
+  th{color:var(--muted);font-weight:600;font-size:12px;white-space:nowrap}
+  tr.click{cursor:pointer} tr.click:hover td{background:#f3ecdf}
+  .tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#eee6d6;color:#5b5446}
+  .tag.pro,.tag.paid{background:#d3f9d8;color:#2b8a3e} .tag.business{background:#e5dbff;color:#5f3dc4}
+  .tag.pending{background:#fff3bf;color:#a76b00} .tag.failed,.tag.expired{background:#ffe3e3;color:#c92a2a}
+  .row{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+  input[type=search],input[type=text],input[type=password]{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit;background:#fff;min-width:240px}
+  button.btn{background:var(--pine);color:#fff;border:0;border-radius:10px;padding:9px 16px;font:inherit;font-weight:600;cursor:pointer}
+  button.ghost{background:#fff;color:var(--pine);border:1px solid var(--line);border-radius:10px;padding:7px 12px;font:inherit;cursor:pointer}
+  .muted{color:var(--muted)} .err{color:#c92a2a;min-height:20px}
+  .bars{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:8px}
+  .bars div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:1px;position:relative}
+  .bars div span{position:absolute;inset:auto 0 0 0;background:var(--pine);border-radius:3px 3px 0 0}
+  .axis{display:flex;justify-content:space-between;color:var(--muted);font-size:11px;margin-top:4px}
+  .legend{font-size:12px;color:var(--muted)} .legend i{display:inline-block;width:10px;height:10px;border-radius:2px;margin:0 4px 0 10px;vertical-align:-1px}
+  .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
+  #login{max-width:360px;margin:80px auto;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px}
+  #login h1{margin:0 0 4px;font-size:20px} #login input{width:100%;margin:6px 0 10px;min-width:0} #login button{width:100%}
+  dialog{border:1px solid var(--line);border-radius:16px;padding:0;max-width:900px;width:calc(100% - 32px);background:var(--card)}
+  dialog .head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+  dialog .body{padding:16px 18px;max-height:75vh;overflow:auto}
+  .yes{color:var(--good);font-weight:600} .no{color:#adb5bd}
+  @media (max-width:640px){header{flex-wrap:wrap;padding:12px 16px} input[type=search]{min-width:0;flex:1}}
+</style>
+</head>
+<body>
+<div id="login" hidden>
+  <h1>MyFlipbook Admin</h1>
+  <p class="muted">Masuk dengan akun admin (bukan akun member).</p>
+  <form id="login-form">
+    <label>Username<input id="username" type="text" autocomplete="username" required></label>
+    <label>Password<input id="password" type="password" autocomplete="current-password" required></label>
+    <p class="err" id="login-error"></p>
+    <button class="btn" type="submit">Masuk</button>
+  </form>
+</div>
+
+<div id="app" hidden>
+  <header>
+    <b>MyFlipbook Admin</b>
+    <nav>
+      <button data-tab="overview" aria-current="true">Ringkasan</button>
+      <button data-tab="members">Member</button>
+      <button data-tab="uploads">Upload</button>
+      <button data-tab="visits">Pengunjung</button>
+      <button data-tab="server">Server</button>
+    </nav>
+    <button class="out" id="logout">Keluar</button>
+  </header>
+  <main>
+    <section data-view="overview"></section>
+    <section data-view="members" hidden>
+      <h2>Member</h2>
+      <div class="row"><input type="search" id="member-q" placeholder="Cari email atau nama…"><span class="muted" id="member-count"></span></div>
+      <div class="panel"><table id="member-table"></table></div>
+      <div class="row"><button class="ghost" id="member-prev">← Sebelumnya</button><button class="ghost" id="member-next">Berikutnya →</button></div>
+    </section>
+    <section data-view="uploads" hidden>
+      <h2>Data yang diupload member (My Library)</h2>
+      <p class="muted">Judul, ukuran dan hasil ekspor saja — isi buku member tetap terkunci dan tidak dibuka di sini.</p>
+      <div class="row"><input type="search" id="upload-q" placeholder="Cari judul atau email…"><span class="muted" id="upload-count"></span></div>
+      <div class="panel"><table id="upload-table"></table></div>
+    </section>
+    <section data-view="visits" hidden>
+      <h2>Pengunjung</h2>
+      <div class="row">
+        <button class="ghost" data-days="7">7 hari</button><button class="ghost" data-days="30">30 hari</button>
+        <button class="ghost" data-days="90">90 hari</button><button class="ghost" data-days="365">1 tahun</button>
+      </div>
+      <div id="visit-view"></div>
+    </section>
+    <section data-view="server" hidden></section>
+  </main>
+</div>
+
+<dialog id="detail"><div class="head"><b id="detail-title"></b><button class="ghost" id="detail-close">Tutup</button></div><div class="body" id="detail-body"></div></dialog>
+
+<script>
+'use strict';
+const $ = s => document.querySelector(s);
+const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+const num = n => Number(n || 0).toLocaleString('id-ID');
+const date = ts => ts ? new Date(ts * 1000).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) : '—';
+const when = ts => ts ? new Date(ts * 1000).toLocaleString('id-ID', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : '—';
+const size = b => { b = Number(b || 0); return b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : b >= 1e3 ? Math.round(b / 1e3) + ' KB' : b + ' B'; };
+const money = (cur, n) => cur === 'USD' ? '$' + (n / 100).toLocaleString('en-US', {minimumFractionDigits: 2}) : 'Rp ' + num(n);
+const PLAN = {free: 'Free', pro: 'Pro', business: 'Business'};
+
+async function api(path, options = {}) {
+  const r = await fetch(path, Object.assign({credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-Admin': '1'}}, options));
+  const data = await r.json().catch(() => ({}));
+  if (r.status === 401 && path !== '/api/login') { show(false); throw Error(data.error || 'Masuk dulu.'); }
+  if (!r.ok) throw Error(data.error || 'Gagal (' + r.status + ').');
+  return data;
+}
+function show(signedIn) { $('#login').hidden = signedIn; $('#app').hidden = !signedIn; if (signedIn) open('overview'); }
+
+$('#login-form').onsubmit = async event => {
+  event.preventDefault(); $('#login-error').textContent = '';
+  try { await api('/api/login', {method: 'POST', body: JSON.stringify({username: $('#username').value, password: $('#password').value})}); $('#password').value = ''; show(true); }
+  catch (e) { $('#login-error').textContent = e.message; }
+};
+$('#logout').onclick = async () => { await api('/api/logout', {method: 'POST', body: '{}'}).catch(() => {}); show(false); };
+
+document.querySelectorAll('header nav button').forEach(b => b.onclick = () => open(b.dataset.tab));
+function open(tab) {
+  document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.tab === tab)));
+  document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== tab; });
+  ({overview: loadOverview, members: () => loadMembers(1), uploads: loadUploads, visits: () => loadVisits(30), server: loadServer})[tab]()
+    .catch(e => { document.querySelector(`[data-view="${tab}"]`).insertAdjacentHTML('afterbegin', `<p class="err">${esc(e.message)}</p>`); });
+}
+const card = (n, l) => `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+
+async function loadOverview() {
+  const d = await api('/api/overview'), v = d.visits || {today: {}, daily: []};
+  const revenue = Object.entries(d.revenue).map(([cur, r]) => money(cur, r.total)).join(' · ') || 'Rp 0';
+  $('[data-view="overview"]').innerHTML = `<h2>Ringkasan</h2>
+    <div class="grid">
+      ${card(num(d.members), 'Member terdaftar')}${card(num(d.paid), 'Member berbayar aktif')}
+      ${card(num(d.new7) + ' / ' + num(d.new30), 'Member baru 7 / 30 hari')}${card(num(d.verified), 'Email terverifikasi')}
+      ${card(revenue, 'Pendapatan (order lunas)')}${card(num(v.today.visitors) + ' / ' + num(v.today.views), 'Pengunjung / tampilan hari ini')}
+      ${card(num(v.visitors), 'Pengunjung 30 hari')}${card(num(d.books), 'Buku di My Library')}
+      ${card(size(d.bookBytes), 'Ukuran arsip member')}${card(num(d.exports), 'Hasil ekspor tersimpan')}
+    </div>
+    <div class="two">
+      <div class="panel"><h3>Pengunjung 30 hari</h3>${bars(v.daily)}</div>
+      <div class="panel"><h3>Paket member</h3><table>${Object.entries(d.plans).map(([p, n]) => `<tr><td><span class="tag ${esc(p)}">${esc(PLAN[p] || p)}</span></td><td>${num(n)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada member</td></tr>'}</table>
+        <h3 style="margin-top:14px">Order</h3><table>${Object.entries(d.orders).map(([s, n]) => `<tr><td><span class="tag ${esc(s)}">${esc(s)}</span></td><td>${num(n)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada order</td></tr>'}</table></div>
+    </div>`;
+}
+function bars(daily) {
+  if (!daily || !daily.length) return '<p class="muted">Belum ada data pengunjung.</p>';
+  const max = Math.max(1, ...daily.map(d => d.views));
+  return `<div class="bars">${daily.map(d => `<div style="height:${d.views / max * 100}%" title="${esc(d.day)}: ${d.visitors} pengunjung, ${d.views} tampilan"><span style="height:${d.views ? d.visitors / d.views * 100 : 0}%"></span></div>`).join('')}</div>
+    <div class="axis"><span>${esc(daily[0].day)}</span><span>${esc(daily[daily.length - 1].day)}</span></div>
+    <div class="legend"><i style="background:var(--pine)"></i>pengunjung unik<i style="background:var(--accent)"></i>tampilan halaman</div>`;
+}
+
+let memberPage = 1, memberTimer = 0;
+$('#member-q').oninput = () => { clearTimeout(memberTimer); memberTimer = setTimeout(() => loadMembers(1), 300); };
+$('#member-prev').onclick = () => memberPage > 1 && loadMembers(memberPage - 1);
+$('#member-next').onclick = () => loadMembers(memberPage + 1);
+async function loadMembers(page) {
+  const d = await api('/api/members?page=' + page + '&q=' + encodeURIComponent($('#member-q').value.trim()));
+  if (!d.items.length && page > 1) return;
+  memberPage = d.page;
+  $('#member-count').textContent = num(d.total) + ' member · halaman ' + d.page + ' dari ' + Math.max(1, Math.ceil(d.total / d.per));
+  $('#member-table').innerHTML = `<tr><th>Email</th><th>Nama</th><th>Paket</th><th>Berlaku s/d</th><th>Verifikasi</th><th>Google</th><th>Buku</th><th>Arsip</th><th>Daftar</th></tr>` +
+    (d.items.map(m => `<tr class="click" data-id="${m.id}"><td>${esc(m.email)}</td><td>${esc(m.name)}</td>
+      <td><span class="tag ${m.paid ? esc(m.plan) : ''}">${esc(m.paid ? PLAN[m.plan] || m.plan : 'Free')}</span></td><td>${m.paid ? date(m.planExpiresAt) : '—'}</td>
+      <td class="${m.verified ? 'yes' : 'no'}">${m.verified ? '✓' : '—'}</td><td class="${m.google ? 'yes' : 'no'}">${m.google ? '✓' : '—'}</td>
+      <td>${num(m.books)}</td><td>${size(m.bytes)}</td><td>${date(m.createdAt)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">Tidak ada member.</td></tr>');
+  document.querySelectorAll('#member-table tr.click').forEach(tr => tr.onclick = () => showMember(tr.dataset.id));
+}
+async function showMember(id) {
+  const m = await api('/api/members/' + id);
+  $('#detail-title').textContent = m.email;
+  $('#detail-body').innerHTML = `<div class="grid">${card(esc(m.paid ? PLAN[m.plan] || m.plan : 'Free'), 'Paket' + (m.paid ? ' s/d ' + date(m.planExpiresAt) : ''))}
+      ${card(num(m.books.length), 'Buku di My Library')}${card(num(m.visits), 'Kunjungan (saat masuk)')}${card(esc(when(m.lastVisit)), 'Terakhir berkunjung')}</div>
+    <p class="muted">Nama: ${esc(m.name) || '—'} · Daftar ${date(m.createdAt)} · Email ${m.verified ? 'terverifikasi' : 'belum terverifikasi'} · ${m.google ? 'Login Google' : 'Login email'} · ${num(m.sessions)} sesi aktif</p>
+    <h3>Buku</h3>${bookTable(m.books, false)}
+    <h3>Order</h3><table><tr><th>Order</th><th>Paket</th><th>Jumlah</th><th>Status</th><th>Lewat</th><th>Dibuat</th><th>Lunas</th></tr>
+    ${m.orders.map(o => `<tr><td>${esc(o.id)}</td><td>${esc(PLAN[o.plan] || o.plan)} · ${esc(o.cycle)}</td><td>${money(o.currency, o.amount)}</td><td><span class="tag ${esc(o.status)}">${esc(o.status)}</span></td><td>${esc(o.provider)}</td><td>${date(o.createdAt)}</td><td>${date(o.paidAt)}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Belum ada order.</td></tr>'}</table>`;
+  $('#detail').showModal();
+}
+$('#detail-close').onclick = () => $('#detail').close();
+function bookTable(items, owner) {
+  return `<table><tr><th>Judul</th>${owner ? '<th>Member</th>' : ''}<th>Halaman</th><th>Ukuran</th><th>Hasil ekspor</th><th>Disimpan</th><th>Diubah</th></tr>` +
+    (items.map(b => `<tr><td>${esc(b.title)}</td>${owner ? `<td>${esc(b.owner)}</td>` : ''}<td>${num(b.pages)}</td><td>${size(b.size)}</td>
+      <td>${b.exports.map(e => `<span class="tag" title="${esc(e.filename)} · ${size(e.size)} · ${date(e.createdAt)}">${esc(e.kind.toUpperCase())}</span>`).join(' ') || '<span class="muted">—</span>'}</td>
+      <td>${date(b.createdAt)}</td><td>${date(b.updatedAt)}</td></tr>`).join('') || `<tr><td colspan="${owner ? 7 : 6}" class="muted">Belum ada buku.</td></tr>`) + '</table>';
+}
+let uploadTimer = 0;
+$('#upload-q').oninput = () => { clearTimeout(uploadTimer); uploadTimer = setTimeout(loadUploads, 300); };
+async function loadUploads() {
+  const d = await api('/api/uploads?q=' + encodeURIComponent($('#upload-q').value.trim()));
+  $('#upload-count').textContent = num(d.items.length) + ' buku' + (d.items.length >= 200 ? ' (200 terbaru)' : '') + ' · ' + size(d.items.reduce((s, b) => s + b.size, 0));
+  $('#upload-table').innerHTML = bookTable(d.items, true).replace(/^<table>|<\/table>$/g, '');
+}
+
+document.querySelectorAll('[data-days]').forEach(b => b.onclick = () => loadVisits(Number(b.dataset.days)));
+async function loadVisits(days) {
+  const d = await api('/api/visits?days=' + days);
+  const list = (rows, label) => `<table>${rows.map(r => `<tr><td>${esc(label(r.name))}</td><td style="text-align:right">${num(r.views)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada data.</td></tr>'}</table>`;
+  $('#visit-view').innerHTML = `<div class="grid">${card(num(d.visitors), 'Pengunjung unik per hari (' + days + ' hari)')}${card(num(d.views), 'Tampilan halaman')}
+      ${card(num(d.members), 'Member yang berkunjung')}${card(num((d.today || {}).visitors), 'Pengunjung hari ini')}</div>
+    <div class="panel"><h3>Per hari</h3>${bars(d.daily)}</div>
+    <div class="two">
+      <div class="panel"><h3>Halaman</h3>${list(d.pages, n => n)}</div>
+      <div class="panel"><h3>Datang dari</h3>${list(d.referrers, n => n)}</div>
+      <div class="panel"><h3>Perangkat</h3>${list(d.devices, n => ({desktop: 'Komputer', mobile: 'HP', tablet: 'Tablet'})[n] || n)}</div>
+    </div>
+    <p class="muted">Tanpa menyimpan IP: pengunjung dihitung dengan kode acak yang berganti setiap hari. Bot tidak dihitung.</p>`;
+}
+
+async function loadServer() {
+  const d = await api('/api/server');
+  const NAMES = {GOOGLE_CLIENT_ID: 'Login Google (Client ID)', GOOGLE_API_KEY: 'Google Drive (API key)', SMTP_HOST: 'Email (SMTP host)', SMTP_USER: 'Email (SMTP user)',
+    SUMOPOD_API_KEY: 'AI (Sumopod)', MIDTRANS_SERVER_KEY: 'Pembayaran Rupiah (Midtrans)', TRIPAY_API_KEY: 'Pembayaran Rupiah (Tripay)',
+    LEMONSQUEEZY_API_KEY: 'Pembayaran USD (LemonSqueezy)', YOUTUBE_API_KEY: 'YouTube API'};
+  $('[data-view="server"]').innerHTML = `<h2>Server</h2>
+    <div class="grid">${d.disk ? card(size(d.disk.free), 'Disk kosong dari ' + size(d.disk.total)) : ''}${card(size(d.database), 'Database akun')}
+      ${card(size(d.library), 'File My Library')}${card(size(d.visitsDb), 'Database pengunjung')}</div>
+    <div class="panel"><h3>Pengaturan (.env)</h3><p class="muted">Hanya terisi / belum — isinya tidak pernah ditampilkan.</p>
+      <table>${Object.entries(d.settings).map(([k, on]) => `<tr><td>${esc(NAMES[k] || k)}</td><td class="${on ? 'yes' : 'no'}">${on ? '✓ terisi' : '— belum'}</td></tr>`).join('')}</table></div>`;
+}
+
+api('/api/session').then(s => {
+  show(s.signedIn);
+  if (!s.configured) $('#login-error').textContent = 'Login admin belum diatur di server: isi ADMIN_USERNAME dan ADMIN_PASSWORD_HASH di .env.';
+}).catch(() => show(false));
+</script>
+</body>
+</html>
