@@ -37,6 +37,8 @@ async function main(){
   // "+" inserts a real blank page (not a duplicate) right after the card.
   assert.equal(JSON.stringify(w.qaBlank()),JSON.stringify([0,'blank-1',1]),'blank inserted at position 1');
   assert.ok(w.document.getElementById('organizeGrid').innerHTML.includes('Blank page'),'blank card renders');
+  // Blank clicks carry a valid (quote-escaped) id so the picker actually opens.
+  assert.ok(w.document.getElementById('organizeGrid').innerHTML.includes('orgBlankAsk(&quot;blank-1&quot;)'),'blank click is valid');
   // A filled blank shows its image on the card.
   assert.equal(w.qaFill(),true,'filled blank renders image');
   const chips=[...w.document.querySelectorAll('#orgFiles .org-chip')];

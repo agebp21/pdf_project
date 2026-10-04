@@ -712,6 +712,8 @@ window.orgRemoveFile=(fi)=>{
   if(files.length===0){ updateFileUI(); } else { renderOrganizeGrid(); }
   log('Org remove file '+(fi+1)+' left '+files.length);
 };
+// Quote-safe JS arg inside double-quoted HTML attributes ("blank-1" -> &quot;blank-1&quot;).
+const orgArg=v=>JSON.stringify(v).replace(/"/g,'&quot;');
 function renderOrganizeGrid(){
   const grid=$('#organizeGrid');
   if(!grid) return;
@@ -744,9 +746,9 @@ function renderOrganizeGrid(){
       : `<span class="org-ph">${L('Page','Hal')} ${origIdx+1}</span>`;
     return `
     <div class="org-cell">
-      <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgDragged=false" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${JSON.stringify(origIdx)})"
+      <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgDragged=false" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${orgArg(origIdx)})"
         class="org-card group${sel?' sel':''}">
-        <div class="org-thumb" data-thumb="${origIdx}" onclick="event.stopPropagation();${isBlank?`orgBlankAsk(${JSON.stringify(origIdx)})`:`openOrgViewer(${pos})`}" title="${isBlank?L('Add an image to this blank page','Tambah gambar nang halaman kosong iki'):L('Click to zoom','Klik untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){event.preventDefault();${isBlank?`orgBlankAsk(${JSON.stringify(origIdx)})`:`openOrgViewer(${pos})`}}">${thumb}</div>
+        <div class="org-thumb" data-thumb="${origIdx}" onclick="event.stopPropagation();${isBlank?`orgBlankAsk(${orgArg(origIdx)})`:`openOrgViewer(${pos})`}" title="${isBlank?L('Add an image to this blank page','Tambah gambar nang halaman kosong iki'):L('Click to zoom','Klik untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){event.preventDefault();${isBlank?`orgBlankAsk(${orgArg(origIdx)})`:`openOrgViewer(${pos})`}}">${thumb}</div>
         <div class="org-hover">
           ${isBlank?'':`<button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}">${ORG_ICONS.rotate}</button>`}
           <button onclick="event.stopPropagation();orgDeleteOne(${pos})" title="${L('Delete this page','Hapus halaman ini')}">${ORG_ICONS.x}</button>
