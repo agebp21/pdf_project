@@ -56,6 +56,13 @@
   <main class="clay-panel card">
     <h1 class="clay-h" id="title" data-i18n="auth.titleLogin">Welcome back</h1>
     <p class="sub clay-muted" data-i18n="auth.sub">One account for your flipbooks, plan and billing.</p>
+    <div id="signedIn" class="check" hidden>
+      <p><span data-i18n="auth.signedInAs">You are signed in as</span> <b id="signedInEmail"></b>.</p>
+      <p style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+        <a class="clay-btn clay-btn-primary" id="continueAs" href="account.html" data-i18n="auth.continue">Continue</a>
+        <button type="button" class="clay-btn clay-btn-ghost" id="switchAccount" data-i18n="auth.switchAccount">Use another account</button>
+      </p>
+    </div>
     <div id="googleBox" hidden>
       <div id="google" class="google"></div>
       <p class="or" data-i18n="auth.or">or</p>
@@ -153,8 +160,19 @@
       if(error.status===403)$('resendRow').hidden=false;      // not verified yet
     }finally{$('submit').disabled=false;}
   });
+  // Already signed in: say as whom, and let the reader continue or switch
+  // account (a silent redirect left no way to sign in with another account).
   MFAuth.me().then(data=>{
-    if(data.user)location.replace(next);
+    if(data.user){
+      $('form').hidden=true;$('switch').parentNode.hidden=true;
+      $('signedInEmail').textContent=data.user.email;$('continueAs').href=next;$('signedIn').hidden=false;
+      $('switchAccount').onclick=async()=>{
+        try{await MFAuth.api('POST','/api/auth/logout',{});}catch(e){}
+        if(window.google&&google.accounts&&google.accounts.id)google.accounts.id.disableAutoSelect();
+        location.reload();
+      };
+      if(window.I18N)I18N.apply();
+    }
     else if(data.offline)showError(t('auth.offline','Accounts need the MyFlipbook server (python server.py).'));
     else if(data.googleClientId)startGoogle(data.googleClientId);
   });
