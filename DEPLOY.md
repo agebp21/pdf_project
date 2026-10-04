@@ -43,7 +43,7 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 
 - VPS 2 GB RAM / 38 GB disk, dienggo bareng numa + sarvamaya.id. RAM mepet (±600 MB kosong) — ojo nglakoni proses abot (build, OCR massal) nang VPS. Owner arep upgrade nang RAM 4 GB.
 - **Ojo install Flutter/Android SDK** nang VPS (`apk:false`); build EXE mustahil nang Linux (`exe:false`).
-- Paywall ON; pembayaran durung aktif (key Midtrans/Lemon durung diisi) — upgrade member saiki lewat `--grant`.
+- Paywall ON; pembayaran **dipause** (`PAYMENTS_PAUSED=1` nang `.env`, key Midtrans/Tripay/Lemon durung diisi) — upgrade member saiki lewat `--grant`. Nguripke: isi key gateway, tes, banjur guwang/setel `PAYMENTS_PAUSED=0` + `systemctl restart myflipbook`.
 - Ojo ngganti password root / user lewat SSH; urusan kredensial domain-e owner.
 
 ## 5. Log deploy
@@ -52,3 +52,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 |---|---|---|---|
 | 2026-10-03 | (overlay manual) | agen liya | Deploy awal + HTTPS certbot. |
 | 2026-10-04 11:18 | `1bf0565` | Claude | Kabeh fitur s/d panel admin; `myflipbook-admin.service` + nginx `/admin/`; backup `/root/pdf_project-code-backup-20261004.tgz`. **Owahan `index.html` (stiker "segera hadir" oranye) sing sadurunge wis live tanpa commit dadi ketimpa** — kudu di-commit dhisik banjur deploy maneh yen arep dibalekke. |
+| 2026-10-04 (siang) | `374657f` | Claude | `PAYMENTS_PAUSED=1` ditambah ke `.env` live (pembayaran sementara mati; owner update payment gateway malam ini). Backup `/root/pdf_project-code-backup-20261004b.tgz`, `.env` lama `/root/pdf_project-env-backup-20261004b`. |

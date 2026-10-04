@@ -2,7 +2,8 @@
 
 ## 📌 Status terkini (diperbarui 2026-10-04 oleh Claude) — BACA DULU
 
-**Live:** https://myflipbookpro.com = commit `1bf0565` (deploy 2026-10-04 11:18, lihat DEPLOY.md → Log deploy). GitHub `main` sudah berisi semua itu + catatan handoff (`fc43230`).
+**Live:** https://myflipbookpro.com = commit `374657f` (deploy 2026-10-04 siang, lihat DEPLOY.md → Log deploy).
+**Pembayaran: DIPAUSE** (`PAYMENTS_PAUSED=1` di `.env` live) — owner meng-update payment gateway malam 2026-10-04; nyalakan hanya setelah key gateway diisi dan dites.
 **Panel admin live:** https://myflipbookpro.com/admin/ (backend terpisah `admin_server.py`, login admin sendiri; password hanya di VPS `/root/myflipbook-admin-password.txt`).
 
 Selesai & live (detail per fitur di PROJECT_HANDOFF.md, bagian bertanggal):
@@ -22,7 +23,7 @@ Selesai & live (detail per fitur di PROJECT_HANDOFF.md, bagian bertanggal):
 - Owner berencana upgrade VPS ke RAM 4 GB (sekarang 2 GB dibagi dengan numa + sarvamaya.id).
 - Email: pindah dari Gmail SMTP ke Brevo/Resend dengan `noreply@myflipbookpro.com` (+ SPF/DKIM) — hanya `.env`.
 - Google OAuth consent screen: Publish app (privacy/terms sudah ada) supaya semua akun Google bisa login.
-- Pembayaran belum aktif (key Midtrans/LemonSqueezy kosong).
+- Payment gateway: owner update malam 2026-10-04 (isi key Midtrans/Tripay/LemonSqueezy di `.env`, tes, lalu `PAYMENTS_PAUSED=0`).
 - Halaman gambar belum ikut terjemahan buku penuh (usulan: terjemahkan teks OCR untuk audio, gambar tidak diubah).
 - Tes Python `test_library...ownership` kadang gagal saat suite penuh (lulus bila sendiri).
 
