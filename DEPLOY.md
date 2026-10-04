@@ -82,3 +82,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-04 (bengi 14) | `9d7392f` | sesi iki | Organize tanpa drop ganda (workspace dadi drop target). Backup `/root/pdf_project-code-backup-20261004u.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-04 (bengi 15) | `ee3c04b` | sesi iki | Flipbook: takeout 3 paragraf bantuan ekspor (+ guard JS). Backup `/root/pdf_project-code-backup-20261004v.tgz`. Verifikasi: capabilities 200, teks ilang nang live. |
 | 2026-10-04 (bengi 16) | `cc64cad` | sesi iki | Organize rapet: gap + padding + nomer dicilikke. Backup `/root/pdf_project-code-backup-20261004w.tgz`. Verifikasi: capabilities 200. |
+| 2026-10-04 (bengi 17) | `e731fad` | sesi iki | Organize: ikon SVG rapi + klik thumbnail = zoom lightbox (navigasi + putar/duplikat/hapus + Esc). Backup `/root/pdf_project-code-backup-20261004x.tgz`. Verifikasi: capabilities 200, 4 suite ijo. |
