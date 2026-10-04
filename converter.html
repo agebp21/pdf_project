@@ -85,11 +85,10 @@
   .org-ph{font-size:11px;color:#9ca3af}
   .org-blankpage{font-size:11px;color:#9ca3af;border:1.5px dashed #d1d5db;border-radius:6px;padding:.4rem .6rem;background:#fff}
   .org-num{font-size:10px;color:#6b7280;font-weight:600;line-height:1.2}
-  .org-hover{position:absolute;top:14px;right:14px;display:flex;gap:6px;z-index:2}
-  .org-zoom{position:absolute;left:14px;bottom:30px;z-index:2}
-  @media(hover:hover){.org-hover,.org-zoom{opacity:0;transition:opacity .15s}.org-card:hover .org-hover,.org-card:focus-within .org-hover,.org-card:hover .org-zoom,.org-card:focus-within .org-zoom{opacity:1}}
-  .org-hover button,.org-zoom button{width:28px;height:28px;border-radius:999px;background:rgba(255,255,255,.96);border:1px solid #e5e7eb;box-shadow:0 2px 6px rgba(0,0,0,.12);cursor:pointer;font-size:14px;display:grid;place-items:center;color:#374151}
-  .org-ic{width:15px;height:15px;display:block}
+  .org-hover{position:absolute;top:10px;right:10px;display:flex;gap:5px;z-index:2}
+  @media(hover:hover){.org-hover{opacity:0;transition:opacity .15s}.org-card:hover .org-hover,.org-card:focus-within .org-hover{opacity:1}}
+  .org-hover button{width:24px;height:24px;border-radius:999px;background:rgba(255,255,255,.96);border:1px solid #e5e7eb;box-shadow:0 2px 6px rgba(0,0,0,.12);cursor:pointer;display:grid;place-items:center;color:#374151}
+  .org-ic{width:13px;height:13px;display:block}
   .org-rot{position:absolute;bottom:30px;right:14px;background:#111827;color:#fff;font-size:10px;font-weight:800;border-radius:999px;padding:2px 7px;z-index:2}
   .org-insert{position:absolute;right:-15px;top:42%;width:24px;height:24px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;color:#ef2d2d;font-weight:800;font-size:14px;line-height:1;z-index:3;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1);display:grid;place-items:center}
   .org-fab{position:absolute;right:12px;top:96px;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:5}
@@ -697,9 +696,6 @@ function renderOrganizeGrid(){
         <div class="org-hover">
           ${isBlank?'':`<button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}">${ORG_ICONS.rotate}</button>`}
           <button onclick="event.stopPropagation();orgDeleteOne(${pos})" title="${L('Delete this page','Hapus halaman ini')}">${ORG_ICONS.x}</button>
-        </div>
-        <div class="org-zoom">
-          <button onclick="event.stopPropagation();openOrgViewer(${pos})" title="${L('Zoom this page','Zoom halaman ini')}">${ORG_ICONS.zoom}</button>
         </div>
         ${rot?`<span class="org-rot">${rot}°</span>`:''}
         <span class="org-num">${pos+1}</span>
