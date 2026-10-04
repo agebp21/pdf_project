@@ -2,7 +2,7 @@
 
 ## 📌 Status terkini (diperbarui 2026-10-04 oleh Claude) — BACA DULU
 
-**Live:** https://myflipbookpro.com = commit `1f65562` (deploy 2026-10-04 sore, lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect).
+**Live:** https://myflipbookpro.com = commit `08a0567` (deploy 2026-10-04 sore, lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect).
 **Build APK/EXE:** lewat PC build owner (`build_worker.py`, `start-build-worker.bat`); VPS hanya mengantrikan. PC mati = build menunggu.
 **Pembayaran: DIPAUSE** (`PAYMENTS_PAUSED=1` di `.env` live) — owner meng-update payment gateway malam 2026-10-04; nyalakan hanya setelah key gateway diisi dan dites.
 **Panel admin live:** https://myflipbookpro.com/admin/ (backend terpisah `admin_server.py`, login admin sendiri; password hanya di VPS `/root/myflipbook-admin-password.txt`).
@@ -13,6 +13,7 @@ Selesai & live (detail per fitur di PROJECT_HANDOFF.md, bagian bertanggal):
 - Audio book: baca edisi terjemahan (juga saat translate berjalan), judul huruf renggang & kapital dibaca sebagai kata.
 - OCR otomatis halaman gambar (Tesseract.js) untuk stabilo/audio; spidol (marker) di toolbar stabilo; fullscreen di toolbar (alat tetap muncul).
 - Buka buku cepat (6 halaman dulu, sisanya di belakang; proyek pakai teks tersimpan); progress bar merah di kotak status.
+- Semua tempat menambah file memakai jendela "Add source" yang sama (assets/add-source.js: link, upload, Google Drive tersaring jenis file alatnya, seret file) — flipbook masih punya salinan markupnya sendiri.
 - My Library hanya lewat tombol "💾 Save My Library" (awal "📚 Open My Library", kembali Open setelah simpan).
 - Nama fitur: "AI Summarizer" (notebook.html), "Find Journal & Ebook" (journals.html). Swara flip kertas dihapus.
 - Admin: ringkasan, member, upload (metadata), pengunjung (visits.py, tanpa IP), server; `--grant EMAIL PLAN DAYS|lifetime`.
