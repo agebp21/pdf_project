@@ -20,6 +20,10 @@ async function main(){
   assert.equal(vis('orgSide'),false,'sidebar hidden without file');
   assert.equal(vis('organizeGrid'),false,'grid hidden without file');
   assert.equal(vis('orgFab'),false,'fab hidden without file');
+  // Empty state offers direct Upload + Google Drive shortcuts.
+  const emptyHTML=w.document.getElementById('orgEmpty').innerHTML;
+  assert.ok(emptyHTML.includes('orgUploadDirect'),'upload shortcut present');
+  assert.ok(emptyHTML.includes('orgDriveDirect'),'drive shortcut present');
   // A file arrives: workspace opens, prompt goes away, no duplicate file panel.
   w.qaLoad();
   assert.equal(vis('orgEmpty'),false,'prompt hides with file');
