@@ -77,7 +77,9 @@
   .showcase-search input::placeholder{color:#A8A29E}
   ::-webkit-scrollbar{height:8px;width:10px}
   ::-webkit-scrollbar-thumb{background:var(--ink);border-radius:999px}
-  .card.soon{cursor:not-allowed;opacity:.62;filter:saturate(.55)}
+  .card.soon{cursor:not-allowed}
+  .card.soon::after{content:"";position:absolute;inset:0;border-radius:inherit;background:rgba(255,255,255,.45);pointer-events:none}
+  .card.soon .sticker{z-index:1}
   .card.soon:hover{transform:none;box-shadow:0 14px 34px rgba(28,25,23,.10),inset 0 1px 0 #fff,inset 0 -3px 10px rgba(28,25,23,.05)}
   .horde-tile.soon{opacity:.45;filter:grayscale(.6);cursor:not-allowed}
   .horde-tile.soon:hover{margin-top:0}
@@ -259,7 +261,7 @@
     }
     if(t.soon){
       return `<div aria-disabled="true" class="card soon p-5 flex flex-col min-h-[170px]">
-      <span class="sticker" style="background:#E7E5E4;color:#57534E">${soonLabel()}</span>
+      <span class="sticker" style="background:#FF5C28;color:#fff">${soonLabel()}</span>
       <div class="flex items-center gap-3">
         <div class="icon-box" style="background:${t.bg};color:${t.color}"><span class="text-[16px] leading-none">${t.icon}</span></div>
         <h3 class="text-[15px] font-extrabold leading-tight serif">${t.title}</h3>
