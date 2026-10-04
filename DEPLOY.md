@@ -87,3 +87,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-04 (bengi 19) | `bf773eb` | sesi iki | Organize: tombol ukuran thumbnail S/M/L nang sidebar (pilihan disimpen). Backup `/root/pdf_project-code-backup-20261004z.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `7643070` | sesi iki | Ikon organize ora ganggu: kaca pembesar dibuang (klik gambar = zoom), tombol 24px. Backup `/root/pdf_project-code-backup-20261005a.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `a3ccbf1` | sesi iki | Plus kiwo-tengen saben kartu (sisip blank sadurunge/sawise). Backup `/root/pdf_project-code-backup-20261005b.tgz`. Verifikasi: capabilities 200. |
+| 2026-10-05 | `4f63972` | sesi iki | Zoom toggle: klik gambar = balik grid. Backup `/root/pdf_project-code-backup-20261005c.tgz`. Verifikasi: capabilities 200. |
