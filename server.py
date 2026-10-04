@@ -166,6 +166,13 @@ def get_library():
         return LIBRARY
 
 
+def payments_paused():
+    """PAYMENTS_PAUSED=1 in .env: no new checkouts (e.g. while the gateway is being
+    set up), even with gateway keys filled in. Notifications for orders already
+    made still come in."""
+    return os.environ.get('PAYMENTS_PAUSED', '').strip().lower() in ('1', 'true', 'yes', 'on')
+
+
 def get_visits():
     """Page-view statistics for the admin panel, next to the account database."""
     global VISITS
@@ -1829,8 +1836,10 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(200, {'methods': store.payment_methods()})
         elif path == '/api/billing/plans':
             providers = {c: store.provider_for(c).name for c in accounts.CURRENCIES}
+            paused = payments_paused()
             self.send_json(200, {'plans': store.plans(), 'provider': store.provider.name, 'providers': providers,
-                                 'paymentsEnabled': {c: name != 'none' for c, name in providers.items()}})
+                                 'paymentsEnabled': {c: name != 'none' and not paused for c, name in providers.items()},
+                                 'paymentsPaused': paused})
         elif re.fullmatch(r'/api/billing/orders/[A-Za-z0-9-]{1,64}/invoice\.pdf', path):
             user = self.current_user()
             if not user:
@@ -1914,6 +1923,8 @@ class Handler(SimpleHTTPRequestHandler):
         if not user:
             raise accounts.AccountError(401, 'Silakan masuk dulu.')
         if path == '/api/billing/checkout':
+            if payments_paused():
+                raise accounts.AccountError(503, 'Pembayaran online sementara dinonaktifkan. Coba lagi nanti.')
             self.send_json(200, store.checkout(user, data.get('plan'), data.get('cycle'), self.base_url(),
                                                data.get('method'), str(data.get('currency') or 'IDR')))
         elif path == '/api/billing/mock/pay':

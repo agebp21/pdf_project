@@ -41,6 +41,7 @@ EXACT = {
     'Bahasa edisi terjemahan tidak valid.': 'Invalid translated edition language.',
     'Halaman edisi terjemahan tidak valid.': 'Invalid translated edition page.',
     # --- AI
+    'Pembayaran online sementara dinonaktifkan. Coba lagi nanti.': 'Online payment is paused for now. Please try again later.',
     'AI tidak menghasilkan ringkasan. Coba lagi.': 'The AI did not produce a summary. Try again.',
     'Teks yang distabilo kosong.': 'The highlighted text is empty.',
     'AI belum diatur di server (SUMOPOD_API_KEY di .env).': 'AI is not set up on the server (SUMOPOD_API_KEY in .env).',

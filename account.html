@@ -257,7 +257,8 @@
       $('pageTitle').setAttribute('data-i18n','acct.pricingTitle');
       $('ordersSection').hidden=true;
       const login=el('a',{className:'clay-btn clay-btn-dark',href:'login.html?next='+encodeURIComponent('account.html'),textContent:t('auth.login','Log in')});
-      notice('info',t('acct.guest','Log in or create an account to subscribe. The free tools need no account.'),login);
+      if(state.paymentsEnabled.IDR===false&&state.paymentsEnabled.USD===false)notice('warn',t('acct.disabled','Online payment is not enabled on this server yet.'));
+      else notice('info',t('acct.guest','Log in or create an account to subscribe. The free tools need no account.'),login);
       if(window.I18N)I18N.apply();
       renderPlans();
       return;
