@@ -77,8 +77,9 @@ body.is-panning #reader-stage{cursor:grabbing}
 .add-link button{width:32px;height:32px;flex:none;border:0;border-radius:999px;background:#fff;font-size:15px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15)}
 .add-link button:hover{background:var(--tang);color:#fff}
 .add-sources{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px}
-.add-sources button{display:inline-flex;align-items:center;gap:6px;padding:7px 14px;border:1px solid #ddd6ca;border-radius:999px;background:#fff;font:600 13px 'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);cursor:pointer}
-.add-sources button:hover{border-color:var(--ink);background:#fffaf2}
+.add-sources button{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border:1.5px solid var(--ink);border-radius:999px;background:#fff;font:700 13px 'Plus Jakarta Sans',system-ui,sans-serif;color:var(--ink);cursor:pointer;box-shadow:2px 2px 0 var(--ink);transition:transform .12s ease,box-shadow .12s ease,background .12s ease}
+.add-sources button:hover{background:#fff4ec;transform:translate(-1px,-1px);box-shadow:3px 3px 0 var(--ink)}
+.add-sources button:active{transform:translate(1px,1px);box-shadow:1px 1px 0 var(--ink)}
 .add-drive{display:inline-block;width:14px;height:12px;background:conic-gradient(from 30deg,#0f9d58 0 120deg,#fbbc04 0 240deg,#4285f4 0);clip-path:polygon(50% 0,100% 85%,0 85%)}
 .add-drive-help{margin:12px 0 0;padding:10px 12px 10px 30px;border-radius:12px;background:#eef6ff;border:1px solid #cfe2fb;font-size:12.5px;line-height:1.55;color:#1c3a5e}
 .add-drive-help[hidden]{display:none}
