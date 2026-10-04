@@ -96,10 +96,13 @@
   .org-blankpage{font-size:11px;color:#9ca3af;border:1.5px dashed #d1d5db;border-radius:6px;padding:.4rem .6rem;background:#fff}
   .org-num{font-size:11px;color:#6b7280;font-weight:600;line-height:1.4}
   .org-top{display:flex;justify-content:space-between;align-items:center;width:100%;min-height:24px;padding:0 2px}
+  .org-hover{position:absolute;top:10px;right:10px;display:flex;gap:5px;z-index:2}
+  @media(hover:hover){.org-hover{opacity:0;transition:opacity .15s}.org-card:hover .org-hover,.org-card:focus-within .org-hover{opacity:1}}
   .org-tools{display:flex;gap:5px}
   @media(hover:hover){.org-tools{opacity:0;transition:opacity .15s}.org-card:hover .org-tools,.org-card:focus-within .org-tools{opacity:1}}
   .org-tools button{width:24px;height:24px;border-radius:999px;background:rgba(255,255,255,.96);border:1px solid #e5e7eb;box-shadow:0 2px 6px rgba(0,0,0,.12);cursor:pointer;display:grid;place-items:center;color:#374151}
   .org-tools .org-ic{width:13px;height:13px}
+  .org-hover button{width:24px;height:24px;border-radius:999px;background:rgba(255,255,255,.96);border:1px solid #e5e7eb;box-shadow:0 2px 6px rgba(0,0,0,.12);cursor:pointer;display:grid;place-items:center;color:#374151}
   .org-ic{width:13px;height:13px;display:block}
   .org-fab{position:absolute;right:12px;top:96px;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:5}
   .org-fab-add{position:relative;width:44px;height:44px;border-radius:999px;background:#ef2d2d;color:#fff;font-size:26px;line-height:1;border:0;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.4);display:grid;place-items:center}
@@ -742,17 +745,14 @@ function renderOrganizeGrid(){
       : `<span class="org-ph">${L('Page','Hal')} ${origIdx+1}</span>`;
     return `
     <div class="org-cell">
-      ${pos===0?`<span class="org-pslot"><button onclick="orgInsertBlankAt(0)" title="${L('Insert a blank page at the start','Sisipkan halaman kosong nang awal')}" class="org-plus">${ORG_ICONS.plus}</button></span>`:''}
       <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgDragged=false" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${JSON.stringify(origIdx)})"
         class="org-card group${sel?' sel':''}">
-        <div class="org-top">
-          <span class="org-num">${pos+1}${rot?` · ${rot}°`:''}</span>
-          <span class="org-tools">
-            ${isBlank?'':`<button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}">${ORG_ICONS.rotate}</button>`}
-            <button onclick="event.stopPropagation();orgDeleteOne(${pos})" title="${L('Delete this page','Hapus halaman ini')}">${ORG_ICONS.x}</button>
-          </span>
-        </div>
         <div class="org-thumb" data-thumb="${origIdx}" onclick="event.stopPropagation();${isBlank?`orgBlankAsk(${JSON.stringify(origIdx)})`:`openOrgViewer(${pos})`}" title="${isBlank?L('Add an image to this blank page','Tambah gambar nang halaman kosong iki'):L('Click to zoom','Klik untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){event.preventDefault();${isBlank?`orgBlankAsk(${JSON.stringify(origIdx)})`:`openOrgViewer(${pos})`}}">${thumb}</div>
+        <div class="org-hover">
+          ${isBlank?'':`<button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}">${ORG_ICONS.rotate}</button>`}
+          <button onclick="event.stopPropagation();orgDeleteOne(${pos})" title="${L('Delete this page','Hapus halaman ini')}">${ORG_ICONS.x}</button>
+        </div>
+        <span class="org-num">${pos+1}${rot?` · ${rot}°`:''}</span>
       </div>
       <span class="org-pslot"><button onclick="orgInsertBlankAt(${pos+1})" title="${L('Insert a blank page after this','Sisipkan halaman kosong setelah ini')}" class="org-plus">${ORG_ICONS.plus}</button></span>
     </div>`;
