@@ -23,7 +23,7 @@
 | `myflipbook-admin.service` | Panel admin (backend pisah): `python3 admin_server.py --host 127.0.0.1 --port 8091 --proxy` |
 | `/etc/nginx/sites-enabled/myflipbookpro` | HTTPS (certbot, wis aktif). `/` → 8080, `/admin/` → 8091. Ojo senggol site liyane. |
 | `/root/myflipbook-admin-password.txt` | Login admin (`admin` + password acak, chmod 600). **Ojo dikirim nang chat / ditulis nang repo.** |
-| Build APK/EXE | VPS ora duwe Flutter: pesenan build mlebu antrian, dijupuk **PC build** (PC owner, `build_worker.py`, kunci `BUILD_WORKER_KEY` padha nang `.env` VPS lan PC). PC mati = build ngantri. Status: `/api/capabilities` → `buildWorker: online/offline`. |
+| Build APK/EXE | VPS ora duwe Flutter: pesenan build mlebu antrian, dijupuk **PC build** (PC owner, ikon systray `build_worker_tray.py` / `start-build-worker.bat`, otomatis nyala lewat shortcut Startup, kunci `BUILD_WORKER_KEY` padha nang `.env` VPS lan PC). PC mati = build ngantri. Status: `/api/capabilities` → `buildWorker: online/offline`. |
 
 ## 3. Prosedur update (kabeh agen nganggo cara iki)
 

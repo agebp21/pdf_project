@@ -25,8 +25,9 @@ POLL_SECONDS = 10
 
 
 class Worker:
-    def __init__(self, base, key, log=print):
+    def __init__(self, base, key, log=print, on_job=None):
         self.base, self.key, self.log = base.rstrip('/'), key, log
+        self.on_job = on_job or (lambda job: None)      # {'id', 'target'} while building, None after
         self.opener = urllib.request.build_opener(urllib.request.ProxyHandler({}) if '//localhost' in base or '//127.' in base else urllib.request.ProxyHandler())
 
     def request(self, method, path, body=None, content_type='application/json', headers=None, timeout=60):
@@ -46,6 +47,7 @@ class Worker:
         if not job.get('id'):
             return False
         job_id, target = job['id'], job['target']
+        self.on_job(job)
         self.log(f'{time.strftime("%H:%M:%S")} build {target.upper()} {job_id[:8]}…')
         folder = server.BUILD / job_id
         try:
@@ -83,6 +85,7 @@ class Worker:
         finally:
             server.JOBS.pop(job_id, None)
             shutil.rmtree(folder, ignore_errors=True)
+            self.on_job(None)
         return True
 
 

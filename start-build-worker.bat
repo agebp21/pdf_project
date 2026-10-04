@@ -1,5 +1,6 @@
 @echo off
-rem MyFlipbook build PC: takes APK/EXE builds from myflipbookpro.com (keep it running).
-rem Put a shortcut to this file in shell:startup to start it with Windows.
+rem MyFlipbook build PC: takes APK/EXE builds from myflipbookpro.com.
+rem Runs as an icon in the system tray (no window); a second start does nothing.
+rem A shortcut to this file in shell:startup starts it with Windows.
 cd /d "%~dp0"
-start "MyFlipbook build PC" /min cmd /c "python -u build_worker.py >> .data\build-worker.log 2>&1"
+start "" pythonw build_worker_tray.py
