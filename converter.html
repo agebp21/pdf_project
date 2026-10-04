@@ -80,6 +80,7 @@
   .org-thumb{position:relative;width:100%;aspect-ratio:3/4;background:#f3f4f6;border-radius:8px;overflow:hidden;display:grid;place-items:center}  .org-thumb img{width:100%;height:100%;object-fit:contain;background:#fff}
   .org-zoomable{cursor:zoom-in}
   .org-ph{font-size:11px;color:#9ca3af}
+  .org-blankpage{font-size:11px;color:#9ca3af;border:1.5px dashed #d1d5db;border-radius:6px;padding:.4rem .6rem;background:#fff}
   .org-num{font-size:10px;color:#6b7280;font-weight:600;line-height:1.2}
   .org-hover{position:absolute;top:14px;right:14px;display:flex;gap:6px;z-index:2}
   .org-zoom{position:absolute;left:14px;bottom:30px;z-index:2}
@@ -412,7 +413,8 @@ function renderHeader(){
     document.getElementById('splitChunk')?.addEventListener('input', updateSplitBtn);
   }
 }
-let organizeOrder = []; // array of page indices in current order
+let organizeOrder = []; // page indices (numbers) or 'blank-N' ids, in current order
+let orgBlankSeq = 0;
 let organizeSelected = new Set();
 let organizeRotations = {}; // idx -> degrees
 function setTool(id){
@@ -599,6 +601,7 @@ async function buildOrganizePreview(){
     try{ orgPdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(buf), disableWorker: location.protocol==='file:'}).promise; }
     catch(e){ log('Org thumbs off: '+e.message); }
     organizeOrder = Array.from({length:n},(_,i)=>i);
+    orgBlankSeq = 0;
     organizeSelected = new Set(organizeOrder);
     organizeRotations={};
     renderOrganizeGrid();
@@ -618,15 +621,21 @@ function orgObserveThumbs(){
   const grid=$('#organizeGrid');
   orgThumbObserver?.disconnect();
   if(!grid || !orgPdfDoc) return;
-  orgThumbObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{
-    if(!entry.isIntersecting) return;
-    orgThumbObserver.unobserve(entry.target);
-    drawOrgThumb(entry.target);
-  }), {root:grid, rootMargin:'300px'});
+  let obs=null;
+  try{
+    obs=new IntersectionObserver(entries=>entries.forEach(entry=>{
+      if(!entry.isIntersecting) return;
+      orgThumbObserver.unobserve(entry.target);
+      drawOrgThumb(entry.target);
+    }), {root:grid, rootMargin:'300px'});
+  }catch(e){ return; }
+  orgThumbObserver=obs;
   grid.querySelectorAll('.org-thumb').forEach(el=>{ if(!el.querySelector('img')) orgThumbObserver.observe(el); });
 }
 async function drawOrgThumb(cell){
-  const origIdx=+cell.dataset.thumb;
+  const raw=cell.dataset.thumb;
+  if(raw==null||raw===''||raw.startsWith('blank')) return;
+  const origIdx=+raw;
   try{
     if(!orgPdfDoc || orgThumbCache.has(origIdx)) return;
     const page=await orgPdfDoc.getPage(origIdx+1);
@@ -669,17 +678,20 @@ function renderOrganizeGrid(){
   grid.innerHTML=organizeOrder.map((origIdx,pos)=>{
     const sel=organizeSelected.has(origIdx);
     const rot=organizeRotations[origIdx]||0;
-    const cached=orgThumbCache.get(origIdx);
-    const thumb=cached
+    const isBlank=typeof origIdx!=='number';
+    const cached=isBlank?null:orgThumbCache.get(origIdx);
+    const thumb=isBlank
+      ? `<span class="org-blankpage">${L('Blank page','Halaman kosong')}</span>`
+      : cached
       ? `<img src="${cached}" alt="Page ${origIdx+1}" draggable="false">`
       : `<span class="org-ph">${L('Page','Hal')} ${origIdx+1}</span>`;
     return `
     <div class="org-cell">
-      <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgDragged=false" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${origIdx})"
+      <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgDragged=false" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${JSON.stringify(origIdx)})"
         class="org-card group${sel?' sel':''}">
-        <div class="org-thumb org-zoomable" data-thumb="${origIdx}" onclick="event.stopPropagation();openOrgViewer(${pos})" title="${L('Click to zoom','Klik untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){event.preventDefault();openOrgViewer(${pos})}">${thumb}</div>
+        <div class="org-thumb" data-thumb="${origIdx}" onclick="event.stopPropagation();openOrgViewer(${pos})" title="${L('Click to zoom','Klik untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){event.preventDefault();openOrgViewer(${pos})}">${thumb}</div>
         <div class="org-hover">
-          <button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}">${ORG_ICONS.rotate}</button>
+          ${isBlank?'':`<button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}">${ORG_ICONS.rotate}</button>`}
           <button onclick="event.stopPropagation();orgDeleteOne(${pos})" title="${L('Delete this page','Hapus halaman ini')}">${ORG_ICONS.x}</button>
         </div>
         <div class="org-zoom">
@@ -688,13 +700,14 @@ function renderOrganizeGrid(){
         ${rot?`<span class="org-rot">${rot}°</span>`:''}
         <span class="org-num">${pos+1}</span>
       </div>
-      ${pos<organizeOrder.length-1?`<button onclick="orgInsertDup(${origIdx})" title="${L('Insert a copy after this page','Sisipkan salinan setelah halaman ini')}" class="org-insert">${ORG_ICONS.plus}</button>`:''}
+      ${pos<organizeOrder.length-1?`<button onclick="orgInsertBlank(${pos})" title="${L('Insert a blank page after this','Sisipkan halaman kosong setelah ini')}" class="org-insert">${ORG_ICONS.plus}</button>`:''}
     </div>`;
   }).join('');
   orgObserveThumbs();
 }
+const orgName=i=>typeof i==='number'?(i+1):'blank';
 let orgSortDesc=false;
-window.orgSortToggle=()=>{ orgSortDesc=!orgSortDesc; const dir=orgSortDesc?-1:1; organizeOrder.sort((a,b)=>(a-b)*dir); renderOrganizeGrid(); log('Org sort '+(orgSortDesc?'desc':'asc')); };
+window.orgSortToggle=()=>{ orgSortDesc=!orgSortDesc; const dir=orgSortDesc?-1:1; const key=v=>typeof v==='number'?v:1e9; organizeOrder.sort((a,b)=>(key(a)-key(b))*dir); renderOrganizeGrid(); log('Org sort '+(orgSortDesc?'desc':'asc')); };
 window.orgReset=()=>{ buildOrganizePreview(); log('Org reset'); };
 // Big page viewer: click a thumbnail to zoom, click ✕ / press Esc to go back.
 let orgViewerPos=0;
@@ -731,8 +744,17 @@ window.openOrgViewer=async (pos)=>{
   }
   const origIdx=organizeOrder[orgViewerPos];
   const rot=organizeRotations[origIdx]||0;
-  box.querySelector('#orgViewerLabel').textContent=`${L('Page','Hal')} ${orgViewerPos+1} / ${organizeOrder.length}${rot?` (${rot}°)`:''}`;
+  const isBlank=typeof origIdx!=='number';
+  box.querySelector('#orgViewerLabel').textContent=`${L('Page','Hal')} ${orgViewerPos+1} / ${organizeOrder.length}${isBlank?` (${L('blank','kosong')})`:rot?` (${rot}°)`:''}`;
   const holder=box.querySelector('#orgViewerPage');
+  if(isBlank){
+    holder.innerHTML='';
+    const blank=document.createElement('div');
+    blank.style.cssText='background:#fff;width:min(480px,80%);aspect-ratio:3/4;display:grid;place-items:center;color:#9ca3af;font-size:14px;box-shadow:0 10px 40px rgba(0,0,0,.5)';
+    blank.textContent=L('Blank page','Halaman kosong');
+    holder.replaceChildren(blank);
+    return;
+  }
   holder.innerHTML='<span class="text-white/70 text-sm">'+L('Loading…','Memuat…')+'</span>';
   try{
     const page=await orgPdfDoc.getPage(origIdx+1);
@@ -760,13 +782,14 @@ window.orgWsOver=(e)=>{ e.preventDefault(); };
 window.orgWsDrop=(e)=>{ e.preventDefault(); if(e.dataTransfer&&e.dataTransfer.files.length){ log('Drop '+e.dataTransfer.files.length+' files'); handleFiles(e.dataTransfer.files); } };
 window.orgRotateOne=(idx)=>{ organizeRotations[idx]=((organizeRotations[idx]||0)+90)%360; if(!organizeRotations[idx]) delete organizeRotations[idx]; renderOrganizeGrid(); };
 window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(pos,1); if(!organizeOrder.includes(idx)) organizeSelected.delete(idx); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); };
-window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); organizeOrder.splice(at<0?organizeOrder.length:at+1,0,idx); renderOrganizeGrid(); };
+window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(at<0?organizeOrder.length:at+1,0,fresh); renderOrganizeGrid(); };
+window.orgInsertBlank=(pos)=>{ organizeOrder.splice(pos+1,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(pos+2)); };
 window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); };
 window.orgCheck=(idx, on)=>{ if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
 window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
 window.orgDelete=()=>{ if(organizeSelected.size===0) return showError('Tick the pages to delete first'); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
 window.orgRotate=(deg)=>{ if(organizeSelected.size===0) return showError('Tick pages first'); for(const idx of organizeSelected) organizeRotations[idx]=(organizeRotations[idx]||0)+deg; renderOrganizeGrid(); }
-window.orgDuplicate=()=>{ if(organizeSelected.size===0) return showError('Tick pages first'); const sel=[...organizeSelected].sort((a,b)=>organizeOrder.indexOf(a)-organizeOrder.indexOf(b)); sel.forEach(idx=>{ const pos=organizeOrder.indexOf(idx); organizeOrder.splice(pos+1,0,idx); }); renderOrganizeGrid(); }
+window.orgDuplicate=()=>{ if(organizeSelected.size===0) return showError('Tick pages first'); const sel=[...organizeSelected].sort((a,b)=>organizeOrder.indexOf(a)-organizeOrder.indexOf(b)); sel.forEach(idx=>{ const pos=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(pos+1,0,fresh); }); renderOrganizeGrid(); }
 let dragPos=null;
 window.orgDrag=(e)=>{ dragPos=parseInt(e.currentTarget.dataset.pos); orgDragged=true; e.dataTransfer.effectAllowed='move'; }
 window.orgOver=(e)=>{ e.preventDefault(); }
@@ -1322,20 +1345,30 @@ async function organizePdf(){
   if(!window.PDFLib) throw new Error('pdf-lib not loaded');
   if(organizeOrder.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
   if(organizeOrder.length===0) throw new Error(L('No pages','Tidak ada halaman'));
-  log('Organize order '+organizeOrder.map(i=>i+1).join(',')+' rotations '+JSON.stringify(organizeRotations));
+  log('Organize order '+organizeOrder.map(orgName).join(',')+' rotations '+JSON.stringify(organizeRotations));
   const buf=await files[0].arrayBuffer();
   const src=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
   const out=await PDFLib.PDFDocument.create();
-  const pages=await out.copyPages(src, organizeOrder);
-  pages.forEach((p, idx)=>{
-    const origIdx=organizeOrder[idx];
-    const rot=organizeRotations[origIdx]||0;
-    if(rot) p.setRotation(PDFLib.degrees(rot%360));
-    out.addPage(p);
+  // Blank pages take the first source page's size.
+  const firstSize=src.getPage(0).getSize();
+  const numIdx=organizeOrder.filter(i=>typeof i==='number');
+  const copied=await out.copyPages(src, numIdx);
+  let k=0;
+  organizeOrder.forEach(idx=>{
+    if(typeof idx==='number'){
+      const p=copied[k++];
+      const rot=organizeRotations[idx]||0;
+      if(rot) p.setRotation(PDFLib.degrees(rot%360));
+      out.addPage(p);
+    }else{
+      const rot=organizeRotations[idx]||0;
+      const p=out.addPage([firstSize.width,firstSize.height]);
+      if(rot) p.setRotation(PDFLib.degrees(rot%360));
+    }
   });
   const bytes=await out.save();
   downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'-organized.pdf'));
-  $('#resultPreview').innerHTML=L(`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} pages saved<br><span class="text-xs text-gray-500">Order: ${organizeOrder.map(i=>i+1).join(' → ')}</span></p>`,`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} hal tersimpan<br><span class="text-xs text-gray-500">Urutan: ${organizeOrder.map(i=>i+1).join(' → ')}</span></p>`)+$('#resultPreview').innerHTML;
+  $('#resultPreview').innerHTML=L(`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} pages saved<br><span class="text-xs text-gray-500">Order: ${organizeOrder.map(orgName).join(' → ')}</span></p>`,`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} hal tersimpan<br><span class="text-xs text-gray-500">Urutan: ${organizeOrder.map(orgName).join(' → ')}</span></p>`)+$('#resultPreview').innerHTML;
 }
 async function wordToPdf(){
   return convertOfficeToPdf('word-to-pdf', ['docx','doc']);
