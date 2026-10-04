@@ -23,6 +23,7 @@
 | `myflipbook-admin.service` | Panel admin (backend pisah): `python3 admin_server.py --host 127.0.0.1 --port 8091 --proxy` |
 | `/etc/nginx/sites-enabled/myflipbookpro` | HTTPS (certbot, wis aktif). `/` → 8080, `/admin/` → 8091. Ojo senggol site liyane. |
 | `/root/myflipbook-admin-password.txt` | Login admin (`admin` + password acak, chmod 600). **Ojo dikirim nang chat / ditulis nang repo.** |
+| Build APK/EXE | VPS ora duwe Flutter: pesenan build mlebu antrian, dijupuk **PC build** (PC owner, `build_worker.py`, kunci `BUILD_WORKER_KEY` padha nang `.env` VPS lan PC). PC mati = build ngantri. Status: `/api/capabilities` → `buildWorker: online/offline`. |
 
 ## 3. Prosedur update (kabeh agen nganggo cara iki)
 
@@ -42,7 +43,7 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 ## 4. Watesan
 
 - VPS 2 GB RAM / 38 GB disk, dienggo bareng numa + sarvamaya.id. RAM mepet (±600 MB kosong) — ojo nglakoni proses abot (build, OCR massal) nang VPS. Owner arep upgrade nang RAM 4 GB.
-- **Ojo install Flutter/Android SDK** nang VPS (`apk:false`); build EXE mustahil nang Linux (`exe:false`).
+- **Ojo install Flutter/Android SDK** nang VPS — build APK/EXE lewat PC build (`build_worker.py` nang PC owner, `start-build-worker.bat`).
 - Paywall ON; pembayaran **dipause** (`PAYMENTS_PAUSED=1` nang `.env`, key Midtrans/Tripay/Lemon durung diisi) — upgrade member saiki lewat `--grant`. Nguripke: isi key gateway, tes, banjur guwang/setel `PAYMENTS_PAUSED=0` + `systemctl restart myflipbook`.
 - Ojo ngganti password root / user lewat SSH; urusan kredensial domain-e owner.
 
@@ -53,3 +54,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-03 | (overlay manual) | agen liya | Deploy awal + HTTPS certbot. |
 | 2026-10-04 11:18 | `1bf0565` | Claude | Kabeh fitur s/d panel admin; `myflipbook-admin.service` + nginx `/admin/`; backup `/root/pdf_project-code-backup-20261004.tgz`. **Owahan `index.html` (stiker "segera hadir" oranye) sing sadurunge wis live tanpa commit dadi ketimpa** — kudu di-commit dhisik banjur deploy maneh yen arep dibalekke. |
 | 2026-10-04 (siang) | `374657f` | Claude | `PAYMENTS_PAUSED=1` ditambah ke `.env` live (pembayaran sementara mati; owner update payment gateway malam ini). Backup `/root/pdf_project-code-backup-20261004b.tgz`, `.env` lama `/root/pdf_project-env-backup-20261004b`. |
+| 2026-10-04 (sore) | `02e3f55` | Claude | Antrian build APK/EXE kanggo PC build; `BUILD_WORKER_KEY` ditambah nang `.env` VPS lan PC (backup `.env` `/root/pdf_project-env-backup-20261004c`, kode `/root/pdf_project-code-backup-20261004c.tgz`). Worker mlaku nang PC owner, live `buildWorker: online`. |
