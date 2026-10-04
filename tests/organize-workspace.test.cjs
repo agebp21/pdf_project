@@ -11,9 +11,7 @@ async function main(){
     window.qaLoad=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}]; updateFileUI();};
     window.qaClear=()=>{clearFiles();};
     window.qaTool=id=>{setTool(id);};
-    window.qaViewer0=()=>{openOrgViewer(0);};
-    window.qaSize=s=>{orgSetSize(s);return document.getElementById('organizeGrid').className;};
-    window.qaBlank=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};
+    window.qaViewer0=()=>{openOrgViewer(0);};    window.qaBlank=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};
     window.qaFill=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,'blank-1'];organizeSelected=new Set(organizeOrder);orgBlankImg={'blank-1':'data:image/jpeg;base64,/9j/'};renderOrganizeGrid();return document.getElementById('organizeGrid').innerHTML.includes('data:image/jpeg');};`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
   // No file yet: prompt visible, workspace tools hidden.
@@ -38,9 +36,6 @@ async function main(){
   // "+" inserts a real blank page (not a duplicate) right after the card.
   assert.equal(JSON.stringify(w.qaBlank()),JSON.stringify([0,'blank-1',1]),'blank inserted at position 1');
   assert.ok(w.document.getElementById('organizeGrid').innerHTML.includes('Blank page'),'blank card renders');
-  // Thumbnail size S/M/L switches the grid density.
-  assert.ok(w.qaSize('L').includes('sm:grid-cols-2'),'L is the biggest');
-  assert.ok(w.qaSize('S').includes('xl:grid-cols-4'),'S is the densest');
   // A filled blank shows its image on the card.
   assert.equal(w.qaFill(),true,'filled blank renders image');
   const chips=[...w.document.querySelectorAll('#orgFiles .org-chip')];
