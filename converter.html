@@ -95,7 +95,10 @@
         <p class="serif font-black text-[20px]">Drop files, grab a coffee ☕</p>
         <p class="font-bold text-[13px] mt-0.5">Drag & drop your files here</p>
         <p id="dropHint" class="text-xs text-[#78716C] mt-1"></p>
-        <button id="pickBtn" class="clay-btn clay-btn-dark mt-4">Choose files</button>
+        <div class="flex flex-wrap justify-center gap-2 mt-4">
+          <button id="pickBtn" class="clay-btn clay-btn-dark">Choose files</button>
+          <a href="library.html" class="clay-btn clay-btn-ghost" onclick="event.stopPropagation()">📚 Open My Library</a>
+        </div>
         <input id="fileInput" type="file" class="hidden">
         <p class="text-[11px] text-[#A8A29E] mt-3 font-semibold">♾️ No size limits — big files are processed right in your browser (depends on RAM)</p>
         <button id="testBtn" class="mt-2 py-2 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter without a file (generate dummy)</button>
@@ -122,6 +125,7 @@
           <a id="downloadBtn" href="#" download class="clay-btn clay-btn-dark">⬇ Download result</a>
           <button id="makeFlipbook" hidden class="clay-btn" style="background:linear-gradient(180deg,#2A5248,#1A3C34);color:#fff;border-color:#1A3C34">Turn into Flipbook →</button>
           <button onclick="resetAll()" class="clay-btn clay-btn-ghost">Convert again</button>
+          <a href="library.html" class="clay-btn clay-btn-ghost">📚 Open My Library</a>
         </div>
       </div>
     </main>
