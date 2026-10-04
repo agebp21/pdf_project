@@ -6,6 +6,9 @@
 2. Jalankan `git status --short` dan lihat diff sebelum mengedit. Perubahan lokal bisa merupakan pekerjaan pengguna atau agen lain; jangan ditimpa atau dibuang.
 3. Cocokkan tugas terbaru pengguna dengan status aktual kode. Catatan handoff adalah konteks, bukan pengganti pemeriksaan kode.
 4. Untuk koordinasi beberapa AI, gunakan [TEAM_WORK.md](TEAM_WORK.md). Dokumen ini tidak otomatis memerintahkan spawning agen atau pengerjaan seluruh backlog.
+5. **Status terkini dan siapa mengerjakan apa: bagian "📌 Status terkini" di paling atas [TEAM_WORK.md](TEAM_WORK.md).** Perbarui bagian itu setiap selesai bekerja.
+6. **Sebelum menyentuh VPS / situs live (myflipbookpro.com): baca [DEPLOY.md](DEPLOY.md)** — satu prosedur deploy untuk semua agen, dan catat setiap deploy di "Log deploy". Yang di-deploy hanya commit yang sudah di-push; jangan pernah men-deploy file yang belum di-commit.
+7. Kunci, password, dan isi `.env` tidak pernah ditulis di repo atau chat.
 
 ## Arah produk dan keputusan pengguna
 

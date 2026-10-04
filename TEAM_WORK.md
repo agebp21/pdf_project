@@ -1,5 +1,34 @@
 # Koordinasi tim AI
 
+## 📌 Status terkini (diperbarui 2026-10-04 oleh Claude) — BACA DULU
+
+**Live:** https://myflipbookpro.com = commit `1bf0565` (deploy 2026-10-04 11:18, lihat DEPLOY.md → Log deploy). GitHub `main` sudah berisi semua itu + catatan handoff (`fc43230`).
+**Panel admin live:** https://myflipbookpro.com/admin/ (backend terpisah `admin_server.py`, login admin sendiri; password hanya di VPS `/root/myflipbook-admin-password.txt`).
+
+Selesai & live (detail per fitur di PROJECT_HANDOFF.md, bagian bertanggal):
+- Terjemahan buku penuh "🌐 Translate" (Argos gratis), progress bar, lanjut setelah Stop, layout ikut kolom majalah, drop cap, caption rata kanan.
+- Translate AI pindah ke toolbar stabilo (hanya teks yang distabilo → catatan); stabilo di edisi terjemahan memakai kata terjemahan (`versionWords`).
+- Audio book: baca edisi terjemahan (juga saat translate berjalan), judul huruf renggang & kapital dibaca sebagai kata.
+- OCR otomatis halaman gambar (Tesseract.js) untuk stabilo/audio; spidol (marker) di toolbar stabilo; fullscreen di toolbar (alat tetap muncul).
+- Buka buku cepat (6 halaman dulu, sisanya di belakang; proyek pakai teks tersimpan); progress bar merah di kotak status.
+- My Library hanya lewat tombol "💾 Save My Library" (awal "📚 Open My Library", kembali Open setelah simpan).
+- Nama fitur: "AI Summarizer" (notebook.html), "Find Journal & Ebook" (journals.html). Swara flip kertas dihapus.
+- Admin: ringkasan, member, upload (metadata), pengunjung (visits.py, tanpa IP), server; `--grant EMAIL PLAN DAYS|lifetime`.
+- Member agungbp.online@gmail.com & wiyanjenarmahesa@gmail.com = Business lifetime (live + lokal).
+
+**Belum di-commit (bukan milik Claude, menunggu keputusan owner/pemiliknya):** `README.md`, `index.html` (stiker "segera hadir" oranye — sempat live, tertimpa deploy 2026-10-04), `messages_en.py`, `notebook.html`, `tests/test_accounts.py`. Pemiliknya: commit (dengan tes) lalu deploy sesuai DEPLOY.md; jangan ditimpa.
+
+**Terbuka / berikutnya:**
+- Owner berencana upgrade VPS ke RAM 4 GB (sekarang 2 GB dibagi dengan numa + sarvamaya.id).
+- Email: pindah dari Gmail SMTP ke Brevo/Resend dengan `noreply@myflipbookpro.com` (+ SPF/DKIM) — hanya `.env`.
+- Google OAuth consent screen: Publish app (privacy/terms sudah ada) supaya semua akun Google bisa login.
+- Pembayaran belum aktif (key Midtrans/LemonSqueezy kosong).
+- Halaman gambar belum ikut terjemahan buku penuh (usulan: terjemahkan teks OCR untuk audio, gambar tidak diubah).
+- Tes Python `test_library...ownership` kadang gagal saat suite penuh (lulus bila sendiri).
+
+Aturan singkat: satu file satu penulis aktif; catat di tabel di bawah sebelum mulai; deploy hanya lewat DEPLOY.md; perbarui bagian ini setiap selesai.
+
+
 Gunakan file ini sebagai papan serah-terima. Semua agen membaca `AGENTS.md` dan `PROJECT_HANDOFF.md` sebelum bekerja. Pesan langsung antartim tetap diperlukan bila dua agen aktif bersamaan; file ini bukan mekanisme lock otomatis.
 
 ## Cara mengambil pekerjaan
@@ -1086,7 +1115,7 @@ E2E (member di-mock): mulai "Open My Library" -> buka PDF "Save My Library", 0 s
 
 ## 2026-10-03 — Akses SSH VPS: root password ditolak, login via SSH key
 
-Laporan: password root lama (`k0YMZ;...`) ditolak (`AuthenticationException`), dan user `deploy` + password yang sama juga ditolak. Bukan gangguan jaringan. Cara login deploy ada di `.md` nusantaramahayatra: root login via SSH key `C:\Users\SARVAMAYA-3\.ssh\id_ed25519` (bukan password) — `E:\Nusantara_Mahayatra_LandingPage\CODEX_VPS_GUIDE.md` bagian 1-2 (dibaca saja, tidak diubah).
+Laporan: password root lama ditolak (`AuthenticationException`), dan user `deploy` + password yang sama juga ditolak. Bukan gangguan jaringan. Cara login deploy ada di `.md` nusantaramahayatra: root login via SSH key `C:\Users\SARVAMAYA-3\.ssh\id_ed25519` (bukan password) — `E:\Nusantara_Mahayatra_LandingPage\CODEX_VPS_GUIDE.md` bagian 1-2 (dibaca saja, tidak diubah).
 Verifikasi: login key sebagai root OK (`whoami` = root); `/opt/pdf_project` + service `myflipbook` (active) utuh. Jangan nebak password berulang (fail2ban aktif di VPS). File disentuh: tidak ada (skrip cek hanya di TEMP).
 
 
