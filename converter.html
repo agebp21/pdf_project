@@ -337,7 +337,7 @@ function renderHeader(){
     </div>`;
   }else if(t.id==='organize-pdf'){
     // iLovePDF-style workspace: page grid + floating actions + right sidebar.
-    html=`<div class="org-ws">
+    html=`<div class="org-ws" ondragover="orgWsOver(event)" ondrop="orgWsDrop(event)">
       <div class="org-main">
         <div id="orgEmpty" class="org-empty">
           <p style="font-size:28px">📄</p>
@@ -684,6 +684,8 @@ function renderOrganizeGrid(){
 let orgSortDesc=false;
 window.orgSortToggle=()=>{ orgSortDesc=!orgSortDesc; const dir=orgSortDesc?-1:1; organizeOrder.sort((a,b)=>(a-b)*dir); renderOrganizeGrid(); log('Org sort '+(orgSortDesc?'desc':'asc')); };
 window.orgReset=()=>{ buildOrganizePreview(); log('Org reset'); };
+window.orgWsOver=(e)=>{ e.preventDefault(); };
+window.orgWsDrop=(e)=>{ e.preventDefault(); if(e.dataTransfer&&e.dataTransfer.files.length){ log('Drop '+e.dataTransfer.files.length+' files'); handleFiles(e.dataTransfer.files); } };
 window.orgRotateOne=(idx)=>{ organizeRotations[idx]=((organizeRotations[idx]||0)+90)%360; if(!organizeRotations[idx]) delete organizeRotations[idx]; renderOrganizeGrid(); };
 window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(pos,1); if(!organizeOrder.includes(idx)) organizeSelected.delete(idx); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); };
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); organizeOrder.splice(at<0?organizeOrder.length:at+1,0,idx); renderOrganizeGrid(); };
@@ -700,6 +702,8 @@ window.orgDrop=(e)=>{ e.preventDefault(); const to=parseInt(e.currentTarget.data
 
 function updateFileUI({preserveError=false}={}){
   document.getElementById('convGrid')?.classList.toggle('single', files.length===0);
+  // Organize brings its own drop surface (the workspace); the main drop card stays out of the way.
+  document.getElementById('drop')?.classList.toggle('is-hidden', active==='organize-pdf');
   if(active==='organize-pdf'){
     // Workspace empty state: no file yet -> prompt; file present -> grid + tools.
     const loaded=files.length>0;

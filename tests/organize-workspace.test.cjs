@@ -9,7 +9,8 @@ async function main(){
   // Driver hooks must live in the SAME eval scope (top-level let is not shared across eval calls).
   w.eval(script+`
     window.qaLoad=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}]; updateFileUI();};
-    window.qaClear=()=>{clearFiles();};`);
+    window.qaClear=()=>{clearFiles();};
+    window.qaTool=id=>{setTool(id);};`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
   // No file yet: prompt visible, workspace tools hidden.
   assert.equal(vis('orgEmpty'),true,'empty prompt shows without file');
@@ -27,6 +28,11 @@ async function main(){
   w.qaClear();
   assert.equal(vis('orgEmpty'),true,'prompt returns after remove');
   assert.equal(w.document.getElementById('organizeGrid').innerHTML,'','grid cleared after remove');
+  // The main drop card stays out of the way for organize, back for other tools.
+  w.qaLoad();
+  assert.ok(w.document.getElementById('drop').classList.contains('is-hidden'),'drop hidden for organize');
+  w.qaTool('merge-pdf');
+  assert.ok(!w.document.getElementById('drop').classList.contains('is-hidden'),'drop returns for merge');
   w.close();
   console.log('PASS organize workspace: empty state, sidebar, no duplicate panel');
 }
