@@ -56,6 +56,14 @@ ANDROID_SIGNING = DATA / 'android-signing.json'
 TOKEN = secrets.token_urlsafe(32)
 JOBS = {}
 BUILD_LOCK = threading.Lock()
+# Remote builds: a server without Flutter (the VPS) queues APK/EXE jobs for a
+# build PC running build_worker.py (BUILD_WORKER_KEY in both .env files).
+WORKER = dict(seen=0.0)
+WORKER_LOCK = threading.Lock()
+WORKER_ONLINE_SECONDS = 90          # the worker asks every ~10 s; quiet longer than this = offline
+WORKER_STALE_SECONDS = 45 * 60      # a claimed job with no news for this long has failed
+MAX_QUEUED_BUILDS = 20
+MAX_BUILD_RESULT = 600 * 1024 * 1024
 POSITIONS = {'top-left', 'top-right', 'bottom-left', 'bottom-right'}
 SESSION_COOKIE = 'mf_session'
 PAGES = {'index.html', 'converter.html', 'workflow.html', 'library.html', 'journals.html', 'flipbook.html', 'animation.html', 'notebook.html',
@@ -171,6 +179,19 @@ def payments_paused():
     set up), even with gateway keys filled in. Notifications for orders already
     made still come in."""
     return os.environ.get('PAYMENTS_PAUSED', '').strip().lower() in ('1', 'true', 'yes', 'on')
+
+
+def worker_key():
+    return os.environ.get('BUILD_WORKER_KEY', '').strip()
+
+
+def remote_builds():
+    """APK/EXE builds go to the build PC: a worker key is set and there is no Flutter here."""
+    return bool(worker_key()) and not shutil.which('flutter')
+
+
+def worker_online():
+    return time.time() - WORKER['seen'] < WORKER_ONLINE_SECONDS
 
 
 def get_visits():
@@ -1695,6 +1716,128 @@ class Handler(SimpleHTTPRequestHandler):
         secure = '; Secure' if CONFIG['secure'] else ''
         return f'{SESSION_COOKIE}={token or ""}; Path=/; HttpOnly; SameSite=Lax; Max-Age={max_age}{secure}'
 
+    # ---------- Remote builds (build PC running build_worker.py) ----------
+    def queue_remote_build(self, target):
+        with WORKER_LOCK:
+            waiting = sum(1 for j in JOBS.values() if j.get('remote') and j['status'] in ('queued', 'running'))
+        if waiting >= MAX_QUEUED_BUILDS:
+            self.send_json(429, {'error': 'Antrean build sedang penuh. Coba lagi beberapa menit lagi.'})
+            return
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if size <= 0:
+                raise ValueError('Paket buku kosong.')
+            prune_builds()
+            job_id = uuid.uuid4().hex
+            folder = BUILD / job_id
+            folder.mkdir(parents=True)
+            self.connection.settimeout(120)
+            with (folder / 'input.zip').open('wb') as output:
+                remaining = size
+                while remaining:
+                    chunk = self.rfile.read(min(1024 * 1024, remaining))
+                    if not chunk:
+                        raise ValueError('Upload tidak lengkap.')
+                    output.write(chunk)
+                    remaining -= len(chunk)
+        except Exception as cause:
+            self.send_json(400, {'error': str(cause)})
+            return
+        message = ('Menunggu giliran di PC build…' if worker_online()
+                   else 'PC build sedang offline — build otomatis mulai begitu PC build menyala.')
+        job = dict(id=job_id, status='queued', message=message, progress=0, remote=True, target=target, updated=time.time())
+        archived = self.headers.get('X-Library-Book', '')
+        member = self.current_user() if archived else None
+        if member and re.fullmatch(r'[0-9a-f]{32}', archived):
+            job.update(library_user=member, library_book=archived)
+        with WORKER_LOCK:
+            JOBS[job_id] = job
+        self.send_json(202, {'id': job_id})
+
+    def worker_route(self, method):
+        """The build PC: claim a queued job, fetch its book, report progress, send the result."""
+        key = worker_key()
+        if not key or not secrets.compare_digest(self.headers.get('X-Worker-Key', ''), key):
+            self.send_json(403, {'error': 'Kunci worker tidak valid.'})
+            return
+        WORKER['seen'] = time.time()
+        path = urlsplit(self.path).path
+        if method == 'POST' and path == '/api/worker/claim':
+            now = time.time()
+            with WORKER_LOCK:
+                for job in JOBS.values():
+                    if job.get('remote') and job['status'] == 'running' and now - job.get('updated', now) > WORKER_STALE_SECONDS:
+                        job.update(status='failed', message='PC build berhenti di tengah jalan. Coba build lagi.')
+                waiting = sorted((j for j in JOBS.values() if j.get('remote') and j['status'] == 'queued'), key=lambda j: j['updated'])
+                job = waiting[0] if waiting else None
+                if job:
+                    job.update(status='running', message='PC build mulai…', progress=0.02, updated=now)
+            self.send_json(200, {'id': job['id'], 'target': job['target']} if job else {'id': None})
+            return
+        match = re.fullmatch(r'/api/worker/jobs/([a-f0-9]{32})/(input|progress|result|fail)', path)
+        job = JOBS.get(match[1]) if match else None
+        if not job or not job.get('remote'):
+            self.send_json(404, {'error': 'Build tidak ditemukan.'})
+            return
+        folder, action = BUILD / job['id'], match[2]
+        if method == 'GET' and action == 'input':
+            file = folder / 'input.zip'
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/zip')
+            self.send_header('Content-Length', str(file.stat().st_size))
+            self.end_headers()
+            with file.open('rb') as source:
+                shutil.copyfileobj(source, self.wfile)
+            return
+        if method != 'POST' or job['status'] != 'running':
+            self.send_json(409, {'error': 'Build ini tidak sedang berjalan.'})
+            return
+        if action in ('progress', 'fail'):
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                data = json.loads(self.rfile.read(size) if 0 < size <= 512 * 1024 else b'{}')
+            except (ValueError, json.JSONDecodeError):
+                data = {}
+            data = data if isinstance(data, dict) else {}
+            if action == 'progress':
+                progress = data.get('progress')
+                job.update(message=str(data.get('message') or job['message'])[:200], updated=time.time(),
+                           progress=min(0.99, max(0.0, float(progress))) if isinstance(progress, (int, float)) else job['progress'])
+            else:
+                (folder / 'build.log').write_text(str(data.get('log') or '')[-200000:], encoding='utf-8')
+                job.update(status='failed', message=str(data.get('message') or 'Build gagal.')[:300], log=f'/api/jobs/{job["id"]}/log', updated=time.time())
+            self.send_json(200, {'ok': True})
+            return
+        # result: the built file
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= MAX_BUILD_RESULT:
+                raise ValueError('Ukuran hasil build tidak valid.')
+            output = folder / ('flipbook.apk' if job['target'] == 'apk' else 'flipbook-windows.zip')
+            self.connection.settimeout(300)
+            with output.open('wb') as stream:
+                remaining = size
+                while remaining:
+                    chunk = self.rfile.read(min(1024 * 1024, remaining))
+                    if not chunk:
+                        raise ValueError('Upload hasil build tidak lengkap.')
+                    stream.write(chunk)
+                    remaining -= len(chunk)
+        except (ValueError, OSError) as cause:
+            self.send_json(400, {'error': str(cause)})
+            return
+        download_name = unquote(self.headers.get('X-Download-Name', '')).strip()[:200] or output.name
+        download_name = re.sub(r'[\\/:*?"<>|\x00-\x1f]+', '_', download_name)
+        if job.get('library_user') and job.get('library_book'):
+            try:
+                get_library().save_export(job['library_user'], job['library_book'], job['target'], download_name, source=output)
+                job['library'] = 'saved'
+            except accounts.AccountError as cause:
+                job['library'] = str(cause)
+        job.update(status='done', message='Build selesai.', progress=1, artifact=output.name, download_name=download_name,
+                   download=f'/api/jobs/{job["id"]}/download', updated=time.time())
+        self.send_json(200, {'ok': True})
+
     def count_visit(self, page):
         """One page view for the admin statistics (never stops the page)."""
         try:
@@ -2120,6 +2263,9 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(403, {'error': 'Akses hanya dari localhost proyek.'})
             return
         path = unquote(urlsplit(self.path).path)
+        if path.startswith('/api/worker/'):
+            self.worker_route('GET')
+            return
         if path.startswith(('/api/auth/', '/api/billing/')):
             try:
                 self.account_get(path)
@@ -2156,7 +2302,9 @@ class Handler(SimpleHTTPRequestHandler):
             # Hosting: the build/convert token is only handed to signed-in users.
             user = self.current_user() if hosted() or CONFIG['paywall'] else None
             token = TOKEN if not hosted() or user else None
-            self.send_json(200, dict(apk=flutter, exe=flutter and os.name == 'nt', office=office, html=html, token=token,
+            remote = remote_builds()
+            self.send_json(200, dict(apk=flutter or remote, exe=(flutter and os.name == 'nt') or remote, office=office, html=html, token=token,
+                                     buildWorker=('online' if worker_online() else 'offline') if remote else None,
                                      loginRequired=hosted(), paywall=CONFIG['paywall'],
                                      entitlements=user['entitlements'] if user else None, drive=drive_picker_config()))
             return
@@ -2333,6 +2481,9 @@ class Handler(SimpleHTTPRequestHandler):
         if not self.trusted():
             self.send_json(403, {'error': 'Akses ditolak.'})
             return
+        if self.path.startswith('/api/worker/'):
+            self.worker_route('POST')
+            return
         if self.path.startswith(('/api/auth/', '/api/billing/')):
             try:
                 self.account_post(self.path)
@@ -2380,6 +2531,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if not match or self.headers.get_content_type() != 'application/zip':
             self.send_json(400, {'error': 'Permintaan build tidak valid.'})
+            return
+        if remote_builds():
+            self.queue_remote_build(match[1])
             return
         if not shutil.which('flutter'):
             self.send_json(503, {'error': 'Flutter tidak tersedia.'})
