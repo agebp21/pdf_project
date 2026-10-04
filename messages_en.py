@@ -41,6 +41,11 @@ EXACT = {
     'Bahasa edisi terjemahan tidak valid.': 'Invalid translated edition language.',
     'Halaman edisi terjemahan tidak valid.': 'Invalid translated edition page.',
     # --- AI
+    'Kunci worker tidak valid.': 'The worker key is not valid.',
+    'Build ini tidak sedang berjalan.': 'This build is not running.',
+    'Ukuran hasil build tidak valid.': 'The size of the build result is not valid.',
+    'Upload hasil build tidak lengkap.': 'The build result upload was incomplete.',
+    'Antrean build sedang penuh. Coba lagi beberapa menit lagi.': 'The build queue is full. Try again in a few minutes.',
     'Pembayaran online sementara dinonaktifkan. Coba lagi nanti.': 'Online payment is paused for now. Please try again later.',
     'AI tidak menghasilkan ringkasan. Coba lagi.': 'The AI did not produce a summary. Try again.',
     'Teks yang distabilo kosong.': 'The highlighted text is empty.',
