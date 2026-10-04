@@ -19,13 +19,16 @@ global.gapi = {load(name, opts) { assert.equal(name, 'picker'); setTimeout(opts.
 const picker = {
   ViewId: {DOCS: 'docs'}, Action: {PICKED: 'picked', CANCEL: 'cancel'},
   Response: {ACTION: 'action', DOCUMENTS: 'docs'}, Document: {ID: 'id', NAME: 'name', MIME_TYPE: 'mimeType'},
-  DocsView: class { constructor(id) { this.id = id; } setIncludeFolders() { return this; } setSelectFolderEnabled() { return this; } setMimeTypes(m) { this.mimes = m; return this; } },
+  DocsView: class { constructor(id) { this.id = id; } setIncludeFolders() { return this; } setSelectFolderEnabled() { return this; } setMimeTypes(m) { this.mimes = m; return this; }
+    setLabel(l) { this.label = l; return this; } setParent(p) { this.parent = p; return this; } setOwnedByMe(o) { this.owned = o; return this; }
+    setEnableDrives(d) { this.drives = d; return this; } setStarred(s) { this.starred = s; return this; } },
+  Feature: {SUPPORT_DRIVES: 'sd'},
   DocsUploadView: class {},
   PickerBuilder: class {
     constructor() { builderState = this; this.views = []; }
     addView(v) { this.views.push(v); return this; } setOAuthToken(t) { this.token = t; return this; } setDeveloperKey(k) { this.key = k; return this; }
     setTitle() { return this; } setAppId(a) { this.appId = a; return this; } setLocale(l) { this.locale = l; return this; }
-    setCallback(cb) { this.cb = cb; return this; }
+    setCallback(cb) { this.cb = cb; return this; } enableFeature(f) { (this.features = this.features || []).push(f); return this; }
     build() { const self = this; return {setVisible() { setTimeout(() => self.cb(pickerReply), 0); }}; }
   },
 };
@@ -50,6 +53,12 @@ const config = {clientId: 'client-1', apiKey: 'key-1', appId: '123456'};
   assert.deepEqual(loaded, ['https://apis.google.com/js/api.js', 'https://accounts.google.com/gsi/client']);
   assert.equal(builderState.key, 'key-1'); assert.equal(builderState.appId, '123456'); assert.equal(builderState.token, 'tok-1'); assert.equal(builderState.locale, 'id');
   assert.ok(builderState.views[0].mimes.includes('application/pdf') && builderState.views[0].mimes.includes('application/vnd.google-apps.presentation'));
+  // Tabs like Google Drive: My Drive (folders from the root), Shared with me, Shared drives, Starred, then Upload.
+  assert.deepEqual(builderState.views.slice(0, 4).map(v => v.label), ['My Drive', 'Shared with me', 'Shared drives', 'Starred']);
+  assert.equal(builderState.views[0].parent, 'root'); assert.equal(builderState.views[1].owned, false);
+  assert.equal(builderState.views[2].drives, true); assert.equal(builderState.views[3].starred, true);
+  assert.ok(builderState.views.every((v, i) => i === 4 || v.mimes), 'every Drive tab shows the supported files only');
+  assert.ok(builderState.views[4] instanceof picker.DocsUploadView); assert.deepEqual(builderState.features, ['sd']);
   assert.deepEqual(requests.pop(), ['https://www.googleapis.com/drive/v3/files/doc%201/export?mimeType=application%2Fpdf', 'Bearer tok-1']);
   assert.equal(file.name, 'Laporan Tahunan.pdf'); assert.equal(file.type, 'application/pdf');
   assert.ok(said.some(t => /Downloading Laporan Tahunan/.test(t)));

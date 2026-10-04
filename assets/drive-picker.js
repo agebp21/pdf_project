@@ -81,9 +81,24 @@
   function choose(config, oauth) {
     var picker = root.google.picker;
     return new Promise(function (resolve) {
-      var view = new picker.DocsView(picker.ViewId.DOCS).setIncludeFolders(true).setSelectFolderEnabled(false).setMimeTypes(MIME_TYPES.join(','));
+      // Tabs like Google Drive itself: My Drive (with its folders), Shared
+      // with me, Shared drives, Starred, Upload. Methods a Picker version
+      // lacks are skipped.
+      var call = function (target, method) {
+        if (typeof target[method] === 'function') target[method].apply(target, Array.prototype.slice.call(arguments, 2));
+        return target;
+      };
+      var tab = function (label, setup) {
+        var v = new picker.DocsView(picker.ViewId.DOCS);
+        call(v, 'setIncludeFolders', true); call(v, 'setSelectFolderEnabled', false); call(v, 'setMimeTypes', MIME_TYPES.join(','));
+        setup(v);
+        return call(v, 'setLabel', label);
+      };
       var builder = new picker.PickerBuilder()
-        .addView(view)
+        .addView(tab('My Drive', function (v) { call(v, 'setParent', 'root'); }))
+        .addView(tab('Shared with me', function (v) { call(v, 'setOwnedByMe', false); }))
+        .addView(tab('Shared drives', function (v) { call(v, 'setEnableDrives', true); }))
+        .addView(tab('Starred', function (v) { call(v, 'setStarred', true); }))
         .addView(new picker.DocsUploadView())
         .setOAuthToken(oauth)
         .setDeveloperKey(config.apiKey)
@@ -93,6 +108,7 @@
           if (action === picker.Action.PICKED) resolve(data[picker.Response.DOCUMENTS][0]);
           else if (action === picker.Action.CANCEL) resolve(null);
         });
+      if (picker.Feature && picker.Feature.SUPPORT_DRIVES && builder.enableFeature) builder.enableFeature(picker.Feature.SUPPORT_DRIVES);
       if (config.appId) builder.setAppId(config.appId);
       var lang = (document.documentElement.lang || '').slice(0, 2);
       if (lang) builder.setLocale(lang);
