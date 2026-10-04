@@ -931,8 +931,9 @@
   fetch('/api/capabilities').then(async response=>{
     if(!response.ok)throw Error(L('The build service is not running','Layanan build belum berjalan'));
     buildConfig=await response.json();exportState();markLocked();
-    $('#build-availability').textContent=buildConfig.apk||buildConfig.exe?L('APK/EXE builds use this computer. The first build can take a few minutes and needs internet for dependencies.','Build APK/EXE memakai komputer ini. Build pertama dapat memerlukan beberapa menit dan internet untuk dependensi.'):L('Flutter is not available yet. HTML export and saving projects still work.','Flutter belum tersedia. Ekspor HTML dan simpan proyek tetap bisa digunakan.');
-  }).catch(()=>{ $('#build-availability').textContent=L('For APK/EXE builds, run the project server with python server.py. HTML export still works.','Untuk build APK/EXE, jalankan server proyek dengan python server.py. Ekspor HTML tetap tersedia.'); });
+    const buildNote=$('#build-availability');
+    if(buildNote)buildNote.textContent=buildConfig.apk||buildConfig.exe?L('APK/EXE builds use this computer. The first build can take a few minutes and needs internet for dependencies.','Build APK/EXE memakai komputer ini. Build pertama dapat memerlukan beberapa menit dan internet untuk dependensi.'):L('Flutter is not available yet. HTML export and saving projects still work.','Flutter belum tersedia. Ekspor HTML dan simpan proyek tetap bisa digunakan.');
+  }).catch(()=>{ const buildNote=$('#build-availability'); if(buildNote)buildNote.textContent=L('For APK/EXE builds, run the project server with python server.py. HTML export still works.','Untuk build APK/EXE, jalankan server proyek dengan python server.py. Ekspor HTML tetap tersedia.'); });
   const fromLibrary = new URLSearchParams(location.search).get('library');
   if (/^[0-9a-f]{32}$/.test(fromLibrary || '')) {
     (async () => {
