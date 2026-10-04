@@ -12,6 +12,7 @@
 <script src="assets/workflow.js"></script>
 <script src="assets/flipbook-transfer.js"></script>
 <script src="assets/auth.js" defer></script>
+<script src="assets/add-source.js" defer></script>
 <script src="assets/mf-dialog.js" defer></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="assets/ui-clay.css">
@@ -150,6 +151,12 @@
   }
   $('#file-input').onchange = event => { addFiles([...event.target.files]); event.target.value = ''; };
   const drop = $('#drop');
+  // Choose PDFs: the shared Add source dialog (link, upload, Google Drive, drop).
+  drop.addEventListener('click', event => {
+    if (!window.AddSource) return;
+    event.preventDefault();
+    AddSource.open({title: 'Workflow', subtitle: 'your PDFs', accept: '.pdf', multiple: true, onFiles: list => addFiles(list)});
+  });
   ['dragenter', 'dragover'].forEach(type => drop.addEventListener(type, e => { e.preventDefault(); drop.classList.add('drag'); }));
   ['dragleave', 'drop'].forEach(type => drop.addEventListener(type, e => { e.preventDefault(); drop.classList.remove('drag'); }));
   drop.addEventListener('drop', e => addFiles([...e.dataTransfer.files]));

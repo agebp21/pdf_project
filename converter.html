@@ -13,6 +13,7 @@
 <script src="assets/i18n.js"></script>
 <script src="assets/pdf-layout.js"></script>
 <script src="assets/auth.js" defer></script>
+<script src="assets/add-source.js" defer></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="stylesheet" href="assets/ui-clay.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -549,7 +550,14 @@ window.removeFile=(i)=>{files.splice(i,1); updateFileUI();}
 window.clearFiles=()=>{files=[]; updateFileUI(); $('#fileInput').value=''; log('Cleared');}
 window.resetAll=()=>{clearFiles(); $('#result').classList.add('hidden'); $('#progress').classList.add('hidden'); $('#error').classList.add('hidden');}
 const drop=$('#drop'), input=$('#fileInput'), pickBtn=$('#pickBtn');
-pickBtn.addEventListener('click',(e)=>{ e.stopPropagation(); input.click(); });
+// Choose files: the shared Add source dialog (link, upload, Google Drive, drop), like the flipbook's.
+pickBtn.addEventListener('click',(e)=>{
+  e.stopPropagation();
+  const t=TOOLS.find(x=>x.id===active);
+  if(!window.AddSource){ input.click(); return; }
+  AddSource.open({title:t.title, subtitle:t.multiple?L('your files','file-mu'):L('your file','file-mu'), accept:t.accept, multiple:!!t.multiple,
+    onFiles:list=>{ log('Added '+list.length+' files'); handleFiles(list); }});
+});
 drop.addEventListener('dragover',e=>{e.preventDefault(); drop.classList.add('drag');});
 drop.addEventListener('dragleave',()=>drop.classList.remove('drag'));
 drop.addEventListener('drop',e=>{

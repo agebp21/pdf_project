@@ -79,7 +79,7 @@
     });
   }
 
-  function choose(config, oauth) {
+  function choose(config, oauth, mimeTypes) {
     var picker = root.google.picker;
     return new Promise(function (resolve) {
       // Tabs like Google Drive itself: My Drive (with its folders), Shared
@@ -91,7 +91,7 @@
       };
       var tab = function (label, setup) {
         var v = new picker.DocsView(picker.ViewId.DOCS);
-        call(v, 'setIncludeFolders', true); call(v, 'setSelectFolderEnabled', false); call(v, 'setMimeTypes', MIME_TYPES.join(','));
+        call(v, 'setIncludeFolders', true); call(v, 'setSelectFolderEnabled', false); call(v, 'setMimeTypes', (mimeTypes && mimeTypes.length ? mimeTypes : MIME_TYPES).join(','));
         setup(v);
         return call(v, 'setLabel', label);
       };
@@ -146,13 +146,15 @@
   }
 
   /* Opens the picker; resolves the picked file as a File, or null when the
-   * reader cancels. status(text) reports progress. */
-  function pick(config, status) {
+   * reader cancels. status(text) reports progress. options.mimeTypes: only
+   * these kinds of files (default: everything a flipbook can be made from). */
+  function pick(config, status, options) {
     status = status || function () {};
+    var only = options && options.mimeTypes;
     var oauth;
     return preload()
       .then(function () { status('Signing in to Google…'); return accessToken(config); })
-      .then(function (value) { oauth = value; status('Choose a file in Google Drive…'); return choose(config, oauth); })
+      .then(function (value) { oauth = value; status('Choose a file in Google Drive…'); return choose(config, oauth, only); })
       .then(function (doc) {
         if (!doc) { status(''); return null; }
         status('Downloading ' + (doc[root.google.picker.Document.NAME] || 'the file') + ' from Google Drive…');
