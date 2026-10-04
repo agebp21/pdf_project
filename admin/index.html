@@ -114,7 +114,8 @@ const money = (cur, n) => cur === 'USD' ? '$' + (n / 100).toLocaleString('en-US'
 const PLAN = {free: 'Free', pro: 'Pro', business: 'Business'};
 
 async function api(path, options = {}) {
-  const r = await fetch(path, Object.assign({credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-Admin': '1'}}, options));
+  // Relative to the page, so the panel also works under a path (nginx: /admin/ -> this server).
+  const r = await fetch(path.slice(1),Object.assign({credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-Admin': '1'}}, options));
   const data = await r.json().catch(() => ({}));
   if (r.status === 401 && path !== '/api/login') { show(false); throw Error(data.error || 'Masuk dulu.'); }
   if (!r.ok) throw Error(data.error || 'Gagal (' + r.status + ').');
