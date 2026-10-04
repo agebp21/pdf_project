@@ -50,6 +50,9 @@
   .conv-cols.single #colRight{max-width:640px;margin:0 auto;width:100%}
   /* Organize workspace (iLovePDF-style): page grid + floating actions + sidebar. */
   .org-ws{display:grid;gap:0;background:#f3f3fa;border:1px solid #e7e2f2;border-radius:16px;overflow:hidden}
+  .org-empty{border:2px dashed #d8d2e8;border-radius:12px;padding:2.5rem 1.5rem;text-align:center;color:#6b7280;background:#fafaff}
+  .org-empty p{margin:.25rem 0;font-size:13px}
+  .org-empty button{margin-top:.75rem;background:#1A3C34;color:#fff;border:0;border-radius:999px;padding:.6rem 1.4rem;font-weight:800;font-size:13px;cursor:pointer}
   @media(min-width:1024px){.org-ws{grid-template-columns:minmax(0,1fr) 300px}}
   .org-main{position:relative;padding:1.25rem;min-width:0}
   .org-main #organizeGrid{padding-right:3rem}
@@ -332,16 +335,22 @@ function renderHeader(){
     // iLovePDF-style workspace: page grid + floating actions + right sidebar.
     html=`<div class="org-ws">
       <div class="org-main">
-        <div id="organizeGrid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[62vh] overflow-auto p-2 pb-4"></div>
-        <div class="org-fab">
+        <div id="orgEmpty" class="org-empty">
+          <p style="font-size:28px">📄</p>
+          <p><b>${L('Pick a PDF to start organizing','Pilih PDF kanggo mulai ngatur')}</b></p>
+          <p>${L('Page thumbnails will appear here — drag to reorder.','Thumbnail halaman bakal muncul nang kene — drag kanggo ngurutke.')}</p>
+          <button onclick="addMoreFiles()">${L('Choose file','Pilih file')}</button>
+        </div>
+        <div id="organizeGrid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[62vh] overflow-auto p-2 pb-4" hidden></div>
+        <div class="org-fab" id="orgFab" hidden>
           <button onclick="orgDuplicate()" id="orgFabAdd" title="${L('Duplicate selected','Duplikat yang dipilih')}" class="org-fab-add">+<span id="orgFabBadge" class="org-fab-badge" hidden></span></button>
           <button onclick="orgSortToggle()" title="${L('Sort by page number','Urutkan nomor halaman')}" class="org-fab-sort">⇅</button>
         </div>
       </div>
-      <aside class="org-side">
+      <aside class="org-side" id="orgSide" hidden>
         <h3 class="org-side-title">Organize pdf</h3>
         <div class="org-files-head"><span>${L('Files:','File:')}</span><button onclick="orgReset()" class="org-reset">Reset all</button></div>
-        <div class="org-chip"><span class="org-chip-icon">⇅</span><span id="orgFileName" class="org-chip-name"></span></div>
+        <div class="org-chip"><span class="org-chip-icon">📄</span><span id="orgFileName" class="org-chip-name"></span></div>
         <div id="orgSelBox" class="org-sel" hidden>
           <p class="org-sel-count"><b id="orgSelCount">0</b> ${L('selected','dipilih')}</p>
           <button onclick="orgDelete()" class="org-sel-del">🗑️ ${L('Delete selected','Hapus yang dipilih')}</button>
@@ -675,6 +684,15 @@ window.orgDrop=(e)=>{ e.preventDefault(); const to=parseInt(e.currentTarget.data
 
 function updateFileUI({preserveError=false}={}){
   document.getElementById('convGrid')?.classList.toggle('single', files.length===0);
+  if(active==='organize-pdf'){
+    // Workspace empty state: no file yet -> prompt; file present -> grid + tools.
+    const loaded=files.length>0;
+    document.getElementById('orgEmpty')?.classList.toggle('hidden',loaded);
+    document.getElementById('organizeGrid')?.classList.toggle('hidden',!loaded);
+    document.getElementById('orgFab')?.classList.toggle('hidden',!loaded);
+    document.getElementById('orgSide')?.classList.toggle('hidden',!loaded);
+    if(!loaded){ organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map(); }
+  }
   if(files.length===0){ $('#fileList').classList.add('hidden'); splitPageCount=0; document.getElementById('splitSelectBox')?.classList.add('hidden'); updateSplitBtn(); return; }
   $('#fileList').classList.remove('hidden');
   $('#fileCount').textContent=files.length;
