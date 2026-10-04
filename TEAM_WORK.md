@@ -2,8 +2,8 @@
 
 ## 📌 Status terkini (diperbarui 2026-10-04 oleh Claude) — BACA DULU
 
-**Live:** https://myflipbookpro.com = commit `5b222fe` (deploy 2026-10-04 sore, lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect).
-**Build APK/EXE:** lewat PC build owner (`build_worker.py`, `start-build-worker.bat`); VPS hanya mengantrikan. PC mati = build menunggu.
+**Live:** https://myflipbookpro.com = commit `0a171c2` (deploy 2026-10-04 sore, lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect).
+**Build APK/EXE + Translate buku:** lewat PC build owner (`build_worker.py`, `start-build-worker.bat`); VPS hanya mengantrikan. PC mati = build menunggu.
 **Pembayaran: DIPAUSE** (`PAYMENTS_PAUSED=1` di `.env` live) — owner meng-update payment gateway malam 2026-10-04; nyalakan hanya setelah key gateway diisi dan dites.
 **Panel admin live:** https://myflipbookpro.com/admin/ (backend terpisah `admin_server.py`, login admin sendiri; password hanya di VPS `/root/myflipbook-admin-password.txt`).
 
@@ -23,7 +23,7 @@ Selesai & live (detail per fitur di PROJECT_HANDOFF.md, bagian bertanggal):
 
 **Terbuka / berikutnya:**
 - Owner berencana upgrade VPS ke RAM 4 GB (sekarang 2 GB dibagi dengan numa + sarvamaya.id).
-- 🌐 Translate buku penuh TIDAK jalan di live: Argos belum terpasang di VPS (pasang setelah upgrade RAM).
+- 🌐 Translate buku penuh di live jalan LEWAT PC build owner (Argos di PC); PC mati = 503 offline. Setelah upgrade RAM: pasang Argos di VPS (server otomatis memakai lokal).
 - Jangka panjang build: "cetakan" app reader (ganti isi buku + tanda tangan ulang di server, tanpa compile) supaya tidak tergantung PC.
 - Email: pindah dari Gmail SMTP ke Brevo/Resend dengan `noreply@myflipbookpro.com` (+ SPF/DKIM) — hanya `.env`.
 - Google OAuth consent screen: Publish app (privacy/terms sudah ada) supaya semua akun Google bisa login.

@@ -23,6 +23,7 @@
 | `myflipbook-admin.service` | Panel admin (backend pisah): `python3 admin_server.py --host 127.0.0.1 --port 8091 --proxy` |
 | `/etc/nginx/sites-enabled/myflipbookpro` | HTTPS (certbot, wis aktif). `/` → 8080, `/admin/` → 8091. Ojo senggol site liyane. |
 | `/root/myflipbook-admin-password.txt` | Login admin (`admin` + password acak, chmod 600). **Ojo dikirim nang chat / ditulis nang repo.** |
+| Translate buku (gratis) | VPS ora duwe Argos: batch terjemahan dikirim menyang PC build sing padha (long poll `/api/worker/translate/claim`), dijawab Argos PC. PC mati = 503 "PC penerjemah sedang offline". Sakwise VPS 4 GB: pasang Argos nang VPS, otomatis dienggo lokal. |
 | Build APK/EXE | VPS ora duwe Flutter: pesenan build mlebu antrian, dijupuk **PC build** (PC owner, ikon systray `build_worker_tray.py` / `start-build-worker.bat`, otomatis nyala lewat shortcut Startup, kunci `BUILD_WORKER_KEY` padha nang `.env` VPS lan PC). PC mati = build ngantri. Status: `/api/capabilities` → `buildWorker: online/offline`. |
 
 ## 3. Prosedur update (kabeh agen nganggo cara iki)
@@ -63,3 +64,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-04 (sore 7) | `a08f984` | Claude | Split PDF: pilih halaman dengan klik (tanpa checkbox), Shift+klik rentang, 🔍 baca halaman. (Kode-only; backup terakhir `/root/pdf_project-code-backup-20261004g.tgz`.) |
 | 2026-10-04 (sore 8) | `5f24fde` | Claude | Tombol Upload / Google Drive di jendela Add source dibuat tegas (tidak terkesan disabled). Kode-only. |
 | 2026-10-04 (sore 9) | `5b222fe` | Claude | Tombol Upload / Google Drive: bayangan dihapus, garis tegas saja. Kode-only. |
+| 2026-10-04 (sore 10) | `0a171c2` | Claude | Translate buku penuh lewat PC build (Argos PC). Worker systray di-restart. Backup `/root/pdf_project-code-backup-20261004h.tgz`. |

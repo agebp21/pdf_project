@@ -52,6 +52,7 @@ EXACT = {
     'Pembayaran online sementara dinonaktifkan. Coba lagi nanti.': 'Online payment is paused for now. Please try again later.',
     'AI tidak menghasilkan ringkasan. Coba lagi.': 'The AI did not produce a summary. Try again.',
     'Teks yang distabilo kosong.': 'The highlighted text is empty.',
+    'Fitur AI belum aktif di server ini (pembayaran belum disiapkan).': 'AI features are not turned on on this server yet (payments are not set up).',
     'AI belum diatur di server (SUMOPOD_API_KEY di .env).': 'AI is not set up on the server (SUMOPOD_API_KEY in .env).',
     'Layanan AI tidak bisa dihubungi. Cek koneksi internet server.': "The AI service could not be reached. Check the server's internet connection.",
     'AI tidak mengembalikan terjemahan yang valid. Coba lagi.': 'The AI did not return a valid translation. Try again.',
