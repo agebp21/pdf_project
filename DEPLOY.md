@@ -97,3 +97,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-05 | `38c2cf5` | sesi iki | Sidebar rapet: nempel isi (ora melar), tombol Organize mudun. Backup `/root/pdf_project-code-backup-20261005j.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `e6730af` | sesi iki | S/M/L dibuang (sidebar fokus fungsi editing). Backup `/root/pdf_project-code-backup-20261005k.tgz`. Verifikasi: capabilities 200, S/M/L 0 nang live. |
 | 2026-10-05 | `4a9bef4` | sesi iki | Oyot thumbnail cilik ketemu: bar options dikunci max 768px, dijebol full-width kanggo organize. Backup `/root/pdf_project-code-backup-20261005l.tgz`. Verifikasi: capabilities 200. |
+| 2026-10-05 | `d0ef2f5` | sesi iki | Blank iso diklik: id kutip dibenerke (`&quot;`) + regression test. Backup `/root/pdf_project-code-backup-20261005m.tgz`. Verifikasi: capabilities 200. |
