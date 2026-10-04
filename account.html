@@ -187,7 +187,7 @@
     });
     document.querySelectorAll('[data-cycle]').forEach(b=>b.classList.toggle('on',b.dataset.cycle===state.cycle));
     document.querySelectorAll('[data-currency]').forEach(b=>b.classList.toggle('on',b.dataset.currency===state.currency));
-    // Tripay channels (QRIS/VA/e-wallet) only apply to rupiah payments.
+    // Duitku/Tripay channels (QRIS/VA/e-wallet) only apply to rupiah payments.
     $('methodBox').hidden=!(state.currency==='IDR'&&state.methods.length);
   }
 
@@ -243,7 +243,7 @@
     try{
       const method=state.currency==='IDR'&&state.methods.length?$('method').value:undefined;
       const result=await MFAuth.api('POST','/api/billing/checkout',{plan,cycle:state.cycle,method,currency:state.currency});
-      location.href=result.redirectUrl; // Midtrans Snap page, or back here (mock) with ?order=
+      location.href=result.redirectUrl; // Gateway payment page (Duitku/Midtrans/Tripay), or back here (mock) with ?order=
     }catch(error){notice('err',error.message);button.disabled=false;}
   }
 
@@ -266,8 +266,8 @@
     $('ordersSection').hidden=false;
     const [plans,orders]=await Promise.all([MFAuth.api('GET','/api/billing/plans'),MFAuth.api('GET','/api/billing/orders')]);
     state=Object.assign(state,{user:me.user,plans:plans.plans,providers:plans.providers||{},paymentsEnabled:plans.paymentsEnabled||{},orders:orders.orders});
-    if(state.providers.IDR==='tripay'&&!state.methods.length){
-      // Gateway channels (QRIS, VA, e-wallet) grouped as Tripay reports them.
+    if((state.providers.IDR==='tripay'||state.providers.IDR==='duitku')&&!state.methods.length){
+      // Gateway channels (QRIS, VA, e-wallet) grouped as the gateway reports them.
       state.methods=(await MFAuth.api('GET','/api/billing/methods')).methods;
       const select=$('method');select.replaceChildren();
       const groups={};

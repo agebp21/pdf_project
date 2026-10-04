@@ -138,13 +138,23 @@ def get_accounts():
         if ACCOUNTS is None:
             key = os.environ.get('MIDTRANS_SERVER_KEY', '').strip()
             tripay = [os.environ.get(n, '').strip() for n in ('TRIPAY_API_KEY', 'TRIPAY_PRIVATE_KEY', 'TRIPAY_MERCHANT_CODE')]
+            duitku = [os.environ.get(n, '').strip() for n in ('DUITKU_MERCHANT_CODE', 'DUITKU_API_KEY')]
             prefer = os.environ.get('MYFLIPBOOK_IDR_PROVIDER', '').strip().lower()
             midtrans = lambda: accounts.MidtransProvider(key, os.environ.get('MIDTRANS_PRODUCTION') == '1')
             tripay_provider = lambda: accounts.TripayProvider(*tripay, production=os.environ.get('TRIPAY_PRODUCTION') == '1')
-            if all(tripay) and (prefer == 'tripay' or not key):
+            duitku_provider = lambda: accounts.DuitkuProvider(*duitku, production=os.environ.get('DUITKU_PRODUCTION') == '1')
+            if prefer == 'duitku' and all(duitku):
+                provider = duitku_provider()
+            elif prefer == 'tripay' and all(tripay):
                 provider = tripay_provider()
+            elif prefer == 'midtrans' and key:
+                provider = midtrans()
+            elif all(duitku):
+                provider = duitku_provider()   # Duitku is the rupiah gateway by default
             elif key:
                 provider = midtrans()   # Midtrans is the rupiah gateway by default
+            elif all(tripay):
+                provider = tripay_provider()
             elif hosted() and os.environ.get('MYFLIPBOOK_MOCK_PAYMENTS') != '1':
                 provider = accounts.DisabledProvider()  # public site without a gateway: no fake payments
             else:
@@ -2009,6 +2019,17 @@ class Handler(SimpleHTTPRequestHandler):
 
     def account_post(self, path):
         store = get_accounts()
+        if path in ('/api/payment/duitku/callback', '/api/billing/duitku/callback'):
+            # Duitku posts form-urlencoded (not JSON), signed with our API key.
+            # Answer plain SUCCESS: anything else makes Duitku resend (5 tries).
+            store.provider_callback(self.read_raw(64 * 1024), self.headers)
+            body = b'SUCCESS'
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/plain')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+            return
         # Gateway webhooks can be larger than our own JSON requests.
         raw = self.read_body(256 * 1024 if path == '/api/billing/lemonsqueezy/webhook' else 64 * 1024)
         if path == '/api/billing/lemonsqueezy/webhook':
@@ -2484,7 +2505,7 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.startswith('/api/worker/'):
             self.worker_route('POST')
             return
-        if self.path.startswith(('/api/auth/', '/api/billing/')):
+        if self.path.startswith(('/api/auth/', '/api/billing/', '/api/payment/')):
             try:
                 self.account_post(self.path)
             except accounts.AccountError as cause:
@@ -2597,7 +2618,7 @@ if __name__ == '__main__':
     store = get_accounts()
     if hosted():
         print('Mode hosting: ' + ', '.join(sorted(CONFIG['public_hosts'])) +
-              f' | Rupiah: {store.provider.name if store.provider.name != "none" else "NONAKTIF (isi MIDTRANS_SERVER_KEY di .env)"}'
+              f' | Rupiah: {store.provider.name if store.provider.name != "none" else "NONAKTIF (isi DUITKU_MERCHANT_CODE + DUITKU_API_KEY di .env)"}'
               f' | Dolar: {store.usd_provider.name if store.usd_provider.name != "none" else "NONAKTIF (isi LEMONSQUEEZY_*)"}',
               flush=True)
     # On Windows SO_REUSEADDR lets a second server silently share the port

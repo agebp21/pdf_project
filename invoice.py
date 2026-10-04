@@ -10,7 +10,7 @@ import zlib
 
 PAGE_W, PAGE_H = 595, 842  # A4 in points
 INK, MUTED, ACCENT, LINE = (0.11, 0.10, 0.09), (0.47, 0.44, 0.42), (0.10, 0.24, 0.20), (0.90, 0.87, 0.82)
-PROVIDERS = {'tripay': 'Tripay', 'midtrans': 'Midtrans', 'lemonsqueezy': 'Lemon Squeezy', 'mock': 'Local simulation'}
+PROVIDERS = {'duitku': 'Duitku', 'tripay': 'Tripay', 'midtrans': 'Midtrans', 'lemonsqueezy': 'Lemon Squeezy', 'mock': 'Local simulation'}
 CYCLES = {'monthly': 'Monthly subscription (30 days)', 'yearly': 'Yearly subscription (365 days)'}
 
 

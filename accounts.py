@@ -5,6 +5,10 @@ Passwords: PBKDF2-HMAC-SHA256, per-user salt. Sessions: random token in an
 HttpOnly cookie; only its SHA-256 is stored, so a leaked DB can't log in.
 
 Payments go through a provider object:
+  * DuitkuProvider — Duitku POP invoice (QRIS / VA / e-wallet), hosted
+    payment page + HMAC-signed callback (set DUITKU_MERCHANT_CODE,
+    DUITKU_API_KEY; DUITKU_PRODUCTION=1 for live). Default rupiah gateway
+    when configured; MYFLIPBOOK_IDR_PROVIDER=duitku forces it.
   * TripayProvider — Tripay closed payment (QRIS / VA / e-wallet), hosted
     checkout page + HMAC-signed callback (set TRIPAY_API_KEY,
     TRIPAY_PRIVATE_KEY, TRIPAY_MERCHANT_CODE; TRIPAY_PRODUCTION=1 for live).
@@ -197,6 +201,132 @@ class TripayProvider:
         status = {'PAID': 'paid', 'EXPIRED': 'expired', 'FAILED': 'failed', 'REFUND': 'refund'}.get(
             payload.get('status'), 'pending')
         return str(payload.get('merchant_ref', '')), status, str(payload.get('reference', ''))
+
+
+class DuitkuProvider:
+    """Duitku POP invoice: https://docs.duitku.com/pop/en
+
+    Checkout is a hosted payment page (redirect to paymentUrl); the method
+    dropdown is optional — without paymentMethod Duitku shows every active
+    channel. Server-to-server callback is form-urlencoded, signed with
+    HMAC-SHA256(merchantCode + amount + merchantOrderId, apiKey).
+    """
+    name = 'duitku'
+    # Must match the Callback URL set in the Duitku merchant dashboard.
+    CALLBACK_PATH = '/api/payment/duitku/callback'
+    EXPIRY_MINUTES = 1440  # 24h, like the Tripay orders (verify in sandbox)
+    # Shown if the payment-method list can't be fetched; Duitku still shows
+    # its own channel menu when no paymentMethod is sent.
+    FALLBACK_METHODS = [('SP', 'QRIS', 'QRIS'), ('VC', 'Credit Card', 'Credit Card'),
+                        ('BC', 'BCA Virtual Account', 'Virtual Account'),
+                        ('BR', 'BRI Virtual Account', 'Virtual Account'),
+                        ('M2', 'Mandiri Virtual Account', 'Virtual Account'),
+                        ('B1', 'CIMB Virtual Account', 'Virtual Account'),
+                        ('DA', 'DANA', 'E-Wallet'), ('OV', 'OVO', 'E-Wallet'),
+                        ('IR', 'Indomaret', 'Retail')]
+
+    def __init__(self, merchant_code, api_key, production=False, opener=None):
+        self.merchant_code, self.api_key = merchant_code, api_key
+        self.base = 'https://api-prod.duitku.com' if production else 'https://api-sandbox.duitku.com'
+        self.opener = opener or urllib.request.urlopen
+        self._methods, self._methods_at = None, 0
+        self._lock = threading.Lock()
+
+    def _headers(self):
+        timestamp = str(int(time.time() * 1000))
+        signature = hmac.new(self.api_key.encode(), (self.merchant_code + timestamp).encode(),
+                             hashlib.sha256).hexdigest()
+        return {'Content-Type': 'application/json', 'Accept': 'application/json',
+                'x-duitku-timestamp': timestamp, 'x-duitku-signature': signature,
+                'x-duitku-merchantcode': self.merchant_code}
+
+    def _call(self, path, payload):
+        request = urllib.request.Request(self.base + path, data=json.dumps(payload).encode(),
+                                         method='POST', headers=self._headers())
+        try:
+            with self.opener(request, timeout=20) as response:
+                return json.loads(response.read())
+        except urllib.error.HTTPError as error:
+            try:
+                return json.loads(error.read())
+            except ValueError:
+                raise AccountError(502, 'Gateway pembayaran menolak permintaan.') from error
+        except (urllib.error.URLError, ValueError, OSError) as cause:
+            raise AccountError(502, 'Gateway pembayaran tidak bisa dihubungi. Coba lagi sebentar.') from cause
+
+    def methods(self):
+        """Active payment channels, cached for 10 minutes."""
+        with self._lock:
+            if self._methods and time.time() - self._methods_at < 600:
+                return self._methods
+            try:
+                moment = time.strftime('%Y-%m-%d %H:%M:%S')
+                amount = str(PLANS['pro']['monthly'])
+                signature = hashlib.sha256((self.merchant_code + amount + moment + self.api_key).encode()).hexdigest()
+                data = self._call('/api/merchant/paymentmethod/getpaymentmethod',
+                                  {'merchantCode': self.merchant_code, 'amount': amount,
+                                   'datetime': moment, 'signature': signature})
+                channels = [dict(code=c.get('paymentMethod') or c.get('code'),
+                                 name=c.get('paymentName') or c.get('name'),
+                                 group=c.get('paymentType') or c.get('group', ''),
+                                 icon=c.get('paymentImage') or c.get('icon_url', '') or c.get('icon', ''))
+                            for c in data.get('paymentFee') or data.get('data') or [] if c.get('paymentMethod') or c.get('code')]
+            except (AccountError, KeyError, TypeError, AttributeError):
+                channels = []
+            if channels:
+                self._methods, self._methods_at = channels, time.time()
+                return channels
+            return [dict(code=c, name=n, group=g, icon='') for c, n, g in self.FALLBACK_METHODS]
+
+    def create(self, order, user, base_url, method=None):
+        if method and method not in {m['code'] for m in self.methods()}:
+            raise AccountError(400, 'Pilih metode pembayaran.')
+        item = f'MyFlipbook {PLANS[order["plan"]]["name"]} ({order["cycle"]})'
+        body = {
+            'paymentAmount': order['amount'], 'merchantOrderId': order['id'], 'productDetails': item,
+            'email': user['email'], 'customerVaName': (user['name'] or user['email'].split('@')[0])[:20],
+            'itemDetails': [{'name': item[:50], 'price': order['amount'], 'quantity': 1}],
+            'callbackUrl': f'{base_url}{self.CALLBACK_PATH}',
+            'returnUrl': f'{base_url}/account.html?order={order["id"]}',
+            'expiryPeriod': self.EXPIRY_MINUTES,
+        }
+        if method:
+            body['paymentMethod'] = method
+        data = self._call('/api/merchant/createInvoice', body)
+        if data.get('statusCode') != '00' or not data.get('paymentUrl'):
+            raise AccountError(502, 'Duitku: ' + str(data.get('statusMessage') or 'transaksi ditolak.'))
+        return dict(redirect_url=data['paymentUrl'], reference=data.get('reference'))
+
+    def verify_callback(self, raw, headers):
+        """Return (merchantOrderId, status, reference) for a genuine callback."""
+        try:
+            form = {k: v[0] for k, v in urllib.parse.parse_qs(raw.decode('utf-8'), keep_blank_values=True).items()}
+        except (ValueError, UnicodeDecodeError):
+            form = {}
+        merchant_order, amount = str(form.get('merchantOrderId') or ''), str(form.get('amount') or '')
+        expected = hmac.new(self.api_key.encode(), (self.merchant_code + amount + merchant_order).encode(),
+                            hashlib.sha256).hexdigest()
+        if not merchant_order or not hmac.compare_digest(expected, str(form.get('signature') or '')):
+            raise AccountError(403, 'Signature callback tidak valid.')
+        status = {'00': 'paid', '01': 'failed'}.get(str(form.get('resultCode') or ''), 'pending')
+        return merchant_order, status, str(form.get('reference') or '')
+
+    def status(self, order_id):
+        """Ask Duitku directly: (status, amount), or None when still pending.
+
+        Lets a payment settle even where Duitku can't reach the callback URL
+        (a local server) or a callback was lost."""
+        signature = hashlib.md5((self.merchant_code + order_id + self.api_key).encode()).hexdigest()
+        data = self._call('/api/merchant/transactionStatus',
+                          {'merchantCode': self.merchant_code, 'merchantOrderId': order_id, 'signature': signature})
+        code = str(data.get('statusCode') or data.get('resultCode') or '')
+        if code == '00':
+            return 'paid', data.get('amount')
+        if code == '01':
+            return None
+        if code == '02':
+            return 'failed', None
+        return None
 
 
 class LemonSqueezyProvider:
