@@ -39,8 +39,6 @@
   .card:hover{box-shadow:0 20px 44px rgba(28,25,23,.13),inset 0 1px 0 #fff;transform:translateY(-2px)}
   .drop{border:2px dashed #C9CFC2;background:#fff;transition:all .2s}
   .drop.drag{border-color:#FF5C28;background:#FFF7ED;transform:scale(1.01)}
-  .tool-pill{border:1px solid #E8E2D4;background:#fff;border-radius:14px;box-shadow:0 3px 10px rgba(28,25,23,.05)}
-  .tool-pill.active{background:#1A3C34;color:#FFF7EA;border-color:#1A3C34;box-shadow:0 8px 18px rgba(26,60,52,.25)}
   .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
   .btn-tang:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(255,92,40,.42),inset 0 1px 0 rgba(255,255,255,.45)}
   ::-webkit-scrollbar{height:6px}
@@ -73,21 +71,9 @@
     <div id="debug" class="hidden mt-2 max-w-3xl mx-auto p-2.5 rounded-xl bg-gray-900 text-white text-[11px] font-mono whitespace-pre-wrap text-left max-h-40 overflow-auto"></div>
   </div>
 
-  <div class="relative z-10 max-w-[1440px] mx-auto px-4 py-6 grid lg:grid-cols-[310px_1fr] gap-4">
-    <!-- sidebar -->
-    <aside class="card p-5 h-fit lg:sticky lg:top-20">
-      <p class="text-[10px] font-extrabold tracking-[.18em] text-[#FF5C28]">✦ WORKSPACE</p>
-      <h2 class="serif font-black text-[19px] tracking-tight">Pick a converter</h2>
-      <p class="text-[11.5px] text-[#78716C] mt-1 leading-relaxed">Everything runs 100% in your browser — files are never uploaded.</p>
-      <div id="toolList" class="mt-3 space-y-1.5"></div>
-      <div id="libStatus" class="hidden mt-3 p-2.5 rounded-2xl bg-red-50 border border-red-200 text-[11px] text-red-700 leading-relaxed"></div>
-      <div class="mt-3 p-3 rounded-2xl bg-[#1A3C34] text-[#FFF7EA] border-[1.5px] border-[#1C1917] text-[11px] leading-relaxed">
-        <b>🔒 Privacy first:</b> your files never leave your device.
-      </div>
-      <button id="serveBtn" onclick="copyServe()" class="clay-btn clay-btn-ghost mt-2 w-full" style="font-size:12px">📋 Copy: npx serve .</button>
-    </aside>
-
+  <div class="relative z-10 max-w-[900px] mx-auto px-4 py-6">
     <main class="space-y-4">
+      <div id="libStatus" class="hidden p-2.5 rounded-2xl bg-red-50 border border-red-200 text-[11px] text-red-700 leading-relaxed"></div>
       <!-- drop zone -->
       <div id="drop" class="drop card p-8 text-center cursor-pointer">
         <div class="w-14 h-14 mx-auto rounded-2xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-xl mb-3 border border-[#E8E2D4] shadow-[0_8px_18px_rgba(26,60,52,.3)]" style="background:linear-gradient(180deg,#2A5248,#1A3C34)">⇧</div>
@@ -185,7 +171,11 @@ function checkLibs(){
 }
 setTimeout(checkLibs, 800);
 function renderToolList(){
-  $('#toolList').innerHTML = TOOLS.map(t=>`
+  // Sidebar was removed for production (tool switching via index catalog).
+  // Kept as a no-op guard so setTool/init/langchange keep working.
+  const el=$('#toolList');
+  if(!el) return;
+  el.innerHTML = TOOLS.map(t=>`
     <button onclick="setTool('${t.id}')" class="tool-pill w-full text-left px-3 py-2.5 rounded-xl border flex items-center gap-3 ${active===t.id?'active':'bg-white border-gray-200 hover:bg-gray-50'}">
       <span class="w-9 h-9 rounded-lg grid place-items-center text-[11px] font-bold shrink-0" style="background:${t.bg};color:${t.color};border:1px solid ${t.color}18">${t.icon}</span>
       <span class="min-w-0">

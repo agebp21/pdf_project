@@ -8,7 +8,7 @@ async function main(){
   w.eval(fs.readFileSync('assets/pdf-edit.js','utf8'));
   const script=[...w.document.scripts].find(s=>s.textContent.includes('const TOOLS')).textContent;
   w.eval(script+'\nwindow.qaFiles=v=>{files=v};');
-  assert.ok(w.document.querySelector('#toolList').children.length);
+  assert.ok(w.document.querySelector('#toolTitle').textContent.length, 'header renders for ?tool='+tool);
   if(tool==='jpg-to-pdf'){
    w.Blob=Blob;
    let posted, result;
