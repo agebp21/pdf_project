@@ -10,7 +10,8 @@ async function main(){
   w.eval(script+`
     window.qaLoad=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}]; updateFileUI();};
     window.qaClear=()=>{clearFiles();};
-    window.qaTool=id=>{setTool(id);};`);
+    window.qaTool=id=>{setTool(id);};
+    window.qaViewer0=()=>{openOrgViewer(0);};`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
   // No file yet: prompt visible, workspace tools hidden.
   assert.equal(vis('orgEmpty'),true,'empty prompt shows without file');
@@ -28,6 +29,9 @@ async function main(){
   w.qaClear();
   assert.equal(vis('orgEmpty'),true,'prompt returns after remove');
   assert.equal(w.document.getElementById('organizeGrid').innerHTML,'','grid cleared after remove');
+  // Viewer needs real page renders: without a document it stays closed.
+  w.qaViewer0();
+  assert.equal(w.document.getElementById('orgViewer'),null,'no viewer without document');
   // The main drop card stays out of the way for organize, back for other tools.
   w.qaLoad();
   assert.ok(w.document.getElementById('drop').classList.contains('is-hidden'),'drop hidden for organize');
