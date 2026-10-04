@@ -109,6 +109,8 @@
   /* Organize owns its files UI in the workspace sidebar: hide the
      duplicated list in the main column, keep progress/error visible. */
   #fileList.org-mode .hide-org{display:none}
+  /* The organize workspace needs the full row (the options bar is capped). */
+  #options.org-full{max-width:none}
   #orgFootExtra:empty{display:none}
   #orgFootExtra p{margin-top:0}
   .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
@@ -392,6 +394,7 @@ function renderHeader(){
   }
   if(['watermark','page-numbers','crop-pdf'].includes(t.id))html=PDFEdit.controls(t.id);
   $('#options').innerHTML=html;
+  $('#options').classList.toggle('org-full', t.id==='organize-pdf' && !comingSoonName);
   // Organize runs its progress/error inside the workspace sidebar;
   // every other tool keeps them in the file list card.
   const progNode=document.getElementById('progress'), errNode=document.getElementById('error');

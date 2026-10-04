@@ -14,8 +14,9 @@ async function main(){
     window.qaViewer0=()=>{openOrgViewer(0);};    window.qaBlank=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};
     window.qaFill=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,'blank-1'];organizeSelected=new Set(organizeOrder);orgBlankImg={'blank-1':'data:image/jpeg;base64,/9j/'};renderOrganizeGrid();return document.getElementById('organizeGrid').innerHTML.includes('data:image/jpeg');};`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
-  // No file yet: prompt visible, workspace tools hidden.
+  // No file yet: prompt visible, workspace tools hidden, full-width row.
   assert.equal(vis('orgEmpty'),true,'empty prompt shows without file');
+  assert.ok(w.document.getElementById('options').classList.contains('org-full'),'workspace uses full width');
   assert.equal(vis('orgSide'),false,'sidebar hidden without file');
   assert.equal(vis('organizeGrid'),false,'grid hidden without file');
   assert.equal(vis('orgFab'),false,'fab hidden without file');
