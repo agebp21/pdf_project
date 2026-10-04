@@ -741,10 +741,10 @@ window.openOrgViewer=async (pos)=>{
         <button type="button" id="orgViewerDel" class="px-3 py-1 rounded-full border text-red-600">${L('Delete','Hapus')}</button>
         <button type="button" data-close class="px-3 py-1 rounded-full border" aria-label="${L('Close','Tutup')}">✕</button>
       </div>
-      <div id="orgViewerPage" class="flex-1 min-h-0 w-full flex items-center justify-center overflow-auto"></div>`;
+      <div id="orgViewerPage" title="${L('Click to go back','Klik untuk kembali')}" class="flex-1 min-h-0 w-full flex items-center justify-center overflow-auto cursor-zoom-out"></div>`;
     document.body.appendChild(box);
     box.addEventListener('click', e=>{
-      if(e.target===box || e.target.closest('[data-close]')) closeOrgViewer();
+      if(e.target===box || e.target.closest('[data-close]') || e.target.closest('#orgViewerPage')) closeOrgViewer();
       const go=e.target.closest('[data-go]'); if(go) openOrgViewer(orgViewerPos + +go.dataset.go);
     });
     box.querySelector('#orgViewerRot').addEventListener('click', ()=>{ orgRotateOne(organizeOrder[orgViewerPos]); openOrgViewer(orgViewerPos); });
