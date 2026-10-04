@@ -29,9 +29,9 @@
 .as-link button{width:32px;height:32px;flex:none;border:0;border-radius:999px;background:#fff;font-size:15px;cursor:pointer;box-shadow:0 1px 3px rgba(0,0,0,.15);color:#1c1917}
 .as-link button:hover{background:#ff5c28;color:#fff}
 .as-sources{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin-top:12px}
-.as-sources button{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border:1.5px solid #1c1917;border-radius:999px;background:#fff;font:700 13px 'Plus Jakarta Sans',system-ui,sans-serif;color:#1c1917;cursor:pointer;box-shadow:2px 2px 0 #1c1917;transition:transform .12s ease,box-shadow .12s ease,background .12s ease}
-.as-sources button:hover{background:#fff4ec;transform:translate(-1px,-1px);box-shadow:3px 3px 0 #1c1917}
-.as-sources button:active{transform:translate(1px,1px);box-shadow:1px 1px 0 #1c1917}
+.as-sources button{display:inline-flex;align-items:center;gap:7px;padding:8px 16px;border:1.5px solid #1c1917;border-radius:999px;background:#fff;font:700 13px 'Plus Jakarta Sans',system-ui,sans-serif;color:#1c1917;cursor:pointer;transition:background .12s ease,color .12s ease}
+.as-sources button:hover{background:#fff4ec}
+.as-sources button:active{background:#ffe4d3}
 .as-drive{display:inline-block;width:14px;height:12px;background:conic-gradient(from 30deg,#0f9d58 0 120deg,#fbbc04 0 240deg,#4285f4 0);clip-path:polygon(50% 0,100% 85%,0 85%)}
 .as-help{margin:12px 0 0;padding:10px 12px 10px 30px;border-radius:12px;background:#eef6ff;border:1px solid #cfe2fb;font-size:12.5px;line-height:1.55;color:#1c3a5e}
 .as-help[hidden]{display:none}
