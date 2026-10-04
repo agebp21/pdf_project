@@ -749,11 +749,14 @@ function renderOrganizeGrid(){
       : cached
       ? `<img src="${cached}" alt="Page ${origIdx+1}" draggable="false">`
       : `<span class="org-ph">${L('Page','Hal')} ${origIdx+1}</span>`;
+    // Filled blanks zoom like real pages; empty blanks open the file picker.
+    const goZoom=!isBlank||orgBlankImg[origIdx];
+    const goCall=goZoom?`openOrgViewer(${pos})`:`orgBlankAsk(${orgArg(origIdx)})`;
     return `
     <div class="org-cell">
       <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgDragged=false" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${orgArg(origIdx)})"
         class="org-card group${sel?' sel':''}">
-        <div class="org-thumb" data-thumb="${origIdx}" onclick="event.stopPropagation();${isBlank?`orgBlankAsk(${orgArg(origIdx)})`:`openOrgViewer(${pos})`}" title="${isBlank?L('Add an image to this blank page','Tambah gambar nang halaman kosong iki'):L('Click to zoom','Klik untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){event.preventDefault();${isBlank?`orgBlankAsk(${orgArg(origIdx)})`:`openOrgViewer(${pos})`}}">${thumb}</div>
+        <div class="org-thumb${goZoom?' org-zoomable':''}" data-thumb="${origIdx}" onclick="event.stopPropagation();${goCall}" title="${goZoom?L('Click to zoom','Klik untuk zoom'):L('Add an image to this blank page','Tambah gambar nang halaman kosong iki')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){event.preventDefault();${goCall}}">${thumb}</div>
         <div class="org-hover">
           ${isBlank?'':`<button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}">${ORG_ICONS.rotate}</button>`}
           <button onclick="event.stopPropagation();orgDeleteOne(${pos})" title="${L('Delete this page','Hapus halaman ini')}">${ORG_ICONS.x}</button>
@@ -774,7 +777,9 @@ window.orgBlankPicked=async (inp)=>{
   if(!f||!id) return;
   try{
     orgBlankImg[id]=await orgReadImageFile(f);
-    renderOrganizeGrid(); log('Org blank filled '+id);
+    renderOrganizeGrid();
+    if(document.getElementById('orgViewer')) openOrgViewer(orgViewerPos);
+    log('Org blank filled '+id);
   }catch(e){ showError(L('Could not read that image','Gambar gagal dibaca')+': '+e.message); }
 };
 function orgReadImageFile(file){
@@ -821,6 +826,7 @@ window.openOrgViewer=async (pos)=>{
         <button type="button" data-go="1" class="px-3 py-1 rounded-full border">→</button>
         <button type="button" id="orgViewerRot" class="px-3 py-1 rounded-full border">↻ 90°</button>
         <button type="button" id="orgViewerDup" class="px-3 py-1 rounded-full border">${L('Duplicate','Duplikat')}</button>
+        <button type="button" id="orgViewerReplace" class="px-3 py-1 rounded-full border">${L('Replace image','Ganti gambar')}</button>
         <button type="button" id="orgViewerDel" class="px-3 py-1 rounded-full border text-red-600">${L('Delete','Hapus')}</button>
         <button type="button" data-close class="px-3 py-1 rounded-full border" aria-label="${L('Close','Tutup')}">✕</button>
       </div>
@@ -836,6 +842,7 @@ window.openOrgViewer=async (pos)=>{
     });
     box.querySelector('#orgViewerRot').addEventListener('click', ()=>{ orgRotateOne(organizeOrder[orgViewerPos]); openOrgViewer(orgViewerPos); });
     box.querySelector('#orgViewerDup').addEventListener('click', ()=>{ orgInsertDup(organizeOrder[orgViewerPos]); openOrgViewer(orgViewerPos+1); });
+    box.querySelector('#orgViewerReplace').addEventListener('click', ()=>{ const cur=organizeOrder[orgViewerPos]; if(typeof cur==='string') orgBlankAsk(cur); });
     box.querySelector('#orgViewerDel').addEventListener('click', ()=>{
       orgDeleteOne(orgViewerPos);
       if(organizeOrder.length===0) closeOrgViewer();
@@ -847,6 +854,7 @@ window.openOrgViewer=async (pos)=>{
   const rot=organizeRotations[origIdx]||0;
   const isBlank=typeof origIdx!=='number';
   box.querySelector('#orgViewerLabel').textContent=`${L('Page','Hal')} ${orgViewerPos+1} / ${organizeOrder.length}${isBlank?` (${L('blank','kosong')})`:rot?` (${rot}°)`:''}`;
+  box.querySelector('#orgViewerReplace').style.display=(isBlank&&orgBlankImg[origIdx])?'':'none';
   const holder=box.querySelector('#orgViewerPage');
   if(isBlank){
     holder.innerHTML='';

@@ -45,6 +45,9 @@ async function main(){
   assert.ok(w.document.getElementById('organizeGrid').innerHTML.includes('orgBlankAsk(&quot;blank-1&quot;)'),'blank click is valid');
   // A filled blank shows its image on the card.
   assert.equal(w.qaFill(),true,'filled blank renders image');
+  const filledThumb=w.document.querySelector('[data-thumb="blank-1"]');
+  assert.ok(filledThumb.getAttribute('onclick').includes('openOrgViewer'),'filled blank zooms');
+  assert.ok(!filledThumb.getAttribute('onclick').includes('orgBlankAsk'),'filled blank does not ask file');
   const chips=[...w.document.querySelectorAll('#orgFiles .org-chip')];
   assert.equal(chips.length,1,'one file chip');
   assert.ok(chips[0].textContent.includes('A')&&chips[0].textContent.includes('a.pdf'),'badge + name');
