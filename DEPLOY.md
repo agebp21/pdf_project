@@ -84,3 +84,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-04 (bengi 16) | `cc64cad` | sesi iki | Organize rapet: gap + padding + nomer dicilikke. Backup `/root/pdf_project-code-backup-20261004w.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-04 (bengi 17) | `e731fad` | sesi iki | Organize: ikon SVG rapi + klik thumbnail = zoom lightbox (navigasi + putar/duplikat/hapus + Esc). Backup `/root/pdf_project-code-backup-20261004x.tgz`. Verifikasi: capabilities 200, 4 suite ijo. |
 | 2026-10-04 (bengi 18) | `29b32b2` | sesi iki | Tombol + = blank page tenan (seukuran halaman pertama, bisa dipilih/diputar/hapus/zoom, melu ke-save). Backup `/root/pdf_project-code-backup-20261004y.tgz`. Verifikasi: capabilities 200, suite ijo. |
+| 2026-10-04 (bengi 19) | `bf773eb` | sesi iki | Organize: tombol ukuran thumbnail S/M/L nang sidebar (pilihan disimpen). Backup `/root/pdf_project-code-backup-20261004z.tgz`. Verifikasi: capabilities 200. |
