@@ -91,6 +91,7 @@
   .org-ic{width:13px;height:13px;display:block}
   .org-rot{position:absolute;bottom:30px;right:14px;background:#111827;color:#fff;font-size:10px;font-weight:800;border-radius:999px;padding:2px 7px;z-index:2}
   .org-insert{position:absolute;right:-15px;top:42%;width:24px;height:24px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;color:#ef2d2d;font-weight:800;font-size:14px;line-height:1;z-index:3;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1);display:grid;place-items:center}
+  .org-insert.left{right:auto;left:-15px}
   .org-fab{position:absolute;right:12px;top:96px;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:5}
   .org-fab-add{position:relative;width:44px;height:44px;border-radius:999px;background:#ef2d2d;color:#fff;font-size:26px;line-height:1;border:0;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.4)}
   .org-fab-badge{position:absolute;top:-6px;left:-8px;background:#1f2937;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:grid;place-items:center;padding:0 4px}
@@ -700,7 +701,8 @@ function renderOrganizeGrid(){
         ${rot?`<span class="org-rot">${rot}°</span>`:''}
         <span class="org-num">${pos+1}</span>
       </div>
-      ${pos<organizeOrder.length-1?`<button onclick="orgInsertBlank(${pos})" title="${L('Insert a blank page after this','Sisipkan halaman kosong setelah ini')}" class="org-insert">${ORG_ICONS.plus}</button>`:''}
+      <button onclick="orgInsertBlankAt(${pos})" title="${L('Insert a blank page before this','Sisipkan halaman kosong sebelum ini')}" class="org-insert left">${ORG_ICONS.plus}</button>
+      <button onclick="orgInsertBlankAt(${pos+1})" title="${L('Insert a blank page after this','Sisipkan halaman kosong setelah ini')}" class="org-insert">${ORG_ICONS.plus}</button>
     </div>`;
   }).join('');
   paintOrgSize();
@@ -795,7 +797,7 @@ window.orgWsDrop=(e)=>{ e.preventDefault(); if(e.dataTransfer&&e.dataTransfer.fi
 window.orgRotateOne=(idx)=>{ organizeRotations[idx]=((organizeRotations[idx]||0)+90)%360; if(!organizeRotations[idx]) delete organizeRotations[idx]; renderOrganizeGrid(); };
 window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(pos,1); if(!organizeOrder.includes(idx)) organizeSelected.delete(idx); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); };
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(at<0?organizeOrder.length:at+1,0,fresh); renderOrganizeGrid(); };
-window.orgInsertBlank=(pos)=>{ organizeOrder.splice(pos+1,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(pos+2)); };
+window.orgInsertBlankAt=(at)=>{ at=Math.max(0,Math.min(organizeOrder.length,at)); organizeOrder.splice(at,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(at+1)); };
 window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); };
 window.orgCheck=(idx, on)=>{ if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
 window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }

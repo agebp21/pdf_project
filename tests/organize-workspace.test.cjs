@@ -13,7 +13,7 @@ async function main(){
     window.qaTool=id=>{setTool(id);};
     window.qaViewer0=()=>{openOrgViewer(0);};
     window.qaSize=s=>{orgSetSize(s);return document.getElementById('organizeGrid').className;};
-    window.qaBlank=()=>{organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlank(0);return organizeOrder.slice();};`);
+    window.qaBlank=()=>{organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
   // No file yet: prompt visible, workspace tools hidden.
   assert.equal(vis('orgEmpty'),true,'empty prompt shows without file');
@@ -35,7 +35,7 @@ async function main(){
   w.qaViewer0();
   assert.equal(w.document.getElementById('orgViewer'),null,'no viewer without document');
   // "+" inserts a real blank page (not a duplicate) right after the card.
-  assert.equal(JSON.stringify(w.qaBlank()),JSON.stringify([0,'blank-1',1]),'blank inserted after position 0');
+  assert.equal(JSON.stringify(w.qaBlank()),JSON.stringify([0,'blank-1',1]),'blank inserted at position 1');
   assert.ok(w.document.getElementById('organizeGrid').innerHTML.includes('Blank page'),'blank card renders');
   // Thumbnail size S/M/L switches the grid density.
   assert.ok(w.qaSize('L').includes('sm:grid-cols-2'),'L is the biggest');
