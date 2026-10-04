@@ -65,3 +65,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-04 (sore 8) | `5f24fde` | Claude | Tombol Upload / Google Drive di jendela Add source dibuat tegas (tidak terkesan disabled). Kode-only. |
 | 2026-10-04 (sore 9) | `5b222fe` | Claude | Tombol Upload / Google Drive: bayangan dihapus, garis tegas saja. Kode-only. |
 | 2026-10-04 (sore 10) | `0a171c2` | Claude | Translate buku penuh lewat PC build (Argos PC). Worker systray di-restart. Backup `/root/pdf_project-code-backup-20261004h.tgz`. |
+| 2026-10-04 (sore 11) | `6ac013e` | Claude | Converter: tombol "📚 Open My Library" (dekat Choose files + kartu hasil). Kode-only. |
