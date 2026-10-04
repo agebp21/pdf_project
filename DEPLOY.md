@@ -58,3 +58,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-04 (sore 2) | `4b3b8f1` | Claude | Login: ganti akun saat sudah masuk. nginx: `www.myflipbookpro.com` -> 301 `https://myflipbookpro.com` (Google OAuth origin_mismatch); backup nginx `/root/nginx-myflipbookpro-backup-20261004b`, kode `/root/pdf_project-code-backup-20261004d.tgz`. |
 | 2026-10-04 (sore 3) | `39b657b` | Claude | Google Drive picker: tab My Drive / Shared with me / Shared drives / Starred / Upload. Backup `/root/pdf_project-code-backup-20261004e.tgz`. |
 | 2026-10-04 (sore 4) | `4280ef6` | Claude | Drive picker: BMP, AVIF, Google Drawings. (Kode-only, backup kode sebelumnya `/root/pdf_project-code-backup-20261004e.tgz`.) |
+| 2026-10-04 (sore 5) | `1f65562` | Claude | Stiker "Coming soon" oranye di beranda dibalikin (owahan `index.html` agen liya, di-commit atas permintaan owner). Backup `/root/pdf_project-code-backup-20261004f.tgz`. |
