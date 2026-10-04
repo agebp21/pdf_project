@@ -1191,3 +1191,4 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - `account.html` (dropdown metode untuk duitku), `invoice.py` ("Duitku"), `.env.example` (variabel + callback URL). Tanpa string Indonesia baru.
 - Verifikasi: `tests/test_duitku.py` (7 tes) + full suite 114/114 OK, `git diff --check`, `py_compile`, `node --check` inline account.html, HTTP 200 account.html + plans (lokal = mock).
 - BELUM: sandbox key asli (wajib: cek expiry 1440 diterima; potong ke 60 bila ditolak), deploy per DEPLOY.md, `PAYMENTS_PAUSED=0` + restart. Bagian pembayaran di README milik sesi lain — minta update.
+- 2026-10-04: Split PDF "Pilih halaman": checkbox dihapus; klik kartu halaman = pilih/batal (bingkai hitam + badge ✓, aria-pressed, Enter/Spasi), Shift+klik = rentang dari klik terakhir, tombol 🔍 di pojok = viewer besar (tombol "Pilih halaman ini"/"✓ Terpilih"). Fungsi toggleSplitPage, paintSplitViewerPick; onSplitCheck dihapus.

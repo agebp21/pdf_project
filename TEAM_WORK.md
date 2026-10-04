@@ -2,7 +2,7 @@
 
 ## 📌 Status terkini (diperbarui 2026-10-04 oleh Claude) — BACA DULU
 
-**Live:** https://myflipbookpro.com = commit `08a0567` (deploy 2026-10-04 sore, lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect).
+**Live:** https://myflipbookpro.com = commit `a08f984` (deploy 2026-10-04 sore, lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect).
 **Build APK/EXE:** lewat PC build owner (`build_worker.py`, `start-build-worker.bat`); VPS hanya mengantrikan. PC mati = build menunggu.
 **Pembayaran: DIPAUSE** (`PAYMENTS_PAUSED=1` di `.env` live) — owner meng-update payment gateway malam 2026-10-04; nyalakan hanya setelah key gateway diisi dan dites.
 **Panel admin live:** https://myflipbookpro.com/admin/ (backend terpisah `admin_server.py`, login admin sendiri; password hanya di VPS `/root/myflipbook-admin-password.txt`).

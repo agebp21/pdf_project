@@ -60,3 +60,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-04 (sore 4) | `4280ef6` | Claude | Drive picker: BMP, AVIF, Google Drawings. (Kode-only, backup kode sebelumnya `/root/pdf_project-code-backup-20261004e.tgz`.) |
 | 2026-10-04 (sore 5) | `1f65562` | Claude | Stiker "Coming soon" oranye di beranda dibalikin (owahan `index.html` agen liya, di-commit atas permintaan owner). Backup `/root/pdf_project-code-backup-20261004f.tgz`. |
 | 2026-10-04 (sore 6) | `08a0567` | Claude | Jendela "Add source" bersama (assets/add-source.js) di Converter, AI Summarizer, Workflow. Backup `/root/pdf_project-code-backup-20261004g.tgz`. |
+| 2026-10-04 (sore 7) | `a08f984` | Claude | Split PDF: pilih halaman dengan klik (tanpa checkbox), Shift+klik rentang, 🔍 baca halaman. (Kode-only; backup terakhir `/root/pdf_project-code-backup-20261004g.tgz`.) |
