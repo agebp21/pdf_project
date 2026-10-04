@@ -66,3 +66,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-04 (sore 9) | `5b222fe` | Claude | Tombol Upload / Google Drive: bayangan dihapus, garis tegas saja. Kode-only. |
 | 2026-10-04 (sore 10) | `0a171c2` | Claude | Translate buku penuh lewat PC build (Argos PC). Worker systray di-restart. Backup `/root/pdf_project-code-backup-20261004h.tgz`. |
 | 2026-10-04 (sore 11) | `6ac013e` | Claude | Converter: tombol "📚 Open My Library" (dekat Choose files + kartu hasil). Kode-only. |
+| 2026-10-04 (bengi) | `fe2c292` | sesi iki | Gateway Duitku (`ebe86a4`: provider, route `/api/payment/duitku/callback`, UI, tes) + takeout tombol debug log converter. Backup `/root/pdf_project-code-backup-20261004g.tgz` (jeneng tabrakan karo backup sore 6 — isine kode sadurunge deploy bengi). Verifikasi: capabilities 200, admin 200, "Toggle log debug" 0 nang live. Key Duitku durung diisi (Rupiah NONAKTIF, PAYMENTS_PAUSED=1 tetep). |
