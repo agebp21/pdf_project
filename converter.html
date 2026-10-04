@@ -51,7 +51,7 @@
   /* Deterministic show/hide: beats every display rule, no cascade fights. */
   .is-hidden{display:none!important}
   /* Organize workspace (iLovePDF-style): page grid + floating actions + sidebar. */
-  .org-ws{display:grid;gap:0;background:#f3f3fa;border:1px solid #e7e2f2;border-radius:16px;overflow:hidden}
+  .org-ws{display:grid;gap:0;width:100%;background:#f3f3fa;border:1px solid #e7e2f2;border-radius:16px;overflow:hidden}
   .org-empty{border:2px dashed #d8d2e8;border-radius:12px;padding:2.5rem 1.5rem;text-align:center;color:#6b7280;background:#fafaff}
   .org-empty p{margin:.25rem 0;font-size:13px}
   .org-empty button{margin-top:.75rem;background:#1A3C34;color:#fff;border:0;border-radius:999px;padding:.6rem 1.4rem;font-weight:800;font-size:13px;cursor:pointer}
@@ -345,7 +345,7 @@ function renderHeader(){
           <p>${L('Page thumbnails will appear here — drag to reorder.','Thumbnail halaman bakal muncul nang kene — drag kanggo ngurutke.')}</p>
           <button onclick="addMoreFiles()">${L('Choose file','Pilih file')}</button>
         </div>
-        <div id="organizeGrid" class="is-hidden grid grid-cols-2 lg:grid-cols-3 gap-6 max-h-[62vh] overflow-auto p-2 pb-4"></div>
+        <div id="organizeGrid" class="is-hidden grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[62vh] overflow-auto p-2 pb-4"></div>
         <div class="org-fab is-hidden" id="orgFab">
           <button onclick="orgDuplicate()" id="orgFabAdd" title="${L('Duplicate selected','Duplikat yang dipilih')}" class="org-fab-add">+<span id="orgFabBadge" class="org-fab-badge is-hidden"></span></button>
           <button onclick="orgSortToggle()" title="${L('Sort by page number','Urutkan nomor halaman')}" class="org-fab-sort">⇅</button>
