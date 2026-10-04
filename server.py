@@ -64,6 +64,12 @@ WORKER_ONLINE_SECONDS = 90          # the worker asks every ~10 s; quiet longer 
 WORKER_STALE_SECONDS = 45 * 60      # a claimed job with no news for this long has failed
 MAX_QUEUED_BUILDS = 20
 MAX_BUILD_RESULT = 600 * 1024 * 1024
+# Remote free translation: without Argos here, whole-book translation batches
+# go to the same PC (build_worker.py translates them with its Argos).
+TRANSLATIONS = {}
+TRANSLATE_COND = threading.Condition()
+REMOTE_TRANSLATE_SECONDS = 150      # one batch, PC included
+TRANSLATE_CLAIM_WAIT = 25           # the PC's long poll
 POSITIONS = {'top-left', 'top-right', 'bottom-left', 'bottom-right'}
 SESSION_COOKIE = 'mf_session'
 PAGES = {'index.html', 'converter.html', 'workflow.html', 'library.html', 'journals.html', 'flipbook.html', 'animation.html', 'notebook.html',
@@ -198,6 +204,30 @@ def worker_key():
 def remote_builds():
     """APK/EXE builds go to the build PC: a worker key is set and there is no Flutter here."""
     return bool(worker_key()) and not shutil.which('flutter')
+
+
+def local_free_translate():
+    """Argos here (FREE_TRANSLATE_LOCAL=0 forces the build PC, e.g. for tests)."""
+    return os.environ.get('FREE_TRANSLATE_LOCAL', '').strip() != '0' and free_translate.available()
+
+
+def remote_translate(pages, target):
+    """One batch translated by the build PC; RuntimeError when it is off or slow."""
+    if not worker_online():
+        raise RuntimeError('PC penerjemah sedang offline. Coba lagi nanti.')
+    task = dict(id=uuid.uuid4().hex, pages=pages, target=target, claimed=False, done=threading.Event(), result=None, error=None)
+    with TRANSLATE_COND:
+        TRANSLATIONS[task['id']] = task
+        TRANSLATE_COND.notify_all()
+    try:
+        if not task['done'].wait(REMOTE_TRANSLATE_SECONDS):
+            raise RuntimeError('PC penerjemah tidak menjawab. Coba lagi.')
+        if task['error']:
+            raise RuntimeError('Terjemahan gagal di PC penerjemah: ' + task['error'])
+        return task['result']
+    finally:
+        with TRANSLATE_COND:
+            TRANSLATIONS.pop(task['id'], None)
 
 
 def worker_online():
@@ -1784,6 +1814,35 @@ class Handler(SimpleHTTPRequestHandler):
                     job.update(status='running', message='PC build mulai…', progress=0.02, updated=now)
             self.send_json(200, {'id': job['id'], 'target': job['target']} if job else {'id': None})
             return
+        if method == 'POST' and path == '/api/worker/translate/claim':
+            # Long poll: the PC waits here until a batch comes (or the wait ends).
+            with TRANSLATE_COND:
+                TRANSLATE_COND.wait_for(lambda: any(not t['claimed'] for t in TRANSLATIONS.values()), timeout=TRANSLATE_CLAIM_WAIT)
+                task = next((t for t in TRANSLATIONS.values() if not t['claimed']), None)
+                if task:
+                    task['claimed'] = True
+            WORKER['seen'] = time.time()
+            self.send_json(200, {'id': task['id'], 'pages': task['pages'], 'target': task['target']} if task else {'id': None})
+            return
+        match = re.fullmatch(r'/api/worker/translate/([a-f0-9]{32})/result', path)
+        if method == 'POST' and match:
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                data = json.loads(self.rfile.read(size) if 0 < size <= 8 * 1024 * 1024 else b'{}')
+            except (ValueError, json.JSONDecodeError):
+                data = {}
+            task = TRANSLATIONS.get(match[1])
+            if not task:
+                self.send_json(404, {'error': 'Terjemahan sudah tidak ditunggu.'})
+                return
+            pages = data.get('pages') if isinstance(data, dict) else None
+            if isinstance(pages, dict) and all(isinstance(k, str) and isinstance(v, str) for k, v in pages.items()):
+                task['result'] = {k: v for k, v in pages.items() if k in task['pages']}
+            else:
+                task['error'] = str((data or {}).get('error') or 'jawaban tidak valid')[:300] if isinstance(data, dict) else 'jawaban tidak valid'
+            task['done'].set()
+            self.send_json(200, {'ok': True})
+            return
         match = re.fullmatch(r'/api/worker/jobs/([a-f0-9]{32})/(input|progress|result|fail)', path)
         job = JOBS.get(match[1]) if match else None
         if not job or not job.get('remote'):
@@ -2188,7 +2247,8 @@ class Handler(SimpleHTTPRequestHandler):
     def translate_route(self, free=False):
         """POST {pages: {page: text}, target, title} -> {pages: {page: translation}}.
         free: the offline Argos translator (whole-book editions, no AI credit)."""
-        if free and not free_translate.available():
+        remote = free and not local_free_translate()
+        if remote and not worker_key():
             self.send_json(503, {'error': 'Penerjemah gratis belum dipasang di server (pip install argostranslate, lalu python free_translate.py --install).'})
             return
         try:
@@ -2220,13 +2280,14 @@ class Handler(SimpleHTTPRequestHandler):
             if free:
                 if target not in free_translate.LANGS:
                     raise ValueError('Bahasa tujuan tidak didukung penerjemah gratis.')
-                self.send_json(200, {'pages': free_translate.translate_texts(clean, target), 'target': target, 'engine': 'free'})
+                done = remote_translate(clean, target) if remote else free_translate.translate_texts(clean, target)
+                self.send_json(200, {'pages': done, 'target': target, 'engine': 'free'})
             else:
                 self.send_json(200, {'pages': translate_pages(clean, target, title), 'target': target})
         except ValueError as cause:
             self.send_json(400, {'error': str(cause)})
         except RuntimeError as cause:
-            self.send_json(502, {'error': str(cause)})
+            self.send_json(503 if 'offline' in str(cause) else 502, {'error': str(cause)})
 
     def podcast_route(self):
         """POST {title, text: {page: [lines]}, lang, hosts} -> two-host podcast script."""

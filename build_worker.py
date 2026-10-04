@@ -1,4 +1,5 @@
-"""Build PC for the live site: takes queued APK/EXE builds from
+"""Build PC for the live site: takes queued APK/EXE builds (and whole-book
+free-translation batches, when the server has no Argos) from
 myflipbookpro.com, builds them here with the normal build (server.build_job:
 Flutter, Android SDK, release signing key, Windows launcher) and sends the
 result back. The live server (no Flutter) queues builds while this runs.
@@ -40,6 +41,33 @@ class Worker:
         with self.opener.open(req, timeout=timeout) as r:
             raw = r.read()
             return json.loads(raw) if r.headers.get_content_type() == 'application/json' else raw
+
+    def run_translate_one(self):
+        """Wait (long poll) for one free-translation batch and answer it; False when none came."""
+        task = self.request('POST', '/api/worker/translate/claim', {}, timeout=60)
+        if not task.get('id'):
+            return False
+        import free_translate
+        try:
+            answer = {'pages': free_translate.translate_texts(task['pages'], task['target'])}
+        except Exception as cause:
+            answer = {'error': str(cause)[:300]}
+        self.request('POST', f"/api/worker/translate/{task['id']}/result", answer)
+        self.log(f'{time.strftime("%H:%M:%S")} translated {len(task["pages"])} block(s) to {task["target"]}' if 'pages' in answer
+                 else f'{time.strftime("%H:%M:%S")} translation failed: {answer["error"]}')
+        return True
+
+    def translate_loop(self, stop=None):
+        """Answer translation batches until stop is set (a thread of its own)."""
+        while not (stop and stop.is_set()):
+            try:
+                self.run_translate_one()
+            except urllib.error.HTTPError as cause:
+                if cause.code == 403:
+                    return
+                time.sleep(POLL_SECONDS)
+            except (urllib.error.URLError, OSError):
+                time.sleep(POLL_SECONDS)
 
     def run_one(self):
         """Claim one job and build it; False when the queue is empty."""
@@ -103,6 +131,8 @@ def main():
         sys.exit('Flutter is not installed on this computer.')
     worker = Worker(args.server, key)
     print(f'MyFlipbook build PC: waiting for builds from {args.server} (Ctrl+C to stop)')
+    if not args.once:
+        threading.Thread(target=worker.translate_loop, daemon=True).start()
     while True:
         try:
             busy = worker.run_one()

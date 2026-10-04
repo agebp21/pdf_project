@@ -1,4 +1,5 @@
-"""The build PC in the system tray (no window): build_worker.py's loop with a
+"""The build PC in the system tray (no window): build_worker.py's loops (APK/EXE
+builds, whole-book free translations) with a
 small icon by the clock — green: waiting for builds, orange: building, red:
 the server cannot be reached. Menu: status, open the log, open the site, quit.
 
@@ -89,6 +90,7 @@ class TrayWorker:
 
     def run(self):
         threading.Thread(target=self.loop, daemon=True).start()
+        threading.Thread(target=self.worker.translate_loop, args=(self.stop,), daemon=True).start()   # whole-book translations
         self.icon.run()
 
 

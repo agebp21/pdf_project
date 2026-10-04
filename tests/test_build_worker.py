@@ -114,5 +114,51 @@ class RemoteBuilds(unittest.TestCase):
         self.assertEqual(self.call('GET', job['log'])[1], b'gradle exploded')
 
 
+class RemoteTranslation(unittest.TestCase):
+    """Whole-book free translation without Argos on the server: batches go to the PC."""
+    @classmethod
+    def setUpClass(cls):
+        cls.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        cls.port = free_port()
+        env = dict(os.environ, MYFLIPBOOK_DB=str(Path(cls.tmp.name) / 'a.sqlite3'), BUILD_WORKER_KEY='worker-key-123', FREE_TRANSLATE_LOCAL='0')
+        cls.proc = subprocess.Popen([sys.executable, str(ROOT / 'server.py'), '--port', str(cls.port), '--no-paywall'], cwd=ROOT, env=env,
+                                    stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+        for _ in range(100):
+            try:
+                RemoteBuilds.call.__func__(cls, 'GET', '/api/capabilities'); break
+            except OSError:
+                time.sleep(0.1)
+
+    @classmethod
+    def tearDownClass(cls):
+        cls.proc.terminate(); cls.proc.wait(10); cls.tmp.cleanup()
+
+    def translate(self, results):
+        _, caps = RemoteBuilds.call.__func__(type(self), 'GET', '/api/capabilities')
+        body = json.dumps({'pages': {'0': 'Good morning.', '3': 'The old lighthouse.'}, 'target': 'id-ID'}).encode()
+        results.append(RemoteBuilds.call.__func__(type(self), 'POST', '/api/translate-free', body,
+                                                  {'Content-Type': 'application/json', 'X-Build-Token': caps['token']}))
+
+    def test_1_offline_pc(self):
+        out = []; self.translate(out)
+        self.assertEqual(out[0][0], 503); self.assertIn('offline', out[0][1]['error'])
+
+    def test_2_pc_translates(self):
+        import threading
+        worker = build_worker.Worker(f'http://127.0.0.1:{self.port}', 'worker-key-123', log=lambda *a: None)
+        fake = lambda pages, target: {k: '<' + target + '> ' + v for k, v in pages.items()}
+        with mock.patch('free_translate.translate_texts', fake):
+            # The PC is seen (a quick claim with nothing waiting), then a reader asks.
+            first = threading.Thread(target=worker.run_translate_one); first.start(); first.join(40)
+            out = []
+            asking = threading.Thread(target=self.translate, args=(out,)); asking.start()
+            self.assertTrue(worker.run_translate_one(), 'the PC took the batch')
+            asking.join(30)
+        status, body = out[0]
+        self.assertEqual(status, 200, body)
+        self.assertEqual(body['pages'], {'0': '<id-ID> Good morning.', '3': '<id-ID> The old lighthouse.'})
+        self.assertEqual(body['engine'], 'free')
+
+
 if __name__ == '__main__':
     unittest.main()
