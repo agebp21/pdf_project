@@ -99,3 +99,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-05 | `4a9bef4` | sesi iki | Oyot thumbnail cilik ketemu: bar options dikunci max 768px, dijebol full-width kanggo organize. Backup `/root/pdf_project-code-backup-20261005l.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `d0ef2f5` | sesi iki | Blank iso diklik: id kutip dibenerke (`&quot;`) + regression test. Backup `/root/pdf_project-code-backup-20261005m.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `cdf7b2f` | sesi iki | Empty state: tombol Upload + Google Drive langsung (kompak tengah). Backup `/root/pdf_project-code-backup-20261005n.tgz`. Verifikasi: capabilities 200. |
+| 2026-10-05 | `dcb5664` | sesi iki | Zoom bertingkat: klik gambar in/out, klik latar nutup. Backup `/root/pdf_project-code-backup-20261005o.tgz`. Verifikasi: capabilities 200. |
