@@ -141,7 +141,7 @@ const TOOLS = [
   {id:'pdf-to-excel', title:'PDF to Excel', desc:'Data sheet first: columns split into cells, numbers become real numbers. Page images kept on a second sheet.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pages embedded as images, text/OCR on extra sheets (needs internet)'},
   {id:'html-to-pdf', title:'HTML to PDF', desc:'Print a saved web page / HTML file to PDF with its real layout, colours and images.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'.html / .htm file — printed by Edge/Chrome on the project server'},
   {id:'merge-pdf', title:'Merge PDF', get desc(){return L('Combine PDFs in the order you want.','Gabungkan PDF sesuai urutan yang kamu mau.')}, cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, get hint(){return L('Choose 2+ PDF files to merge','Pilih 2+ file PDF untuk digabungkan')}},
-  {id:'split-pdf', title:'Split PDF', get desc(){return L('Extract pages 1-3, split every N pages, or tick pages one by one.','Extract halaman 1-3, split per N halaman, atau centang manual per halaman.')}, cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', get hint(){return L('PDF file — pick a split mode below','File PDF — pilih mode split di bawah')}},
+  {id:'split-pdf', title:'Split PDF', get desc(){return L('Extract pages 1-3, split every N pages, or just click the pages you want.','Extract halaman 1-3, split per N halaman, atau cukup klik halaman yang mau diambil.')}, cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', get hint(){return L('PDF file — pick a split mode below','File PDF — pilih mode split di bawah')}},
   {id:'compress-pdf', title:'Compress PDF', desc:'Shrink PDFs full of photos and scans: images are resized and re-encoded, text stays sharp.', cat:'Optimize PDF', icon:'⇲', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pick Light / Balanced / Strong'},
   {id:'rotate-pdf', title:'Rotate PDF', get desc(){return L('Rotate PDF pages 90° / 180° / 270° — some pages or all.','Putar halaman PDF 90° / 180° / 270° — per halaman atau semua.')}, cat:'Organize PDF', icon:'↻', color:'#a855a7', bg:'#fae8ff', accept:'.pdf', get hint(){return L('PDF file — pick the angle & pages','File PDF — pilih sudut & halaman')}},
   {id:'organize-pdf', title:'Organize PDF', get desc(){return L('Reorder, delete, rotate or extract pages — drag & drop like a pro tool.','Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.')}, cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', get hint(){return L('PDF file — page grid, drag to reorder','File PDF — preview grid, drag untuk urutkan')}},
@@ -232,7 +232,7 @@ function renderHeader(){
     html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-4 shadow-sm text-left">
       <p class="text-xs font-bold mb-2 text-center">${L('Split mode — pick one:','Mode Split — pilih salah satu:')}</p>
       <div class="flex flex-wrap justify-center gap-2 mb-3">
-        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="select" checked class="hidden"> <span class="text-xs font-medium">${L('☑️ Pick pages','☑️ Pilih halaman')}</span></label>
+        <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="select" checked class="hidden"> <span class="text-xs font-medium">${L('👆 Pick pages','👆 Pilih halaman')}</span></label>
         <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="all" class="hidden"> <span class="text-xs font-medium">${L('All (1 page = 1 PDF)','Semua (1 hal = 1 PDF)')}</span></label>
         <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-amber-50 border-amber-200 cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="range" class="hidden"> <span class="text-xs font-medium">${L('✂️ Extract a range','✂️ Extract rentang')}</span></label>
         <label class="flex items-center gap-1.5 px-3.5 py-1.5 rounded-full border bg-white cursor-pointer has-[:checked]:bg-gray-900 has-[:checked]:text-white has-[:checked]:border-gray-900 shadow-sm"><input type="radio" name="splitMode" value="chunk" class="hidden"> <span class="text-xs font-medium">${L('📦 Every N pages','📦 Per N halaman')}</span></label>
@@ -249,7 +249,7 @@ function renderHeader(){
         <span class="text-xs">${L('pages — 100 pages / 5 = 20 files','halaman — 100 hal / 5 = 20 file')}</span>
       </div>
       <div id="splitSelectBox" class="hidden bg-gray-50 border rounded-xl p-3 mt-3">
-        <p class="text-[11.5px] text-gray-600 mb-2 text-center">${L('<b>Click a picture</b> to read the page · <b>tick</b> the pages you want','<b>Klik gambar</b> untuk membaca halaman · <b>centang</b> halaman yang mau diambil')} · <button type="button" onclick="toggleAllSplit(true)" class="underline font-semibold">${L('Select all','Pilih semua')}</button> · <button type="button" onclick="toggleAllSplit(false)" class="underline">${L('Clear','Kosongkan')}</button> · <span id="selectCount" class="font-bold"></span></p>
+        <p class="text-[11.5px] text-gray-600 mb-2 text-center">${L('<b>Click the pages</b> you want · <b>Shift+click</b> picks a run of pages · 🔍 reads a page large','<b>Klik halaman</b> yang mau diambil · <b>Shift+klik</b> memilih satu rentang · 🔍 untuk membaca halaman')} · <button type="button" onclick="toggleAllSplit(true)" class="underline font-semibold">${L('Select all','Pilih semua')}</button> · <button type="button" onclick="toggleAllSplit(false)" class="underline">${L('Clear','Kosongkan')}</button> · <span id="selectCount" class="font-bold"></span></p>
         <div id="splitGrid" class="grid grid-cols-3 sm:grid-cols-4 lg:grid-cols-6 gap-3 max-h-[70vh] overflow-auto p-1"></div>
       </div>
     </div>`;
@@ -346,7 +346,7 @@ function updateSplitBtn(){
     const n=parseInt($('#splitChunk')?.value||'5');
     $('#btnText').textContent=L(`Split every ${n} pages →`,`Split per ${n} hal →`);
   }else if(m==='select'){
-    $('#btnText').textContent=splitSelected.size ? L(`Take the ${splitSelected.size} selected pages →`,`Ambil ${splitSelected.size} halaman terpilih →`) : L('Tick pages first','Centang halaman dulu');
+    $('#btnText').textContent=splitSelected.size ? L(`Take the ${splitSelected.size} selected pages →`,`Ambil ${splitSelected.size} halaman terpilih →`) : L('Click pages first','Pilih halaman dulu');
     $('#selectCount').textContent = splitSelected.size ? L(`(${splitSelected.size} selected)`,`(${splitSelected.size} terpilih)`) : '';
   }else{
     $('#btnText').textContent=L(`Split all (${splitPageCount||'?'} pages) →`,`Split semua (${splitPageCount||'?'} hal) →`);
@@ -355,11 +355,10 @@ function updateSplitBtn(){
 window.toggleAllSplit=(on)=>{
   if(on){ splitSelected=new Set(Array.from({length:splitPageCount},(_,i)=>i)); }
   else splitSelected.clear();
-  document.querySelectorAll('#splitGrid input[type=checkbox]').forEach(cb=>cb.checked=on);
   updateSplitBtn(); markSplitRange();
 }
 // Split: every page as a real thumbnail (drawn when scrolled into view);
-// click a page to read it large, tick the pages to take.
+// click a page to pick it (Shift+click: a run of pages), 🔍 to read it large.
 let splitPdfDoc=null, splitThumbObserver=null;
 async function buildSplitPreview(){
   if(active!=='split-pdf' || files.length===0) return;
@@ -374,14 +373,16 @@ async function buildSplitPreview(){
     const grid=$('#splitGrid');
     if(grid){
       grid.innerHTML=Array.from({length:splitPageCount},(_,i)=>`
-        <div class="split-page relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent bg-white shadow-sm" data-page="${i}">
-          <input type="checkbox" value="${i}" class="absolute top-2 right-2 w-5 h-5 z-10 cursor-pointer accent-gray-900" onchange="onSplitCheck(this)" aria-label="${L('Pick page','Pilih halaman')} ${i+1}">
-          <button type="button" class="split-thumb w-full aspect-[3/4] rounded-lg border bg-gray-100 grid place-items-center overflow-hidden cursor-zoom-in" onclick="openSplitViewer(${i})" title="${L('Read page','Baca halaman')} ${i+1}">
+        <div class="split-page relative flex flex-col items-center gap-1 p-2 rounded-xl border-2 border-transparent bg-white shadow-sm cursor-pointer select-none" data-page="${i}"
+             role="button" tabindex="0" aria-pressed="false" aria-label="${L('Pick page','Pilih halaman')} ${i+1}" onclick="toggleSplitPage(${i}, event)" onkeydown="if(event.key===' '||event.key==='Enter'){event.preventDefault();toggleSplitPage(${i}, event)}">
+          <div class="split-thumb w-full aspect-[3/4] rounded-lg border bg-gray-100 grid place-items-center overflow-hidden">
             <span class="text-[11px] text-gray-400">${L('Page','Hal')} ${i+1}</span>
-          </button>
+          </div>
+          <button type="button" class="absolute top-3 left-3 w-7 h-7 rounded-full bg-white/90 border shadow-sm text-[13px] grid place-items-center hover:bg-white" onclick="event.stopPropagation();openSplitViewer(${i})" title="${L('Read page','Baca halaman')} ${i+1}" aria-label="${L('Read page','Baca halaman')} ${i+1}">🔍</button>
+          <span class="split-badge hidden absolute top-3 right-3 w-7 h-7 rounded-full bg-gray-900 text-white text-[14px] font-bold grid place-items-center shadow">✓</span>
           <span class="text-[11px] font-semibold">${L('Page','Hal')} ${i+1}</span>
         </div>`).join('');
-      splitSelected=new Set();
+      splitSelected=new Set(); splitLastClick=null;
       splitThumbObserver?.disconnect();
       splitThumbObserver=new IntersectionObserver(entries=>entries.forEach(entry=>{
         if(!entry.isIntersecting) return;
@@ -420,6 +421,8 @@ function markSplitRange(){
     const i=+el.dataset.page, on=range ? range.has(i) : splitSelected.has(i);
     el.classList.toggle('!border-gray-900', on);
     el.classList.toggle('!bg-amber-50', on);
+    el.setAttribute('aria-pressed', String(on));
+    el.querySelector('.split-badge')?.classList.toggle('hidden', !on);
   });
 }
 // A big page viewer: ← → to browse, tick to pick.
@@ -434,7 +437,7 @@ window.openSplitViewer=async (index)=>{
         <button type="button" data-go="-1" class="px-3 py-1 rounded-full border">←</button>
         <span id="splitViewerLabel"></span>
         <button type="button" data-go="1" class="px-3 py-1 rounded-full border">→</button>
-        <label class="flex items-center gap-1.5 ml-2 px-3 py-1 rounded-full bg-gray-900 text-white cursor-pointer"><input id="splitViewerPick" type="checkbox" class="w-4 h-4"> ${L('Pick this page','Pilih halaman ini')}</label>
+        <button type="button" id="splitViewerPick" class="ml-2 px-3 py-1 rounded-full border border-gray-900"></button>
         <button type="button" data-close class="ml-2 px-3 py-1 rounded-full border" aria-label="${L('Close','Tutup')}">✕</button>
       </div>
       <div id="splitViewerPage" class="flex-1 min-h-0 w-full flex items-center justify-center overflow-auto"></div>`;
@@ -443,14 +446,11 @@ window.openSplitViewer=async (index)=>{
       if(e.target===box || e.target.closest('[data-close]')) closeSplitViewer();
       const go=e.target.closest('[data-go]'); if(go) openSplitViewer(splitViewerAt + +go.dataset.go);
     });
-    box.querySelector('#splitViewerPick').addEventListener('change', e=>{
-      const cb=document.querySelector(`#splitGrid input[value="${splitViewerAt}"]`);
-      if(cb){ cb.checked=e.target.checked; onSplitCheck(cb); }
-    });
+    box.querySelector('#splitViewerPick').addEventListener('click', ()=>{ toggleSplitPage(splitViewerAt); paintSplitViewerPick(); });
     document.addEventListener('keydown', splitViewerKeys);
   }
   box.querySelector('#splitViewerLabel').textContent=L(`Page ${splitViewerAt+1} / ${splitPageCount}`,`Halaman ${splitViewerAt+1} / ${splitPageCount}`);
-  box.querySelector('#splitViewerPick').checked=splitSelected.has(splitViewerAt);
+  paintSplitViewerPick();
   const holder=box.querySelector('#splitViewerPage');
   holder.innerHTML='<span class="text-white/70 text-sm">'+L('Loading…','Memuat…')+'</span>';
   const want=splitViewerAt;
@@ -467,15 +467,28 @@ function splitViewerKeys(e){
   else if(e.key==='ArrowLeft') openSplitViewer(splitViewerAt-1);
 }
 function closeSplitViewer(){ document.getElementById('splitViewer')?.remove(); document.removeEventListener('keydown', splitViewerKeys); }
-window.onSplitCheck=(el)=>{
-  const idx=parseInt(el.value);
-  if(el.checked) splitSelected.add(idx);
+function paintSplitViewerPick(){
+  const btn=document.getElementById('splitViewerPick'); if(!btn) return;
+  const on=splitSelected.has(splitViewerAt);
+  btn.textContent=on ? L('✓ Picked','✓ Terpilih') : L('Pick this page','Pilih halaman ini');
+  btn.className='ml-2 px-3 py-1 rounded-full border border-gray-900 '+(on ? 'bg-gray-900 text-white' : 'bg-white text-gray-900');
+}
+// Click a page: pick / unpick it. Shift+click: the whole run from the last
+// page clicked takes that page's new state.
+let splitLastClick=null;
+window.toggleSplitPage=(idx, event)=>{
+  const on=!splitSelected.has(idx);
+  if(event && event.shiftKey && splitLastClick!==null){
+    const [a,b]=[Math.min(splitLastClick, idx), Math.max(splitLastClick, idx)];
+    for(let i=a;i<=b;i++){ if(on) splitSelected.add(i); else splitSelected.delete(i); }
+  }else if(on) splitSelected.add(idx);
   else splitSelected.delete(idx);
-  // Ticking a page means "pick pages".
+  splitLastClick=idx;
+  // Picking a page means "pick pages".
   const pick=document.querySelector('input[name="splitMode"][value="select"]');
   if(pick && !pick.checked){ pick.checked=true; pick.dispatchEvent(new Event('change')); }
   updateSplitBtn(); markSplitRange();
-}
+};
 async function buildRotatePreview(){
   if(active!=='rotate-pdf' || files.length===0) return;
   try{
