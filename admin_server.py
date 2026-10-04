@@ -2,6 +2,7 @@
 
   python admin_server.py                      # http://127.0.0.1:8091 (behind nginx: admin.<domain>)
   python admin_server.py --hash-password      # prints ADMIN_PASSWORD_HASH=... for .env
+  python admin_server.py --grant EMAIL PLAN DAYS|lifetime   # give a member a plan without payment
 
 Its own login (ADMIN_USERNAME + ADMIN_PASSWORD_HASH in .env), not a member
 account; its own port, so the member site never serves it. It only reads the
@@ -96,7 +97,8 @@ def failed(ip):
 
 # ---------- the numbers --------------------------------------------------
 def paid_active(row, now):
-    return row['plan'] != 'free' and (row['plan_expires_at'] is None or row['plan_expires_at'] > now)
+    # Same rule as accounts.public_user: a paid plan needs an end date in the future.
+    return row['plan'] != 'free' and bool(row['plan_expires_at']) and row['plan_expires_at'] > now
 
 
 def overview(now=None):
@@ -386,7 +388,25 @@ def main():
     parser.add_argument('--proxy', action='store_true', help='Behind nginx: trust X-Forwarded-For / X-Forwarded-Proto.')
     parser.add_argument('--secure', action='store_true', help='Always mark the cookie Secure (HTTPS).')
     parser.add_argument('--hash-password', action='store_true', help='Print ADMIN_PASSWORD_HASH=... for a new password.')
+    parser.add_argument('--grant', nargs=3, metavar=('EMAIL', 'PLAN', 'DAYS'),
+                        help='Give a member a plan (free/pro/business) for DAYS more days, or "lifetime", without payment.')
     args = parser.parse_args()
+    if args.grant:
+        load_env(ROOT / '.env')
+        email, plan, days = args.grant
+        if days.lower() not in ('lifetime', 'bypass') and not days.isdigit():
+            sys.exit('DAYS must be a number of days or "lifetime".')
+        try:
+            user = accounts.Accounts(str(db_path())).grant_plan(email, plan.lower(), None if not days.isdigit() else int(days))
+        except accounts.AccountError as cause:
+            sys.exit(str(cause))
+        until = 'tanpa batas' if user['planExpiresAt'] == accounts.Accounts.LIFETIME else (
+            time.strftime('%Y-%m-%d', time.localtime(user['planExpiresAt'])) if user['planExpiresAt'] else '-')
+        line = f"{time.strftime('%Y-%m-%d %H:%M:%S')} grant {user['email']} -> {user['planName']} ({until})"
+        with open(db_path().parent / 'admin.log', 'a', encoding='utf-8') as log:
+            log.write(line + '\n')
+        print(line)
+        return
     if args.hash_password:
         first = getpass.getpass('New admin password (at least 12 characters): ')
         if len(first) < 12 or getpass.getpass('Again: ') != first:

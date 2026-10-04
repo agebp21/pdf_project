@@ -107,7 +107,7 @@
 const $ = s => document.querySelector(s);
 const esc = v => String(v == null ? '' : v).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
 const num = n => Number(n || 0).toLocaleString('id-ID');
-const date = ts => ts ? new Date(ts * 1000).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) : '—';
+const date = ts => ts >= 4102444800 ? 'tanpa batas' : ts ? new Date(ts * 1000).toLocaleDateString('id-ID', {day: 'numeric', month: 'short', year: 'numeric'}) : '—';
 const when = ts => ts ? new Date(ts * 1000).toLocaleString('id-ID', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : '—';
 const size = b => { b = Number(b || 0); return b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : b >= 1e3 ? Math.round(b / 1e3) + ' KB' : b + ' B'; };
 const money = (cur, n) => cur === 'USD' ? '$' + (n / 100).toLocaleString('en-US', {minimumFractionDigits: 2}) : 'Rp ' + num(n);

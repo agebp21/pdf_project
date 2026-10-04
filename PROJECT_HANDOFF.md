@@ -1167,3 +1167,5 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
   3) nginx: server_name admin.myflipbookpro.com -> proxy_pass http://127.0.0.1:8091 dengan X-Forwarded-For/Proto + SSL (certbot). Opsional: batasi IP (allow/deny) atau basic auth tambahan.
   4) DNS: A record admin.myflipbookpro.com -> IP VPS.
   Alternatif tanpa subdomain: SSH tunnel `ssh -L 8091:127.0.0.1:8091 root@vps` lalu buka http://localhost:8091.
+
+- 2026-10-04: `python admin_server.py --grant EMAIL PLAN DAYS|lifetime` (accounts.grant_plan): paket tanpa bayar; hari ditambah setelah periode berjalan (paket sama); lifetime = berakhir 2100-01-01 (Accounts.LIFETIME, panel admin menulis "tanpa batas"); free = cabut paket; dicatat di .data/admin.log. admin_server.paid_active disamakan dengan accounts.public_user (tanpa tanggal akhir = free). Atas permintaan user: agungbp.online@gmail.com & wiyanjenarmahesa@gmail.com -> Business lifetime di DB LOKAL (backup: .data/myflipbook-backup-20261004-before-grant.sqlite3). Di VPS live perlu dijalankan perintah yang sama.

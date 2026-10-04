@@ -130,6 +130,25 @@ class AdminTests(unittest.TestCase):
         self.assertNotIn('1.2.3.4', dump); self.assertNotIn('Chrome/150', dump)
 
 
+class GrantPlan(unittest.TestCase):
+    def test_grant(self):
+        with tempfile.TemporaryDirectory(ignore_cleanup_errors=True) as tmp:
+            store = accounts.Accounts(str(Path(tmp) / 'a.sqlite3'))
+            store.register('m@example.com', 'secret-pass-1')
+            now = int(time.time())
+            u = store.grant_plan('M@example.com', 'business', None, now)
+            self.assertEqual((u['plan'], u['planExpiresAt']), ('business', accounts.Accounts.LIFETIME))
+            u = store.grant_plan('m@example.com', 'pro', 30, now)
+            self.assertEqual(u['plan'], 'pro'); self.assertEqual(u['planExpiresAt'], now + 30 * 86400)
+            u = store.grant_plan('m@example.com', 'pro', 10, now)
+            self.assertEqual(u['planExpiresAt'], now + 40 * 86400, 'added after the running period')
+            self.assertEqual(store.grant_plan('m@example.com', 'free', None, now)['plan'], 'free')
+            with self.assertRaises(accounts.AccountError):
+                store.grant_plan('nobody@example.com', 'pro', 30)
+            with self.assertRaises(accounts.AccountError):
+                store.grant_plan('m@example.com', 'gold', 30)
+
+
 class SiteCountsVisits(unittest.TestCase):
     def test_page_view_counted(self):
         import server

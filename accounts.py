@@ -44,21 +44,22 @@ EMAIL_RE = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$')
 
 # Entitlements the server enforces (see server.entitlement_error):
 #   office -> Word/Excel/PowerPoint to PDF via LibreOffice (login on a public host)
+#   ai     -> AI Summarizer: summary, translation, podcast (all plans, login required)
 #   export -> flipbook export (offline HTML package, also the animation editor)
 #   apk    -> Android build, exe -> Windows build
 # Browser tools and flipbook preview / project save stay free.
 PLANS = {
-    'free': dict(name='Free', monthly=0, yearly=0, usd_monthly=0, usd_yearly=0, entitlements=['office'],
+    'free': dict(name='Free', monthly=0, yearly=0, usd_monthly=0, usd_yearly=0, entitlements=['office', 'ai'],
                  features=dict(id=['Semua tool PDF di browser', 'PDF to Flipbook: baca & preview',
-                                   'Word/Excel/PPT ke PDF'],
+                                   'Word/Excel/PPT ke PDF', 'AI Summarizer: ringkasan, terjemahan, podcast'],
                                en=['Every in-browser PDF tool', 'PDF to Flipbook: read & preview',
-                                   'Word/Excel/PPT to PDF'])),
+                                   'Word/Excel/PPT to PDF', 'AI Summarizer: summary, translation, podcast'])),
     'pro': dict(name='Pro', monthly=99_000, yearly=990_000, usd_monthly=999, usd_yearly=9_900,
-                entitlements=['office', 'export', 'apk'],
+                entitlements=['office', 'ai', 'export', 'apk'],
                 features=dict(id=['Semua fitur Free', 'Ekspor flipbook: HTML offline', 'Build aplikasi Android (APK)'],
                               en=['Everything in Free', 'Flipbook export: offline HTML', 'Build Android apps (APK)'])),
     'business': dict(name='Business', monthly=149_000, yearly=1_490_000, usd_monthly=1_999, usd_yearly=19_900,
-                     entitlements=['office', 'export', 'apk', 'exe'],
+                     entitlements=['office', 'ai', 'export', 'apk', 'exe'],
                      features=dict(id=['Semua fitur Pro', 'Build aplikasi Windows (EXE)', 'Cocok untuk tim & instansi'],
                                    en=['Everything in Pro', 'Build Windows apps (EXE)', 'Made for teams & institutions'])),
 }
@@ -644,6 +645,30 @@ class Accounts:
                        (order['plan'], start + CYCLE_SECONDS[order['cycle']], user['id']))
             db.execute("UPDATE orders SET status='paid', paid_at=? WHERE id=?", (now, order_id))
         return True
+
+    # Far in the future: a plan granted for good ("lifetime").
+    LIFETIME = 4102444800          # 2100-01-01
+
+    def grant_plan(self, email, plan, days=None, now=None):
+        """Give a member a plan without payment (admin): `days` more days (added
+        after the current period when the same plan is still running), or for
+        good when days is None. Returns the member as public_user."""
+        if plan not in PLANS:
+            raise AccountError(400, 'Paket tidak dikenal: ' + str(plan))
+        now = int(now or time.time())
+        with self.connect() as db:
+            user = db.execute('SELECT * FROM users WHERE email=?', ((email or '').strip().lower(),)).fetchone()
+            if not user:
+                raise AccountError(404, 'Member tidak ditemukan: ' + str(email))
+            if plan == 'free':
+                expires = None
+            elif days is None:
+                expires = self.LIFETIME
+            else:
+                running = user['plan'] == plan and (user['plan_expires_at'] or 0) > now
+                expires = min(self.LIFETIME, (user['plan_expires_at'] if running else now) + int(days) * 86400)
+            db.execute('UPDATE users SET plan=?, plan_expires_at=? WHERE id=?', (plan, expires, user['id']))
+            return self.public_user(db.execute('SELECT * FROM users WHERE id=?', (user['id'],)).fetchone())
 
     def mock_pay(self, user, order_id):
         with self.connect() as db:
