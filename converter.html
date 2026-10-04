@@ -71,10 +71,12 @@
     <div id="debug" class="hidden mt-2 max-w-3xl mx-auto p-2.5 rounded-xl bg-gray-900 text-white text-[11px] font-mono whitespace-pre-wrap text-left max-h-40 overflow-auto"></div>
   </div>
 
-  <div class="relative z-10 max-w-[900px] mx-auto px-4 py-6">
+  <div class="relative z-10 max-w-[1200px] mx-auto px-4 py-6">
     <main class="space-y-4">
       <div id="libStatus" class="hidden p-2.5 rounded-2xl bg-red-50 border border-red-200 text-[11px] text-red-700 leading-relaxed"></div>
-      <!-- drop zone (compact) -->
+      <div class="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-start">
+      <div class="space-y-4 min-w-0">
+      <!-- drop zone (compact, left) -->
       <div id="drop" class="drop card p-4 sm:p-5 text-center cursor-pointer">
         <div class="w-10 h-10 mx-auto rounded-xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-base mb-2 border border-[#E8E2D4] shadow-[0_6px_14px_rgba(26,60,52,.3)]" style="background:linear-gradient(180deg,#2A5248,#1A3C34)">⇧</div>
         <p class="serif font-black text-[16px]">Drop files, grab a coffee ☕</p>
@@ -89,10 +91,15 @@
         <button id="testBtn" class="mt-1 py-1.5 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter without a file (generate dummy)</button>
       </div>
 
+      </div><!-- /left -->
+      <div class="space-y-4 min-w-0">
       <div id="fileList" class="hidden card p-5">
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-bold text-[13px] serif text-[16px]">Selected files (<span id="fileCount">0</span>)</h3>
-          <button onclick="clearFiles()" class="text-xs font-extrabold text-red-600 hover:underline">Remove all</button>
+          <div class="flex items-center gap-3">
+            <button onclick="addMoreFiles()" class="text-xs font-extrabold text-[#1A3C34] hover:underline">＋ Add more</button>
+            <button onclick="clearFiles()" class="text-xs font-extrabold text-red-600 hover:underline">Remove all</button>
+          </div>
         </div>
         <div id="files" class="space-y-2"></div>
         <button id="convertBtn" class="btn-tang mt-4 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
@@ -113,6 +120,8 @@
           <a href="library.html" class="clay-btn clay-btn-ghost">📚 Open My Library</a>
         </div>
       </div>
+      </div><!-- /right -->
+      </div><!-- /grid -->
     </main>
   </div>
 
@@ -613,6 +622,7 @@ function updateFileUI({preserveError=false}={}){
   if(!preserveError)$('#error').classList.add('hidden');
 }
 window.removeFile=(i)=>{files.splice(i,1); updateFileUI();}
+window.addMoreFiles=()=>{ $('#pickBtn').click(); };
 window.clearFiles=()=>{files=[]; updateFileUI(); $('#fileInput').value=''; log('Cleared');}
 window.resetAll=()=>{clearFiles(); $('#result').classList.add('hidden'); $('#progress').classList.add('hidden'); $('#error').classList.add('hidden');}
 const drop=$('#drop'), input=$('#fileInput'), pickBtn=$('#pickBtn');
@@ -646,7 +656,14 @@ function handleFiles(list){
     return ok;
   });
   if(filtered.length===0 && arr.length>0) return;
-  files = t.multiple ? [...files, ...filtered] : filtered;
+  // Add more never replaces: multi-file tools append (exact duplicates skipped),
+  // single-file tools keep the new file.
+  if(t.multiple){
+    const seen=new Set(files.map(f=>[f.name,f.size,f.lastModified].join('|')));
+    const fresh=filtered.filter(f=>{ const k=[f.name,f.size,f.lastModified].join('|'); if(seen.has(k)){ log('Skip duplicate '+f.name); return false; } seen.add(k); return true; });
+    files=[...files,...fresh];
+  }else files=filtered;
+  try{ input.value=''; }catch(e){}
   // tanpa batasan — semua ukuran diizinkan, cuma warning kalau >200MB biar user tau risiko RAM
   const huge = files.filter(f=> f.size > 200*1024*1024);
   if(huge.length) log('WARNING: file besar '+huge.map(f=>f.name+': '+(f.size/1024/1024).toFixed(1)+'MB').join(', ')+' — butuh RAM besar, bisa lambat');
