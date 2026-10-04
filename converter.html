@@ -345,7 +345,7 @@ function renderHeader(){
           <p>${L('Page thumbnails will appear here — drag to reorder.','Thumbnail halaman bakal muncul nang kene — drag kanggo ngurutke.')}</p>
           <button onclick="addMoreFiles()">${L('Choose file','Pilih file')}</button>
         </div>
-        <div id="organizeGrid" class="is-hidden grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[62vh] overflow-auto p-2 pb-4"></div>
+        <div id="organizeGrid" class="is-hidden grid grid-cols-2 lg:grid-cols-3 gap-6 max-h-[62vh] overflow-auto p-2 pb-4"></div>
         <div class="org-fab is-hidden" id="orgFab">
           <button onclick="orgDuplicate()" id="orgFabAdd" title="${L('Duplicate selected','Duplikat yang dipilih')}" class="org-fab-add">+<span id="orgFabBadge" class="org-fab-badge is-hidden"></span></button>
           <button onclick="orgSortToggle()" title="${L('Sort by page number','Urutkan nomor halaman')}" class="org-fab-sort">⇅</button>
