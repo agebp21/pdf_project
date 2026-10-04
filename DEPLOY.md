@@ -62,3 +62,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-04 (sore 6) | `08a0567` | Claude | Jendela "Add source" bersama (assets/add-source.js) di Converter, AI Summarizer, Workflow. Backup `/root/pdf_project-code-backup-20261004g.tgz`. |
 | 2026-10-04 (sore 7) | `a08f984` | Claude | Split PDF: pilih halaman dengan klik (tanpa checkbox), Shift+klik rentang, 🔍 baca halaman. (Kode-only; backup terakhir `/root/pdf_project-code-backup-20261004g.tgz`.) |
 | 2026-10-04 (sore 8) | `5f24fde` | Claude | Tombol Upload / Google Drive di jendela Add source dibuat tegas (tidak terkesan disabled). Kode-only. |
+| 2026-10-04 (sore 9) | `5b222fe` | Claude | Tombol Upload / Google Drive: bayangan dihapus, garis tegas saja. Kode-only. |
