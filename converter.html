@@ -48,6 +48,43 @@
   .conv-cols.single{grid-template-columns:minmax(0,1fr)}
   .conv-cols.single #colLeft{display:none}
   .conv-cols.single #colRight{max-width:640px;margin:0 auto;width:100%}
+  /* Organize workspace (iLovePDF-style): page grid + floating actions + sidebar. */
+  .org-ws{display:grid;gap:0;background:#f3f3fa;border:1px solid #e7e2f2;border-radius:16px;overflow:hidden}
+  @media(min-width:1024px){.org-ws{grid-template-columns:minmax(0,1fr) 300px}}
+  .org-main{position:relative;padding:1.25rem;min-width:0}
+  .org-main #organizeGrid{padding-right:3rem}
+  .org-side{background:#fff;border-top:1px solid #eee;display:flex;flex-direction:column;min-width:0}
+  @media(min-width:1024px){.org-side{border-top:0;border-left:1px solid #eee}}
+  .org-side-title{position:relative;margin:0;padding:1rem 1.25rem .75rem;font-size:20px;font-weight:800;text-align:center}
+  .org-side-title::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#ef2d2d}
+  .org-files-head{display:flex;justify-content:space-between;align-items:center;padding:.25rem 1.25rem;font-size:13px;font-weight:700}
+  .org-reset{color:#ef2d2d;font-weight:800;font-size:12px;text-decoration:underline;background:none;border:0;cursor:pointer}
+  .org-chip{margin:.25rem 1.25rem 0;display:flex;align-items:center;gap:.5rem;background:#fde8e8;border-radius:8px;padding:.6rem .75rem;font-size:12px;min-width:0}
+  .org-chip-icon{font-weight:800;color:#b91c1c}
+  .org-chip-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
+  .org-sel{margin:.75rem 1.25rem 0;border:1px solid #eee;border-radius:12px;padding:.75rem;display:grid;gap:.5rem}
+  .org-sel-count{margin:0;font-size:12px;color:#555}
+  .org-sel-del{background:none;border:0;color:#ef2d2d;font-weight:800;font-size:12px;cursor:pointer;text-align:left;padding:0}
+  .org-sel-row{display:flex;flex-wrap:wrap;gap:.4rem}
+  .org-sel-row button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .7rem;font-size:11px;font-weight:700;cursor:pointer}
+  .org-foot{margin-top:auto;background:#fdf0f0;padding:1rem 1.25rem}
+  .org-go{width:100%;background:#ef2d2d;color:#fff;border:0;border-radius:12px;padding:.9rem;font-size:15px;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.35)}
+  .org-cell{position:relative;min-width:0}
+  .org-card{background:#fff;border:1.5px solid #f3c4c4;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:center;gap:6px;cursor:move;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.04);height:100%}
+  .org-card.sel{border-color:#ef2d2d;background:#fff5f5}
+  .org-thumb{position:relative;width:100%;aspect-ratio:3/4;background:#f3f4f6;border-radius:8px;overflow:hidden;display:grid;place-items:center}
+  .org-thumb img{width:100%;height:100%;object-fit:contain;background:#fff}
+  .org-ph{font-size:11px;color:#9ca3af}
+  .org-num{font-size:11px;color:#6b7280;font-weight:600}
+  .org-hover{position:absolute;top:14px;right:14px;display:flex;gap:6px;z-index:2}
+  @media(hover:hover){.org-hover{opacity:0;transition:opacity .15s}.org-card:hover .org-hover,.org-card:focus-within .org-hover{opacity:1}}
+  .org-hover button{width:28px;height:28px;border-radius:999px;background:rgba(255,255,255,.96);border:1px solid #e5e7eb;box-shadow:0 2px 6px rgba(0,0,0,.12);cursor:pointer;font-size:14px;display:grid;place-items:center}
+  .org-rot{position:absolute;bottom:30px;right:14px;background:#111827;color:#fff;font-size:10px;font-weight:800;border-radius:999px;padding:2px 7px;z-index:2}
+  .org-insert{position:absolute;right:-15px;top:42%;width:24px;height:24px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;color:#ef2d2d;font-weight:800;font-size:14px;line-height:1;z-index:3;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1);display:grid;place-items:center}
+  .org-fab{position:absolute;right:12px;top:96px;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:5}
+  .org-fab-add{position:relative;width:44px;height:44px;border-radius:999px;background:#ef2d2d;color:#fff;font-size:26px;line-height:1;border:0;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.4)}
+  .org-fab-badge{position:absolute;top:-6px;left:-8px;background:#1f2937;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:grid;place-items:center;padding:0 4px}
+  .org-fab-sort{width:36px;height:36px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;cursor:pointer;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
   .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
   .btn-tang:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(255,92,40,.42),inset 0 1px 0 rgba(255,255,255,.45)}
   ::-webkit-scrollbar{height:6px}
@@ -289,18 +326,34 @@ function renderHeader(){
       <div id="rotateGrid" class="grid grid-cols-4 sm:grid-cols-6 gap-2 max-h-40 overflow-auto hidden"></div>
     </div>`;
   }else if(t.id==='organize-pdf'){
-    html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-3 shadow-sm">
-      <p class="text-xs font-bold text-center mb-2">${L('Organize — drag cards to reorder, tick to select','Organize — drag kartu untuk urutkan, centang untuk pilih')}</p>
-      <div class="flex flex-wrap justify-center gap-1.5 mb-2">
-        <button onclick="orgDelete()" class="px-3 py-1.5 rounded-full bg-red-600 text-white text-xs font-bold">🗑️ ${L('Delete selected','Hapus yang dipilih')}</button>
-        <button onclick="orgRotate(90)" class="px-3 py-1.5 rounded-full bg-white border text-xs font-bold">↻ 90°</button>
-        <button onclick="orgRotate(180)" class="px-3 py-1.5 rounded-full bg-white border text-xs font-bold">↻ 180°</button>
-        <button onclick="orgDuplicate()" class="px-3 py-1.5 rounded-full bg-white border text-xs font-bold">${L('⎘ Duplicate','⎘ Duplikat')}</button>
-        <button onclick="toggleAllOrg(true)" class="px-3 py-1.5 rounded-full bg-gray-900 text-white text-xs font-bold">Select all</button>
-        <button onclick="toggleAllOrg(false)" class="px-3 py-1.5 rounded-full bg-white border text-xs">Clear</button>
+    // iLovePDF-style workspace: page grid + floating actions + right sidebar.
+    html=`<div class="org-ws">
+      <div class="org-main">
+        <div id="organizeGrid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[62vh] overflow-auto p-2 pb-4"></div>
+        <div class="org-fab">
+          <button onclick="orgDuplicate()" id="orgFabAdd" title="${L('Duplicate selected','Duplikat yang dipilih')}" class="org-fab-add">+<span id="orgFabBadge" class="org-fab-badge" hidden></span></button>
+          <button onclick="orgSortToggle()" title="${L('Sort by page number','Urutkan nomor halaman')}" class="org-fab-sort">⇅</button>
+        </div>
       </div>
-      <div id="organizeGrid" class="flex flex-wrap gap-y-3 max-h-[62vh] overflow-auto p-1 pb-3"></div>
-      <p class="text-[11px] text-gray-500 text-center mt-2">${L('Tip: click a card to select • + inserts a copy after it • ⟳ rotates just that page','Tips: klik kartu untuk pilih • + menyisipkan salinan setelahnya • ⟳ memutar halaman itu saja')}</p>
+      <aside class="org-side">
+        <h3 class="org-side-title">Organize pdf</h3>
+        <div class="org-files-head"><span>${L('Files:','File:')}</span><button onclick="orgReset()" class="org-reset">Reset all</button></div>
+        <div class="org-chip"><span class="org-chip-icon">⇅</span><span id="orgFileName" class="org-chip-name"></span></div>
+        <div id="orgSelBox" class="org-sel" hidden>
+          <p class="org-sel-count"><b id="orgSelCount">0</b> ${L('selected','dipilih')}</p>
+          <button onclick="orgDelete()" class="org-sel-del">🗑️ ${L('Delete selected','Hapus yang dipilih')}</button>
+          <div class="org-sel-row">
+            <button onclick="orgRotate(90)">↻ 90°</button>
+            <button onclick="orgRotate(180)">↻ 180°</button>
+            <button onclick="orgDuplicate()">${L('⎘ Duplicate','⎘ Duplikat')}</button>
+          </div>
+          <div class="org-sel-row">
+            <button onclick="toggleAllOrg(true)">Select all</button>
+            <button onclick="toggleAllOrg(false)">Clear</button>
+          </div>
+        </div>
+        <div class="org-foot"><button onclick="document.getElementById('convertBtn').click()" class="org-go">Organize <span aria-hidden="true">→</span></button></div>
+      </aside>
     </div>`;
   }
   if(['watermark','page-numbers','crop-pdf'].includes(t.id))html=PDFEdit.controls(t.id);
@@ -567,32 +620,42 @@ async function drawOrgThumb(cell){
 function renderOrganizeGrid(){
   const grid=$('#organizeGrid');
   if(!grid) return;
+  const chip=$('#orgFileName');
+  if(chip) chip.textContent=((files[0]&&files[0].name)||'');
+  const nSel=organizeSelected.size;
+  const badge=$('#orgFabBadge');
+  if(badge){ badge.hidden=nSel===0; badge.textContent=nSel; }
+  const box=$('#orgSelBox');
+  if(box) box.hidden=nSel===0;
+  const cnt=$('#orgSelCount');
+  if(cnt) cnt.textContent=nSel;
   grid.innerHTML=organizeOrder.map((origIdx,pos)=>{
     const sel=organizeSelected.has(origIdx);
     const rot=organizeRotations[origIdx]||0;
     const cached=orgThumbCache.get(origIdx);
     const thumb=cached
-      ? `<img src="${cached}" alt="Page ${origIdx+1}" draggable="false" class="w-full h-full object-contain bg-white">`
-      : `<span class="text-[11px] text-gray-400">${L('Page','Hal')} ${origIdx+1}</span>`;
+      ? `<img src="${cached}" alt="Page ${origIdx+1}" draggable="false">`
+      : `<span class="org-ph">${L('Page','Hal')} ${origIdx+1}</span>`;
     return `
-    <div class="flex items-center gap-1 w-1/2 sm:w-1/3 xl:w-1/4 p-1">
+    <div class="org-cell">
       <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgDragged=false" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${origIdx})"
-        class="org-card group relative flex-1 min-w-0 flex flex-col items-center gap-1 p-2 rounded-xl border-2 bg-white shadow-sm cursor-move ${sel?'!border-red-400 !bg-red-50':'border-gray-200 hover:border-gray-300'}">
-        <div class="org-thumb w-full aspect-[3/4] rounded-lg border bg-gray-100 grid place-items-center overflow-hidden" data-thumb="${origIdx}">${thumb}</div>
-        <div class="absolute top-1.5 right-1.5 flex gap-1 lg:opacity-0 lg:group-hover:opacity-100 lg:focus-within:opacity-100 transition-opacity">
-          <button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}" class="w-7 h-7 rounded-full bg-white/95 border shadow text-[14px] grid place-items-center hover:bg-white">⟳</button>
-          <button onclick="event.stopPropagation();orgDeleteOne(${pos})" title="${L('Delete this page','Hapus halaman ini')}" class="w-7 h-7 rounded-full bg-white/95 border shadow text-[13px] grid place-items-center hover:bg-white">✕</button>
+        class="org-card group${sel?' sel':''}">
+        <div class="org-thumb" data-thumb="${origIdx}">${thumb}</div>
+        <div class="org-hover">
+          <button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}">⟳</button>
+          <button onclick="event.stopPropagation();orgDeleteOne(${pos})" title="${L('Delete this page','Hapus halaman ini')}">✕</button>
         </div>
-        ${rot?`<span class="absolute bottom-8 right-2.5 text-[10px] font-bold px-1.5 py-0.5 rounded-full bg-gray-900 text-white">${rot}°</span>`:''}
-        <span class="text-[11px] font-semibold ${sel?'text-red-700':''}">${pos+1}</span>
+        ${rot?`<span class="org-rot">${rot}°</span>`:''}
+        <span class="org-num">${pos+1}</span>
       </div>
-      ${pos<organizeOrder.length-1
-        ? `<button onclick="orgInsertDup(${origIdx})" title="${L('Insert a copy after this page','Sisipkan salinan setelah halaman ini')}" class="shrink-0 w-6 h-6 rounded-full bg-white border shadow-sm text-red-600 text-[14px] font-bold grid place-items-center hover:bg-red-50">+</button>`
-        : `<span class="shrink-0 w-6"></span>`}
+      ${pos<organizeOrder.length-1?`<button onclick="orgInsertDup(${origIdx})" title="${L('Insert a copy after this page','Sisipkan salinan setelah halaman ini')}" class="org-insert">+</button>`:''}
     </div>`;
   }).join('');
   orgObserveThumbs();
 }
+let orgSortDesc=false;
+window.orgSortToggle=()=>{ orgSortDesc=!orgSortDesc; const dir=orgSortDesc?-1:1; organizeOrder.sort((a,b)=>(a-b)*dir); renderOrganizeGrid(); log('Org sort '+(orgSortDesc?'desc':'asc')); };
+window.orgReset=()=>{ buildOrganizePreview(); log('Org reset'); };
 window.orgRotateOne=(idx)=>{ organizeRotations[idx]=((organizeRotations[idx]||0)+90)%360; if(!organizeRotations[idx]) delete organizeRotations[idx]; renderOrganizeGrid(); };
 window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(pos,1); if(!organizeOrder.includes(idx)) organizeSelected.delete(idx); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); };
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); organizeOrder.splice(at<0?organizeOrder.length:at+1,0,idx); renderOrganizeGrid(); };
@@ -623,6 +686,8 @@ function updateFileUI({preserveError=false}={}){
     </div>
   `).join('');
   const t=TOOLS.find(x=>x.id===active);
+  // Organize has its own big red button in the workspace sidebar.
+  $('#convertBtn').classList.toggle('hidden', t.id==='organize-pdf');
   if(t.id==='merge-pdf') $('#btnText').textContent = `Merge ${files.length} PDF →`;
   else if(t.id==='split-pdf'){ buildSplitPreview(); }
   else if(t.id==='rotate-pdf'){ buildRotatePreview(); $('#btnText').textContent=L('Rotate PDF →','Putar PDF →'); }
