@@ -85,6 +85,9 @@
   .org-fab-add{position:relative;width:44px;height:44px;border-radius:999px;background:#ef2d2d;color:#fff;font-size:26px;line-height:1;border:0;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.4)}
   .org-fab-badge{position:absolute;top:-6px;left:-8px;background:#1f2937;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:grid;place-items:center;padding:0 4px}
   .org-fab-sort{width:36px;height:36px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;cursor:pointer;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
+  /* Organize owns its files UI in the workspace sidebar: hide the
+     duplicated list in the main column, keep progress/error visible. */
+  #fileList.org-mode .hide-org{display:none}
   .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
   .btn-tang:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(255,92,40,.42),inset 0 1px 0 rgba(255,255,255,.45)}
   ::-webkit-scrollbar{height:6px}
@@ -124,14 +127,14 @@
       <div class="space-y-4 min-w-0" id="colLeft">
       <!-- files + result (left) -->
       <div id="fileList" class="hidden card p-5">
-        <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center justify-between mb-3 hide-org">
           <h3 class="font-bold text-[13px] serif text-[16px]">Selected files (<span id="fileCount">0</span>)</h3>
           <div class="flex items-center gap-3">
             <button onclick="addMoreFiles()" class="text-xs font-extrabold text-[#1A3C34] hover:underline">＋ Add more</button>
             <button onclick="clearFiles()" class="text-xs font-extrabold text-red-600 hover:underline">Remove all</button>
           </div>
         </div>
-        <div id="files" class="space-y-2"></div>
+        <div id="files" class="space-y-2 hide-org"></div>
         <button id="convertBtn" class="btn-tang mt-4 w-full py-3.5 rounded-2xl text-white font-extrabold text-sm flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
           <span id="btnText">Convert now →</span>
           <span id="btnSpinner" class="hidden w-4 h-4 border-2 border-white/30 border-t-white rounded-full animate-spin"></span>
@@ -686,8 +689,9 @@ function updateFileUI({preserveError=false}={}){
     </div>
   `).join('');
   const t=TOOLS.find(x=>x.id===active);
-  // Organize has its own big red button in the workspace sidebar.
+  // Organize has its own files UI + big red button in the workspace sidebar.
   $('#convertBtn').classList.toggle('hidden', t.id==='organize-pdf');
+  $('#fileList').classList.toggle('org-mode', t.id==='organize-pdf');
   if(t.id==='merge-pdf') $('#btnText').textContent = `Merge ${files.length} PDF →`;
   else if(t.id==='split-pdf'){ buildSplitPreview(); }
   else if(t.id==='rotate-pdf'){ buildRotatePreview(); $('#btnText').textContent=L('Rotate PDF →','Putar PDF →'); }
