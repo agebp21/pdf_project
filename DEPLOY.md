@@ -79,3 +79,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-04 (bengi 11) | `b3abe52` | sesi iki | Organize anti-ngawur: show/hide deterministik (`.is-hidden`) + progress/error pindah sidebar + fileList utuh didelikke + regression test. Backup `/root/pdf_project-code-backup-20261004r.tgz`. Verifikasi: capabilities 200, 4 suite converter ijo. |
 | 2026-10-04 (bengi 12) | `914e88d` | sesi iki | Organize thumbnail gede (grid 3 kolom). Backup `/root/pdf_project-code-backup-20261004s.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-04 (bengi 13) | `4f3d3dd` | sesi iki | Workspace organize full-width + balik 4 kolom (oyot thumbnail cilik: panel nyusut). Backup `/root/pdf_project-code-backup-20261004t.tgz`. Verifikasi: capabilities 200. |
+| 2026-10-04 (bengi 14) | `9d7392f` | sesi iki | Organize tanpa drop ganda (workspace dadi drop target). Backup `/root/pdf_project-code-backup-20261004u.tgz`. Verifikasi: capabilities 200. |
