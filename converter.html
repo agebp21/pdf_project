@@ -74,19 +74,19 @@
   <div class="relative z-10 max-w-[900px] mx-auto px-4 py-6">
     <main class="space-y-4">
       <div id="libStatus" class="hidden p-2.5 rounded-2xl bg-red-50 border border-red-200 text-[11px] text-red-700 leading-relaxed"></div>
-      <!-- drop zone -->
-      <div id="drop" class="drop card p-8 text-center cursor-pointer">
-        <div class="w-14 h-14 mx-auto rounded-2xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-xl mb-3 border border-[#E8E2D4] shadow-[0_8px_18px_rgba(26,60,52,.3)]" style="background:linear-gradient(180deg,#2A5248,#1A3C34)">⇧</div>
-        <p class="serif font-black text-[20px]">Drop files, grab a coffee ☕</p>
-        <p class="font-bold text-[13px] mt-0.5">Drag & drop your files here</p>
+      <!-- drop zone (compact) -->
+      <div id="drop" class="drop card p-4 sm:p-5 text-center cursor-pointer">
+        <div class="w-10 h-10 mx-auto rounded-xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-base mb-2 border border-[#E8E2D4] shadow-[0_6px_14px_rgba(26,60,52,.3)]" style="background:linear-gradient(180deg,#2A5248,#1A3C34)">⇧</div>
+        <p class="serif font-black text-[16px]">Drop files, grab a coffee ☕</p>
+        <p class="font-bold text-[12px] mt-0.5">Drag & drop your files here</p>
         <p id="dropHint" class="text-xs text-[#78716C] mt-1"></p>
-        <div class="flex flex-wrap justify-center gap-2 mt-4">
+        <div class="flex flex-wrap justify-center gap-2 mt-2.5">
           <button id="pickBtn" class="clay-btn clay-btn-dark">Choose files</button>
           <a href="library.html" class="clay-btn clay-btn-ghost" onclick="event.stopPropagation()">📚 Open My Library</a>
         </div>
         <input id="fileInput" type="file" class="hidden">
-        <p class="text-[11px] text-[#A8A29E] mt-3 font-semibold">♾️ No size limits — big files are processed right in your browser (depends on RAM)</p>
-        <button id="testBtn" class="mt-2 py-2 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter without a file (generate dummy)</button>
+        <p class="text-[11px] text-[#A8A29E] mt-2 font-semibold">♾️ No size limits — big files are processed right in your browser (depends on RAM)</p>
+        <button id="testBtn" class="mt-1 py-1.5 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter without a file (generate dummy)</button>
       </div>
 
       <div id="fileList" class="hidden card p-5">
