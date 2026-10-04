@@ -48,6 +48,8 @@
   .conv-cols.single{grid-template-columns:minmax(0,1fr)}
   .conv-cols.single #colLeft{display:none}
   .conv-cols.single #colRight{max-width:640px;margin:0 auto;width:100%}
+  /* Deterministic show/hide: beats every display rule, no cascade fights. */
+  .is-hidden{display:none!important}
   /* Organize workspace (iLovePDF-style): page grid + floating actions + sidebar. */
   .org-ws{display:grid;gap:0;background:#f3f3fa;border:1px solid #e7e2f2;border-radius:16px;overflow:hidden}
   .org-empty{border:2px dashed #d8d2e8;border-radius:12px;padding:2.5rem 1.5rem;text-align:center;color:#6b7280;background:#fafaff}
@@ -91,6 +93,8 @@
   /* Organize owns its files UI in the workspace sidebar: hide the
      duplicated list in the main column, keep progress/error visible. */
   #fileList.org-mode .hide-org{display:none}
+  #orgFootExtra:empty{display:none}
+  #orgFootExtra p{margin-top:0}
   .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
   .btn-tang:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(255,92,40,.42),inset 0 1px 0 rgba(255,255,255,.45)}
   ::-webkit-scrollbar{height:6px}
@@ -341,17 +345,17 @@ function renderHeader(){
           <p>${L('Page thumbnails will appear here — drag to reorder.','Thumbnail halaman bakal muncul nang kene — drag kanggo ngurutke.')}</p>
           <button onclick="addMoreFiles()">${L('Choose file','Pilih file')}</button>
         </div>
-        <div id="organizeGrid" class="grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[62vh] overflow-auto p-2 pb-4" hidden></div>
-        <div class="org-fab" id="orgFab" hidden>
-          <button onclick="orgDuplicate()" id="orgFabAdd" title="${L('Duplicate selected','Duplikat yang dipilih')}" class="org-fab-add">+<span id="orgFabBadge" class="org-fab-badge" hidden></span></button>
+        <div id="organizeGrid" class="is-hidden grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-6 max-h-[62vh] overflow-auto p-2 pb-4"></div>
+        <div class="org-fab is-hidden" id="orgFab">
+          <button onclick="orgDuplicate()" id="orgFabAdd" title="${L('Duplicate selected','Duplikat yang dipilih')}" class="org-fab-add">+<span id="orgFabBadge" class="org-fab-badge is-hidden"></span></button>
           <button onclick="orgSortToggle()" title="${L('Sort by page number','Urutkan nomor halaman')}" class="org-fab-sort">⇅</button>
         </div>
       </div>
-      <aside class="org-side" id="orgSide" hidden>
+      <aside class="org-side is-hidden" id="orgSide">
         <h3 class="org-side-title">Organize pdf</h3>
         <div class="org-files-head"><span>${L('Files:','File:')}</span><button onclick="orgReset()" class="org-reset">Reset all</button></div>
         <div class="org-chip"><span class="org-chip-icon">📄</span><span id="orgFileName" class="org-chip-name"></span></div>
-        <div id="orgSelBox" class="org-sel" hidden>
+        <div id="orgSelBox" class="org-sel is-hidden">
           <p class="org-sel-count"><b id="orgSelCount">0</b> ${L('selected','dipilih')}</p>
           <button onclick="orgDelete()" class="org-sel-del">🗑️ ${L('Delete selected','Hapus yang dipilih')}</button>
           <div class="org-sel-row">
@@ -364,12 +368,17 @@ function renderHeader(){
             <button onclick="toggleAllOrg(false)">Clear</button>
           </div>
         </div>
-        <div class="org-foot"><button onclick="document.getElementById('convertBtn').click()" class="org-go">Organize <span aria-hidden="true">→</span></button></div>
+        <div class="org-foot"><div id="orgFootExtra"></div><button onclick="document.getElementById('convertBtn').click()" class="org-go">Organize <span aria-hidden="true">→</span></button></div>
       </aside>
     </div>`;
   }
   if(['watermark','page-numbers','crop-pdf'].includes(t.id))html=PDFEdit.controls(t.id);
   $('#options').innerHTML=html;
+  // Organize runs its progress/error inside the workspace sidebar;
+  // every other tool keeps them in the file list card.
+  const progNode=document.getElementById('progress'), errNode=document.getElementById('error');
+  if(active==='organize-pdf'){ document.getElementById('orgFootExtra')?.append(progNode,errNode); }
+  else{ const flCard=document.getElementById('fileList'); if(flCard&&progNode&&errNode) flCard.append(progNode,errNode); }
   // Unbuilt catalog tools: clear "Coming soon" state and no upload area,
   // so nobody converts with the wrong tool by accident.
   $('#drop').classList.toggle('hidden', !!comingSoonName);
@@ -632,13 +641,20 @@ async function drawOrgThumb(cell){
 function renderOrganizeGrid(){
   const grid=$('#organizeGrid');
   if(!grid) return;
+  // Single source of truth: a render always ends in the loaded state.
+  const hasPages=organizeOrder.length>0;
+  document.getElementById('orgEmpty')?.classList.toggle('is-hidden',hasPages);
+  grid.classList.toggle('is-hidden',!hasPages);
+  document.getElementById('orgFab')?.classList.toggle('is-hidden',!hasPages);
+  document.getElementById('orgSide')?.classList.toggle('is-hidden',!hasPages);
+  if(!hasPages) return;
   const chip=$('#orgFileName');
   if(chip) chip.textContent=((files[0]&&files[0].name)||'');
   const nSel=organizeSelected.size;
   const badge=$('#orgFabBadge');
-  if(badge){ badge.hidden=nSel===0; badge.textContent=nSel; }
+  if(badge){ badge.classList.toggle('is-hidden',nSel===0); badge.textContent=nSel; }
   const box=$('#orgSelBox');
-  if(box) box.hidden=nSel===0;
+  if(box) box.classList.toggle('is-hidden',nSel===0);
   const cnt=$('#orgSelCount');
   if(cnt) cnt.textContent=nSel;
   grid.innerHTML=organizeOrder.map((origIdx,pos)=>{
@@ -687,14 +703,17 @@ function updateFileUI({preserveError=false}={}){
   if(active==='organize-pdf'){
     // Workspace empty state: no file yet -> prompt; file present -> grid + tools.
     const loaded=files.length>0;
-    document.getElementById('orgEmpty')?.classList.toggle('hidden',loaded);
-    document.getElementById('organizeGrid')?.classList.toggle('hidden',!loaded);
-    document.getElementById('orgFab')?.classList.toggle('hidden',!loaded);
-    document.getElementById('orgSide')?.classList.toggle('hidden',!loaded);
-    if(!loaded){ organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map(); }
+    document.getElementById('orgEmpty')?.classList.toggle('is-hidden',loaded);
+    document.getElementById('organizeGrid')?.classList.toggle('is-hidden',!loaded);
+    document.getElementById('orgFab')?.classList.toggle('is-hidden',!loaded);
+    document.getElementById('orgSide')?.classList.toggle('is-hidden',!loaded);
+    if(!loaded){
+      organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map();
+      const grid0=document.getElementById('organizeGrid'); if(grid0) grid0.innerHTML='';
+    }
   }
   if(files.length===0){ $('#fileList').classList.add('hidden'); splitPageCount=0; document.getElementById('splitSelectBox')?.classList.add('hidden'); updateSplitBtn(); return; }
-  $('#fileList').classList.remove('hidden');
+  $('#fileList').classList.toggle('hidden', active==='organize-pdf');
   $('#fileCount').textContent=files.length;
   $('#files').innerHTML=files.map((f,i)=>`
     <div class="flex items-center gap-3 p-2.5 rounded-xl border border-gray-200 bg-gray-50">
