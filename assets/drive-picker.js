@@ -16,13 +16,14 @@
     'application/vnd.google-apps.document': 'application/pdf',
     'application/vnd.google-apps.presentation': 'application/pdf',
     'application/vnd.google-apps.spreadsheet': 'application/pdf',
+    'application/vnd.google-apps.drawing': 'application/pdf',
   };
   var MIME_TYPES = [
     'application/pdf',
     'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'application/msword',
     'application/vnd.openxmlformats-officedocument.presentationml.presentation', 'application/vnd.ms-powerpoint',
     'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet', 'application/vnd.ms-excel', 'text/csv',
-    'image/jpeg', 'image/png', 'image/webp', 'image/gif',
+    'image/jpeg', 'image/png', 'image/webp', 'image/gif', 'image/bmp', 'image/avif',
   ].concat(Object.keys(GOOGLE_DOCS));
 
   var scripts = {};

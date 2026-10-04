@@ -58,6 +58,8 @@ const config = {clientId: 'client-1', apiKey: 'key-1', appId: '123456'};
   assert.equal(builderState.views[0].parent, 'root'); assert.equal(builderState.views[1].owned, false);
   assert.equal(builderState.views[2].drives, true); assert.equal(builderState.views[3].starred, true);
   assert.ok(builderState.views.every((v, i) => i === 4 || v.mimes), 'every Drive tab shows the supported files only');
+  for (const type of ['application/vnd.google-apps.drawing', 'image/bmp', 'image/avif', 'application/vnd.ms-excel', 'image/gif'])
+    assert.ok(builderState.views[0].mimes.includes(type), type + ' can be picked');
   assert.ok(builderState.views[4] instanceof picker.DocsUploadView); assert.deepEqual(builderState.features, ['sd']);
   assert.deepEqual(requests.pop(), ['https://www.googleapis.com/drive/v3/files/doc%201/export?mimeType=application%2Fpdf', 'Bearer tok-1']);
   assert.equal(file.name, 'Laporan Tahunan.pdf'); assert.equal(file.type, 'application/pdf');
