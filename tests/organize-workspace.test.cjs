@@ -13,7 +13,7 @@ async function main(){
     window.qaTool=id=>{setTool(id);};
     window.qaViewer0=()=>{openOrgViewer(0);};
     window.qaSize=s=>{orgSetSize(s);return document.getElementById('organizeGrid').className;};
-    window.qaBlank=()=>{organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};`);
+    window.qaBlank=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
   // No file yet: prompt visible, workspace tools hidden.
   assert.equal(vis('orgEmpty'),true,'empty prompt shows without file');
@@ -40,6 +40,11 @@ async function main(){
   // Thumbnail size S/M/L switches the grid density.
   assert.ok(w.qaSize('L').includes('sm:grid-cols-2'),'L is the biggest');
   assert.ok(w.qaSize('S').includes('xl:grid-cols-4'),'S is the densest');
+  // Sidebar lists every document with a letter badge + an add-file button.
+  const chips=[...w.document.querySelectorAll('#orgFiles .org-chip')];
+  assert.equal(chips.length,1,'one file chip');
+  assert.ok(chips[0].textContent.includes('A')&&chips[0].textContent.includes('a.pdf'),'badge + name');
+  assert.ok(w.document.querySelector('.org-addfile'),'add-file button present');
   // The main drop card stays out of the way for organize, back for other tools.
   w.qaLoad();
   assert.ok(w.document.getElementById('drop').classList.contains('is-hidden'),'drop hidden for organize');

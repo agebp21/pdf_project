@@ -67,7 +67,13 @@
   .org-size button{border:1px solid #e5e7eb;background:#fff;border-radius:8px;min-width:30px;padding:.25rem .5rem;font-size:11px;font-weight:800;cursor:pointer;color:#374151}
   .org-size button.on{background:#1f2937;color:#fff;border-color:#1f2937}
   .org-reset{color:#ef2d2d;font-weight:800;font-size:12px;text-decoration:underline;background:none;border:0;cursor:pointer}
-  .org-chip{margin:.25rem 1.25rem 0;display:flex;align-items:center;gap:.5rem;background:#fde8e8;border-radius:8px;padding:.6rem .75rem;font-size:12px;min-width:0}
+  .org-chip{margin:0;display:flex;align-items:center;gap:.5rem;background:#fde8e8;border-radius:8px;padding:.6rem .75rem;font-size:12px;min-width:0}
+  #orgFiles{display:grid;gap:.4rem;margin:.25rem 1.25rem 0}
+  .org-chip-badge{background:#1f2937;color:#fff;font-size:10px;font-weight:800;border-radius:6px;min-width:20px;height:20px;display:grid;place-items:center;flex-shrink:0}
+  .org-chip-x{background:none;border:0;color:#9ca3af;font-weight:800;cursor:pointer;font-size:12px;padding:0 2px;flex-shrink:0}
+  .org-chip-x:hover{color:#ef2d2d}
+  .org-addfile{margin:.5rem 1.25rem 0;border:1.5px dashed #d1d5db;background:#fff;border-radius:10px;padding:.55rem;font-size:12px;font-weight:800;color:#374151;cursor:pointer}
+  .org-addfile:hover{border-color:#ef2d2d;color:#ef2d2d}
   .org-chip-icon{font-weight:800;color:#b91c1c}
   .org-chip-name{overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-weight:600}
   .org-sel{margin:.75rem 1.25rem 0;border:1px solid #eee;border-radius:12px;padding:.75rem;display:grid;gap:.5rem}
@@ -93,7 +99,8 @@
   .org-insert{position:absolute;right:-15px;top:42%;width:24px;height:24px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;color:#ef2d2d;font-weight:800;font-size:14px;line-height:1;z-index:3;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1);display:grid;place-items:center}
   .org-insert.left{right:auto;left:-15px}
   .org-fab{position:absolute;right:12px;top:96px;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:5}
-  .org-fab-add{position:relative;width:44px;height:44px;border-radius:999px;background:#ef2d2d;color:#fff;font-size:26px;line-height:1;border:0;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.4)}
+  .org-fab-add{position:relative;width:44px;height:44px;border-radius:999px;background:#ef2d2d;color:#fff;font-size:26px;line-height:1;border:0;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.4);display:grid;place-items:center}
+  .org-fab-add .org-ic{width:22px;height:22px}
   .org-fab-badge{position:absolute;top:-6px;left:-8px;background:#1f2937;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:grid;place-items:center;padding:0 4px}
   .org-fab-sort{width:36px;height:36px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;cursor:pointer;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
   /* Organize owns its files UI in the workspace sidebar: hide the
@@ -205,7 +212,7 @@ const TOOLS = [
   {id:'split-pdf', title:'Split PDF', get desc(){return L('Extract pages 1-3, split every N pages, or just click the pages you want.','Extract halaman 1-3, split per N halaman, atau cukup klik halaman yang mau diambil.')}, cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', get hint(){return L('PDF file — pick a split mode below','File PDF — pilih mode split di bawah')}},
   {id:'compress-pdf', title:'Compress PDF', desc:'Shrink PDFs full of photos and scans: images are resized and re-encoded, text stays sharp.', cat:'Optimize PDF', icon:'⇲', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pick Light / Balanced / Strong'},
   {id:'rotate-pdf', title:'Rotate PDF', get desc(){return L('Rotate PDF pages 90° / 180° / 270° — some pages or all.','Putar halaman PDF 90° / 180° / 270° — per halaman atau semua.')}, cat:'Organize PDF', icon:'↻', color:'#a855a7', bg:'#fae8ff', accept:'.pdf', get hint(){return L('PDF file — pick the angle & pages','File PDF — pilih sudut & halaman')}},
-  {id:'organize-pdf', title:'Organize PDF', get desc(){return L('Reorder, delete, rotate or extract pages — drag & drop like a pro tool.','Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.')}, cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', get hint(){return L('PDF file — page grid, drag to reorder','File PDF — preview grid, drag untuk urutkan')}},
+  {id:'organize-pdf', title:'Organize PDF', get desc(){return L('Reorder, delete, rotate or extract pages — drag & drop like a pro tool.','Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.')}, cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, get hint(){return L('PDF files — pages merge into one grid, drag to reorder','File-file PDF — halaman gabung satu grid, drag untuk urutkan')}},
   {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Real PPTX→PDF via local LibreOffice (needs the project server).', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'PPTX/PPT file — converted on your computer via the local server + LibreOffice'},
   {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'Real .pptx: slides look like the PDF pages and every text line is an editable text box.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'PDF file — design kept, text editable on the slide (needs internet)'},
   {id:'pdf-to-md', title:'PDF to Markdown', desc:'Headings, lists, and tables detected — perfect food for AI, notes, and blogs.', cat:'Convert PDF', icon:'{ }', color:'#4C1D95', bg:'#E9E4FF', accept:'.pdf', hint:'PDF file — structure detected from fonts and columns'},
@@ -353,7 +360,7 @@ function renderHeader(){
         </div>
         <div id="organizeGrid" class="is-hidden grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-3 max-h-[62vh] overflow-auto p-2 pb-4"></div>
         <div class="org-fab is-hidden" id="orgFab">
-          <button onclick="orgDuplicate()" id="orgFabAdd" title="${L('Duplicate selected','Duplikat yang dipilih')}" class="org-fab-add">+<span id="orgFabBadge" class="org-fab-badge is-hidden"></span></button>
+          <button onclick="orgDuplicate()" id="orgFabAdd" title="${L('Duplicate selected','Duplikat yang dipilih')}" class="org-fab-add">${ORG_ICONS.plus}<span id="orgFabBadge" class="org-fab-badge is-hidden"></span></button>
           <button onclick="orgSortToggle()" title="${L('Sort by page number','Urutkan nomor halaman')}" class="org-fab-sort">⇅</button>
         </div>
       </div>
@@ -361,7 +368,8 @@ function renderHeader(){
         <h3 class="org-side-title">Organize pdf</h3>
         <div class="org-size" id="orgSizeBox"><span>${L('Thumbnails:','Gambar:')}</span><button data-size="S" onclick="orgSetSize('S')">S</button><button data-size="M" onclick="orgSetSize('M')">M</button><button data-size="L" onclick="orgSetSize('L')">L</button></div>
         <div class="org-files-head"><span>${L('Files:','File:')}</span><button onclick="orgReset()" class="org-reset">Reset all</button></div>
-        <div class="org-chip"><span class="org-chip-icon">📄</span><span id="orgFileName" class="org-chip-name"></span></div>
+        <div id="orgFiles"></div>
+        <button class="org-addfile" onclick="addMoreFiles()">＋ ${L('Add file','Tambah file')}</button>
         <div id="orgSelBox" class="org-sel is-hidden">
           <p class="org-sel-count"><b id="orgSelCount">0</b> ${L('selected','dipilih')}</p>
           <button onclick="orgDelete()" class="org-sel-del">🗑️ ${L('Delete selected','Hapus yang dipilih')}</button>
@@ -425,6 +433,8 @@ function setTool(id){
   active=id; comingSoonName=null;
   history.replaceState(null,'',`?tool=${id}`);
   files=[]; organizeOrder=[]; organizeSelected.clear(); organizeRotations={};
+  for(const d of orgPdfDocs){ try{ const r=d&&d.destroy(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
+  orgPdfDocs=[]; orgThumbCache=new Map(); orgBlankSeq=0;
   updateFileUI(); $('#result').classList.add('hidden'); $('#error').classList.add('hidden'); $('#progress').classList.add('hidden');
   renderToolList(); renderHeader(); log('Switch tool: '+id);
 }
@@ -597,23 +607,22 @@ async function buildRotatePreview(){
 async function buildOrganizePreview(){
   if(active!=='organize-pdf' || files.length===0) return;
   try{
-    const buf=await files[0].arrayBuffer();
-    const doc=await PDFLib.PDFDocument.load(buf.slice(0), {ignoreEncryption:true});
-    const n=doc.getPageCount();
-    if(orgPdfDoc){ try{ await orgPdfDoc.destroy(); }catch(e){} orgPdfDoc=null; }
-    orgThumbCache=new Map();
-    try{ orgPdfDoc=await pdfjsLib.getDocument({data:new Uint8Array(buf), disableWorker: location.protocol==='file:'}).promise; }
-    catch(e){ log('Org thumbs off: '+e.message); }
-    organizeOrder = Array.from({length:n},(_,i)=>i);
-    orgBlankSeq = 0;
-    organizeSelected = new Set(organizeOrder);
-    organizeRotations={};
+    // New documents are APPENDED: pages already arranged stay untouched.
+    for(let fi=orgPdfDocs.length; fi<files.length; fi++){
+      const buf=await files[fi].arrayBuffer();
+      const doc=await PDFLib.PDFDocument.load(buf.slice(0), {ignoreEncryption:true});
+      const n=doc.getPageCount();
+      for(let p=0;p<n;p++){ organizeOrder.push(fi*1000000+p); organizeSelected.add(fi*1000000+p); }
+      try{ orgPdfDocs.push(await pdfjsLib.getDocument({data:new Uint8Array(buf), disableWorker: location.protocol==='file:'}).promise); }
+      catch(e){ orgPdfDocs.push(null); log('Org thumbs off file '+(fi+1)+': '+e.message); }
+    }
     renderOrganizeGrid();
-    log('Organize preview '+n);
+    log('Organize preview '+organizeOrder.length+' pages from '+files.length+' files');
   }catch(e){ log('Organize preview fail '+e.message); }
 }
 // Real page thumbnails (cached dataURLs survive reorder re-renders).
-let orgPdfDoc=null, orgThumbObserver=null, orgThumbCache=new Map(), orgDragged=false;
+// Page codes are fi*1000000+p so pages from every document share one order.
+let orgPdfDocs=[], orgThumbObserver=null, orgThumbCache=new Map(), orgDragged=false;
 // Neat stroke icons (no emoji): rotate, close, plus, magnifier.
 const ORG_ICONS={
   rotate:'<svg class="org-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
@@ -624,7 +633,7 @@ const ORG_ICONS={
 function orgObserveThumbs(){
   const grid=$('#organizeGrid');
   orgThumbObserver?.disconnect();
-  if(!grid || !orgPdfDoc) return;
+  if(!grid || !orgPdfDocs.length) return;
   let obs=null;
   try{
     obs=new IntersectionObserver(entries=>entries.forEach(entry=>{
@@ -639,10 +648,11 @@ function orgObserveThumbs(){
 async function drawOrgThumb(cell){
   const raw=cell.dataset.thumb;
   if(raw==null||raw===''||raw.startsWith('blank')) return;
-  const origIdx=+raw;
+  const origIdx=+raw, fi=Math.floor(origIdx/1000000), pg=origIdx%1000000;
   try{
-    if(!orgPdfDoc || orgThumbCache.has(origIdx)) return;
-    const page=await orgPdfDoc.getPage(origIdx+1);
+    const doc=orgPdfDocs[fi];
+    if(!doc || orgThumbCache.has(origIdx)) return;
+    const page=await doc.getPage(pg+1);
     const base=page.getViewport({scale:1});
     const w=Math.max(140,(cell.clientWidth||220)*(window.devicePixelRatio||1));
     const viewport=page.getViewport({scale:Math.min(3, w/base.width)});
@@ -660,6 +670,40 @@ async function drawOrgThumb(cell){
     }
   }catch(e){ log('Org thumb fail '+(origIdx+1)+': '+e.message); }
 }
+// Sidebar file list (A/B/C…): names via textContent, never innerHTML.
+function paintOrgFiles(){
+  const box=$('#orgFiles'); if(!box) return;
+  box.replaceChildren();
+  files.forEach((f,fi)=>{
+    const row=document.createElement('div'); row.className='org-chip';
+    const badge=document.createElement('span'); badge.className='org-chip-badge'; badge.textContent=String.fromCharCode(65+fi);
+    const name=document.createElement('span'); name.className='org-chip-name'; name.textContent=f.name; name.title=f.name;
+    row.append(badge,name);
+    if(files.length>1){
+      const x=document.createElement('button'); x.className='org-chip-x'; x.textContent='✕';
+      x.title=L('Remove this file','Buang file ini'); x.onclick=()=>orgRemoveFile(fi); row.append(x);
+    }
+    box.append(row);
+  });
+}
+window.orgRemoveFile=(fi)=>{
+  files.splice(fi,1);
+  const dead=orgPdfDocs[fi];
+  if(dead){ try{ const r=dead.destroy(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
+  orgPdfDocs.splice(fi,1);
+  const keep=(code)=>typeof code!=='number'||Math.floor(code/1000000)!==fi;
+  const shift=(code)=>{ if(typeof code!=='number')return code; const f=Math.floor(code/1000000); return f>fi?((f-1)*1000000+code%1000000):code; };
+  organizeOrder=organizeOrder.filter(keep).map(shift);
+  const sel=new Set();
+  organizeSelected.forEach(c=>{ if(typeof c==='string') sel.add(c); else if(keep(c)) sel.add(shift(c)); });
+  organizeSelected=sel;
+  const rot={};
+  Object.entries(organizeRotations).forEach(([k,v])=>{ if(k.indexOf('blank')===0||isNaN(+k)){ rot[k]=v; } else { const c=+k; if(keep(c)) rot[shift(c)]=v; } });
+  organizeRotations=rot;
+  for(const k of [...orgThumbCache.keys()]){ if(typeof k==='number'&&Math.floor(k/1000000)===fi) orgThumbCache.delete(k); }
+  if(files.length===0){ updateFileUI(); } else { renderOrganizeGrid(); }
+  log('Org remove file '+(fi+1)+' left '+files.length);
+};
 function renderOrganizeGrid(){
   const grid=$('#organizeGrid');
   if(!grid) return;
@@ -670,8 +714,7 @@ function renderOrganizeGrid(){
   document.getElementById('orgFab')?.classList.toggle('is-hidden',!hasPages);
   document.getElementById('orgSide')?.classList.toggle('is-hidden',!hasPages);
   if(!hasPages) return;
-  const chip=$('#orgFileName');
-  if(chip) chip.textContent=((files[0]&&files[0].name)||'');
+  paintOrgFiles();
   const nSel=organizeSelected.size;
   const badge=$('#orgFabBadge');
   if(badge){ badge.classList.toggle('is-hidden',nSel===0); badge.textContent=nSel; }
@@ -722,11 +765,15 @@ function paintOrgSize(){
 }
 let orgSortDesc=false;
 window.orgSortToggle=()=>{ orgSortDesc=!orgSortDesc; const dir=orgSortDesc?-1:1; const key=v=>typeof v==='number'?v:1e9; organizeOrder.sort((a,b)=>(key(a)-key(b))*dir); renderOrganizeGrid(); log('Org sort '+(orgSortDesc?'desc':'asc')); };
-window.orgReset=()=>{ buildOrganizePreview(); log('Org reset'); };
+window.orgReset=()=>{
+  for(const d of orgPdfDocs){ try{ const r=d&&d.destroy(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
+  orgPdfDocs=[]; organizeOrder=[]; organizeSelected=new Set(); organizeRotations={}; orgBlankSeq=0; orgThumbCache=new Map();
+  buildOrganizePreview(); log('Org reset');
+};
 // Big page viewer: click a thumbnail to zoom, click ✕ / press Esc to go back.
 let orgViewerPos=0;
 window.openOrgViewer=async (pos)=>{
-  if(!orgPdfDoc || organizeOrder.length===0) return;
+  if(!orgPdfDocs.length || organizeOrder.length===0) return;
   orgViewerPos=Math.max(0, Math.min(organizeOrder.length-1, pos));
   let box=document.getElementById('orgViewer');
   if(!box){
@@ -771,7 +818,9 @@ window.openOrgViewer=async (pos)=>{
   }
   holder.innerHTML='<span class="text-white/70 text-sm">'+L('Loading…','Memuat…')+'</span>';
   try{
-    const page=await orgPdfDoc.getPage(origIdx+1);
+    const doc=orgPdfDocs[Math.floor(origIdx/1000000)];
+    if(!doc) throw new Error('no document');
+    const page=await doc.getPage(origIdx%1000000+1);
     const base=page.getViewport({scale:1});
     const w=Math.min(1400, window.innerWidth||800)*(window.devicePixelRatio||1);
     const viewport=page.getViewport({scale:Math.min(3, w/base.width), rotation:(base.rotation+rot)%360});
@@ -821,7 +870,9 @@ function updateFileUI({preserveError=false}={}){
     document.getElementById('orgFab')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgSide')?.classList.toggle('is-hidden',!loaded);
     if(!loaded){
-      organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map();
+      organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map(); orgBlankSeq=0;
+      for(const d of orgPdfDocs){ try{ const r=d&&d.destroy(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
+      orgPdfDocs=[];
       const grid0=document.getElementById('organizeGrid'); if(grid0) grid0.innerHTML='';
     }
   }
@@ -1360,21 +1411,29 @@ async function organizePdf(){
   if(organizeOrder.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
   if(organizeOrder.length===0) throw new Error(L('No pages','Tidak ada halaman'));
   log('Organize order '+organizeOrder.map(orgName).join(',')+' rotations '+JSON.stringify(organizeRotations));
-  const buf=await files[0].arrayBuffer();
-  const src=await PDFLib.PDFDocument.load(buf, {ignoreEncryption:true});
   const out=await PDFLib.PDFDocument.create();
-  // Blank pages take the first source page's size.
-  const firstSize=src.getPage(0).getSize();
-  const numIdx=organizeOrder.filter(i=>typeof i==='number');
-  const copied=await out.copyPages(src, numIdx);
-  let k=0;
+  // Pages may come from several documents: copy per file, then interleave.
+  const needFiles=[...new Set(organizeOrder.filter(i=>typeof i==='number').map(i=>Math.floor(i/1000000)))].sort((a,b)=>a-b);
+  const srcs=new Map(), copied=new Map();
+  for(const fi of needFiles){
+    const buf=await files[fi].arrayBuffer();
+    const src=await PDFLib.PDFDocument.load(buf,{ignoreEncryption:true});
+    srcs.set(fi,src);
+    const pages=organizeOrder.filter(i=>typeof i==='number'&&Math.floor(i/1000000)===fi).map(i=>i%1000000);
+    copied.set(fi,await out.copyPages(src,pages));
+  }
+  let firstSize=null;
+  if(srcs.has(0)) firstSize=srcs.get(0).getPage(0).getSize();
+  else if(files.length){ const s0=await PDFLib.PDFDocument.load(await files[0].arrayBuffer(),{ignoreEncryption:true}); firstSize=s0.getPage(0).getSize(); }
+  const used=new Map();
   organizeOrder.forEach(idx=>{
     if(typeof idx==='number'){
-      const p=copied[k++];
+      const f=Math.floor(idx/1000000), n=used.get(f)||0; used.set(f,n+1);
+      const p=copied.get(f)[n];
       const rot=organizeRotations[idx]||0;
       if(rot) p.setRotation(PDFLib.degrees(rot%360));
       out.addPage(p);
-    }else{
+    }else if(firstSize){
       const rot=organizeRotations[idx]||0;
       const p=out.addPage([firstSize.width,firstSize.height]);
       if(rot) p.setRotation(PDFLib.degrees(rot%360));
