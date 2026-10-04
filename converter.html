@@ -39,10 +39,15 @@
   .card:hover{box-shadow:0 20px 44px rgba(28,25,23,.13),inset 0 1px 0 #fff;transform:translateY(-2px)}
   .drop{border:2px dashed #C9CFC2;background:#fff;transition:all .2s}
   .drop.drag{border-color:#FF5C28;background:#FFF7ED;transform:scale(1.01)}
-  /* Two-column workspace: plain CSS (no framework dependency). */
+  /* Two-column workspace: plain CSS (no framework dependency).
+     Left = files + result (wider), right = drop zone.
+     Empty (no files yet) = drop zone centered, no hollow column. */
   .conv-cols{display:grid;gap:1rem;align-items:start;grid-template-columns:minmax(0,1fr)}
-  @media(min-width:1024px){.conv-cols{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}}
+  @media(min-width:1024px){.conv-cols{grid-template-columns:minmax(0,7fr) minmax(0,5fr)}}
   .conv-cols>*{min-width:0}
+  .conv-cols.single{grid-template-columns:minmax(0,1fr)}
+  .conv-cols.single #colLeft{display:none}
+  .conv-cols.single #colRight{max-width:640px;margin:0 auto;width:100%}
   .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
   .btn-tang:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(255,92,40,.42),inset 0 1px 0 rgba(255,255,255,.45)}
   ::-webkit-scrollbar{height:6px}
@@ -78,25 +83,9 @@
   <div class="relative z-10 max-w-[1200px] mx-auto px-4 py-6">
     <main class="space-y-4">
       <div id="libStatus" class="hidden p-2.5 rounded-2xl bg-red-50 border border-red-200 text-[11px] text-red-700 leading-relaxed"></div>
-      <div class="conv-cols">
-      <div class="space-y-4 min-w-0">
-      <!-- drop zone (compact, left) -->
-      <div id="drop" class="drop card p-4 sm:p-5 text-center cursor-pointer">
-        <div class="w-10 h-10 mx-auto rounded-xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-base mb-2 border border-[#E8E2D4] shadow-[0_6px_14px_rgba(26,60,52,.3)]" style="background:linear-gradient(180deg,#2A5248,#1A3C34)">⇧</div>
-        <p class="serif font-black text-[16px]">Drop files, grab a coffee ☕</p>
-        <p class="font-bold text-[12px] mt-0.5">Drag & drop your files here</p>
-        <p id="dropHint" class="text-xs text-[#78716C] mt-1"></p>
-        <div class="flex flex-wrap justify-center gap-2 mt-2.5">
-          <button id="pickBtn" class="clay-btn clay-btn-dark">Choose files</button>
-          <a href="library.html" class="clay-btn clay-btn-ghost" onclick="event.stopPropagation()">📚 Open My Library</a>
-        </div>
-        <input id="fileInput" type="file" class="hidden">
-        <p class="text-[11px] text-[#A8A29E] mt-2 font-semibold">♾️ No size limits — big files are processed right in your browser (depends on RAM)</p>
-        <button id="testBtn" class="mt-1 py-1.5 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter without a file (generate dummy)</button>
-      </div>
-
-      </div><!-- /left -->
-      <div class="space-y-4 min-w-0">
+      <div class="conv-cols single" id="convGrid">
+      <div class="space-y-4 min-w-0" id="colLeft">
+      <!-- files + result (left) -->
       <div id="fileList" class="hidden card p-5">
         <div class="flex items-center justify-between mb-3">
           <h3 class="font-bold text-[13px] serif text-[16px]">Selected files (<span id="fileCount">0</span>)</h3>
@@ -124,6 +113,23 @@
           <a href="library.html" class="clay-btn clay-btn-ghost">📚 Open My Library</a>
         </div>
       </div>
+      </div><!-- /left -->
+      <div class="space-y-4 min-w-0" id="colRight">
+      <!-- drop zone (compact, right) -->
+      <div id="drop" class="drop card p-4 sm:p-5 text-center cursor-pointer">
+        <div class="w-10 h-10 mx-auto rounded-xl bg-[#1A3C34] text-[#FFF7EA] grid place-items-center text-base mb-2 border border-[#E8E2D4] shadow-[0_6px_14px_rgba(26,60,52,.3)]" style="background:linear-gradient(180deg,#2A5248,#1A3C34)">⇧</div>
+        <p class="serif font-black text-[16px]">Drop files, grab a coffee ☕</p>
+        <p class="font-bold text-[12px] mt-0.5">Drag & drop your files here</p>
+        <p id="dropHint" class="text-xs text-[#78716C] mt-1"></p>
+        <div class="flex flex-wrap justify-center gap-2 mt-2.5">
+          <button id="pickBtn" class="clay-btn clay-btn-dark">Choose files</button>
+          <a href="library.html" class="clay-btn clay-btn-ghost" onclick="event.stopPropagation()">📚 Open My Library</a>
+        </div>
+        <input id="fileInput" type="file" class="hidden">
+        <p class="text-[11px] text-[#A8A29E] mt-2 font-semibold">♾️ No size limits — big files are processed right in your browser (depends on RAM)</p>
+        <button id="testBtn" class="mt-1 py-1.5 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter without a file (generate dummy)</button>
+      </div>
+
       </div><!-- /right -->
       </div><!-- /grid -->
     </main>
@@ -602,6 +608,7 @@ window.orgOver=(e)=>{ e.preventDefault(); }
 window.orgDrop=(e)=>{ e.preventDefault(); const to=parseInt(e.currentTarget.dataset.pos); if(dragPos===null||dragPos===to) return; const [m]=organizeOrder.splice(dragPos,1); organizeOrder.splice(to,0,m); dragPos=null; renderOrganizeGrid(); }
 
 function updateFileUI({preserveError=false}={}){
+  document.getElementById('convGrid')?.classList.toggle('single', files.length===0);
   if(files.length===0){ $('#fileList').classList.add('hidden'); splitPageCount=0; document.getElementById('splitSelectBox')?.classList.add('hidden'); updateSplitBtn(); return; }
   $('#fileList').classList.remove('hidden');
   $('#fileCount').textContent=files.length;
