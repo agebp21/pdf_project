@@ -39,6 +39,10 @@
   .card:hover{box-shadow:0 20px 44px rgba(28,25,23,.13),inset 0 1px 0 #fff;transform:translateY(-2px)}
   .drop{border:2px dashed #C9CFC2;background:#fff;transition:all .2s}
   .drop.drag{border-color:#FF5C28;background:#FFF7ED;transform:scale(1.01)}
+  /* Two-column workspace: plain CSS (no framework dependency). */
+  .conv-cols{display:grid;gap:1rem;align-items:start;grid-template-columns:minmax(0,1fr)}
+  @media(min-width:1024px){.conv-cols{grid-template-columns:minmax(0,5fr) minmax(0,7fr)}}
+  .conv-cols>*{min-width:0}
   .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
   .btn-tang:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(255,92,40,.42),inset 0 1px 0 rgba(255,255,255,.45)}
   ::-webkit-scrollbar{height:6px}
@@ -74,7 +78,7 @@
   <div class="relative z-10 max-w-[1200px] mx-auto px-4 py-6">
     <main class="space-y-4">
       <div id="libStatus" class="hidden p-2.5 rounded-2xl bg-red-50 border border-red-200 text-[11px] text-red-700 leading-relaxed"></div>
-      <div class="grid gap-4 lg:grid-cols-[minmax(0,5fr)_minmax(0,7fr)] items-start">
+      <div class="conv-cols">
       <div class="space-y-4 min-w-0">
       <!-- drop zone (compact, left) -->
       <div id="drop" class="drop card p-4 sm:p-5 text-center cursor-pointer">
@@ -289,7 +293,7 @@ function renderHeader(){
         <button onclick="toggleAllOrg(true)" class="px-3 py-1.5 rounded-full bg-gray-900 text-white text-xs font-bold">Select all</button>
         <button onclick="toggleAllOrg(false)" class="px-3 py-1.5 rounded-full bg-white border text-xs">Clear</button>
       </div>
-      <div id="organizeGrid" class="flex flex-wrap gap-y-3 max-h-[420px] overflow-auto p-1"></div>
+      <div id="organizeGrid" class="flex flex-wrap gap-y-3 max-h-[62vh] overflow-auto p-1 pb-3"></div>
       <p class="text-[11px] text-gray-500 text-center mt-2">${L('Tip: click a card to select • + inserts a copy after it • ⟳ rotates just that page','Tips: klik kartu untuk pilih • + menyisipkan salinan setelahnya • ⟳ memutar halaman itu saja')}</p>
     </div>`;
   }
