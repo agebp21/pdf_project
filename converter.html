@@ -123,8 +123,6 @@
   #orgBook .opf-page img{width:100%;height:100%;object-fit:contain;background:#fff}
   .opf-blank{background:#fff;width:100%;height:100%}
   .opf-ph{color:#9ca3af;font-size:12px}
-  .org-previewbtn{margin:.5rem 1.25rem 0;border:1.5px dashed #d1d5db;background:#fff;border-radius:10px;padding:.55rem;font-size:12px;font-weight:800;color:#374151;cursor:pointer}
-  .org-previewbtn.on{background:#1f2937;color:#fff;border-color:#1f2937;border-style:solid}
   .org-reader-empty{text-align:center;color:#9ca3af;font-size:12px;padding:1rem}
   .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
   .btn-tang:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(255,92,40,.42),inset 0 1px 0 rgba(255,255,255,.45)}
@@ -375,7 +373,6 @@ function renderHeader(){
             <button onclick="orgReaderGo(-1)" aria-label="Previous">←</button>
             <span id="orgPageLabel"></span>
             <button onclick="orgReaderGo(1)" aria-label="Next">→</button>
-            <button onclick="orgPreviewToggle()" aria-label="${L('Close','Tutup')}">✕</button>
           </div>
           <div id="orgBook"></div>
         </div>
@@ -400,7 +397,6 @@ function renderHeader(){
         <div class="org-files-head"><span>${L('Files:','File:')}</span><button onclick="orgReset()" class="org-reset">Reset all</button></div>
         <div id="orgFiles"></div>
         <button class="org-addfile" onclick="addMoreFiles()">＋ ${L('Add file','Tambah file')}</button>
-        <button class="org-previewbtn" id="orgPreviewBtn" onclick="orgPreviewToggle()">📖 ${L('Preview book','Pratinjau buku')}</button>
         <input id="blankInput" type="file" accept="image/*" hidden onchange="orgBlankPicked(this)">
         <div id="orgSelBox" class="org-sel is-hidden">
           <p class="org-sel-count"><b id="orgSelCount">0</b> ${L('selected','dipilih')}</p>
@@ -797,12 +793,9 @@ function renderOrganizeGrid(){
       <span class="org-pslot"><button onclick="orgInsertBlankAt(${pos+1})" title="${L('Insert a blank page after this','Sisipkan halaman kosong setelah ini')}" class="org-plus">${ORG_ICONS.plus}</button></span>
     </div>`;
   }).join('');
-  paintOrgPreviewBtn();
   orgObserveThumbs();
-  if(orgReaderOpen){
-    const sig=organizeOrder.join('|')+'#'+Object.keys(organizeRotations).sort().join(',')+'#'+Object.keys(orgBlankImg).sort().join(',');
-    if(sig!==orgReaderSig||!orgBook){ orgReaderSig=sig; orgReaderBuild(); }
-  }
+  const sig=organizeOrder.join('|')+'#'+Object.keys(organizeRotations).sort().join(',')+'#'+Object.keys(orgBlankImg).sort().join(',');
+  if(sig!==orgReaderSig||!orgBook){ orgReaderSig=sig; orgReaderBuild(); }
 }
 const orgName=i=>typeof i==='number'?(i+1):'blank';
 // Click a blank page -> pick an image to fill it (stored as JPEG, embedded on save).
@@ -935,7 +928,7 @@ window.orgWsOver=(e)=>{ e.preventDefault(); };
 window.orgWsDrop=(e)=>{ e.preventDefault(); if(e.dataTransfer&&e.dataTransfer.files.length){ log('Drop '+e.dataTransfer.files.length+' files'); handleFiles(e.dataTransfer.files); } };
 // Mini flipbook preview: the current order as a real flippable book.
 // Clicking a card selects it AND flips the preview there.
-let orgReaderOpen=false, orgBook=null, orgPrevCache=new Map(), orgReaderSig='', orgBuildSeq=0, orgEngineLoading=null;
+let orgBook=null, orgPrevCache=new Map(), orgReaderSig='', orgBuildSeq=0, orgEngineLoading=null;
 function orgBookEngine(){
   if(window.St&&window.St.PageFlip) return Promise.resolve();
   if(!orgEngineLoading) orgEngineLoading=new Promise((res,rej)=>{
@@ -946,12 +939,6 @@ function orgBookEngine(){
   });
   return orgEngineLoading;
 }
-function paintOrgPreviewBtn(){ const b=document.getElementById('orgPreviewBtn'); if(b) b.classList.toggle('on',orgReaderOpen); }
-window.orgPreviewToggle=()=>{
-  orgReaderOpen=!orgReaderOpen; paintOrgPreviewBtn();
-  const w=document.getElementById('orgReader'); if(w) w.classList.toggle('is-hidden',!orgReaderOpen);
-  if(orgReaderOpen) orgReaderBuild(); else orgReaderClose();
-};
 function orgReaderClose(){ if(orgBook){ try{orgBook.destroy();}catch(e){} orgBook=null; } }
 function orgPrevKey(code){ return code+'|'+(organizeRotations[code]||0); }
 function orgPreviewFace(code,pos){
@@ -964,7 +951,6 @@ function orgPreviewFace(code,pos){
   const ph=document.createElement('div'); ph.className='opf-ph'; ph.textContent=pos+1; return ph;
 }
 async function orgReaderBuild(){
-  if(!orgReaderOpen) return;
   const myBuild=++orgBuildSeq;
   const wrap=document.getElementById('orgReader'), box=document.getElementById('orgBook');
   if(!wrap||!box) return;
@@ -985,9 +971,11 @@ async function orgReaderBuild(){
   let keep=0;
   if(orgBook){ try{keep=orgBook.getCurrentPageIndex();}catch(e){} try{orgBook.destroy();}catch(e){} orgBook=null; }
   try{ await orgBookEngine(); }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau ora tersedia')+'</p>'; return; }
-  if(myBuild!==orgBuildSeq||!orgReaderOpen) return;
-  orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'stretch',minWidth:200,maxWidth:700,minHeight:140,maxHeight:560,autoSize:true,usePortrait:true,showCover:false,useMouseEvents:true,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
-  orgBook.loadFromHTML(Array.from(box.children));
+  if(myBuild!==orgBuildSeq) return;
+  try{
+    orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'stretch',minWidth:200,maxWidth:700,minHeight:140,maxHeight:560,autoSize:true,usePortrait:true,showCover:false,useMouseEvents:true,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
+    orgBook.loadFromHTML(Array.from(box.children));
+  }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau ora tersedia')+'</p>'; return; }
   orgBook.on('flip',()=>{ orgPaintReaderLabel(); orgRenderVisible(); });
   try{ orgBook.flip(Math.max(0,Math.min(keep,organizeOrder.length-1))); }catch(e){}
   orgPaintReaderLabel(); orgRenderVisible();
@@ -1006,7 +994,7 @@ function orgVisibleIdx(){
   return out;
 }
 async function orgRenderVisible(){
-  if(!orgReaderOpen||!orgBook) return;
+  if(!orgBook) return;
   if(orgPrevCache.size>600) orgPrevCache.clear();
   for(const pos of orgVisibleIdx()){
     const code=organizeOrder[pos]; if(code===undefined||typeof code!=='number') continue;
@@ -1042,7 +1030,7 @@ const orgPruneFills=()=>{ const alive=new Set(organizeOrder); Object.keys(orgBla
 window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(pos,1); if(!organizeOrder.includes(idx)) organizeSelected.delete(idx); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); };
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(at<0?organizeOrder.length:at+1,0,fresh); renderOrganizeGrid(); };
 window.orgInsertBlankAt=(at)=>{ at=Math.max(0,Math.min(organizeOrder.length,at)); organizeOrder.splice(at,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(at+1)); };
-window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); if(orgReaderOpen&&orgBook){ const at=organizeOrder.indexOf(idx); if(at>=0){ try{orgBook.flip(at);}catch(err){} } } };
+window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); if(orgBook){ const at=organizeOrder.indexOf(idx); if(at>=0){ try{orgBook.flip(at);}catch(err){} } } };
 window.orgCheck=(idx, on)=>{ if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
 window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
 window.orgDelete=()=>{ if(organizeSelected.size===0) return showError('Tick the pages to delete first'); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
@@ -1064,13 +1052,13 @@ function updateFileUI({preserveError=false}={}){
     document.getElementById('organizeGrid')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgFab')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgSide')?.classList.toggle('is-hidden',!loaded);
-    document.getElementById('orgReader')?.classList.toggle('is-hidden',!(loaded&&orgReaderOpen));
-    paintOrgPreviewBtn();
+    document.getElementById('orgReader')?.classList.toggle('is-hidden',!loaded);
     if(!loaded){
       organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map(); orgBlankSeq=0; orgBlankImg={}; orgBlankTarget=null;
       for(const d of orgPdfDocs){ try{ const r=d&&d.destroy(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
       orgPdfDocs=[];
-      if(orgReaderOpen){ orgReaderOpen=false; paintOrgPreviewBtn(); orgReaderClose(); }
+      orgReaderClose();
+      const wr=document.getElementById('orgReader'); if(wr) wr.classList.add('is-hidden');
       const grid0=document.getElementById('organizeGrid'); if(grid0) grid0.innerHTML='';
     }
   }
