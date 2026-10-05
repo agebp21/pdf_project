@@ -935,6 +935,7 @@
   function openSharePopup(message) {
     $('#share-popup-status').textContent = message || '';
     $('#share-popup-row').hidden = true;
+    paintCopy($('#share-popup-copy'), false);
     $('#share-popup').hidden = false;
   }
   function showShareLink(url) {
@@ -942,11 +943,20 @@
     $('#share-popup-row').hidden = false;
   }
   function closeSharePopup() { $('#share-popup').hidden = true; }
-  async function copyShareLink(input, note) {
+  function paintCopy(button, done) {
+    if (!button) return;
+    if (!button.dataset.label) button.dataset.label = button.textContent;
+    if (button.dataset.timer) { clearTimeout(Number(button.dataset.timer)); delete button.dataset.timer; }
+    button.classList.toggle('is-copied', !!done);
+    button.textContent = done ? L('✓ Copied', '✓ Tersalin') : button.dataset.label;
+    if (done) button.dataset.timer = String(setTimeout(() => paintCopy(button, false), 2500));
+  }
+  async function copyShareLink(input, note, button) {
     if (!input.value) return;
     try { await navigator.clipboard.writeText(input.value); }
     catch (e) { input.select(); try { document.execCommand('copy'); } catch (_) {} }
     note.textContent = L('Link copied.', 'Tautan disalin.');
+    paintCopy(button, true);
   }
   async function shareBook(){
     if(!sourcePdf||opening||exporting) return;
@@ -976,8 +986,8 @@
     }catch(cause){ progress(null); status(L('Sharing failed: ','Berbagi gagal: ')+cause.message); error(cause.message); }
     finally{ exporting=false; exportState(); $('#pdf-file').disabled=false; $('#overlay-fields').disabled=!book; }
   }
-  $('#share-copy').onclick=()=>copyShareLink($('#share-url'), $('#share-status'));
-  $('#share-popup-copy').onclick=()=>copyShareLink($('#share-popup-url'), $('#share-popup-status'));
+  $('#share-copy').onclick=()=>copyShareLink($('#share-url'), $('#share-status'), $('#share-copy'));
+  $('#share-popup-copy').onclick=()=>copyShareLink($('#share-popup-url'), $('#share-popup-status'), $('#share-popup-copy'));
   $('#share-popup-close').onclick=closeSharePopup;
   $('#share-popup').addEventListener('mousedown', event => { if (event.target.id === 'share-popup') closeSharePopup(); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('#share-popup').hidden) closeSharePopup(); });

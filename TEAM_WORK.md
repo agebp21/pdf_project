@@ -1244,3 +1244,9 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - File: `flipbook.html` (tombol header + popup body-level), `assets/theme-cream.css` (gaya popup mbuntut add-dialog), `assets/flipbook.js` (popup open/fill/close, Esc/klik njobo nutup, status ganda sidebar+popup, markLocked mbuntut tombol header).
 - Tes: `node --check` OK, `git diff --check` bersih, qa-editor/export ijo, HTTP 200 + markup/CSS kesaji. Interaksi klik popup durung dites otomatis (qa-editor ora ngeklik share); diverifikasi manual karo owner sing lagi nyoba share.
 - Durung commit/push/deploy.
+
+### 2026-10-06 — Popup share: link ketok + tombol ganti rupo (request owner + screenshot)
+- Masalah: input link kepencet tombol (`.apply` width 100%) dadi ora ketok; user njaluk teks link ketok + tombol owah pas dikopi.
+- Fix: baris popup dadi grid (input full-width nang nduwur, tombol full-width ngisore), input diwenehi border/font mono; `paintCopy()`: tombol dadi ijo + "✓ Copied/Tersalin", bali dewe 2,5 dtk; reset saben popup dibuka. Sidebar melu entuk feedback sing padha.
+- Tes: sintaks + diff bersih, qa-editor/export ijo, HTTP 200. Klik/copy asli durung otomatis (butuh clipboard browser); nunggu verifikasi manual owner.
+- Durung commit/push/deploy.
