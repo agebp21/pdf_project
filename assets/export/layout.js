@@ -517,10 +517,16 @@
   /* surface: element receiving gestures; target: element that scales;
      options: {button (🔍: 200% / back to 100%), zoomOut, level, zoomIn
      (optional − 100% + control), chip, hint,
-     onChange(scale), content(): the book's on-screen rect (client
+     onChange(scale), state(): PageFlip state ('read' while idle; zooming
+     in is refused mid-turn so a turn never plays zoomed and snaps at
+     the end), content(): the book's on-screen rect (client
      coordinates) so panning stops at its edges} */
   bind(surface, target, options) {
     const self = this, opts = options || {};
+    // Zooming in mid-turn makes the turn play zoomed and snap back when
+    // it lands; only zoom while the book sits still (resetting out is
+    // always allowed: buttons unzoom before they turn a page).
+    const canZoom = () => { try { const s = opts.state && opts.state(); return !s || s === 'read' || s === 'fold_corner'; } catch (e) { return true; } };
     let scale = 1, x = 0, y = 0, gesture = null, lastTap = null, drag = null;
     target.style.transformOrigin = '0 0';
     function apply(smooth) {
@@ -550,6 +556,7 @@
       if (opts.onChange) opts.onChange(scale);
     }
     function zoomTo(next, px, py, smooth) {
+      if (!canZoom()) return;
       next = Math.max(1, Math.min(self.MAX, next));
       const moved = self.anchor(scale, next, x, y, px, py);
       scale = next; x = moved.x; y = moved.y; apply(smooth);
@@ -594,6 +601,7 @@
       const touches = event.touches;
       if (gesture.type === 'pinch' && touches.length >= 2) {
         block(event);
+        if (!canZoom()) return;
         const next = Math.max(1, Math.min(self.MAX, gesture.scale * distance(touches[0], touches[1]) / gesture.start));
         const mid = middle(touches[0], touches[1]);
         // The content point first pinched follows the fingers.
@@ -664,9 +672,22 @@
     let dragged = false;
     window.addEventListener('mouseup', () => { if (drag) { dragged = drag.moved; drag = null; document.body.classList.remove('is-panning'); } });
     // A drag that panned is not a click (links, cover).
-    surface.addEventListener('click', event => { if (dragged) { dragged = false; block(event); } }, true);
+    surface.addEventListener('click', event => {
+      if (dragged) { dragged = false; block(event); return; }
+      // A tap while zoomed leaves the zoom instead of turning a page
+      // (PageFlip never sees it, so taps felt dead): the next tap turns
+      // normally at 100%. Links, buttons, note tabs and highlight marks
+      // keep working; the stabilo keeps its own taps.
+      if (scale > 1 && !highlighting()) {
+        const t = event.target;
+        if (!t || !t.closest || !t.closest('a,button,.book-hl,input,textarea,select,[contenteditable]')) { snap(); block(event); }
+      }
+    }, true);
     surface.addEventListener('dblclick', event => { if (scale > 1) { block(event); reset(); } }, true);
     function reset() { if (scale > 1) { scale = 1; apply(true); } }
+    // Page turns call this first: unzoom instantly so the turn starts (and
+    // plays) at 100% instead of wobbling out of a smooth zoom-out.
+    function snap() { if (scale > 1) { scale = 1; apply(false); } }
     // 🔍: zoom to 200%, press again for 100%.
     function step() { const c = center(); zoomTo(self.up(scale), c.x, c.y, true); }
     if (opts.button) opts.button.onclick = step;
@@ -691,7 +712,7 @@
       if (!seen) { opts.hint.hidden = false; setTimeout(() => { opts.hint.hidden = true; }, 4000); }
     }
     apply(false);
-    return { reset, step, scale: () => scale };
+    return { reset, snap, step, scale: () => scale };
   },
 };
 

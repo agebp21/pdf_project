@@ -197,6 +197,7 @@
       FlipbookLayout.centerCover(book, container, reduced);
       curl = FlipbookCurl.bind(book, container, sheets, {reduced});
       if (!zoom) zoom = FlipbookZoom.bind($('#reader-stage'), zoomBox, {button: $('#zoom'),
+        state: () => { try { return book && book.getState(); } catch (e) { return 'read'; } },
         // The pages on screen: pan no further than the book.
         content: () => {
           const bounds = book && book.getBoundsRect(), block = document.querySelector('#pdf-book .stf__block');
@@ -215,7 +216,7 @@
         const option = document.createElement('option'); option.value = String(index); option.textContent = 'Page ' + (index + 1); return option;
       }));
       // Skip pages already on screen; a hovered corner (fold_corner) may still flip.
-      const goPage = target => { if (book && ['read', 'fold_corner'].includes(book.getState()) && !visiblePages().includes(target)) book.flip(target, 'top'); };
+      const goPage = target => { if (book && ['read', 'fold_corner'].includes(book.getState()) && !visiblePages().includes(target)) { zoom?.snap(); book.flip(target, 'top'); } };
       Object.entries(bookLinks).forEach(([index, list]) => FlipbookLinks.mount(newElements[Number(index)], list, goPage));
       marks?.close();
       marks = FlipbookBookmarks.bind({key: FlipbookBookmarks.key(name, newElements.length, ratio), pages: newElements,
@@ -761,8 +762,8 @@
   $('#add-dialog').addEventListener('drop', e => openSources(e.dataTransfer.files));
   // The cover opens/closes with the curved turn; other pages use PageFlip.
   // Ignore clicks while a cover turn is still animating.
-  const goPrev = () => { zoom?.reset(); if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; book.flipPrev(); };
-  const goNext = () => { zoom?.reset(); if (!book || curl?.busy()) return; if (!curl?.open()) book.flipNext(); };
+  const goPrev = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; book.flipPrev(); };
+  const goNext = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (!curl?.open()) book.flipNext(); };
   $('#prev').addEventListener('click', goPrev);
   $('#next').addEventListener('click', goNext);
   $('#home').addEventListener('click', () => {

@@ -1221,6 +1221,15 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Tes: `export.test.cjs` (mock lawas tetep + blok anyar: geser pas mlebu, meneng nang ending, bali pas lunga, portrait ora geser); 38 suite Node ijo, `node --check` OK, `git diff --check` bersih, HTTP 200.
 - Durung commit/push/deploy. Eksper lawas/share lawas perlu digawe ulang. Catetan pinggir: spread blank-dewekan kanggo buku ganjil saiki peteng (ora krem) — konsisten karo "invisible".
 
+### 2026-10-06 — Oyot tenan: zoom 2x kecepit tengah flip (bukti piksel video)
+- Ukur frame video 2 (lebar buku nang video sing padha): 965px → **1934px (persis 2×!)** → 965px. Dadi user nge-zoom 2× (🔍, moco tulisan index cilik) terus flip: klik pojok ketahan zoom (PageFlip ora nampa mousedown → krasa "macet"), tombol → flip mainながら zoom + zoom-out overlap 0,28 dtk, flip rampung → `zoom.reset()` snap ("munggah-mudhun"), bola-bali. Klik dobel = flip start + dblclick zoom tengah animasi. End-only mergo sing di-zoom halaman index mburi.
+- Fix (`assets/export/layout.js`, preview + ekspor; `viewer.js` + `flipbook.js` melu):
+  - `opts.state` anyar: zoom-IN (tombol/pinch/wheel/keys/double-tap) ditolak pas state ora `read`/`fold_corner` — flip ora tau main zoom, ora ono snap pungkasan.
+  - `snap()` anyar (reset instan tanpa transisi); kabeh dalan flip animasi (→/←/Home/link) snap dhisik → flip miwiti + main nang 1× resik. Reset alus tetep kanggo aksi unzoom eksplisit.
+  - Tap pas zoom metu zoom (PageFlip ora nampa, dadi tap ora kroso mati): link/tombol/tab catatan/mark stabilo + mode stabilo tetep lolos.
+- Tes: `tests/zoom-flip.test.cjs` anyar (gate mid-flip, snap instan, tap metu zoom, link/mark lolos, tap normal ora kesedot); 39 suite Node + 122 Python ijo; `node --check` layout/viewer/flipbook OK; `git diff --check` bersih; HTTP 200.
+- Durung commit/push/deploy.
+
 ### 2026-10-06 — Analisis video bug flip (Drive, 6,1 dtk, 30fps)
 - Frame diekstrak via ffmpeg (2fps + 10fps nang area flip). Isi video: spread pungkasan single [211/Zip, sisih tengen peteng = EKSPOR LAWAS tanpa back cover] → flip MUNDUR pojok (klik pojok kanan-NGISOR, kursor ketok) → landing [209,210] resik.
 - Temuan: lembaran miring/geser munggah-mudhun nang tengah flip = perspektif 3D normal flip POJOK (sumbu miring, pojok ngayun metu layar). Flip tombol/keyboard nganggo pojok NDUWUR (ayunan luwih alus); klik pojok ngisor = ayunan paling gedhe. Math engine podo kanggo kabeh halaman (verifikasi nang vendor) — sing spesifik mburi mung landing bolongan (wes di-fix back cover, nunggu share ulang).
