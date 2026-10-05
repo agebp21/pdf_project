@@ -1004,6 +1004,18 @@
   }
   $('#share-copy').onclick=()=>copyShareLink($('#share-url'), $('#share-status'), $('#share-copy'));
   $('#share-popup-copy').onclick=()=>copyShareLink($('#share-popup-url'), $('#share-popup-status'), $('#share-popup-copy'));
+  // Drive launcher: tiny redirect file the owner uploads to Google Drive.
+  // Members download + double-click it and land straight in the player.
+  $('#share-popup-launcher').onclick=()=>{
+    const url = $('#share-popup-url').value; if (!url) return;
+    try {
+      const title = ($('#export-title') && $('#export-title').value) || 'book';
+      FlipbookExport.download(new Blob([FlipbookExport.shareLauncher(title, url)], {type: 'text/html'}),
+        'Open-' + FlipbookExport.titleFile(title) + '.html');
+      $('#share-popup-status').textContent = L('Launcher downloaded — upload it to Google Drive and share that file.',
+        'Launcher ke-download — upload nang Google Drive terus bagi file kui.');
+    } catch (cause) { $('#share-popup-status').textContent = cause.message; }
+  };
   $('#share-popup-close').onclick=closeSharePopup;
   $('#share-popup').addEventListener('mousedown', event => { if (event.target.id === 'share-popup') closeSharePopup(); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('#share-popup').hidden) closeSharePopup(); });

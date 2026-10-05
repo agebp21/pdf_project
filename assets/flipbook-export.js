@@ -340,5 +340,22 @@
   function draftSave(data) { return draftWithDb('readwrite', store => store.put(data, DRAFT_KEY)); }
   function draftLoad() { return draftWithDb('readonly', store => store.get(DRAFT_KEY)); }
   function draftClear() { return draftWithDb('readwrite', store => store.delete(DRAFT_KEY)); }
-  globalThis.FlipbookExport={validate,versionImages,LANGS,scriptData,packageBook,packageSingleHtml,titleFile,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,upload,draftSave,draftLoad,draftClear,HOW_TO_OPEN};
+  // Drive launcher: a tiny HTML file the owner uploads to Google Drive
+  // (Drive cannot play book files itself). Downloaded + double-clicked, it
+  // jumps straight into the share player link. Pure function (testable).
+  function shareLauncher(title, url) {
+    const safeTitle = String(title || 'Book').replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+    const safeUrl = String(url || '');
+    if (!/^https?:\/\/[A-Za-z0-9.-]+(\/[A-Za-z0-9._~:/?#[\]@!$&'()*+,;=%-]*)?$/.test(safeUrl)) throw Error('Tautan share tidak valid.');
+    if (safeUrl.indexOf('</script') >= 0 || safeUrl.indexOf('<!--') >= 0) throw Error('Tautan share tidak valid.');
+    const js = JSON.stringify(safeUrl);
+    return '<!DOCTYPE html><html lang="id"><head><meta charset="utf-8">'
+      + '<title>Buka: ' + safeTitle + '</title>'
+      + '<meta http-equiv="refresh" content="0;url=' + safeUrl + '">'
+      + '<style>body{font-family:system-ui,sans-serif;display:grid;place-items:center;min-height:100vh;margin:0;background:#FFFDF6;color:#1C1917;text-align:center}</style>'
+      + '</head><body><main><p>Membuka buku…</p>'
+      + '<p><a href="' + safeUrl + '">Klik di sini bila tidak terbuka otomatis</a></p></main>'
+      + '<script>location.replace(' + js + ')<\/script></body></html>';
+  }
+  globalThis.FlipbookExport={validate,versionImages,LANGS,scriptData,packageBook,packageSingleHtml,titleFile,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,upload,draftSave,draftLoad,draftClear,shareLauncher,HOW_TO_OPEN};
 })();

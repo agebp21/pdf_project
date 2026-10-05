@@ -1256,3 +1256,9 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Fix: baris popup dadi grid (input full-width nang nduwur, tombol full-width ngisore), input diwenehi border/font mono; `paintCopy()`: tombol dadi ijo + "✓ Copied/Tersalin", bali dewe 2,5 dtk; reset saben popup dibuka. Sidebar melu entuk feedback sing padha.
 - Tes: sintaks + diff bersih, qa-editor/export ijo, HTTP 200. Klik/copy asli durung otomatis (butuh clipboard browser); nunggu verifikasi manual owner.
 - Durung commit/push/deploy.
+
+### 2026-10-06 — Drive launcher: file cilik redirect nang player (request owner)
+- Owner: file HTML nang Drive diklik langsung metu link share player (Drive ora iso preview HTML — kebijakan Google). Solusi: file launcher `Open-<Judul>.html` (~1KB, redirect otomatis meta+JS + link fallback) — iki sing di-upload Drive (munngah sedetik); member download + double-click → mencolot nang player, iso moco + download buku full nang kono.
+- File: `flipbook-export.js` (`shareLauncher(title,url)` pure: gate URL http(s) mutlak, escape judul/URL) + tombol nang popup share (+ sidebar ora usah, popup wis dadi alur). Judul file manut judul buku.
+- Tes: `tests/share-launcher.test.cjs` anyar (redirect 3 jalur, escaping, gate URL); qa-editor/export ijo; sintaks + diff bersih; HTTP 200 + tombol kesaji. Redirect nang browser asli durung dites langsung (meta+JS standar + fallback link).
+- Durung commit/push/deploy.
