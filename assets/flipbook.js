@@ -821,7 +821,7 @@
       'Ekspor ini butuh paket ' + (plan === 'Business' ? 'Business' : 'Pro atau Business') + '. Preview dan simpan proyek tetap gratis. '), link);
   }
   function markLocked() {
-    for (const [id, target] of [['#export-html','html'],['#export-apk','apk'],['#export-exe','exe'],['#share-link','html']]) {
+    for (const [id, target] of [['#export-html','html'],['#export-apk','apk'],['#export-exe','exe'],['#share-link','html'],['#share-link-top','html']]) {
       const button = $(id), plan = lockedFor(target, buildConfig);
       if (!button.dataset.label) button.dataset.label = button.textContent;
       button.textContent = button.dataset.label + (plan ? ' · ' + plan.toUpperCase() : '');
@@ -930,6 +930,24 @@
   // Share link: upload the sealed single-file HTML so anyone with the
   // link can read the book in a browser and download it for keeping.
   // Same bytes as "Save offline HTML", only the destination differs.
+  // Share-link popup (top header button): the link text with a Copy button
+  // below it. Stays usable on short screens where the sidebar is folded away.
+  function openSharePopup(message) {
+    $('#share-popup-status').textContent = message || '';
+    $('#share-popup-row').hidden = true;
+    $('#share-popup').hidden = false;
+  }
+  function showShareLink(url) {
+    $('#share-popup-url').value = url;
+    $('#share-popup-row').hidden = false;
+  }
+  function closeSharePopup() { $('#share-popup').hidden = true; }
+  async function copyShareLink(input, note) {
+    if (!input.value) return;
+    try { await navigator.clipboard.writeText(input.value); }
+    catch (e) { input.select(); try { document.execCommand('copy'); } catch (_) {} }
+    note.textContent = L('Link copied.', 'Tautan disalin.');
+  }
   async function shareBook(){
     if(!sourcePdf||opening||exporting) return;
     if(!buildConfig){ try{ const r=await fetch('/api/capabilities',{cache:'no-store'}); if(r.ok){ buildConfig=await r.json(); markLocked(); } }catch(e){} }
@@ -938,7 +956,8 @@
     if(!buildConfig||!buildConfig.token){ error(L('Please sign in to share a book.','Silakan masuk dulu untuk membagikan buku.')); return; }
     exporting=true; exportState(); $('#pdf-file').disabled=true; $('#overlay-fields').disabled=true;
     error(''); $('#share-box').hidden=true;
-    const status=message=>{ $('#export-status').textContent=message; };
+    const status=message=>{ $('#export-status').textContent=message; $('#share-popup-status').textContent=message; };
+    openSharePopup(L('Preparing the pages…','Menyiapkan halaman…'));
     const step=(from,to)=>fraction=>progress(from+(to-from)*Math.max(0,Math.min(1,fraction)));
     try{
       status(L('Preparing the pages…','Menyiapkan halaman…')); await pagesReady;
@@ -952,19 +971,20 @@
       $('#share-url').value=url; $('#share-box').hidden=false;
       $('#share-status').textContent=L('Link ready — send it anywhere (chat, Drive, email). The book plays in the browser and can be downloaded there.',
         'Tautan siap — kirim ke mana saja (chat, Drive, email). Buku langsung diputar di browser dan bisa diunduh di sana.');
+      showShareLink(url);
       progress(1); status(L('Share link ready.','Tautan berbagi siap.'));
     }catch(cause){ progress(null); status(L('Sharing failed: ','Berbagi gagal: ')+cause.message); error(cause.message); }
     finally{ exporting=false; exportState(); $('#pdf-file').disabled=false; $('#overlay-fields').disabled=!book; }
   }
-  $('#share-copy').onclick=async ()=>{
-    const input=$('#share-url'); if(!input.value) return;
-    try{ await navigator.clipboard.writeText(input.value); }
-    catch(e){ input.select(); try{ document.execCommand('copy'); }catch(_){} }
-    $('#share-status').textContent=L('Link copied.','Tautan disalin.');
-  };
+  $('#share-copy').onclick=()=>copyShareLink($('#share-url'), $('#share-status'));
+  $('#share-popup-copy').onclick=()=>copyShareLink($('#share-popup-url'), $('#share-popup-status'));
+  $('#share-popup-close').onclick=closeSharePopup;
+  $('#share-popup').addEventListener('mousedown', event => { if (event.target.id === 'share-popup') closeSharePopup(); });
+  document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('#share-popup').hidden) closeSharePopup(); });
   $('#save-project').onclick=()=>exportBook('project');$('#export-html').onclick=()=>exportBook('html');
   $('#export-apk').onclick=()=>exportBook('apk');$('#export-exe').onclick=()=>exportBook('exe');
   $('#share-link').onclick=()=>shareBook();
+  $('#share-link-top').onclick=()=>shareBook();
   $('#organize-pages').onclick=async ()=>{
     if(!sourcePdf){ error(L('Open a PDF first.','Buka PDF dulu.')); return; }
     const raw=(($('#document-name')||{}).textContent||'').trim()||'document.pdf';

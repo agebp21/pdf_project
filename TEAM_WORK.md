@@ -1219,7 +1219,7 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
   - `centerCover` saiki ngerti "last spread" (L = N-1 yen genap, N-2 yen ganjil, N≥4): mlebu ending (maju seko L-2) mulai geser pas flip START (glide bareng animasi, landing wes tengah — persis buka cover); lunga seko ending (mundur seko L) bali pas flip START. Flip ora tau main miring, ora ono glide sawise landing. `settle()` tetep benerke posisi akhir kanggo lompatan (Home/link) + drag (settle pas release, kaya cover).
   - Bookmark/notes/stabilo/audio maca `visible()` (indeks < pageCount) dadi blank ora tau ke-bookmark/ono-tab; status "212 / 212" tetep; `next` tetep mati nang spread pungkasan.
 - Tes: `export.test.cjs` (mock lawas tetep + blok anyar: geser pas mlebu, meneng nang ending, bali pas lunga, portrait ora geser); 38 suite Node ijo, `node --check` OK, `git diff --check` bersih, HTTP 200.
-- Durung commit/push/deploy. Eksper lawas/share lawas perlu digawe ulang. Catetan pinggir: spread blank-dewekan kanggo buku ganjil saiki peteng (ora krem) — konsisten karo "invisible".
+- Durung commit/push/deploy.
 
 ### 2026-10-06 — Oyot tenan: zoom 2x kecepit tengah flip (bukti piksel video)
 - Ukur frame video 2 (lebar buku nang video sing padha): 965px → **1934px (persis 2×!)** → 965px. Dadi user nge-zoom 2× (🔍, moco tulisan index cilik) terus flip: klik pojok ketahan zoom (PageFlip ora nampa mousedown → krasa "macet"), tombol → flip mainながら zoom + zoom-out overlap 0,28 dtk, flip rampung → `zoom.reset()` snap ("munggah-mudhun"), bola-bali. Klik dobel = flip start + dblclick zoom tengah animasi. End-only mergo sing di-zoom halaman index mburi.
@@ -1234,3 +1234,13 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Frame diekstrak via ffmpeg (2fps + 10fps nang area flip). Isi video: spread pungkasan single [211/Zip, sisih tengen peteng = EKSPOR LAWAS tanpa back cover] → flip MUNDUR pojok (klik pojok kanan-NGISOR, kursor ketok) → landing [209,210] resik.
 - Temuan: lembaran miring/geser munggah-mudhun nang tengah flip = perspektif 3D normal flip POJOK (sumbu miring, pojok ngayun metu layar). Flip tombol/keyboard nganggo pojok NDUWUR (ayunan luwih alus); klik pojok ngisor = ayunan paling gedhe. Math engine podo kanggo kabeh halaman (verifikasi nang vendor) — sing spesifik mburi mung landing bolongan (wes di-fix back cover, nunggu share ulang).
 - Tindak lanjut: owner share ulang → coba flip pojok maneh. Nek ayunan pojok-ngisor isih keganggu, opsi: biasakake tombol → / pojok nduwur, utowo tak pikirke calming flip pojok.
+
+### 2026-10-06 — Duo MONIER: kloningan vs asline ("dobel nempel", owner konfirmasi paham)
+- Owner ("iyo bener"): flip pungkasan kudune blank, tapi halaman sing podo dobel/nempel. Analisis pungkasan: ghost dobel = kloningan flip nembe ngangkat (normal ~100ms); flip dijamin rampung ≤1,15 dtk nang vendor (wall-clock) dadi "macet" = spam-klik (saben klik teleport + restart, lembaran ora tau landing ayem) — apamanah pas zoom nang kode lawas (klik pojok mati → spam → wobble). Fix zoom (42f159c, live) + back-cover/centering (live) nutup kabeh rantai kui; kabeh mung mlebu LINK ANYAR.
+- Langkah: owner share ulang → tes klik alon (1 klik, enteni landing) tanpa zoom. Nek link anyar + klik alon isih dobel/nempel → cadangan: antrian flip (1 pending) kanggo tombol/keys + audit ulang. Link anyar durung ditampa (diminta).
+
+### 2026-10-06 — Tombol Share nang header + popup link (request owner)
+- Owner: menu share nang ngisor kepotong nang monitor amba-resolusi cendhek. Saiki mung tombol **🔗 Share nang header ndhuwur** (sidebar ora diutak-atik): diklik → popup tengah layar (aman nang layar cendhek) → progress → teks link + tombol **Copy link** ngisore. Copy: clipboard + fallback select.
+- File: `flipbook.html` (tombol header + popup body-level), `assets/theme-cream.css` (gaya popup mbuntut add-dialog), `assets/flipbook.js` (popup open/fill/close, Esc/klik njobo nutup, status ganda sidebar+popup, markLocked mbuntut tombol header).
+- Tes: `node --check` OK, `git diff --check` bersih, qa-editor/export ijo, HTTP 200 + markup/CSS kesaji. Interaksi klik popup durung dites otomatis (qa-editor ora ngeklik share); diverifikasi manual karo owner sing lagi nyoba share.
+- Durung commit/push/deploy.

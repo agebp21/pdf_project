@@ -29,7 +29,7 @@
   <script defer src="assets/auth.js"></script>
 </head>
 <body class="clay">
-  <header class="topbar"><a class="brand" href="index.html"><img src="assets/img/logo.png?v=green" alt="MyFlipbook" width="128" height="34"></a><span style="display:flex;align-items:center;gap:10px"><span data-auth-slot></span><a class="back-link badge" href="converter.html?tool=jpg-to-pdf">Open converter →</a></span></header>
+  <header class="topbar"><a class="brand" href="index.html"><img src="assets/img/logo.png?v=green" alt="MyFlipbook" width="128" height="34"></a><span style="display:flex;align-items:center;gap:10px"><span data-auth-slot></span><button id="share-link-top" class="back-link badge" type="button">🔗 Share</button><a class="back-link badge" href="converter.html?tool=jpg-to-pdf">Open converter →</a></span></header>
   <main>
     <div class="heading"><div><p class="eyebrow">✦ PDF TO FLIPBOOK • INTERACTIVE</p><h1>Your doc, turned into a living book.</h1><p>Upload a PDF or continue straight from a convert result. Cover first, then the inside — just like a real book.</p></div></div>
     <div class="workspace">
@@ -102,6 +102,17 @@
       </ol>
       <div id="add-drop" class="add-drop">Drop files here · PDF, Word, Excel, PowerPoint, JPG, PNG</div>
       <p id="add-status" class="add-status" role="status"></p>
+        </div>
+  </div>
+  <div id="share-popup" hidden>
+    <div class="share-card" role="dialog" aria-modal="true" aria-labelledby="share-popup-title">
+      <h2 id="share-popup-title">🔗 Share this book</h2>
+      <p id="share-popup-status" class="muted" role="status">Preparing…</p>
+      <div id="share-popup-row" hidden>
+        <input id="share-popup-url" readonly onclick="this.select()" aria-label="Share link">
+        <button id="share-popup-copy" class="primary apply" type="button">Copy link</button>
+      </div>
+      <button id="share-popup-close" class="secondary" type="button">Close</button>
     </div>
   </div>
 </body>
