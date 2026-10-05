@@ -964,12 +964,15 @@ function orgFlipTo(pos){
   // Recalculate from live layout first: flips silently die on stale geometry.
   try{ orgBook.update(); cur=orgBook.getCurrentPageIndex(); }catch(e){ return; }
   if(cur===pos||organizeOrder[pos]===undefined) return;
-  try{ orgBook.flip(pos); }catch(e){}
+  try{orgBook.flip(pos);}catch(e){}
   setTimeout(()=>{ try{
-    if(!orgBook||orgBook.getState()!=='read'||orgBook.getCurrentPageIndex()!==cur) return;
-    if(organizeOrder[pos]===undefined) return;
-    orgBook.turnToPage(pos);
-  }catch(e){} },1600);
+    if(!orgBook||organizeOrder[pos]===undefined) return;
+    // Still mid-flip long after it should have settled: the frame loop
+    // died silently (it never throws) — restart it so the book keeps moving.
+    if(orgBook.getState()==='flipping'){ try{orgBook.getRender().start();}catch(e){} return; }
+    // Settled but never moved: snap there instantly.
+    if(orgBook.getCurrentPageIndex()===cur) orgBook.turnToPage(pos);
+  }catch(e){} },2500);
 }
 async function orgReaderBuild(){
   const myBuild=++orgBuildSeq;
