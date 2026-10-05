@@ -662,7 +662,7 @@ async function buildOrganizePreview(){
 }
 // Real page thumbnails (cached dataURLs survive reorder re-renders).
 // Page codes are fi*1000000+p so pages from every document share one order.
-let orgPdfDocs=[], orgThumbObserver=null, orgThumbCache=new Map(), orgDragged=false;
+let orgPdfDocs=[], orgThumbObserver=null, orgThumbCache=new Map(), orgDragged=false, orgDragEnd=0;
 // Neat stroke icons (no emoji): rotate, close, plus, magnifier.
 const ORG_ICONS={
   rotate:'<svg class="org-ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><polyline points="23 4 23 10 17 10"/><polyline points="1 20 1 14 7 14"/><path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15"/></svg>',
@@ -780,7 +780,7 @@ function renderOrganizeGrid(){
     const goZoom=!isBlank||orgBlankImg[origIdx];
     return `
     <div class="org-cell">
-      <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgDragged=false" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${orgArg(origIdx)})"
+      <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgDragged=false;orgDragEnd=Date.now()" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${orgArg(origIdx)})"
         class="org-card group${sel?' sel':''}">
         <div class="org-thumb" data-thumb="${origIdx}" onclick="${isBlank&&!goZoom?`event.stopPropagation();orgBlankAsk(${orgArg(origIdx)})`:''}" ondblclick="event.stopPropagation();openOrgViewer(${pos})" title="${isBlank&&!goZoom?L('Add an image to this blank page','Tambah gambar nang halaman kosong iki'):L('Click to flip here, double-click to zoom','Klik untuk flip ke sini, double-click untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){orgCardClick(event,${orgArg(origIdx)})}">${thumb}</div>
         <div class="org-hover">
@@ -964,7 +964,8 @@ function orgFlipTo(pos){
   // Recalculate from live layout first: flips silently die on stale geometry.
   try{ orgBook.update(); cur=orgBook.getCurrentPageIndex(); }catch(e){ return; }
   if(cur===pos||organizeOrder[pos]===undefined) return;
-  try{orgBook.flip(pos);}catch(e){}
+  log('Org flip '+cur+' -> '+pos);
+  try{orgBook.flip(pos);}catch(e){ log('Org flip threw: '+(e&&e.message||e)); }
   setTimeout(()=>{ try{
     if(!orgBook||organizeOrder[pos]===undefined) return;
     // Still mid-flip long after it should have settled: the frame loop
@@ -1018,7 +1019,7 @@ async function orgReaderBuild(){
     orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'stretch',minWidth:200,maxWidth:700,minHeight:140,maxHeight:560,autoSize:true,usePortrait:true,showCover:false,useMouseEvents:true,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
     orgBook.loadFromHTML(Array.from(box.children));
   }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau ora tersedia')+'</p>'; return; }
-  orgBook.on('flip',()=>{ orgPaintReaderLabel(); orgRenderVisible(); });
+  orgBook.on('flip',()=>{ orgPaintReaderLabel(); try{ log('Org at '+orgBook.getCurrentPageIndex()); }catch(e){} orgRenderVisible(); });
   orgPaintReaderLabel(); orgRenderVisible();
 }
 function orgPaintReaderLabel(){
@@ -1071,7 +1072,7 @@ const orgPruneFills=()=>{ const alive=new Set(organizeOrder); Object.keys(orgBla
 window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(pos,1); if(!organizeOrder.includes(idx)) organizeSelected.delete(idx); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); };
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(at<0?organizeOrder.length:at+1,0,fresh); renderOrganizeGrid(); };
 window.orgInsertBlankAt=(at)=>{ at=Math.max(0,Math.min(organizeOrder.length,at)); organizeOrder.splice(at,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(at+1)); };
-window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); orgFlipTo(organizeOrder.indexOf(idx)); };
+window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(Date.now()-orgDragEnd<350) return; if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); orgFlipTo(organizeOrder.indexOf(idx)); };
 window.orgCheck=(idx, on)=>{ if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
 window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
 window.orgDelete=()=>{ if(organizeSelected.size===0) return showError('Tick the pages to delete first'); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
