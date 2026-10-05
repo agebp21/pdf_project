@@ -100,6 +100,7 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-05 | `d0ef2f5` | sesi iki | Blank iso diklik: id kutip dibenerke (`&quot;`) + regression test. Backup `/root/pdf_project-code-backup-20261005m.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `cdf7b2f` | sesi iki | Empty state: tombol Upload + Google Drive langsung (kompak tengah). Backup `/root/pdf_project-code-backup-20261005n.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `47f6450` | sesi iki | AI dibuka kanggo Pro/Business walau gateway durung ono (oyot "translate ga jalan": 503 payments gate; Free tetep dikunci). Disk kebak → backup lawas (a–q) dibuang, backup anyar tanpa `.build`. Backup `/root/pdf_project-code-backup-20261005r.tgz`. Verifikasi: capabilities 200, kode live dicek. |
+| 2026-10-05 | `a205da5` | sesi iki | Tab note: outline fokus ireng dipateni. Backup `/root/pdf_project-code-backup-20261005s.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `dcb5664` | sesi iki | Zoom bertingkat: klik gambar in/out, klik latar nutup. Backup `/root/pdf_project-code-backup-20261005o.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `3c829da` | sesi iki | Blank isi diklik = zoom (kosong = pilih file) + tombol Ganti gambar nang viewer. Backup `/root/pdf_project-code-backup-20261005p.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `2349881` | sesi iki | Zoom sekali: langsung gede, klik balik (tiering dibuang). Backup `/root/pdf_project-code-backup-20261005q.tgz`. Verifikasi: capabilities 200. |
