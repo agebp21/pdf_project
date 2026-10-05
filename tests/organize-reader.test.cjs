@@ -38,10 +38,15 @@ async function main() {
   book.destroy();
   assert.equal(w.document.getElementById('box'), null, 'destroy removes its block');
   // Rebuild on a fresh box, then refresh in place without destroy.
+  // Faces are built detached (never wiping the live box first).
   book = new w.St.PageFlip(w.document.getElementById('box') || (() => { const b = w.document.createElement('div'); b.id = 'box'; w.document.body.append(b); return b; })(), settings);
   book.loadFromHTML(pages(10));
-  book.updateFromHtml(pages(8));
+  const faces8 = [];
+  for (let i = 0; i < 8; i++) { const d = w.document.createElement('div'); d.className = 'opf-page'; d.textContent = 'N' + i; faces8.push(d); }
+  book.updateFromHtml(faces8);
   assert.ok(w.document.getElementById('box'), 'update keeps the block in the DOM');
+  const blk = w.document.querySelector('#box .stf__block');
+  assert.ok(blk && blk.children.length >= 8, 'update places all faces in the live block');
   book.turnToPage(7); await sleep(100);
   assert.equal(book.getCurrentPageIndex(), 6, 'turnToPage lands on the spread start');
   assert.equal(errors.length, 0, String(errors.slice(0, 3)));

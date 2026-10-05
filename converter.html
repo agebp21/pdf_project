@@ -952,12 +952,13 @@ function orgPreviewFace(code,pos){
   }
   const ph=document.createElement('div'); ph.className='opf-ph'; ph.textContent=pos+1; return ph;
 }
-function orgReaderFaces(box){
-  box.innerHTML='';
-  const frag=document.createDocumentFragment();
+function orgReaderFaces(){
+  // Build fresh face divs WITHOUT touching live DOM: wiping #orgBook
+  // detaches the engine's own wrapper and blanks the whole book.
+  const out=[];
   orgFaceEls=[];
-  organizeOrder.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.dataset.code=code; d.append(orgPreviewFace(code,pos)); frag.append(d); orgFaceEls.push(d); });
-  box.append(frag);
+  organizeOrder.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.dataset.code=code; d.append(orgPreviewFace(code,pos)); out.push(d); orgFaceEls.push(d); });
+  return out;
 }
 // Paint check: do the visible book sheets actually show the current spread?
 // (Proven failure mode: the index moves on while the picture stays frozen.)
@@ -1093,19 +1094,17 @@ async function orgReaderBuild(){
   if(myBuild!==orgBuildSeq) return;
   // Prefer the engine's in-place update: destroy() removes #orgBook itself.
   if(orgBook){
-    orgReaderFaces(document.getElementById('orgBook')||document.createElement('div'));
-    if(!document.getElementById('orgBook')){ try{orgBook.destroy();}catch(_){} orgBook=null; }
-    else{
-      try{
-        orgBook.updateFromHtml(orgFaceEls);
-        orgBook.update();
-        orgPaintReaderLabel(); orgRenderVisible(); return;
-      }catch(e){ try{orgBook.destroy();}catch(_){} orgBook=null; }
-    }
+    const faces=orgReaderFaces();
+    try{
+      orgBook.updateFromHtml(faces);
+      orgBook.update();
+      orgPaintReaderLabel(); orgRenderVisible(); return;
+    }catch(e){ try{orgBook.destroy();}catch(_){} orgBook=null; }
   }
   let box=document.getElementById('orgBook');
   if(!box){ box=document.createElement('div'); box.id='orgBook'; wrap.append(box); }
-  orgReaderFaces(box);
+  box.innerHTML='';
+  orgReaderFaces().forEach(f=>box.append(f));
   try{
     orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'stretch',minWidth:200,maxWidth:700,minHeight:140,maxHeight:560,autoSize:true,usePortrait:true,showCover:false,useMouseEvents:true,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
     orgBook.loadFromHTML(Array.from(box.children));
