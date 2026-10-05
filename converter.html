@@ -968,12 +968,14 @@ function orgFlipTo(pos){
   try{orgBook.flip(pos);}catch(e){ log('Org flip threw: '+(e&&e.message||e)); }
   setTimeout(()=>{ try{
     if(!orgBook||organizeOrder[pos]===undefined) return;
-    // The frame loop paints every change but never throws: if it died, the
-    // index moves on while the picture freezes. Restart it, then snap if
-    // this flip still went nowhere.
-    try{ orgBook.getRender().start(); }catch(e){}
-    if(orgBook.getState()==='flipping') return;
-    if(orgBook.getCurrentPageIndex()===cur){ log('Org snap '+pos); orgBook.turnToPage(pos); }
+    // Still mid-flip long after it should have settled: revive the loop.
+    if(orgBook.getState()==='flipping'){ try{orgBook.getRender().start();}catch(e){} return; }
+    // Settled but never moved: revive the loop, then snap there instantly.
+    if(orgBook.getCurrentPageIndex()===cur){
+      try{orgBook.getRender().start();}catch(e){}
+      log('Org snap '+pos);
+      try{orgBook.turnToPage(pos);}catch(e){}
+    }
   }catch(e){} },2500);
 }
 async function orgReaderBuild(){
