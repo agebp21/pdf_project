@@ -949,12 +949,39 @@ function orgPreviewFace(code,pos){
   }
   const ph=document.createElement('div'); ph.className='opf-ph'; ph.textContent=pos+1; return ph;
 }
+function orgReaderFaces(box){
+  box.innerHTML='';
+  const frag=document.createDocumentFragment();
+  organizeOrder.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.append(orgPreviewFace(code,pos)); frag.append(d); });
+  box.append(frag);
+}
+// Programmatic jump with self-heal: flip() animates, but if the engine
+// swallows it (it never throws), fall back to an instant turnToPage.
+function orgFlipTo(pos){
+  if(!orgBook) return;
+  pos=Math.max(0,Math.min(organizeOrder.length-1,pos));
+  let cur=-1;
+  // Recalculate from live layout first: flips silently die on stale geometry.
+  try{ orgBook.update(); cur=orgBook.getCurrentPageIndex(); }catch(e){ return; }
+  if(cur===pos||organizeOrder[pos]===undefined) return;
+  try{ orgBook.flip(pos); }catch(e){}
+  setTimeout(()=>{ try{
+    if(!orgBook||orgBook.getState()!=='read'||orgBook.getCurrentPageIndex()!==cur) return;
+    if(organizeOrder[pos]===undefined) return;
+    orgBook.turnToPage(pos);
+  }catch(e){} },1600);
+}
 async function orgReaderBuild(){
   const myBuild=++orgBuildSeq;
-  const wrap=document.getElementById('orgReader'), box=document.getElementById('orgBook');
-  if(!wrap||!box) return;
+  const wrap=document.getElementById('orgReader');
+  if(!wrap) return;
   wrap.classList.remove('is-hidden');
-  if(!organizeOrder.length){ box.innerHTML='<p class="org-reader-empty">'+L('No pages','Ora ono halaman')+'</p>'; return; }
+  if(!organizeOrder.length){
+    orgReaderClose();
+    const b0=document.getElementById('orgBook');
+    if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('No pages','Ora ono halaman')+'</p>';
+    return;
+  }
   let ratio=0.72;
   try{
     const first=orgPdfDocs[0];
@@ -963,20 +990,32 @@ async function orgReaderBuild(){
   const avail=Math.max(280,(wrap.clientWidth||600)-24);
   const single=avail<520;
   const PW=Math.round(single?avail:Math.min(avail,640)/2), PH=Math.round(PW/Math.max(0.4,Math.min(2.5,ratio)));
-  box.innerHTML='';
-  const frag=document.createDocumentFragment();
-  organizeOrder.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.append(orgPreviewFace(code,pos)); frag.append(d); });
-  box.append(frag);
-  let keep=0;
-  if(orgBook){ try{keep=orgBook.getCurrentPageIndex();}catch(e){} try{orgBook.destroy();}catch(e){} orgBook=null; }
-  try{ await orgBookEngine(); }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau ora tersedia')+'</p>'; return; }
+  try{ await orgBookEngine(); }catch(e){
+    const b0=document.getElementById('orgBook');
+    if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau ora tersedia')+'</p>';
+    return;
+  }
   if(myBuild!==orgBuildSeq) return;
+  // Prefer the engine's in-place update: destroy() removes #orgBook itself.
+  if(orgBook){
+    const liveBox=document.getElementById('orgBook');
+    if(liveBox){
+      orgReaderFaces(liveBox);
+      try{
+        orgBook.updateFromHtml(Array.from(liveBox.children));
+        orgBook.update();
+        orgPaintReaderLabel(); orgRenderVisible(); return;
+      }catch(e){ try{orgBook.destroy();}catch(_){} orgBook=null; }
+    }else orgBook=null;
+  }
+  let box=document.getElementById('orgBook');
+  if(!box){ box=document.createElement('div'); box.id='orgBook'; wrap.append(box); }
+  orgReaderFaces(box);
   try{
     orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'stretch',minWidth:200,maxWidth:700,minHeight:140,maxHeight:560,autoSize:true,usePortrait:true,showCover:false,useMouseEvents:true,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
     orgBook.loadFromHTML(Array.from(box.children));
   }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau ora tersedia')+'</p>'; return; }
   orgBook.on('flip',()=>{ orgPaintReaderLabel(); orgRenderVisible(); });
-  try{ orgBook.flip(Math.max(0,Math.min(keep,organizeOrder.length-1))); }catch(e){}
   orgPaintReaderLabel(); orgRenderVisible();
 }
 function orgPaintReaderLabel(){
@@ -1022,14 +1061,14 @@ async function orgRenderVisible(){
 window.orgReaderGo=(dir)=>{
   if(!orgBook) return;
   let cur=0; try{cur=orgBook.getCurrentPageIndex();}catch(e){}
-  try{ orgBook.flip(Math.max(0,Math.min(organizeOrder.length-1,cur+dir))); }catch(e){}
+  orgFlipTo(cur+dir);
 };
 window.orgRotateOne=(idx)=>{ organizeRotations[idx]=((organizeRotations[idx]||0)+90)%360; if(!organizeRotations[idx]) delete organizeRotations[idx]; renderOrganizeGrid(); };
 const orgPruneFills=()=>{ const alive=new Set(organizeOrder); Object.keys(orgBlankImg).forEach(k=>{ if(!alive.has(k)) delete orgBlankImg[k]; }); };
 window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(pos,1); if(!organizeOrder.includes(idx)) organizeSelected.delete(idx); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); };
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(at<0?organizeOrder.length:at+1,0,fresh); renderOrganizeGrid(); };
 window.orgInsertBlankAt=(at)=>{ at=Math.max(0,Math.min(organizeOrder.length,at)); organizeOrder.splice(at,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(at+1)); };
-window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); if(orgBook){ const at=organizeOrder.indexOf(idx); if(at>=0){ try{orgBook.flip(at);}catch(err){} } } };
+window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); orgFlipTo(organizeOrder.indexOf(idx)); };
 window.orgCheck=(idx, on)=>{ if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
 window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
 window.orgDelete=()=>{ if(organizeSelected.size===0) return showError('Tick the pages to delete first'); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
