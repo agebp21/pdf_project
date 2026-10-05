@@ -2321,7 +2321,9 @@ class Handler(SimpleHTTPRequestHandler):
         user = self.current_user()
         if not user:
             return 401, 'Silakan masuk dulu untuk memakai fitur ini.'
-        if feature == 'ai' and not payments_live():
+        if feature == 'ai' and not payments_live() and user['plan'] not in ('pro', 'business'):
+            # No gateway yet: paid members (their plan already covers AI credit)
+            # keep working; free waits until payments are set up.
             return 503, 'Fitur AI belum aktif di server ini (pembayaran belum disiapkan).'
         if feature not in user['entitlements']:
             plan = 'Business' if feature == 'exe' else 'Pro atau Business'
