@@ -928,6 +928,16 @@
   }
   $('#save-project').onclick=()=>exportBook('project');$('#export-html').onclick=()=>exportBook('html');
   $('#export-apk').onclick=()=>exportBook('apk');$('#export-exe').onclick=()=>exportBook('exe');
+  $('#organize-pages').onclick=async ()=>{
+    if(!sourcePdf){ error(L('Open a PDF first.','Buka PDF dulu.')); return; }
+    const raw=(($('#document-name')||{}).textContent||'').trim()||'document.pdf';
+    const name=/\.pdf$/i.test(raw)?raw:raw+'.pdf';
+    try{
+      loading(L('Preparing organize…','Menyiapkan organize…'));
+      const id=await FlipbookTransfer.save(sourcePdf, name);
+      location.href='converter.html?tool=organize-pdf&source='+encodeURIComponent(id);
+    }catch(cause){ error(L('Could not open organize: ','Tidak bisa membuka organize: ')+(cause&&cause.message||cause)); }
+  };
   fetch('/api/capabilities').then(async response=>{
     if(!response.ok)throw Error(L('The build service is not running','Layanan build belum berjalan'));
     buildConfig=await response.json();exportState();markLocked();

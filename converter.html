@@ -2277,6 +2277,21 @@ async function pdfToPpt(){
   downloadBlob(blob, source.name.replace(/\.pdf$/i,'')+'.pptx', {flipbookSource:source});
 }
 renderToolList(); renderHeader(); updateFileUI();
+// Flipbook handoff (tahap 1): flipbook.html? -> ?tool=organize-pdf&source=<id>.
+(async ()=>{
+  let source=null;
+  try{ source=new URLSearchParams(location.search).get('source'); }catch(e){}
+  if(!source || active!=='organize-pdf' || !window.FlipbookTransfer) return;
+  try{
+    const entry=await FlipbookTransfer.get(source);
+    if(!entry || !entry.blob) throw new Error(L('The book was not found. Open it from the flipbook again.','Buku tidak ditemukan. Buka lagi dari flipbook.'));
+    await FlipbookTransfer.remove(source);
+    history.replaceState(null,'',location.pathname+'?tool=organize-pdf');
+    const file=entry.blob instanceof File?entry.blob:new File([entry.blob], entry.name||'document.pdf', {type:entry.blob.type||'application/pdf'});
+    log('Flipbook handoff '+file.name);
+    handleFiles([file]);
+  }catch(e){ showError(e.message||String(e)); }
+})();
 // Language switched on another page or tab: redraw the texts.
 document.addEventListener('langchange', () => { renderToolList(); renderHeader(); updateFileUI(); });
 log('Ready. Style sudah sama kaya index.html — blob + card rounded-xl.');
