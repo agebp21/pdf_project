@@ -111,6 +111,7 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-06 | `5aeafe3` | sesi iki | Restart loop saben flip + snap (gambar meneng padahal nomer ganti). Backup `/root/pdf_project-code-backup-20261006a.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-06 | `2a840d2` | sesi iki | Heal mung pas macet (restart + snap). Backup `/root/pdf_project-code-backup-20261006b.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-06 | `e963b81` | sesi iki | Fallback statis: paint diverifikasi tiap flip, gagal = spread biasa tanpa engine. Backup `/root/pdf_project-code-backup-20261006c.tgz`. Verifikasi: capabilities 200. |
+| 2026-10-06 | `4b332bb` | sesi iki | Oyot flip macet ketemu: lazy render ngganti sak isi buku engine. Ndandani + regression test. Backup `/root/pdf_project-code-backup-20261006d.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `dcb5664` | sesi iki | Zoom bertingkat: klik gambar in/out, klik latar nutup. Backup `/root/pdf_project-code-backup-20261005o.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `3c829da` | sesi iki | Blank isi diklik = zoom (kosong = pilih file) + tombol Ganti gambar nang viewer. Backup `/root/pdf_project-code-backup-20261005p.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `2349881` | sesi iki | Zoom sekali: langsung gede, klik balik (tiering dibuang). Backup `/root/pdf_project-code-backup-20261005q.tgz`. Verifikasi: capabilities 200. |
