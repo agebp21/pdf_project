@@ -107,6 +107,7 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-05 | `73b3632` | sesi iki | Klik kartu = flip (gambar ora nyolong klik; zoom pindah double-click). Backup `/root/pdf_project-code-backup-20261005w.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `1301069` | sesi iki | Flip mati didandani: update() saben flip/rebuild + self-heal turnToPage + tes engine (oyot: geometri basi = flip meneng). Backup `/root/pdf_project-code-backup-20261005x.tgz`. Verifikasi: capabilities 200, 5 suite ijo. |
 | 2026-10-05 | `a55337b` | sesi iki | Watchdog flip macet (restart loop + snap instan). Backup `/root/pdf_project-code-backup-20261005y.tgz`. Verifikasi: capabilities 200. |
+| 2026-10-05 | `b32f424` | sesi iki | Telemetri flip (log dalan klik) + klik pasca-drag dipercoyo. Backup `/root/pdf_project-code-backup-20261005z.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `dcb5664` | sesi iki | Zoom bertingkat: klik gambar in/out, klik latar nutup. Backup `/root/pdf_project-code-backup-20261005o.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `3c829da` | sesi iki | Blank isi diklik = zoom (kosong = pilih file) + tombol Ganti gambar nang viewer. Backup `/root/pdf_project-code-backup-20261005p.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `2349881` | sesi iki | Zoom sekali: langsung gede, klik balik (tiering dibuang). Backup `/root/pdf_project-code-backup-20261005q.tgz`. Verifikasi: capabilities 200. |
