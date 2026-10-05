@@ -39,6 +39,10 @@
         <input id="pdf-file" type="file" accept="application/pdf,.pdf,.docx,.doc,.xlsx,.xls,.csv,.pptx,.ppt,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,image/*" multiple hidden>
         <p class="muted">PDF, Word, Excel, PowerPoint or images — or a link / Google Drive.</p>
         <p id="load-status" class="feedback" role="status">No document yet.</p>
+        <div id="draft-box" hidden>
+          <p class="muted" id="draft-text"></p>
+          <div style="display:flex;gap:.5rem"><button id="draft-resume" class="secondary" type="button">Continue</button><button id="draft-discard" class="secondary" type="button">Discard</button></div>
+        </div>
         <p class="archive-line"><span id="archive-status" class="archive-status" role="status"></span></p>
         <button type="button" id="save-library" class="secondary archive-link">📚 Open My Library</button>
         <!-- Editor animasi disembunyikan sementara atas permintaan pengguna. -->

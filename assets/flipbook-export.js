@@ -308,5 +308,37 @@
     });
   }
   const filename = title => (title.replace(/[^a-zA-Z0-9_-]+/g,'-').replace(/^-|-$/g,'').slice(0,80)||'flipbook');
-  globalThis.FlipbookExport={validate,versionImages,LANGS,scriptData,packageBook,packageSingleHtml,titleFile,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,upload,HOW_TO_OPEN};
+  // Draft autosave (this device only): the editor keeps its last document
+  // here so a refresh offers it back. Everything degrades silently when
+  // IndexedDB is missing, so callers never branch on capability.
+  const DRAFT_DB = 'pdf-tools-draft', DRAFT_KEY = 'open-book';
+  function draftDb() {
+    return new Promise((resolve, reject) => {
+      try {
+        const request = indexedDB.open(DRAFT_DB, 1);
+        request.onupgradeneeded = () => request.result.createObjectStore('drafts');
+        request.onsuccess = () => resolve(request.result);
+        request.onerror = () => reject(request.error || Error('idb'));
+      } catch (cause) { reject(cause); }
+    });
+  }
+  async function draftWithDb(mode, operation) {
+    let db = null;
+    try {
+      db = await draftDb();
+      return await new Promise((resolve, reject) => {
+        try {
+          const tx = db.transaction('drafts', mode);
+          const request = operation(tx.objectStore('drafts'));
+          tx.oncomplete = () => resolve(request.result === undefined ? true : request.result);
+          tx.onerror = tx.onabort = () => reject(tx.error || Error('idb'));
+        } catch (cause) { reject(cause); }
+      });
+    } catch (cause) { return null; }
+    finally { try { db && db.close(); } catch (cause) {} }
+  }
+  function draftSave(data) { return draftWithDb('readwrite', store => store.put(data, DRAFT_KEY)); }
+  function draftLoad() { return draftWithDb('readonly', store => store.get(DRAFT_KEY)); }
+  function draftClear() { return draftWithDb('readwrite', store => store.delete(DRAFT_KEY)); }
+  globalThis.FlipbookExport={validate,versionImages,LANGS,scriptData,packageBook,packageSingleHtml,titleFile,saveProject,readProject,download,filename,chooseSave,saveBlob,saveRemote,upload,draftSave,draftLoad,draftClear,HOW_TO_OPEN};
 })();

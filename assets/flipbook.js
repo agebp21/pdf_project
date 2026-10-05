@@ -212,6 +212,7 @@
       if (project) for (const [index,config] of Object.entries(project.overlays)) { overlays.set(Number(index),config); renderOverlay(Number(index),config); }
       $('#build-download').hidden = true;
       $('#document-name').textContent = name;
+      draftName = name; hideDraft(); saveDraft();
       $('#target-page').replaceChildren(...newElements.map((_, index) => {
         const option = document.createElement('option'); option.value = String(index); option.textContent = 'Page ' + (index + 1); return option;
       }));
@@ -703,6 +704,7 @@
   async function openSources(list) {
     const files = [...list];
     if (!files.length || opening || exporting || adding) return;
+    hideDraft();
     adding = true; $('#add-dialog').classList.add('is-busy');
     try {
       const first = files[0], ext = extOf(first.name), base = first.name.replace(/\.[^.]+$/, '') || 'document';
@@ -927,8 +929,22 @@
     } catch(cause) { progress(null); if(cause.name==='AbortError')status(L('Export cancelled.','Ekspor dibatalkan.'));else { status(L('Export failed: ','Ekspor gagal: ')+cause.message); error(cause.message); } }
     finally { exporting=false;exportState();$('#pdf-file').disabled=false;$('#overlay-fields').disabled=!book; }
   }
-  // Share link: upload the sealed single-file HTML so anyone with the
-  // link can read the book in a browser and download it for keeping.
+  // Draft autosave (this device only): reopening the editor after a
+  // refresh offers the last document back, so work is not lost. Notes,
+  // highlights and bookmarks already persist per book in localStorage;
+  // AI translations/editions do not — use My Library (or a project file)
+  // when those must survive. Storage lives in flipbook-export.js so the
+  // save/load round-trip is unit-testable.
+  let draftName = '', draftTimer = 0;
+  function hideDraft() { const box = $('#draft-box'); if (box) box.hidden = true; }
+  function saveDraft() {
+    if (!sourcePdf) return;
+    const titleEl = $('#export-title');
+    FlipbookExport.draftSave({blob: sourcePdf, name: draftName || 'document.pdf',
+      title: (titleEl && titleEl.value) || '', savedAt: Date.now()}).then(() => {});
+  }
+  function queueDraft() { clearTimeout(draftTimer); draftTimer = setTimeout(saveDraft, 4000); }
+  // Share link: upload the sealed single-file HTML so anyone with the  // link can read the book in a browser and download it for keeping.
   // Same bytes as "Save offline HTML", only the destination differs.
   // Share-link popup (top header button): the link text with a Copy button
   // below it. Stays usable on short screens where the sidebar is folded away.
@@ -1037,8 +1053,33 @@
     $('#add-link').requestSubmit();
   }
   const source = new URLSearchParams(location.search).get('source');
-  if (source) {
-    (async () => {
+  // A new title is worth keeping too (debounced into the draft).
+  const titleInput = $('#export-title');
+  if (titleInput) titleInput.addEventListener('input', queueDraft);
+  document.addEventListener('visibilitychange', () => { if (document.hidden) saveDraft(); });
+  // No incoming document (converter handoff, library, link): offer the
+  // autosaved draft back instead of a blank editor.
+  if (!fromLibrary && !handedLink && !source) {
+    FlipbookExport.draftLoad().then(draft => {
+      if (!draft || !draft.blob || sourcePdf) return;
+      const box = $('#draft-box'); if (!box) return;
+      const when = draft.savedAt ? new Date(draft.savedAt).toLocaleString() : '';
+      $('#draft-text').textContent = L(`Continue with “${draft.name}”${when ? ' (' + when + ')' : ''}? Unsaved edits other than notes are lost otherwise.`,
+        `Teruske “${draft.name}”${when ? ' (' + when + ')' : ''}? Edit-an sing durung kesimpen (saliyane catatan) bakal ilang.`);
+      $('#draft-resume').textContent = L('Continue', 'Teruske');
+      $('#draft-discard').textContent = L('Discard', 'Buang');
+      box.hidden = false;
+      $('#draft-resume').onclick = async () => {
+        hideDraft();
+        if (await openPdf(draft.blob, draft.name)) {
+          if (draft.title) $('#export-title').value = draft.title;
+          draftName = draft.name; saveDraft();
+        }
+      };
+      $('#draft-discard').onclick = async () => { hideDraft(); await FlipbookExport.draftClear(); };
+    });
+  }
+  if (source) {    (async () => {
       try {
         const entry = await FlipbookTransfer.get(source);
         if (!entry) throw new Error(L('The conversion result was not found. Choose a PDF or convert again.', 'Hasil konversi tidak ditemukan. Pilih PDF atau konversi ulang.'));

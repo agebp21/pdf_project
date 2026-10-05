@@ -1239,6 +1239,12 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Owner ("iyo bener"): flip pungkasan kudune blank, tapi halaman sing podo dobel/nempel. Analisis pungkasan: ghost dobel = kloningan flip nembe ngangkat (normal ~100ms); flip dijamin rampung ≤1,15 dtk nang vendor (wall-clock) dadi "macet" = spam-klik (saben klik teleport + restart, lembaran ora tau landing ayem) — apamanah pas zoom nang kode lawas (klik pojok mati → spam → wobble). Fix zoom (42f159c, live) + back-cover/centering (live) nutup kabeh rantai kui; kabeh mung mlebu LINK ANYAR.
 - Langkah: owner share ulang → tes klik alon (1 klik, enteni landing) tanpa zoom. Nek link anyar + klik alon isih dobel/nempel → cadangan: antrian flip (1 pending) kanggo tombol/keys + audit ulang. Link anyar durung ditampa (diminta).
 
+### 2026-10-06 — Draft autosave lokal: refresh ora ilang (request owner)
+- Masalah: editor nyimpen nang memori tok → refresh = import ulang. Saiki: dokumen + judul kesimpen otomatis nang IndexedDB browser (debounce + pas tab didelikke); bukak editor tanpa dokumen → tawaran "Teruske [nama, waktu]?" / Buang. Catatan/stabilo/bookmark melu balik dewe (localStorage per buku, wes ono); terjemahan AI/edisi ORA melu (gawe ulang utowo My Library — ditulis cetha nang tawaran + kode).
+- File: `assets/flipbook-export.js` (draftSave/Load/Clear, meneng yen IDB ora ono) + `flipbook.js` (hook bukak/judul/visibility + banner) + `flipbook.html` (kotak tawaran). Ganti dokumen = draft diganti; Buang = resik.
+- Tes: `tests/draft.test.cjs` anyar (round-trip, clear, meneng tanpa IDB); qa-editor/export/save-location ijo; sintaks + diff bersih; HTTP 200 + kotak kesaji. Alur klik banner durung otomatis (butuh PDF beneran); nunggu coba manual owner.
+- Durung commit/push/deploy.
+
 ### 2026-10-06 — Tombol Share nang header + popup link (request owner)
 - Owner: menu share nang ngisor kepotong nang monitor amba-resolusi cendhek. Saiki mung tombol **🔗 Share nang header ndhuwur** (sidebar ora diutak-atik): diklik → popup tengah layar (aman nang layar cendhek) → progress → teks link + tombol **Copy link** ngisore. Copy: clipboard + fallback select.
 - File: `flipbook.html` (tombol header + popup body-level), `assets/theme-cream.css` (gaya popup mbuntut add-dialog), `assets/flipbook.js` (popup open/fill/close, Esc/klik njobo nutup, status ganda sidebar+popup, markLocked mbuntut tombol header).
