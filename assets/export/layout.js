@@ -17,11 +17,14 @@
       if(hard)page.classList.add('book-board');
     });
   },
-  // An odd page count ends on a right-hand page with nothing to turn it
-  // over onto, so the book could never close. Like a real book, add a blank
-  // back cover (engine only; it is not a page of the document).
+  // Every book ends on a full spread: an odd page count ends on a
+  // right-hand page with nothing to turn it over onto (so the book could
+  // never close), and an even count ends on a lone left-hand page facing
+  // an empty dark slot — the turning sheet visibly vanishes upward into
+  // it at the end of the flip. Like a real book, add a blank back cover
+  // (engine only; it is not a page of the document).
   withBackCover(pages,className) {
-    if(pages.length<3||pages.length%2===0)return pages.slice();
+    if(pages.length<3)return pages.slice();
     const back=document.createElement('article');
     back.className=className+' book-back-blank';back.setAttribute('aria-label','Back cover');
     return pages.concat([back]);

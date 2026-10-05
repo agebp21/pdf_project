@@ -49,7 +49,7 @@ async function main(){
  const projectInput=w.document.querySelector('#project-file');
  Object.defineProperty(projectInput,'files',{configurable:true,value:[saved]});projectInput.dispatchEvent(new w.Event('change'));
  await until(test,()=>!projectInput.disabled,'restore project');
- assert.equal(w.engine.getPageCount(),8);assert.equal(w.document.querySelector('#reader-error').hidden,true);
+  assert.equal(w.engine.getPageCount(),9,'8 content pages + blank back cover so the last spread stays full');assert.equal(w.document.querySelector('#reader-error').hidden,true);
  w.document.querySelector('#export-html').click();await until(test,()=>files.size===2,'export HTML');
  await until(test,()=>!w.document.querySelector('#export-fields').disabled,'export unlock');
  // HTML export: ONE file named after the book, pages and data encrypted inside.

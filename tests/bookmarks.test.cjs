@@ -76,12 +76,16 @@ list.click();
 assert.equal(w.document.querySelectorAll('.book-marks').length, 1);
 localStorage.setItem(key, 'not json');
 assert.deepEqual(B.load(key), [], 'corrupt storage is ignored');
-// Odd page counts get a blank back cover so the book can close; even counts don't.
+// Every book ends on a full spread: odd counts get a blank back cover so
+// the book can close, and even counts get one so the last spread never
+// faces an empty dark slot (the turning sheet vanished upward into it).
 const L = global.FlipbookLayout;
 const make = n => Array.from({ length: n }, () => w.document.createElement('article'));
 const odd = make(11), sheets = L.withBackCover(odd, 'page');
 assert.equal(sheets.length, 12); assert.equal(sheets[11].className, 'page book-back-blank');
 assert.equal(odd.length, 11, 'document pages untouched');
-assert.equal(L.withBackCover(make(12), 'page').length, 12);
+const even = L.withBackCover(make(12), 'page');
+assert.equal(even.length, 13); assert.equal(even[12].className, 'page book-back-blank');
 assert.equal(L.withBackCover(make(1), 'page').length, 1, 'a single page stays alone');
+assert.equal(L.withBackCover(make(2), 'page').length, 2, 'too short for a back cover');
 console.log('PASS bookmarks: ribbons, left/right picker on spreads, list jump/remove, Escape, persistence per book, rebind without duplicates');
