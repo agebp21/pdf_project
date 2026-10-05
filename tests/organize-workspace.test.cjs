@@ -13,6 +13,20 @@ async function main(){
     window.qaTool=id=>{setTool(id);};
     window.qaViewer0=()=>{openOrgViewer(0);};
     window.qaStatic=()=>{organizeOrder=[0,1,2];organizeSelected=new Set(organizeOrder);orgStaticShow(1);return document.querySelectorAll('#orgBook .opf-page').length;};
+    // Lazy thumb renders must target our face divs, never box.children[]
+    // (after loadFromHTML those belong to the engine's wrapper).
+    window.qaFaceSwap=async ()=>{
+      organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);renderOrganizeGrid();
+      orgBook={getCurrentPageIndex:()=>0};
+      orgPrevCache.set('1|0','data:image/jpeg;base64,/9j/');
+      const box=document.getElementById('orgBook');
+      const wrap=document.createElement('div'); wrap.className='stf__wrapper';
+      [...box.children].forEach(c=>wrap.append(c)); box.append(wrap);
+      await orgRenderVisible();
+      orgBook=null;
+      return box.querySelector('.stf__wrapper')!==null
+        && box.querySelectorAll('.stf__wrapper img').length===1;
+    };
     window.qaPreview=()=>{organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);renderOrganizeGrid();return document.getElementById('orgReader').className;};    window.qaBlank=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};
     window.qaFill=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,'blank-1'];organizeSelected=new Set(organizeOrder);orgBlankImg={'blank-1':'data:image/jpeg;base64,/9j/'};renderOrganizeGrid();return document.getElementById('organizeGrid').innerHTML.includes('data:image/jpeg');};`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
@@ -69,6 +83,8 @@ async function main(){
   // Static fallback (no engine): plain spread + label follow the position.
   assert.equal(w.qaStatic(),2,'static spread renders two pages');
   assert.equal(w.document.getElementById('orgPageLabel').textContent,'2 / 3','static label follows');
+  // Lazy renders swap into our faces even after the engine took the box.
+  assert.equal(await w.qaFaceSwap(),true,'engine wrapper survives lazy renders');
   w.close();
   console.log('PASS organize workspace: empty state, sidebar, no duplicate panel');
 }

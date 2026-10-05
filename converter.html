@@ -930,7 +930,7 @@ window.orgWsOver=(e)=>{ e.preventDefault(); };
 window.orgWsDrop=(e)=>{ e.preventDefault(); if(e.dataTransfer&&e.dataTransfer.files.length){ log('Drop '+e.dataTransfer.files.length+' files'); handleFiles(e.dataTransfer.files); } };
 // Mini flipbook preview: the current order as a real flippable book.
 // Clicking a card selects it AND flips the preview there.
-let orgBook=null, orgPrevCache=new Map(), orgReaderSig='', orgBuildSeq=0, orgEngineLoading=null;
+let orgBook=null, orgPrevCache=new Map(), orgReaderSig='', orgBuildSeq=0, orgEngineLoading=null, orgFaceEls=[];
 function orgBookEngine(){
   if(window.St&&window.St.PageFlip) return Promise.resolve();
   if(!orgEngineLoading) orgEngineLoading=new Promise((res,rej)=>{
@@ -955,7 +955,8 @@ function orgPreviewFace(code,pos){
 function orgReaderFaces(box){
   box.innerHTML='';
   const frag=document.createDocumentFragment();
-  organizeOrder.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.dataset.code=code; d.append(orgPreviewFace(code,pos)); frag.append(d); });
+  orgFaceEls=[];
+  organizeOrder.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.dataset.code=code; d.append(orgPreviewFace(code,pos)); frag.append(d); orgFaceEls.push(d); });
   box.append(frag);
 }
 // Paint check: do the visible book sheets actually show the current spread?
@@ -1092,15 +1093,15 @@ async function orgReaderBuild(){
   if(myBuild!==orgBuildSeq) return;
   // Prefer the engine's in-place update: destroy() removes #orgBook itself.
   if(orgBook){
-    const liveBox=document.getElementById('orgBook');
-    if(liveBox){
-      orgReaderFaces(liveBox);
+    orgReaderFaces(document.getElementById('orgBook')||document.createElement('div'));
+    if(!document.getElementById('orgBook')){ try{orgBook.destroy();}catch(_){} orgBook=null; }
+    else{
       try{
-        orgBook.updateFromHtml(Array.from(liveBox.children));
+        orgBook.updateFromHtml(orgFaceEls);
         orgBook.update();
         orgPaintReaderLabel(); orgRenderVisible(); return;
       }catch(e){ try{orgBook.destroy();}catch(_){} orgBook=null; }
-    }else orgBook=null;
+    }
   }
   let box=document.getElementById('orgBook');
   if(!box){ box=document.createElement('div'); box.id='orgBook'; wrap.append(box); }
@@ -1136,8 +1137,10 @@ async function orgRenderVisible(){
     const had=orgPrevCache.has(orgPrevKey(code));
     const url=await orgRenderPage(code);
     if(url==null||had) continue;
-    const box=document.getElementById('orgBook'), cell=box&&box.children[pos];
-    if(cell&&organizeOrder[pos]===code){
+    // NB: never touch box.children[] here — after loadFromHTML those are the
+    // engine's wrapper, not our faces (replacing one would nuke the book).
+    const cell=orgFaceEls[pos];
+    if(cell&&cell.isConnected&&organizeOrder[pos]===code){
       const img=document.createElement('img'); img.src=url; img.draggable=false; img.alt='';
       cell.replaceChildren(img);
     }
