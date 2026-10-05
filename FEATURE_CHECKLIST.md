@@ -37,6 +37,7 @@ Diperbarui: 29 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 | [x] | PDF to Markdown | Judul/daftar/tabel terdeteksi dari font dan kolom; mock builder OK; browser E2E belum. |
 | [x] | Validasi / error | Range salah, crop kosong, watermark terlalu besar, input PDF rusak, tool tak tersedia; pesan error tetap terlihat. |
 | [x] | Penghapusan pemotongan konten | Batas buatan teks/baris/kolom sudah dihapus. Tes ekstraksi >300 baris, teks panjang, dan >6 kolom lolos. Memori, format output, print area, dan timeout proses Office tetap berlaku. |
+| [x] | Share link flipbook | 6 Okt: Pro/Business upload HTML tersegel → `/s/<id>` publik (buku main di browser + tombol ⬇ Download, `?dl=1` attachment); gate 401/402/403, tolak non-buku 400/413, 404, kuota paket, hapus hanya pemilik. `tests/test_share.py` + E2E HTTP server lokal. Tombol Share 1-klik di editor belum diuji di browser asli. |
 
 ## Sudah ada, belum boleh dianggap tuntas
 

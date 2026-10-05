@@ -43,6 +43,7 @@ except ImportError:          # optional: pip install truststore
 
 import accounts
 import library
+import share
 import messages_en
 import free_translate
 import book_seal
@@ -188,6 +189,33 @@ def get_library():
         if LIBRARY is None or LIBRARY.store is not store:
             LIBRARY = library.Library(store, store.path.parent)
         return LIBRARY
+
+
+SHARE = None
+
+
+def get_share():
+    """Public share links, next to the account database (same SQLite file)."""
+    global SHARE
+    store = get_accounts()
+    with ACCOUNTS_LOCK:
+        if SHARE is None or SHARE.store is not store:
+            SHARE = share.Share(store, store.path.parent)
+        return SHARE
+
+
+# Floating download button injected into a served share page (no script,
+# only HTML+CSS, so the sealed book's CSP still holds).
+SHARE_BAR = ('<div id="mf-share-dl" style="position:fixed;right:14px;bottom:14px;z-index:2147483647;'
+             'font-family:system-ui,sans-serif">'
+             '<a href="?dl=1" download style="display:inline-block;background:#1A3C34;color:#fff;font-weight:800;'
+             'font-size:14px;padding:12px 18px;border-radius:999px;text-decoration:none;'
+             'box-shadow:0 8px 20px rgba(0,0,0,.35)">&#11015; Download</a></div>')
+
+
+def share_filename(title):
+    safe = re.sub(r'[^A-Za-z0-9._ -]+', '_', (title or '').strip())[:80] or 'flipbook'
+    return safe + '.html'
 
 
 def payments_paused():
@@ -2023,6 +2051,67 @@ class Handler(SimpleHTTPRequestHandler):
             store.delete(user, book_id)
         self.send_json(200, {'ok': True, 'usage': store.usage(user)})
 
+    def share_member(self):
+        user = self.current_user()
+        if not user:
+            raise accounts.AccountError(401, 'Silakan masuk dulu untuk membagikan buku.')
+        return user
+
+    def share_get(self, path):
+        user, store = self.share_member(), get_share()
+        if path == '/api/share':
+            self.send_json(200, {'links': store.mine(user), 'usage': store.usage(user)})
+            return
+        self.send_json(404, {'error': 'Tidak ditemukan.'})
+
+    def share_post(self, path):
+        user, store = self.share_member(), get_share()
+        if path == '/api/share':
+            denied = self.entitlement_error('export')
+            if denied:
+                self.send_json(denied[0], {'error': denied[1]})
+                return
+            if not secrets.compare_digest(self.headers.get('X-Build-Token', ''), TOKEN):
+                self.send_json(403, {'error': 'Sesi build tidak valid. Refresh halaman.'})
+                return
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+            except ValueError:
+                size = -1
+            if not 0 < size <= share.MAX_SHARE_FILE:
+                self.send_json(413, {'error': 'Ukuran file tidak valid atau terlalu besar.'})
+                return
+            title = unquote(self.headers.get('X-Title', ''))
+            try:
+                link_id, clean = store.create(user, title, size)
+            except accounts.AccountError as cause:
+                self.send_json(cause.status, {'error': str(cause)})
+                return
+            try:
+                self.connection.settimeout(300)
+                with store.tmp_path(link_id).open('wb') as output:
+                    remaining = size
+                    while remaining:
+                        chunk = self.rfile.read(min(1024 * 1024, remaining))
+                        if not chunk:
+                            raise accounts.AccountError(400, 'Upload tidak lengkap.')
+                        output.write(chunk)
+                        remaining -= len(chunk)
+                store.finalize(link_id, size)
+            except accounts.AccountError as cause:
+                store.discard(link_id)
+                self.send_json(cause.status, {'error': str(cause)})
+                return
+            self.send_json(200, {'id': link_id, 'url': '/s/' + link_id, 'title': clean,
+                                 'usage': store.usage(user)})
+            return
+        match = re.fullmatch(r'/api/share/([0-9a-f]{32})/delete', path)
+        if not match:
+            self.send_json(404, {'error': 'Tidak ditemukan.'})
+            return
+        store.remove(user, match[1])
+        self.send_json(200, {'ok': True, 'usage': store.usage(user)})
+
     def account_get(self, path):
         store = get_accounts()
         if path == '/api/auth/me':
@@ -2362,6 +2451,12 @@ class Handler(SimpleHTTPRequestHandler):
             except accounts.AccountError as cause:
                 self.send_json(cause.status, {'error': str(cause)})
             return
+        if path == '/api/share' or path.startswith('/api/share/'):
+            try:
+                self.share_get(path)
+            except accounts.AccountError as cause:
+                self.send_json(cause.status, {'error': str(cause)})
+            return
         if path == '/api/journals':
             self.journals_route()
             return
@@ -2415,6 +2510,27 @@ class Handler(SimpleHTTPRequestHandler):
                 self.end_headers()
                 with file.open('rb') as source:
                     shutil.copyfileobj(source, self.wfile)
+            return
+        match = re.fullmatch(r'/s/([0-9a-f]{32})', path)
+        if match:
+            # Public share link: anyone with the URL reads the book, no login.
+            try:
+                title, data = get_share().page(match[1])
+            except accounts.AccountError as cause:
+                self.send_json(cause.status, {'error': str(cause)})
+                return
+            if (parse_qs(urlsplit(self.path).query).get('dl') or [''])[0]:
+                self.send_file_bytes(data, 'text/html', share_filename(title))
+                return
+            head, sep, tail = data.rpartition(b'</body>')
+            page = (head + SHARE_BAR.encode() + sep + tail) if sep else (data + SHARE_BAR.encode())
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            # One id = one immutable book: caches may keep it for a year.
+            self.send_header('Cache-Control', 'public, max-age=31536000, immutable')
+            self.send_header('Content-Length', str(len(page)))
+            self.end_headers()
+            self.wfile.write(page)
             return
         relative = path.lstrip('/') or 'index.html'
         file = (ROOT / relative).resolve()
@@ -2577,6 +2693,12 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path.startswith('/api/library/'):
             try:
                 self.library_post(self.path)
+            except accounts.AccountError as cause:
+                self.send_json(cause.status, {'error': str(cause)})
+            return
+        if self.path == '/api/share' or self.path.startswith('/api/share/'):
+            try:
+                self.share_post(self.path)
             except accounts.AccountError as cause:
                 self.send_json(cause.status, {'error': str(cause)})
             return

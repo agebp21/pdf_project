@@ -820,7 +820,7 @@
       'Ekspor ini butuh paket ' + (plan === 'Business' ? 'Business' : 'Pro atau Business') + '. Preview dan simpan proyek tetap gratis. '), link);
   }
   function markLocked() {
-    for (const [id, target] of [['#export-html','html'],['#export-apk','apk'],['#export-exe','exe']]) {
+    for (const [id, target] of [['#export-html','html'],['#export-apk','apk'],['#export-exe','exe'],['#share-link','html']]) {
       const button = $(id), plan = lockedFor(target, buildConfig);
       if (!button.dataset.label) button.dataset.label = button.textContent;
       button.textContent = button.dataset.label + (plan ? ' · ' + plan.toUpperCase() : '');
@@ -926,8 +926,44 @@
     } catch(cause) { progress(null); if(cause.name==='AbortError')status(L('Export cancelled.','Ekspor dibatalkan.'));else { status(L('Export failed: ','Ekspor gagal: ')+cause.message); error(cause.message); } }
     finally { exporting=false;exportState();$('#pdf-file').disabled=false;$('#overlay-fields').disabled=!book; }
   }
+  // Share link: upload the sealed single-file HTML so anyone with the
+  // link can read the book in a browser and download it for keeping.
+  // Same bytes as "Save offline HTML", only the destination differs.
+  async function shareBook(){
+    if(!sourcePdf||opening||exporting) return;
+    if(!buildConfig){ try{ const r=await fetch('/api/capabilities',{cache:'no-store'}); if(r.ok){ buildConfig=await r.json(); markLocked(); } }catch(e){} }
+    const plan=lockedFor('html', buildConfig);
+    if(plan){ showPaywall(plan); return; }
+    if(!buildConfig||!buildConfig.token){ error(L('Please sign in to share a book.','Silakan masuk dulu untuk membagikan buku.')); return; }
+    exporting=true; exportState(); $('#pdf-file').disabled=true; $('#overlay-fields').disabled=true;
+    error(''); $('#share-box').hidden=true;
+    const status=message=>{ $('#export-status').textContent=message; };
+    const step=(from,to)=>fraction=>progress(from+(to-from)*Math.max(0,Math.min(1,fraction)));
+    try{
+      status(L('Preparing the pages…','Menyiapkan halaman…')); await pagesReady;
+      const data=model();
+      const single=await FlipbookExport.packageSingleHtml(data, allPictures(data), (message,fraction)=>{ status(message); if(fraction!==undefined) step(0,.8)(fraction); });
+      status(L('Uploading the book for sharing…','Mengunggah buku untuk dibagikan…'));
+      const sent=await FlipbookExport.upload('/api/share', single,
+        {'Content-Type':'text/html','X-Build-Token':buildConfig.token,'X-Title':encodeURIComponent(data.title||'Interactive book')}, step(.8,.98));
+      if(!sent.ok) throw Error((sent.data&&sent.data.error)||L('Sharing failed.','Berbagi gagal.'));
+      const url=location.origin+sent.data.url;
+      $('#share-url').value=url; $('#share-box').hidden=false;
+      $('#share-status').textContent=L('Link ready — send it anywhere (chat, Drive, email). The book plays in the browser and can be downloaded there.',
+        'Tautan siap — kirim ke mana saja (chat, Drive, email). Buku langsung diputar di browser dan bisa diunduh di sana.');
+      progress(1); status(L('Share link ready.','Tautan berbagi siap.'));
+    }catch(cause){ progress(null); status(L('Sharing failed: ','Berbagi gagal: ')+cause.message); error(cause.message); }
+    finally{ exporting=false; exportState(); $('#pdf-file').disabled=false; $('#overlay-fields').disabled=!book; }
+  }
+  $('#share-copy').onclick=async ()=>{
+    const input=$('#share-url'); if(!input.value) return;
+    try{ await navigator.clipboard.writeText(input.value); }
+    catch(e){ input.select(); try{ document.execCommand('copy'); }catch(_){} }
+    $('#share-status').textContent=L('Link copied.','Tautan disalin.');
+  };
   $('#save-project').onclick=()=>exportBook('project');$('#export-html').onclick=()=>exportBook('html');
   $('#export-apk').onclick=()=>exportBook('apk');$('#export-exe').onclick=()=>exportBook('exe');
+  $('#share-link').onclick=()=>shareBook();
   $('#organize-pages').onclick=async ()=>{
     if(!sourcePdf){ error(L('Open a PDF first.','Buka PDF dulu.')); return; }
     const raw=(($('#document-name')||{}).textContent||'').trim()||'document.pdf';

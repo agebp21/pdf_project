@@ -178,6 +178,14 @@ EXACT = {
     'Jenis ekspor tidak dikenal.': 'Unknown export type.',
     'File ekspor terlalu besar untuk arsip.': 'The export file is too large for the library.',
     'Ekspor tidak ditemukan.': 'Export not found.',
+    # --- Share link
+    'Silakan masuk dulu untuk membagikan buku.': 'Please sign in to share a book.',
+    'Batas tautan berbagi paket ini sudah penuh. Hapus tautan lama atau upgrade paket.':
+        "This plan's share-link limit is full. Delete old links or upgrade your plan.",
+    'Ruang berbagi paket ini sudah penuh. Hapus tautan lama atau upgrade paket.':
+        "This plan's share space is full. Delete old links or upgrade your plan.",
+    'File share bukan buku flipbook yang valid.': 'The shared file is not a valid flipbook.',
+    'Tautan berbagi tidak ditemukan.': 'Share link not found.',
 }
 
 PATTERNS = [

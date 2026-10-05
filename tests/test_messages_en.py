@@ -23,7 +23,7 @@ INDONESIAN = re.compile(r'\b(tidak|belum|gagal|silakan|halaman|terlalu|ditemukan
 class MessagesTests(unittest.TestCase):
     def test_every_fixed_message_has_english(self):
         missing = []
-        for name in ('server.py', 'accounts.py', 'library.py'):
+        for name in ('server.py', 'accounts.py', 'library.py', 'share.py'):
             for match in MESSAGE.finditer((ROOT / name).read_text(encoding='utf-8')):
                 text = match.group(1)[1:-1]
                 if INDONESIAN.search(text) and '{' not in text and not text.endswith(': ') and messages_en.english(text) == text:

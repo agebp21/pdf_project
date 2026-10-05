@@ -62,11 +62,17 @@
           <button id="export-apk" class="secondary" type="button" disabled>Build Android APK</button>
           <button id="export-exe" class="secondary" type="button" disabled>Build Windows EXE (.zip)</button>
           <button id="organize-pages" class="secondary" type="button">Organize pages…</button>
+          <button id="share-link" class="secondary" type="button">🔗 Share link…</button>
         </fieldset>
         <button id="open-project" class="secondary" type="button" onclick="document.getElementById('project-file').click()">Open project… (.smflipbook)</button>
         <input id="project-file" type="file" accept=".smflipbook,.sm-flipbook" hidden>
         <div id="export-progress" class="export-progress" role="progressbar" aria-label="Export progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="export-progress-track"><span></span></div><small id="export-percent">0%</small></div>
         <p id="export-status" class="feedback" role="status"></p>
+        <div id="share-box" hidden>
+          <p class="muted">Anyone with the link can read and download this book. Don't share private documents.</p>
+          <div style="display:flex;gap:.5rem"><input id="share-url" readonly style="flex:1;min-width:0" onclick="this.select()"><button id="share-copy" class="secondary" type="button">Copy</button></div>
+          <p id="share-status" class="feedback" role="status"></p>
+        </div>
         <a id="build-download" class="secondary" style="text-align:center" hidden download>Download build result</a>
       </aside>
       <section class="preview" aria-label="Book from PDF">
