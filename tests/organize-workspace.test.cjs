@@ -12,6 +12,7 @@ async function main(){
     window.qaClear=()=>{clearFiles();};
     window.qaTool=id=>{setTool(id);};
     window.qaViewer0=()=>{openOrgViewer(0);};
+    window.qaStatic=()=>{organizeOrder=[0,1,2];organizeSelected=new Set(organizeOrder);orgStaticShow(1);return document.querySelectorAll('#orgBook .opf-page').length;};
     window.qaPreview=()=>{organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);renderOrganizeGrid();return document.getElementById('orgReader').className;};    window.qaBlank=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};
     window.qaFill=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,'blank-1'];organizeSelected=new Set(organizeOrder);orgBlankImg={'blank-1':'data:image/jpeg;base64,/9j/'};renderOrganizeGrid();return document.getElementById('organizeGrid').innerHTML.includes('data:image/jpeg');};`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
@@ -65,6 +66,9 @@ async function main(){
   assert.ok(!w.document.getElementById('orgReader').classList.contains('is-hidden'),'reader shows with files');
   w.qaPreview();
   assert.ok(w.document.getElementById('orgBook'),'reader book element present');
+  // Static fallback (no engine): plain spread + label follow the position.
+  assert.equal(w.qaStatic(),2,'static spread renders two pages');
+  assert.equal(w.document.getElementById('orgPageLabel').textContent,'2 / 3','static label follows');
   w.close();
   console.log('PASS organize workspace: empty state, sidebar, no duplicate panel');
 }

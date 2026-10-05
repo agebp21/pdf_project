@@ -121,6 +121,8 @@
   #orgBook{margin:0 auto}
   #orgBook .opf-page{background:#fff;display:grid;place-items:center;overflow:hidden}
   #orgBook .opf-page img{width:100%;height:100%;object-fit:contain;background:#fff}
+  .org-staticrow{display:flex;gap:8px;justify-content:center;max-width:640px;margin:0 auto}
+  .org-staticrow .opf-page{flex:1;min-width:0;aspect-ratio:3/4}
   .opf-blank{background:#fff;width:100%;height:100%}
   .opf-ph{color:#9ca3af;font-size:12px}
   .org-reader-empty{text-align:center;color:#9ca3af;font-size:12px;padding:1rem}
@@ -431,7 +433,7 @@ function renderHeader(){
   $('#options').classList.toggle('org-full', t.id==='organize-pdf' && !comingSoonName);
   // Options rebuilt: any live preview book points at dead DOM.
   try{ if(orgBook) orgBook.destroy(); }catch(e){}
-  orgBook=null; orgReaderSig='';
+  orgBook=null; orgReaderSig=''; orgStatic=false;
   // Unbuilt catalog tools: clear "Coming soon" state and no upload area,
   // so nobody converts with the wrong tool by accident.
   $('#drop').classList.toggle('hidden', !!comingSoonName);
@@ -794,6 +796,7 @@ function renderOrganizeGrid(){
   }).join('');
   orgObserveThumbs();
   const sig=organizeOrder.join('|')+'#'+Object.keys(organizeRotations).sort().join(',')+'#'+Object.keys(orgBlankImg).sort().join(',');
+  if(orgStatic){ orgStaticRender(); return; }
   if(sig!==orgReaderSig||!orgBook){ orgReaderSig=sig; orgReaderBuild(); }
 }
 const orgName=i=>typeof i==='number'?(i+1):'blank';
@@ -952,14 +955,93 @@ function orgPreviewFace(code,pos){
 function orgReaderFaces(box){
   box.innerHTML='';
   const frag=document.createDocumentFragment();
-  organizeOrder.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.append(orgPreviewFace(code,pos)); frag.append(d); });
+  organizeOrder.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.dataset.code=code; d.append(orgPreviewFace(code,pos)); frag.append(d); });
   box.append(frag);
+}
+// Paint check: do the visible book sheets actually show the current spread?
+// (Proven failure mode: the index moves on while the picture stays frozen.)
+function orgPaintOk(){
+  try{
+    const box=document.getElementById('orgBook'); if(!box||!orgBook) return true;
+    let cur=0; try{cur=orgBook.getCurrentPageIndex();}catch(e){return true;}
+    let ori='landscape'; try{ori=orgBook.getOrientation();}catch(e){}
+    const start=ori==='portrait'?cur:cur-(cur%2);
+    const want=new Set([start,start+1].filter(i=>i>=0&&i<organizeOrder.length).map(i=>String(organizeOrder[i])));
+    if(!want.size) return true;
+    let painted=false;
+    box.querySelectorAll('.stf__item').forEach(el=>{
+      let vis=false;
+      try{ vis=getComputedStyle(el).display!=='none'; }catch(e){ vis=el.style.display!=='none'; }
+      if(vis&&el.dataset&&want.has(String(el.dataset.code))) painted=true;
+    });
+    return painted;
+  }catch(e){ return true; }
+}
+// Last-resort reader: plain side-by-side spread, zero engine dependency.
+let orgStatic=false, orgStaticIdx=0;
+function orgStaticSpread(){
+  const wrap=document.getElementById('orgReader');
+  const narrow=wrap?(wrap.clientWidth||600)<520:true;
+  const idx=Math.max(0,Math.min(organizeOrder.length-1,orgStaticIdx));
+  return narrow?[idx]:[idx-(idx%2),idx-(idx%2)+1].filter(i=>i>=0&&i<organizeOrder.length);
+}
+async function orgStaticRender(){
+  const box=document.getElementById('orgBook'); if(!box) return;
+  box.innerHTML='';
+  const row=document.createElement('div'); row.className='org-staticrow';
+  for(const pos of orgStaticSpread()){
+    const code=organizeOrder[pos];
+    const cell=document.createElement('div'); cell.className='opf-page'; cell.dataset.code=code;
+    cell.append(orgPreviewFace(code,pos)); row.append(cell);
+  }
+  box.append(row);
+  orgPaintReaderLabel();
+  const idxs=orgStaticSpread();
+  for(let k=0;k<idxs.length;k++){
+    const pos=idxs[k], code=organizeOrder[pos];
+    const url=await orgRenderPage(code);
+    if(url==null) continue;
+    const cell=row.children[k];
+    if(cell&&organizeOrder[pos]===code){
+      const img=document.createElement('img'); img.src=url; img.draggable=false; img.alt='';
+      cell.replaceChildren(img);
+    }
+  }
+}
+function orgStaticShow(pos){
+  orgStatic=true;
+  orgStaticIdx=Math.max(0,Math.min(organizeOrder.length-1,pos==null?orgStaticIdx:pos));
+  if(orgBook){ try{orgBook.destroy();}catch(e){} orgBook=null; }
+  const box=document.getElementById('orgBook');
+  if(box) orgStaticRender();
+}
+async function orgRenderPage(code){
+  if(typeof code!=='number') return null;
+  if(orgPrevCache.has(orgPrevKey(code))) return orgPrevCache.get(orgPrevKey(code));
+  const doc=orgPdfDocs[Math.floor(code/1000000)];
+  if(!doc) return null;
+  try{
+    const pg=await doc.getPage(code%1000000+1);
+    const base=pg.getViewport({scale:1});
+    const rot=(organizeRotations[code]||0);
+    const v=pg.getViewport({scale:Math.min(2.2,560/base.width), rotation:(base.rotation+rot)%360});
+    const c=document.createElement('canvas'); c.width=Math.ceil(v.width); c.height=Math.ceil(v.height);
+    await pg.render({canvasContext:c.getContext('2d'), viewport:v}).promise;
+    pg.cleanup();
+    const url=c.toDataURL('image/jpeg',0.8);
+    if(orgPrevCache.size>600) orgPrevCache.clear();
+    orgPrevCache.set(orgPrevKey(code),url);
+    return url;
+  }catch(e){ return null; }
 }
 // Programmatic jump with self-heal: flip() animates, but if the engine
 // swallows it (it never throws), fall back to an instant turnToPage.
 function orgFlipTo(pos){
-  if(!orgBook) return;
   pos=Math.max(0,Math.min(organizeOrder.length-1,pos));
+  if(organizeOrder[pos]===undefined) return;
+  orgStaticIdx=pos;
+  if(orgStatic){ orgStaticRender(); return; }
+  if(!orgBook) return;
   let cur=-1;
   // Recalculate from live layout first: flips silently die on stale geometry.
   try{ orgBook.update(); cur=orgBook.getCurrentPageIndex(); }catch(e){ return; }
@@ -967,7 +1049,7 @@ function orgFlipTo(pos){
   log('Org flip '+cur+' -> '+pos);
   try{orgBook.flip(pos);}catch(e){ log('Org flip threw: '+(e&&e.message||e)); }
   setTimeout(()=>{ try{
-    if(!orgBook||organizeOrder[pos]===undefined) return;
+    if(!orgBook||organizeOrder[pos]===undefined||orgStatic) return;
     // Still mid-flip long after it should have settled: revive the loop.
     if(orgBook.getState()==='flipping'){ try{orgBook.getRender().start();}catch(e){} return; }
     // Settled but never moved: revive the loop, then snap there instantly.
@@ -976,6 +1058,11 @@ function orgFlipTo(pos){
       log('Org snap '+pos);
       try{orgBook.turnToPage(pos);}catch(e){}
     }
+    // Index moved (or snapped) but the picture may still be frozen:
+    // verify the paint, fall back to a static spread if it lies.
+    setTimeout(()=>{ try{
+      if(!orgStatic&&orgBook&&!orgPaintOk()){ log('Org static fallback'); orgStaticShow(orgStaticIdx); }
+    }catch(e){} },1500);
   }catch(e){} },2500);
 }
 async function orgReaderBuild(){
@@ -1024,11 +1111,15 @@ async function orgReaderBuild(){
   }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau ora tersedia')+'</p>'; return; }
   orgBook.on('flip',()=>{ orgPaintReaderLabel(); try{ log('Org at '+orgBook.getCurrentPageIndex()); }catch(e){} orgRenderVisible(); });
   orgPaintReaderLabel(); orgRenderVisible();
+  setTimeout(()=>{ try{
+    if(!orgStatic&&orgBook&&!orgPaintOk()){ log('Org static fallback'); orgStaticShow(orgStaticIdx); }
+  }catch(e){} },2000);
 }
 function orgPaintReaderLabel(){
   const el=document.getElementById('orgPageLabel'); if(!el) return;
   let cur=1;
-  if(orgBook){ try{cur=orgBook.getCurrentPageIndex()+1;}catch(e){} }
+  if(orgStatic) cur=orgStaticIdx+1;
+  else if(orgBook){ try{cur=orgBook.getCurrentPageIndex()+1;}catch(e){} }
   el.textContent=cur+' / '+organizeOrder.length;
 }
 function orgVisibleIdx(){
@@ -1040,34 +1131,25 @@ function orgVisibleIdx(){
 }
 async function orgRenderVisible(){
   if(!orgBook) return;
-  if(orgPrevCache.size>600) orgPrevCache.clear();
   for(const pos of orgVisibleIdx()){
-    const code=organizeOrder[pos]; if(code===undefined||typeof code!=='number') continue;
-    if(orgPrevCache.has(orgPrevKey(code))) continue;
-    const doc=orgPdfDocs[Math.floor(code/1000000)];
-    if(!doc) continue;
-    try{
-      const pg=await doc.getPage(code%1000000+1);
-      const base=pg.getViewport({scale:1});
-      const rot=(organizeRotations[code]||0);
-      const v=pg.getViewport({scale:Math.min(2.2,560/base.width), rotation:(base.rotation+rot)%360});
-      const c=document.createElement('canvas'); c.width=Math.ceil(v.width); c.height=Math.ceil(v.height);
-      await pg.render({canvasContext:c.getContext('2d'), viewport:v}).promise;
-      pg.cleanup();
-      const url=c.toDataURL('image/jpeg',0.8);
-      orgPrevCache.set(orgPrevKey(code),url);
-      const box=document.getElementById('orgBook'), cell=box&&box.children[pos];
-      if(cell&&organizeOrder[pos]===code){
-        const img=document.createElement('img'); img.src=url; img.draggable=false; img.alt='';
-        cell.replaceChildren(img);
-      }
-    }catch(e){}
+    const code=organizeOrder[pos]; if(code===undefined) continue;
+    const had=orgPrevCache.has(orgPrevKey(code));
+    const url=await orgRenderPage(code);
+    if(url==null||had) continue;
+    const box=document.getElementById('orgBook'), cell=box&&box.children[pos];
+    if(cell&&organizeOrder[pos]===code){
+      const img=document.createElement('img'); img.src=url; img.draggable=false; img.alt='';
+      cell.replaceChildren(img);
+    }
   }
   orgPaintReaderLabel();
 }
 window.orgReaderGo=(dir)=>{
-  if(!orgBook) return;
-  let cur=0; try{cur=orgBook.getCurrentPageIndex();}catch(e){}
+  let cur=orgStatic?orgStaticIdx:0;
+  if(!orgStatic){
+    if(!orgBook) return;
+    try{cur=orgBook.getCurrentPageIndex();}catch(e){return;}
+  }
   orgFlipTo(cur+dir);
 };
 window.orgRotateOne=(idx)=>{ organizeRotations[idx]=((organizeRotations[idx]||0)+90)%360; if(!organizeRotations[idx]) delete organizeRotations[idx]; renderOrganizeGrid(); };
@@ -1102,6 +1184,7 @@ function updateFileUI({preserveError=false}={}){
       organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map(); orgBlankSeq=0; orgBlankImg={}; orgBlankTarget=null;
       for(const d of orgPdfDocs){ try{ const r=d&&d.destroy(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
       orgPdfDocs=[];
+      orgStatic=false;
       orgReaderClose();
       const wr=document.getElementById('orgReader'); if(wr) wr.classList.add('is-hidden');
       const grid0=document.getElementById('organizeGrid'); if(grid0) grid0.innerHTML='';
