@@ -830,15 +830,12 @@ window.openOrgViewer=async (pos)=>{
         <button type="button" id="orgViewerDel" class="px-3 py-1 rounded-full border text-red-600">${L('Delete','Hapus')}</button>
         <button type="button" data-close class="px-3 py-1 rounded-full border" aria-label="${L('Close','Tutup')}">✕</button>
       </div>
-      <div id="orgViewerPage" title="${L('Click image to zoom in/out, background to go back','Klik gambar untuk zoom in/out, latar untuk kembali')}" class="flex-1 min-h-0 w-full flex items-center justify-center overflow-auto cursor-zoom-out"></div>`;
+      <div id="orgViewerPage" title="${L('Click to go back','Klik untuk kembali')}" class="flex-1 min-h-0 w-full flex items-center justify-center overflow-auto cursor-zoom-out"></div>`;
     document.body.appendChild(box);
     box.addEventListener('click', e=>{
       if(e.target.closest('[data-close]')){ closeOrgViewer(); return; }
       const go=e.target.closest('[data-go]'); if(go){ openOrgViewer(orgViewerPos + +go.dataset.go); return; }
-      if(e.target.closest('#orgViewerPage')){
-        if(e.target.closest('canvas,img')) orgZoomToggle();
-        else closeOrgViewer();
-      }else if(e.target===box) closeOrgViewer();
+      if(e.target.closest('#orgViewerPage') || e.target===box) closeOrgViewer();
     });
     box.querySelector('#orgViewerRot').addEventListener('click', ()=>{ orgRotateOne(organizeOrder[orgViewerPos]); openOrgViewer(orgViewerPos); });
     box.querySelector('#orgViewerDup').addEventListener('click', ()=>{ orgInsertDup(organizeOrder[orgViewerPos]); openOrgViewer(orgViewerPos+1); });
@@ -862,9 +859,8 @@ window.openOrgViewer=async (pos)=>{
     if(imgUrl){
       const big=document.createElement('img');
       big.src=imgUrl; big.alt=L('Filled blank page','Halaman kosong terisi');
-      big.style.cssText='background:#fff;max-width:min(480px,90%);max-height:100%;object-fit:contain;box-shadow:0 10px 40px rgba(0,0,0,.5);cursor:zoom-in';
+      big.style.cssText='background:#fff;box-shadow:0 10px 40px rgba(0,0,0,.5);cursor:zoom-out';
       holder.replaceChildren(big);
-      orgZoomBig=false;
     }else{
       const blank=document.createElement('div');
       blank.style.cssText='background:#fff;width:min(480px,80%);aspect-ratio:3/4;display:grid;place-items:center;color:#9ca3af;font-size:14px;box-shadow:0 10px 40px rgba(0,0,0,.5)';
@@ -886,10 +882,9 @@ window.openOrgViewer=async (pos)=>{
     await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
     page.cleanup();
     if(orgViewerPos>=organizeOrder.length || organizeOrder[orgViewerPos]!==origIdx || !document.getElementById('orgViewer')) return;
-    canvas.style.maxWidth='100%'; canvas.style.maxHeight='100%'; canvas.style.objectFit='contain'; canvas.style.background='#fff';
-    canvas.style.boxShadow='0 10px 40px rgba(0,0,0,.5)'; canvas.style.cursor='zoom-in';
+    canvas.style.objectFit='contain'; canvas.style.background='#fff';
+    canvas.style.boxShadow='0 10px 40px rgba(0,0,0,.5)'; canvas.style.cursor='zoom-out';
     holder.replaceChildren(canvas);
-    orgZoomBig=false;
   }catch(e){ holder.innerHTML='<span class="text-white/70 text-sm">'+L('Could not render this page','Halaman gagal dirender')+'</span>'; }
 };
 function orgViewerKeys(e){
@@ -898,19 +893,7 @@ function orgViewerKeys(e){
   else if(e.key==='ArrowRight') openOrgViewer(orgViewerPos+1);
   else if(e.key==='ArrowLeft') openOrgViewer(orgViewerPos-1);
 }
-// Progressive zoom in the lightbox: fit <-> full pixels (scrollable).
-let orgZoomBig=false;
-function orgApplyZoomFit(media,big){
-  if(!media) return;
-  media.style.maxWidth=big?'none':'100%';
-  media.style.maxHeight=big?'none':'100%';
-  media.style.cursor=big?'zoom-out':'zoom-in';
-}
-window.orgZoomToggle=()=>{
-  const holder=document.getElementById('orgViewerPage'); if(!holder) return;
-  const media=holder.querySelector('canvas,img'); if(!media) return;
-  orgZoomBig=!orgZoomBig; orgApplyZoomFit(media,orgZoomBig);
-};
+// Single-level zoom in the lightbox: always big, click goes back.
 function closeOrgViewer(){ document.getElementById('orgViewer')?.remove(); document.removeEventListener('keydown', orgViewerKeys); }
 window.orgWsOver=(e)=>{ e.preventDefault(); };
 window.orgWsDrop=(e)=>{ e.preventDefault(); if(e.dataTransfer&&e.dataTransfer.files.length){ log('Drop '+e.dataTransfer.files.length+' files'); handleFiles(e.dataTransfer.files); } };
