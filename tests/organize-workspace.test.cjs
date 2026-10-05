@@ -56,6 +56,25 @@ async function main(){
       return {dimmed,gap:!!gap,gapIdx,afterDrop,selfGap,
         sideL:orgGapSide(0,200,40),sideR:orgGapSide(0,200,160),
         clean:!document.getElementById('orgGap')&&!document.querySelector('.org-card.drag-src')};
+    };
+    // Auto-scroll: pointer in the bottom strip scrolls the grid down,
+    // middle stays still, loop stops cleanly on dragend.
+    window.qaScroll=()=>{
+      files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];
+      organizeOrder=[0,1,2,3,4,5];organizeSelected=new Set(organizeOrder);renderOrganizeGrid();
+      const grid=document.getElementById('organizeGrid');
+      grid.getBoundingClientRect=()=>({left:0,width:400,top:0,bottom:400,right:400,height:400});
+      Object.defineProperty(grid,'scrollHeight',{value:1200,configurable:true});
+      Object.defineProperty(grid,'clientHeight',{value:400,configurable:true});
+      grid.scrollTop=100;
+      const pure={top:orgScrollSpeed(10,0,400),mid:orgScrollSpeed(200,0,400),
+        bottom:orgScrollSpeed(395,0,400),above:orgScrollSpeed(-50,0,400),below:orgScrollSpeed(460,0,400)};
+      const cards=[...document.querySelectorAll('#organizeGrid .org-card')];
+      orgDrag({currentTarget:cards[0],clientX:200,clientY:395,dataTransfer:{}});
+      const d=orgAutoTick(), moved=grid.scrollTop;
+      orgPointer={x:200,y:200}; const dMid=orgAutoTick();
+      orgFinishDrag();
+      return {pure,d,moved,dMid,raf:orgScrollRaf,ptr:orgPointer};
     };`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
   // No file yet: prompt visible, workspace tools hidden, full-width row.
@@ -124,6 +143,17 @@ async function main(){
   assert.equal(g.afterDrop.gapLeft,false,'gap removed after drop');
   assert.equal(g.selfGap,false,'no gap when hovering the dragged card itself');
   assert.equal(g.clean,true,'dragend leaves no gap or highlight');
+  // Auto-scroll while dragging near the grid edges.
+  const s=w.qaScroll();
+  assert.ok(s.pure.top<0,'pointer near top scrolls up');
+  assert.equal(s.pure.mid,0,'pointer in middle does not scroll');
+  assert.ok(s.pure.bottom>0,'pointer near bottom scrolls down');
+  assert.equal(s.pure.above,-20,'pointer above grid scrolls up full speed');
+  assert.equal(s.pure.below,20,'pointer below grid scrolls down full speed');
+  assert.ok(s.d>0&&s.moved>100,'tick near bottom edge moves the grid down');
+  assert.equal(s.dMid,0,'tick in the middle does not move the grid');
+  assert.equal(s.raf,0,'scroll loop stopped after dragend');
+  assert.equal(s.ptr,null,'pointer cleared after dragend');
   w.close();
   console.log('PASS organize workspace: empty state, sidebar, no duplicate panel');
 }

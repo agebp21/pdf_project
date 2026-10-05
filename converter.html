@@ -1185,7 +1185,50 @@ function orgPlaceGap(cell,side){
   let idx=0; for(const k of grid.children){ if(k===gap) break; if(k.classList&&k.classList.contains('org-cell')) idx++; }
   orgGapPos=idx;
 }
+// Auto-scroll: pixel per frame from pointer closeness to the visible edge.
+// Pure (no DOM) so tests can pin it down. zone = sensitive strip (px).
+function orgScrollSpeed(y,top,bottom,zone,max){ zone=zone||60; max=max||20;
+  if(y<top+zone) return -Math.ceil(max*(1-Math.max(0,y-top)/zone));
+  if(y>bottom-zone) return Math.ceil(max*(1-Math.max(0,bottom-y)/zone));
+  return 0;
+}
+let orgPointer=null, orgScrollRaf=0;
+// One autoscroll step: move the grid, then re-place the Trello gap under
+// the (unmoved) pointer so the gap follows while the pages slide.
+// Returns the applied delta (0 = no scroll).
+function orgAutoTick(){
+  const grid=document.getElementById('organizeGrid');
+  if(!grid||!orgPointer||dragPos===null||dragPos===undefined) return 0;
+  let d=0;
+  try{
+    const r=grid.getBoundingClientRect();
+    d=orgScrollSpeed(orgPointer.y,r.top,r.bottom);
+    if(d&&(grid.scrollHeight-grid.clientHeight)>0) grid.scrollTop+=d; else d=0;
+    if(d){
+      const el=document.elementFromPoint?document.elementFromPoint(orgPointer.x,orgPointer.y):null;
+      const cell=el&&el.closest?el.closest('.org-cell'):null;
+      if(cell){
+        const card=cell.querySelector('.org-card');
+        if(card&&parseInt(card.dataset.pos)!==dragPos){
+          let side='before';
+          try{ const cr=cell.getBoundingClientRect(); side=orgGapSide(cr.left,cr.width,orgPointer.x); }catch(_){}
+          orgPlaceGap(cell,side);
+        }
+      }
+    }
+  }catch(_){ d=0; }
+  return d;
+}
+function orgAutoStart(){
+  // Cancel a previous loop but KEEP orgPointer: orgDrag sets the pointer
+  // first and then starts the loop (stop is what clears it).
+  if(orgScrollRaf){ try{cancelAnimationFrame(orgScrollRaf);}catch(_){} orgScrollRaf=0; }
+  const step=()=>{ if(dragPos===null||dragPos===undefined){ orgScrollRaf=0; return; } orgAutoTick(); orgScrollRaf=requestAnimationFrame(step); };
+  try{ orgScrollRaf=requestAnimationFrame(step); }catch(_){ orgScrollRaf=0; }
+}
+function orgAutoStop(){ if(orgScrollRaf){ try{cancelAnimationFrame(orgScrollRaf);}catch(_){} } orgScrollRaf=0; orgPointer=null; }
 function orgCommitDrop(fromPos){
+  orgAutoStop();
   if(fromPos===null||fromPos===undefined) return;
   const to0=orgGapPos;
   dragPos=null; orgClearGap();
@@ -1197,8 +1240,9 @@ function orgCommitDrop(fromPos){
   const [m]=organizeOrder.splice(fromPos,1); organizeOrder.splice(to,0,m);
   renderOrganizeGrid(); log('Org move '+(fromPos+1)+' -> '+(to+1));
 }
-window.orgDrag=(e)=>{ dragPos=parseInt(e.currentTarget.dataset.pos); orgDragged=true; e.currentTarget.classList.add('drag-src'); try{e.dataTransfer.effectAllowed='move';}catch(_){} };
+window.orgDrag=(e)=>{ dragPos=parseInt(e.currentTarget.dataset.pos); orgDragged=true; e.currentTarget.classList.add('drag-src'); orgPointer={x:e.clientX,y:e.clientY}; orgAutoStart(); try{e.dataTransfer.effectAllowed='move';}catch(_){} };
 window.orgOver=(e)=>{ e.preventDefault(); try{e.dataTransfer.dropEffect='move';}catch(_){}
+  orgPointer={x:e.clientX,y:e.clientY};
   if(dragPos===null||dragPos===undefined) return;
   const cell=e.target&&e.target.closest?e.target.closest('.org-cell'):null;
   if(!cell) return;
@@ -1219,7 +1263,7 @@ window.orgDrop=(e)=>{ e.preventDefault(); e.stopPropagation();
 window.orgGridDrop=(e)=>{ e.preventDefault(); e.stopPropagation(); orgCommitDrop(dragPos); };
 // dragend always fires (drop, cancel, or drop outside): never leave a
 // stale gap, highlight, or drag position behind.
-window.orgFinishDrag=()=>{ orgDragged=false; orgDragEnd=Date.now(); dragPos=null; orgClearGap(); document.querySelectorAll('.org-card.drag-src').forEach(c=>c.classList.remove('drag-src')); };
+window.orgFinishDrag=()=>{ orgDragged=false; orgDragEnd=Date.now(); dragPos=null; orgAutoStop(); orgClearGap(); document.querySelectorAll('.org-card.drag-src').forEach(c=>c.classList.remove('drag-src')); };
 
 function updateFileUI({preserveError=false}={}){
   document.getElementById('convGrid')?.classList.toggle('single', files.length===0);
