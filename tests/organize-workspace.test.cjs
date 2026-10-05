@@ -27,8 +27,36 @@ async function main(){
       return box.querySelector('.stf__wrapper')!==null
         && box.querySelectorAll('.stf__wrapper img').length===1;
     };
-    window.qaPreview=()=>{organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);renderOrganizeGrid();return document.getElementById('orgReader').className;};    window.qaBlank=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};
-    window.qaFill=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,'blank-1'];organizeSelected=new Set(organizeOrder);orgBlankImg={'blank-1':'data:image/jpeg;base64,/9j/'};renderOrganizeGrid();return document.getElementById('organizeGrid').innerHTML.includes('data:image/jpeg');};`);
+    window.qaPreview=()=>{organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);renderOrganizeGrid();return document.getElementById('orgReader').className;};    window.qaBlank=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};    window.qaFill=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,'blank-1'];organizeSelected=new Set(organizeOrder);orgBlankImg={'blank-1':'data:image/jpeg;base64,/9j/'};renderOrganizeGrid();return document.getElementById('organizeGrid').innerHTML.includes('data:image/jpeg');};
+    // Trello-style gap: drag card 0, hover right half of card 2 -> gap after
+    // it, drop commits [1,2,0,3]; hovering the dragged card itself clears it.
+    window.qaGap=()=>{
+      files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];
+      organizeOrder=[0,1,2,3];organizeSelected=new Set(organizeOrder);renderOrganizeGrid();
+      const cards=[...document.querySelectorAll('#organizeGrid .org-card')];
+      const fakeDT=()=>({effectAllowed:'',dropEffect:''});
+      orgDrag({currentTarget:cards[0],dataTransfer:fakeDT()});
+      const dimmed=cards[0].classList.contains('drag-src');
+      const cell2=cards[2].closest('.org-cell');
+      cell2.getBoundingClientRect=()=>({left:0,width:200,top:0,height:0,bottom:0,right:200});
+      orgOver({preventDefault(){},target:cards[2],clientX:150,dataTransfer:fakeDT()});
+      const grid=document.getElementById('organizeGrid');
+      const gap=document.getElementById('orgGap');
+      const gapIdx=gap?[...grid.children].indexOf(gap):-1;
+      orgDrop({preventDefault(){},stopPropagation(){},currentTarget:cards[2],dataTransfer:fakeDT()});
+      const afterDrop={order:organizeOrder.slice(),gapLeft:!!document.getElementById('orgGap')};
+      // Hovering the dragged card itself must not leave a gap behind.
+      const c2=[...document.querySelectorAll('#organizeGrid .org-card')][2];
+      orgDrag({currentTarget:c2,dataTransfer:fakeDT()});
+      const self=c2.closest('.org-cell');
+      self.getBoundingClientRect=()=>({left:0,width:200,top:0,height:0,bottom:0,right:200});
+      orgOver({preventDefault(){},target:c2,clientX:150,dataTransfer:fakeDT()});
+      const selfGap=!!document.getElementById('orgGap');
+      orgFinishDrag();
+      return {dimmed,gap:!!gap,gapIdx,afterDrop,selfGap,
+        sideL:orgGapSide(0,200,40),sideR:orgGapSide(0,200,160),
+        clean:!document.getElementById('orgGap')&&!document.querySelector('.org-card.drag-src')};
+    };`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
   // No file yet: prompt visible, workspace tools hidden, full-width row.
   assert.equal(vis('orgEmpty'),true,'empty prompt shows without file');
@@ -85,6 +113,17 @@ async function main(){
   assert.equal(w.document.getElementById('orgPageLabel').textContent,'2 / 3','static label follows');
   // Lazy renders swap into our faces even after the engine took the box.
   assert.equal(await w.qaFaceSwap(),true,'engine wrapper survives lazy renders');
+  // Trello-style insertion gap while dragging.
+  const g=w.qaGap();
+  assert.equal(g.dimmed,true,'drag source dims while dragging');
+  assert.equal(g.sideL,'before','left half means before');
+  assert.equal(g.sideR,'after','right half means after');
+  assert.equal(g.gap,true,'gap element appears on hover');
+  assert.equal(g.gapIdx,3,'gap sits after card 2 (3 cells before it)');
+  assert.equal(JSON.stringify(g.afterDrop.order),JSON.stringify([1,2,0,3]),'drop at gap moves card 0 after card 2');
+  assert.equal(g.afterDrop.gapLeft,false,'gap removed after drop');
+  assert.equal(g.selfGap,false,'no gap when hovering the dragged card itself');
+  assert.equal(g.clean,true,'dragend leaves no gap or highlight');
   w.close();
   console.log('PASS organize workspace: empty state, sidebar, no duplicate panel');
 }

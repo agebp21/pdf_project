@@ -88,6 +88,9 @@
   .org-plus:hover{border-color:#ef2d2d}
   .org-card{background:#fff;border:1.5px solid #f3c4c4;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:stretch;gap:6px;cursor:move;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.04);height:100%}
   .org-card.sel{border-color:#ef2d2d;background:#fff5f5}
+  .org-card.drag-src{opacity:.35}
+  /* Trello-style insertion gap: the hovered card shifts aside while dragging. */
+  .org-gap{border:2px dashed #ef2d2d;border-radius:12px;background:#fff5f5;min-height:140px;align-self:stretch}
   .org-thumb{position:relative;width:100%;aspect-ratio:3/4;background:#f3f4f6;border-radius:8px;overflow:hidden;display:grid;place-items:center}  .org-thumb img{width:100%;height:100%;object-fit:contain;background:#fff}
   .org-zoomable{cursor:zoom-in}
   .org-ph{font-size:11px;color:#9ca3af}
@@ -388,7 +391,7 @@ function renderHeader(){
           </div>
           <p id="orgEmptyStatus" class="org-empty-status"></p>
         </div>
-        <div id="organizeGrid" class="is-hidden grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-3 max-h-[62vh] overflow-auto p-2 pb-4"></div>
+        <div id="organizeGrid" ondrop="orgGridDrop(event)" ondragover="event.preventDefault()" class="is-hidden grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-3 max-h-[62vh] overflow-auto p-2 pb-4"></div>
         <div class="org-fab is-hidden" id="orgFab">
           <button onclick="orgDuplicate()" id="orgFabAdd" title="${L('Duplicate selected','Duplikat yang dipilih')}" class="org-fab-add">${ORG_ICONS.plus}<span id="orgFabBadge" class="org-fab-badge is-hidden"></span></button>
           <button onclick="orgSortToggle()" title="${L('Sort by page number','Urutkan nomor halaman')}" class="org-fab-sort">⇅</button>
@@ -782,7 +785,7 @@ function renderOrganizeGrid(){
     const goZoom=!isBlank||orgBlankImg[origIdx];
     return `
     <div class="org-cell">
-      <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgDragged=false;orgDragEnd=Date.now()" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${orgArg(origIdx)})"
+      <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgFinishDrag()" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${orgArg(origIdx)})"
         class="org-card group${sel?' sel':''}">
         <div class="org-thumb" data-thumb="${origIdx}" onclick="${isBlank&&!goZoom?`event.stopPropagation();orgBlankAsk(${orgArg(origIdx)})`:''}" ondblclick="event.stopPropagation();openOrgViewer(${pos})" title="${isBlank&&!goZoom?L('Add an image to this blank page','Tambah gambar nang halaman kosong iki'):L('Click to flip here, double-click to zoom','Klik untuk flip ke sini, double-click untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){orgCardClick(event,${orgArg(origIdx)})}">${thumb}</div>
         <div class="org-hover">
@@ -1165,10 +1168,58 @@ window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else
 window.orgDelete=()=>{ if(organizeSelected.size===0) return showError('Tick the pages to delete first'); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
 window.orgRotate=(deg)=>{ if(organizeSelected.size===0) return showError('Tick pages first'); for(const idx of organizeSelected) organizeRotations[idx]=(organizeRotations[idx]||0)+deg; renderOrganizeGrid(); }
 window.orgDuplicate=()=>{ if(organizeSelected.size===0) return showError('Tick pages first'); const sel=[...organizeSelected].sort((a,b)=>organizeOrder.indexOf(a)-organizeOrder.indexOf(b)); sel.forEach(idx=>{ const pos=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(pos+1,0,fresh); }); renderOrganizeGrid(); }
-let dragPos=null;
-window.orgDrag=(e)=>{ dragPos=parseInt(e.currentTarget.dataset.pos); orgDragged=true; e.dataTransfer.effectAllowed='move'; }
-window.orgOver=(e)=>{ e.preventDefault(); }
-window.orgDrop=(e)=>{ e.preventDefault(); const to=parseInt(e.currentTarget.dataset.pos); if(dragPos===null||dragPos===to) return; const [m]=organizeOrder.splice(dragPos,1); organizeOrder.splice(to,0,m); dragPos=null; renderOrganizeGrid(); }
+let dragPos=null, orgGapPos=null;
+// Trello-style: which side of the hovered card does the pointer favour?
+// Pure function (no DOM) so tests can pin it down.
+function orgGapSide(left,width,x){ return (x-left)<width/2?'before':'after'; }
+function orgClearGap(){ document.getElementById('orgGap')?.remove(); orgGapPos=null; }
+// Move the single gap element before/after the hovered cell WITHOUT
+// re-rendering: re-rendering mid-drag would kill the drag operation.
+// orgGapPos = insertion index among .org-cell items (gap excluded).
+function orgPlaceGap(cell,side){
+  const grid=document.getElementById('organizeGrid'); if(!grid||!cell||!cell.isConnected) return;
+  let gap=document.getElementById('orgGap');
+  if(!gap){ gap=document.createElement('div'); gap.id='orgGap'; gap.className='org-gap'; gap.ondragover=(e)=>{e.preventDefault();}; }
+  const ref=(side==='before')?cell:cell.nextSibling;
+  if(gap.parentNode!==grid||gap.nextSibling!==ref) grid.insertBefore(gap,ref);
+  let idx=0; for(const k of grid.children){ if(k===gap) break; if(k.classList&&k.classList.contains('org-cell')) idx++; }
+  orgGapPos=idx;
+}
+function orgCommitDrop(fromPos){
+  if(fromPos===null||fromPos===undefined) return;
+  const to0=orgGapPos;
+  dragPos=null; orgClearGap();
+  if(to0===null||to0===undefined) return;
+  // The gap index counted the dragged card (still in the DOM): dropping
+  // from the left shifts the target one slot down after removal.
+  let to=to0; if(fromPos<to) to--;
+  if(to===fromPos) { renderOrganizeGrid(); return; }
+  const [m]=organizeOrder.splice(fromPos,1); organizeOrder.splice(to,0,m);
+  renderOrganizeGrid(); log('Org move '+(fromPos+1)+' -> '+(to+1));
+}
+window.orgDrag=(e)=>{ dragPos=parseInt(e.currentTarget.dataset.pos); orgDragged=true; e.currentTarget.classList.add('drag-src'); try{e.dataTransfer.effectAllowed='move';}catch(_){} };
+window.orgOver=(e)=>{ e.preventDefault(); try{e.dataTransfer.dropEffect='move';}catch(_){}
+  if(dragPos===null||dragPos===undefined) return;
+  const cell=e.target&&e.target.closest?e.target.closest('.org-cell'):null;
+  if(!cell) return;
+  const card=cell.querySelector('.org-card');
+  if(!card||parseInt(card.dataset.pos)===dragPos){ orgClearGap(); return; }
+  let side='before';
+  try{ const r=cell.getBoundingClientRect(); side=orgGapSide(r.left,r.width,e.clientX); }catch(_){}
+  orgPlaceGap(cell,side);
+};
+window.orgDrop=(e)=>{ e.preventDefault(); e.stopPropagation();
+  // Prefer the Trello gap position; fall back to the hovered card slot.
+  if(orgGapPos!==null&&orgGapPos!==undefined){ orgCommitDrop(dragPos); return; }
+  const to=parseInt(e.currentTarget.dataset.pos); const from=dragPos;
+  if(from===null||from===to) return; const [m]=organizeOrder.splice(from,1); organizeOrder.splice(to,0,m); dragPos=null; renderOrganizeGrid();
+};
+// Drop lands on the gap itself or an empty grid corner: same gap commit
+// (the event bubbles here from #organizeGrid, not from a card).
+window.orgGridDrop=(e)=>{ e.preventDefault(); e.stopPropagation(); orgCommitDrop(dragPos); };
+// dragend always fires (drop, cancel, or drop outside): never leave a
+// stale gap, highlight, or drag position behind.
+window.orgFinishDrag=()=>{ orgDragged=false; orgDragEnd=Date.now(); dragPos=null; orgClearGap(); document.querySelectorAll('.org-card.drag-src').forEach(c=>c.classList.remove('drag-src')); };
 
 function updateFileUI({preserveError=false}={}){
   document.getElementById('convGrid')?.classList.toggle('single', files.length===0);
