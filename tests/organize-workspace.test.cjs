@@ -11,7 +11,8 @@ async function main(){
     window.qaLoad=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}]; updateFileUI();};
     window.qaClear=()=>{clearFiles();};
     window.qaTool=id=>{setTool(id);};
-    window.qaViewer0=()=>{openOrgViewer(0);};    window.qaBlank=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};
+    window.qaViewer0=()=>{openOrgViewer(0);};
+    window.qaPreview=()=>{organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);renderOrganizeGrid();orgPreviewToggle();return document.getElementById('orgReader').className;};    window.qaBlank=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,1];organizeSelected=new Set(organizeOrder);orgInsertBlankAt(1);return organizeOrder.slice();};
     window.qaFill=()=>{files=[{name:'a.pdf',size:1234,type:'application/pdf',lastModified:1}];organizeOrder=[0,'blank-1'];organizeSelected=new Set(organizeOrder);orgBlankImg={'blank-1':'data:image/jpeg;base64,/9j/'};renderOrganizeGrid();return document.getElementById('organizeGrid').innerHTML.includes('data:image/jpeg');};`);
   const vis=id=>!w.document.getElementById(id).classList.contains('is-hidden');
   // No file yet: prompt visible, workspace tools hidden, full-width row.
@@ -57,6 +58,13 @@ async function main(){
   assert.ok(w.document.getElementById('drop').classList.contains('is-hidden'),'drop hidden for organize');
   w.qaTool('merge-pdf');
   assert.ok(!w.document.getElementById('drop').classList.contains('is-hidden'),'drop returns for merge');
+  // Preview panel toggles without the engine (script never loads in JSDOM).
+  w.qaTool('organize-pdf');
+  w.qaLoad();
+  assert.ok(w.document.getElementById('orgPreviewBtn'),'preview toggle present');
+  assert.ok(!w.qaPreview().includes('is-hidden'),'reader panel opens');
+  w.eval('orgPreviewToggle()');
+  assert.ok(w.document.getElementById('orgReader').classList.contains('is-hidden'),'reader panel closes');
   w.close();
   console.log('PASS organize workspace: empty state, sidebar, no duplicate panel');
 }

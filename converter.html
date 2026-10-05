@@ -114,6 +114,18 @@
   #options.org-full{max-width:none}
   #orgFootExtra:empty{display:none}
   #orgFootExtra p{margin-top:0}
+  /* Mini flipbook preview above the grid: click a card and the book flips there. */
+  #orgReader{background:#fff;border:1px solid #e7e2f2;border-radius:12px;padding:.6rem;margin-bottom:.75rem;position:sticky;top:.5rem;z-index:6}
+  .org-reader-bar{display:flex;align-items:center;justify-content:center;gap:.5rem;font-size:12px;font-weight:800;margin-bottom:.5rem;color:#374151}
+  .org-reader-bar button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;min-width:30px;padding:.25rem .6rem;font-size:12px;font-weight:800;cursor:pointer;color:#374151}
+  #orgBook{margin:0 auto}
+  #orgBook .opf-page{background:#fff;display:grid;place-items:center;overflow:hidden}
+  #orgBook .opf-page img{width:100%;height:100%;object-fit:contain;background:#fff}
+  .opf-blank{background:#fff;width:100%;height:100%}
+  .opf-ph{color:#9ca3af;font-size:12px}
+  .org-previewbtn{margin:.5rem 1.25rem 0;border:1.5px dashed #d1d5db;background:#fff;border-radius:10px;padding:.55rem;font-size:12px;font-weight:800;color:#374151;cursor:pointer}
+  .org-previewbtn.on{background:#1f2937;color:#fff;border-color:#1f2937;border-style:solid}
+  .org-reader-empty{text-align:center;color:#9ca3af;font-size:12px;padding:1rem}
   .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
   .btn-tang:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(255,92,40,.42),inset 0 1px 0 rgba(255,255,255,.45)}
   ::-webkit-scrollbar{height:6px}
@@ -358,6 +370,15 @@ function renderHeader(){
     // iLovePDF-style workspace: page grid + floating actions + right sidebar.
     html=`<div class="org-ws" ondragover="orgWsOver(event)" ondrop="orgWsDrop(event)">
       <div class="org-main">
+        <div id="orgReader" class="is-hidden">
+          <div class="org-reader-bar">
+            <button onclick="orgReaderGo(-1)" aria-label="Previous">←</button>
+            <span id="orgPageLabel"></span>
+            <button onclick="orgReaderGo(1)" aria-label="Next">→</button>
+            <button onclick="orgPreviewToggle()" aria-label="${L('Close','Tutup')}">✕</button>
+          </div>
+          <div id="orgBook"></div>
+        </div>
         <div id="orgEmpty" class="org-empty">
           <p style="font-size:28px">📄</p>
           <p><b>${L('Pick a PDF to start organizing','Pilih PDF kanggo mulai ngatur')}</b></p>
@@ -379,6 +400,7 @@ function renderHeader(){
         <div class="org-files-head"><span>${L('Files:','File:')}</span><button onclick="orgReset()" class="org-reset">Reset all</button></div>
         <div id="orgFiles"></div>
         <button class="org-addfile" onclick="addMoreFiles()">＋ ${L('Add file','Tambah file')}</button>
+        <button class="org-previewbtn" id="orgPreviewBtn" onclick="orgPreviewToggle()">📖 ${L('Preview book','Pratinjau buku')}</button>
         <input id="blankInput" type="file" accept="image/*" hidden onchange="orgBlankPicked(this)">
         <div id="orgSelBox" class="org-sel is-hidden">
           <p class="org-sel-count"><b id="orgSelCount">0</b> ${L('selected','dipilih')}</p>
@@ -398,13 +420,22 @@ function renderHeader(){
     </div>`;
   }
   if(['watermark','page-numbers','crop-pdf'].includes(t.id))html=PDFEdit.controls(t.id);
-  $('#options').innerHTML=html;
-  $('#options').classList.toggle('org-full', t.id==='organize-pdf' && !comingSoonName);
-  // Organize runs its progress/error inside the workspace sidebar;
-  // every other tool keeps them in the file list card.
+  // Progress/error live in #fileList — except on organize, hosted by the
+  // workspace sidebar. Rescue them BEFORE rebuilding options (innerHTML
+  // would destroy them), then park them in the right place.
   const progNode=document.getElementById('progress'), errNode=document.getElementById('error');
-  if(active==='organize-pdf'){ document.getElementById('orgFootExtra')?.append(progNode,errNode); }
-  else{ const flCard=document.getElementById('fileList'); if(flCard&&progNode&&errNode) flCard.append(progNode,errNode); }
+  const flCard=document.getElementById('fileList');
+  if(flCard&&progNode&&errNode) flCard.append(progNode,errNode);
+  $('#options').innerHTML=html;
+  if(active==='organize-pdf'){
+    const foot=document.getElementById('orgFootExtra');
+    const p2=document.getElementById('progress'), e2=document.getElementById('error');
+    if(foot&&p2&&e2) foot.append(p2,e2);
+  }
+  $('#options').classList.toggle('org-full', t.id==='organize-pdf' && !comingSoonName);
+  // Options rebuilt: any live preview book points at dead DOM.
+  try{ if(orgBook) orgBook.destroy(); }catch(e){}
+  orgBook=null; orgReaderSig='';
   // Unbuilt catalog tools: clear "Coming soon" state and no upload area,
   // so nobody converts with the wrong tool by accident.
   $('#drop').classList.toggle('hidden', !!comingSoonName);
@@ -766,7 +797,12 @@ function renderOrganizeGrid(){
       <span class="org-pslot"><button onclick="orgInsertBlankAt(${pos+1})" title="${L('Insert a blank page after this','Sisipkan halaman kosong setelah ini')}" class="org-plus">${ORG_ICONS.plus}</button></span>
     </div>`;
   }).join('');
+  paintOrgPreviewBtn();
   orgObserveThumbs();
+  if(orgReaderOpen){
+    const sig=organizeOrder.join('|')+'#'+Object.keys(organizeRotations).sort().join(',')+'#'+Object.keys(orgBlankImg).sort().join(',');
+    if(sig!==orgReaderSig||!orgBook){ orgReaderSig=sig; orgReaderBuild(); }
+  }
 }
 const orgName=i=>typeof i==='number'?(i+1):'blank';
 // Click a blank page -> pick an image to fill it (stored as JPEG, embedded on save).
@@ -897,12 +933,116 @@ function orgViewerKeys(e){
 function closeOrgViewer(){ document.getElementById('orgViewer')?.remove(); document.removeEventListener('keydown', orgViewerKeys); }
 window.orgWsOver=(e)=>{ e.preventDefault(); };
 window.orgWsDrop=(e)=>{ e.preventDefault(); if(e.dataTransfer&&e.dataTransfer.files.length){ log('Drop '+e.dataTransfer.files.length+' files'); handleFiles(e.dataTransfer.files); } };
+// Mini flipbook preview: the current order as a real flippable book.
+// Clicking a card selects it AND flips the preview there.
+let orgReaderOpen=false, orgBook=null, orgPrevCache=new Map(), orgReaderSig='', orgBuildSeq=0, orgEngineLoading=null;
+function orgBookEngine(){
+  if(window.St&&window.St.PageFlip) return Promise.resolve();
+  if(!orgEngineLoading) orgEngineLoading=new Promise((res,rej)=>{
+    const s=document.createElement('script'); s.src='assets/vendor/page-flip.browser.js';
+    s.onload=()=>((window.St&&window.St.PageFlip)?res():rej(new Error('engine')));
+    s.onerror=()=>rej(new Error('engine'));
+    document.head.append(s);
+  });
+  return orgEngineLoading;
+}
+function paintOrgPreviewBtn(){ const b=document.getElementById('orgPreviewBtn'); if(b) b.classList.toggle('on',orgReaderOpen); }
+window.orgPreviewToggle=()=>{
+  orgReaderOpen=!orgReaderOpen; paintOrgPreviewBtn();
+  const w=document.getElementById('orgReader'); if(w) w.classList.toggle('is-hidden',!orgReaderOpen);
+  if(orgReaderOpen) orgReaderBuild(); else orgReaderClose();
+};
+function orgReaderClose(){ if(orgBook){ try{orgBook.destroy();}catch(e){} orgBook=null; } }
+function orgPrevKey(code){ return code+'|'+(organizeRotations[code]||0); }
+function orgPreviewFace(code,pos){
+  const hit=orgPrevCache.get(orgPrevKey(code));
+  if(hit){ const img=document.createElement('img'); img.src=hit; img.draggable=false; img.alt=''; return img; }
+  if(typeof code==='string'){
+    if(orgBlankImg[code]){ const img=document.createElement('img'); img.src=orgBlankImg[code]; img.draggable=false; img.alt=''; return img; }
+    const b=document.createElement('div'); b.className='opf-blank'; return b;
+  }
+  const ph=document.createElement('div'); ph.className='opf-ph'; ph.textContent=pos+1; return ph;
+}
+async function orgReaderBuild(){
+  if(!orgReaderOpen) return;
+  const myBuild=++orgBuildSeq;
+  const wrap=document.getElementById('orgReader'), box=document.getElementById('orgBook');
+  if(!wrap||!box) return;
+  wrap.classList.remove('is-hidden');
+  if(!organizeOrder.length){ box.innerHTML='<p class="org-reader-empty">'+L('No pages','Ora ono halaman')+'</p>'; return; }
+  let ratio=0.72;
+  try{
+    const first=orgPdfDocs[0];
+    if(first){ const pg=await first.getPage(1); const v=pg.getViewport({scale:1}); ratio=v.width/v.height; pg.cleanup(); }
+  }catch(e){}
+  const avail=Math.max(280,(wrap.clientWidth||600)-24);
+  const single=avail<520;
+  const PW=Math.round(single?avail:Math.min(avail,640)/2), PH=Math.round(PW/Math.max(0.4,Math.min(2.5,ratio)));
+  box.innerHTML='';
+  const frag=document.createDocumentFragment();
+  organizeOrder.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.append(orgPreviewFace(code,pos)); frag.append(d); });
+  box.append(frag);
+  let keep=0;
+  if(orgBook){ try{keep=orgBook.getCurrentPageIndex();}catch(e){} try{orgBook.destroy();}catch(e){} orgBook=null; }
+  try{ await orgBookEngine(); }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau ora tersedia')+'</p>'; return; }
+  if(myBuild!==orgBuildSeq||!orgReaderOpen) return;
+  orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'stretch',minWidth:200,maxWidth:700,minHeight:140,maxHeight:560,autoSize:true,usePortrait:true,showCover:false,useMouseEvents:true,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
+  orgBook.loadFromHTML(Array.from(box.children));
+  orgBook.on('flip',()=>{ orgPaintReaderLabel(); orgRenderVisible(); });
+  try{ orgBook.flip(Math.max(0,Math.min(keep,organizeOrder.length-1))); }catch(e){}
+  orgPaintReaderLabel(); orgRenderVisible();
+}
+function orgPaintReaderLabel(){
+  const el=document.getElementById('orgPageLabel'); if(!el) return;
+  let cur=1;
+  if(orgBook){ try{cur=orgBook.getCurrentPageIndex()+1;}catch(e){} }
+  el.textContent=cur+' / '+organizeOrder.length;
+}
+function orgVisibleIdx(){
+  let cur=0;
+  if(orgBook){ try{cur=orgBook.getCurrentPageIndex();}catch(e){} }
+  const out=[];
+  for(let i=Math.max(0,cur-1);i<=Math.min(organizeOrder.length-1,cur+2);i++) out.push(i);
+  return out;
+}
+async function orgRenderVisible(){
+  if(!orgReaderOpen||!orgBook) return;
+  if(orgPrevCache.size>600) orgPrevCache.clear();
+  for(const pos of orgVisibleIdx()){
+    const code=organizeOrder[pos]; if(code===undefined||typeof code!=='number') continue;
+    if(orgPrevCache.has(orgPrevKey(code))) continue;
+    const doc=orgPdfDocs[Math.floor(code/1000000)];
+    if(!doc) continue;
+    try{
+      const pg=await doc.getPage(code%1000000+1);
+      const base=pg.getViewport({scale:1});
+      const rot=(organizeRotations[code]||0);
+      const v=pg.getViewport({scale:Math.min(2.2,560/base.width), rotation:(base.rotation+rot)%360});
+      const c=document.createElement('canvas'); c.width=Math.ceil(v.width); c.height=Math.ceil(v.height);
+      await pg.render({canvasContext:c.getContext('2d'), viewport:v}).promise;
+      pg.cleanup();
+      const url=c.toDataURL('image/jpeg',0.8);
+      orgPrevCache.set(orgPrevKey(code),url);
+      const box=document.getElementById('orgBook'), cell=box&&box.children[pos];
+      if(cell&&organizeOrder[pos]===code){
+        const img=document.createElement('img'); img.src=url; img.draggable=false; img.alt='';
+        cell.replaceChildren(img);
+      }
+    }catch(e){}
+  }
+  orgPaintReaderLabel();
+}
+window.orgReaderGo=(dir)=>{
+  if(!orgBook) return;
+  let cur=0; try{cur=orgBook.getCurrentPageIndex();}catch(e){}
+  try{ orgBook.flip(Math.max(0,Math.min(organizeOrder.length-1,cur+dir))); }catch(e){}
+};
 window.orgRotateOne=(idx)=>{ organizeRotations[idx]=((organizeRotations[idx]||0)+90)%360; if(!organizeRotations[idx]) delete organizeRotations[idx]; renderOrganizeGrid(); };
 const orgPruneFills=()=>{ const alive=new Set(organizeOrder); Object.keys(orgBlankImg).forEach(k=>{ if(!alive.has(k)) delete orgBlankImg[k]; }); };
 window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(pos,1); if(!organizeOrder.includes(idx)) organizeSelected.delete(idx); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); };
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(at<0?organizeOrder.length:at+1,0,fresh); renderOrganizeGrid(); };
 window.orgInsertBlankAt=(at)=>{ at=Math.max(0,Math.min(organizeOrder.length,at)); organizeOrder.splice(at,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(at+1)); };
-window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); };
+window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); if(orgReaderOpen&&orgBook){ const at=organizeOrder.indexOf(idx); if(at>=0){ try{orgBook.flip(at);}catch(err){} } } };
 window.orgCheck=(idx, on)=>{ if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
 window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
 window.orgDelete=()=>{ if(organizeSelected.size===0) return showError('Tick the pages to delete first'); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
@@ -924,10 +1064,13 @@ function updateFileUI({preserveError=false}={}){
     document.getElementById('organizeGrid')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgFab')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgSide')?.classList.toggle('is-hidden',!loaded);
+    document.getElementById('orgReader')?.classList.toggle('is-hidden',!(loaded&&orgReaderOpen));
+    paintOrgPreviewBtn();
     if(!loaded){
       organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map(); orgBlankSeq=0; orgBlankImg={}; orgBlankTarget=null;
       for(const d of orgPdfDocs){ try{ const r=d&&d.destroy(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
       orgPdfDocs=[];
+      if(orgReaderOpen){ orgReaderOpen=false; paintOrgPreviewBtn(); orgReaderClose(); }
       const grid0=document.getElementById('organizeGrid'); if(grid0) grid0.innerHTML='';
     }
   }
