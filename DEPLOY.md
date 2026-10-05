@@ -116,3 +116,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-05 | `dcb5664` | sesi iki | Zoom bertingkat: klik gambar in/out, klik latar nutup. Backup `/root/pdf_project-code-backup-20261005o.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `3c829da` | sesi iki | Blank isi diklik = zoom (kosong = pilih file) + tombol Ganti gambar nang viewer. Backup `/root/pdf_project-code-backup-20261005p.tgz`. Verifikasi: capabilities 200. |
 | 2026-10-05 | `2349881` | sesi iki | Zoom sekali: langsung gede, klik balik (tiering dibuang). Backup `/root/pdf_project-code-backup-20261005q.tgz`. Verifikasi: capabilities 200. |
+| 2026-10-06 | `3f59b23` | sesi iki | Organize drag gaya Trello: gap placeholder abang pas hover (kartu liyo minggir), drop commit nang posisi gap + regression test. Backup `/root/pdf_project-code-backup-20261006f.tgz`. Verifikasi: capabilities 200, `orgFinishDrag`/`org-gap` live OK. |
