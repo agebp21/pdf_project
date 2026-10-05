@@ -14,8 +14,8 @@ assert.equal(FlipbookLayout.motion(false).flippingTime,1150,'slower, smoother tu
 assert.equal(FlipbookLayout.motion(false).useMouseEvents,true);
 assert.equal(FlipbookLayout.motion(true).flippingTime,1);
 { // Closed covers sit centred and slide to the spread when opened.
-  const handlers={},state={index:0,orientation:'landscape'};
-  const book={getPageCount:()=>12,getOrientation:()=>state.orientation,getCurrentPageIndex:()=>state.index,getBoundsRect:()=>({pageWidth:400}),on:(n,f)=>{(handlers[n]=handlers[n]||[]).push(f)}};
+  const handlers={},state={index:0,orientation:'landscape',dir:0};
+  const book={getPageCount:()=>12,getOrientation:()=>state.orientation,getCurrentPageIndex:()=>state.index,getBoundsRect:()=>({pageWidth:400}),getRender:()=>({getDirection:()=>state.dir}),on:(n,f)=>{(handlers[n]=handlers[n]||[]).push(f)}};
   const root={style:{},classList:{add(){}}};
   const emit=(n,d)=>(handlers[n]||[]).forEach(f=>f({data:d}));
   FlipbookLayout.centerCover(book,root,false);
@@ -24,6 +24,21 @@ assert.equal(FlipbookLayout.motion(true).flippingTime,1);
   state.index=1;emit('flip');assert.equal(root.style.transform,'','spreads are not shifted');
   state.index=11;emit('flip');assert.equal(root.style.transform,'translateX(200.0px)','lone back cover centred');
   state.orientation='portrait';emit('changeOrientation');assert.equal(root.style.transform,'','single-page mode never shifts');
+}
+{ // The ending mirrors the opening: the turn into the last spread slides
+  // to the centre while it turns (instead of gliding after landing), and
+  // turning away slides back during the turn — never off-centre, no glide.
+  const handlers={},state={index:9,orientation:'landscape',dir:0};
+  const book={getPageCount:()=>13,getOrientation:()=>state.orientation,getCurrentPageIndex:()=>state.index,getBoundsRect:()=>({pageWidth:400}),getRender:()=>({getDirection:()=>state.dir}),on:(n,f)=>{(handlers[n]=handlers[n]||[]).push(f)}};
+  const root={style:{},classList:{add(){}}};
+  const emit=(n,d)=>(handlers[n]||[]).forEach(f=>f({data:d}));
+  FlipbookLayout.centerCover(book,root,false);
+  assert.equal(root.style.transform||'','','second-to-last spread is not shifted');
+  emit('changeState','flipping');assert.equal(root.style.transform,'translateX(200.0px)','slides to the centre while turning into the ending');
+  state.index=11;emit('flip');assert.equal(root.style.transform,'translateX(200.0px)','stays centred on the ending');
+  state.dir=1;emit('changeState','flipping');assert.equal(root.style.transform,'','slides back while turning away');
+  state.index=9;emit('flip');assert.equal(root.style.transform,'','settled on the spread');
+  state.dir=0;state.orientation='portrait';emit('changeState','flipping');assert.equal(root.style.transform,'','portrait never shifts mid-turn');
 }
 { // Curved cover turn: strip angles always add up to the turn; the free edge leads when opening.
   const n=FlipbookCurl.STRIPS,sum=a=>a.reduce((x,y)=>x+y,0);

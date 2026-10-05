@@ -1211,3 +1211,17 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Fix: `FlipbookLayout.withBackCover` saiki nambah blank back cover krem kanggo GENAP pisan (ganjil tetep, <3 halaman tetep ora). Spread pungkasan dadi kebak [211+blank], ora ono bolongan; efek samping apik: glide tengah `centerCover` nang halaman pungkasan ilang (sheets dadi ganjil → syarat shift ora kecandhak). Berlaku preview + kabeh ekspor (HTML/APK/EXE/share) + proyek lawas otomatis (sheets dibangun ulang pas dibuka).
 - Tes: `bookmarks.test` (genap 12→13 + blank; ganjil/siji/cilik tetep) + `qa-editor` (engine 8→9 sheets) disesuaikan; 38 suite Node ijo kabeh, `node --check` layout OK, `git diff --check` bersih, HTTP 200 flipbook.
 - Durung commit/push/deploy — ngenteni owner coba. Ekspor/share lawas perlu digawe ulang ben entuk back cover-e.
+
+### 2026-10-06 — Ending kaya buka cover: krem invisible + geser tengah (request owner)
+- Owner: krem didelikke, ending tetep geser tengah kaya awal buka cover. Analisis video wingi nunjukke flip lungo lungo (departure) main miring + glide-balik 1,6 dtk — mekanisme glide-sawise-landing sing kudu diilangi.
+- Implementasi (`assets/export/layout.js` + `book-effects.css`, otomatis preview + kabeh ekspor):
+  - Back sheet tetep ditempelke (mesin butuh spread kebak) tapi CSS transparent total (background/box-shadow/spine-shading dipateni; berlaku ganjil-genap konsisten).
+  - `centerCover` saiki ngerti "last spread" (L = N-1 yen genap, N-2 yen ganjil, N≥4): mlebu ending (maju seko L-2) mulai geser pas flip START (glide bareng animasi, landing wes tengah — persis buka cover); lunga seko ending (mundur seko L) bali pas flip START. Flip ora tau main miring, ora ono glide sawise landing. `settle()` tetep benerke posisi akhir kanggo lompatan (Home/link) + drag (settle pas release, kaya cover).
+  - Bookmark/notes/stabilo/audio maca `visible()` (indeks < pageCount) dadi blank ora tau ke-bookmark/ono-tab; status "212 / 212" tetep; `next` tetep mati nang spread pungkasan.
+- Tes: `export.test.cjs` (mock lawas tetep + blok anyar: geser pas mlebu, meneng nang ending, bali pas lunga, portrait ora geser); 38 suite Node ijo, `node --check` OK, `git diff --check` bersih, HTTP 200.
+- Durung commit/push/deploy. Eksper lawas/share lawas perlu digawe ulang. Catetan pinggir: spread blank-dewekan kanggo buku ganjil saiki peteng (ora krem) — konsisten karo "invisible".
+
+### 2026-10-06 — Analisis video bug flip (Drive, 6,1 dtk, 30fps)
+- Frame diekstrak via ffmpeg (2fps + 10fps nang area flip). Isi video: spread pungkasan single [211/Zip, sisih tengen peteng = EKSPOR LAWAS tanpa back cover] → flip MUNDUR pojok (klik pojok kanan-NGISOR, kursor ketok) → landing [209,210] resik.
+- Temuan: lembaran miring/geser munggah-mudhun nang tengah flip = perspektif 3D normal flip POJOK (sumbu miring, pojok ngayun metu layar). Flip tombol/keyboard nganggo pojok NDUWUR (ayunan luwih alus); klik pojok ngisor = ayunan paling gedhe. Math engine podo kanggo kabeh halaman (verifikasi nang vendor) — sing spesifik mburi mung landing bolongan (wes di-fix back cover, nunggu share ulang).
+- Tindak lanjut: owner share ulang → coba flip pojok maneh. Nek ayunan pojok-ngisor isih keganggu, opsi: biasakake tombol → / pojok nduwur, utowo tak pikirke calming flip pojok.

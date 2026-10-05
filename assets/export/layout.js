@@ -45,17 +45,26 @@
     return {single,minWidth:single?width+1:1,maxWidth:width,maxHeight:height};
   },
   // A closed book sits centred: the front cover alone would otherwise fill
-  // only the right half (and a lone back cover the left half). Opening the
+  // only the right half (and a lone last page the left half). Opening the
   // cover slides the book to its spread position while the cover turns;
-  // closing it turns first, then glides back to the centre.
+  // closing it turns first, then glides back to the centre. The ending
+  // mirrors the opening: the last spread glides to the centre while it
+  // turns (lone last page centred, invisible back sheet off the edge),
+  // and glides back while turning away — so a turn never plays off-centre
+  // and nothing glides after landing.
   centerCover(book, root, reduced) {
     const count = () => book.getPageCount();
+    // First index of the last spread (always paired with the invisible
+    // back sheet, or the lone blank itself); -1 when there is no ending.
+    const lastFirst = () => { const n = count(); return n < 4 ? -1 : (n % 2 === 0 ? n - 1 : n - 2); };
+    const direction = () => { try { return book.getRender().getDirection(); } catch (e) { return 0; } };
     const closedShift = () => {
       if (book.getOrientation() !== 'landscape') return 0;
       const rect = book.getBoundsRect(), index = book.getCurrentPageIndex();
       if (!rect || !rect.pageWidth) return 0;
       if (index === 0) return -rect.pageWidth / 2;
-      if (index === count() - 1 && count() % 2 === 0) return rect.pageWidth / 2;
+      const L = lastFirst();
+      if (L > 0 && index === L) return rect.pageWidth / 2;
       return 0;
     };
     const apply = x => { root.style.transform = x ? 'translateX(' + x.toFixed(1) + 'px)' : ''; };
@@ -66,6 +75,17 @@
       // Leaving a closed cover by button/key/swipe: slide while it opens.
       // (A drag keeps the book still under the finger; it settles on release.)
       if (event.data === 'flipping' && closedShift() !== 0) apply(0);
+      if (event.data === 'flipping') {
+        // Into / out of the ending: slide during the turn, like the cover.
+        const L = lastFirst(), idx = book.getCurrentPageIndex(), dir = direction();
+        if (L > 0 && book.getOrientation() === 'landscape') {
+          const rect = book.getBoundsRect();
+          if (rect && rect.pageWidth) {
+            if (dir === 0 && idx === L - 2) apply(rect.pageWidth / 2);
+            else if (dir === 1 && idx === L) apply(0);
+          }
+        }
+      }
       if (event.data === 'read') settle();
     });
     book.on('flip', settle); book.on('changeOrientation', settle);
