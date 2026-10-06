@@ -145,6 +145,48 @@
     });
   }
 
+  function escapeHtml(text) {
+    return String(text).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  }
+  // multipart/related body for files.create with media (uploadType=multipart).
+  function multipart(title, html) {
+    const boundary = 'myflipbook' + Math.random().toString(36).slice(2) + Date.now().toString(36);
+    const meta = JSON.stringify({ name: title, mimeType: 'application/vnd.google-apps.document' });
+    return { boundary: boundary, type: 'multipart/related; boundary=' + boundary,
+      body: '--' + boundary + '\r\nContent-Type: application/json; charset=UTF-8\r\n\r\n' + meta
+        + '\r\n--' + boundary + '\r\nContent-Type: text/html; charset=UTF-8\r\n\r\n' + html
+        + '\r\n--' + boundary + '--' };
+  }
+  /* Creates a Google Doc titled `title` in the reader's own Drive, holding a
+   * clickable share link: opened from Drive it previews natively, one click
+   * reaches the player. Resolves {id, name, url}, or null when cancelled. */
+  function createDoc(config, title, url, status, fetcher) {
+    status = status || function () {};
+    var clean = String(title || 'Book').slice(0, 120) || 'Book';
+    var link = String(url || '');
+    var html = '<h1>' + escapeHtml(clean) + '</h1><p><a href="' + escapeHtml(link) + '">' + escapeHtml(link) + '</a></p>';
+    var send = fetcher || root.fetch;
+    return preload()
+      .then(function () { status('Signing in to Google…'); return accessToken(config); })
+      .then(function (oauth) {
+        var part = multipart(clean, html);
+        return send('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,mimeType',
+          { method: 'POST', headers: { Authorization: 'Bearer ' + oauth, 'Content-Type': part.type }, body: part.body });
+      })
+      .then(function (response) {
+        if (response.ok) return response.json();
+        if (response.status === 401) token = null;
+        return (response.json ? response.json() : Promise.reject()).catch(function () { return {}; }).then(function (body) {
+          var error = (body && body.error) || {};
+          throw new Error('Google Drive refused the document (' + response.status + (error.message ? ': ' + error.message : '') + ').');
+        });
+      })
+      .then(function (file) { return { id: file.id, name: file.name, url: file.webViewLink }; })
+      .catch(function (cause) {
+        if (cause && cause.message === 'cancelled') { status(''); return null; }
+        throw cause;
+      });
+  }
   /* Opens the picker; resolves the picked file as a File, or null when the
    * reader cancels. status(text) reports progress. options.mimeTypes: only
    * these kinds of files (default: everything a flipbook can be made from). */
@@ -166,5 +208,5 @@
       });
   }
 
-  root.DrivePicker = { preload: preload, pick: pick, download: download, MIME_TYPES: MIME_TYPES, SCOPE: SCOPE };
+  root.DrivePicker = { preload: preload, pick: pick, download: download, createDoc: createDoc, MIME_TYPES: MIME_TYPES, SCOPE: SCOPE };
 })(typeof window !== 'undefined' ? window : globalThis);

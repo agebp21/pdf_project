@@ -1026,6 +1026,28 @@
         'Shortcut ke-download — upload nang Google Drive. Nang Windows double-click mesthi mbukak browser (ora Notepad).');
     } catch (cause) { $('#share-popup-status').textContent = cause.message; }
   };
+  // Google Doc straight into the reader's Drive (title = book title, the
+  // share link clickable inside): Drive previews Docs natively, one click
+  // reaches the player — no download step at all.
+  $('#share-popup-doc').onclick = async () => {
+    const url = $('#share-popup-url').value; if (!url) return;
+    const statusEl = $('#share-popup-status');
+    const link = (text, href) => {
+      const anchor = document.createElement('a');
+      anchor.href = href; anchor.target = '_blank'; anchor.rel = 'noopener'; anchor.textContent = text;
+      return anchor;
+    };
+    try {
+      if (!driveConfig) await loadDriveConfig();
+      if (!driveConfig || !window.DrivePicker) throw Error(L('Google Drive is not set up on this server (GOOGLE_CLIENT_ID + GOOGLE_API_KEY). Copy the link or grab a file above instead.',
+        'Google Drive durung disetel nang server iki (GOOGLE_CLIENT_ID + GOOGLE_API_KEY). Salin link-e utowo download file nang nduwur wae.'));
+      const title = ($('#export-title') && $('#export-title').value) || 'book';
+      const doc = await DrivePicker.createDoc(driveConfig, title, url, message => { statusEl.textContent = message; });
+      if (!doc) { statusEl.textContent = L('Cancelled.', 'Batal.'); return; }
+      statusEl.replaceChildren(L('Document created: ', 'Dokumen dadi: '), link(doc.name, doc.url),
+        L(' — open it in Google Drive and share it with members.', ' — bukaken nang Google Drive terus bagi ke member.'));
+    } catch (cause) { statusEl.textContent = cause.message; }
+  };
   $('#share-popup-close').onclick=closeSharePopup;
   $('#share-popup').addEventListener('mousedown', event => { if (event.target.id === 'share-popup') closeSharePopup(); });
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('#share-popup').hidden) closeSharePopup(); });

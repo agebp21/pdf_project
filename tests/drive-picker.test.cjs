@@ -92,5 +92,27 @@ const config = {clientId: 'client-1', apiKey: 'key-1', appId: '123456'};
   fetchReply = {ok: true, status: 200};
   await DrivePicker.pick(config);
   assert.equal(tokenRequests, 2, 'signed in again after a 401');
+  // A Google Doc with the share link inside: converted from HTML on upload,
+  // so Drive previews it natively and one click reaches the player.
+  let posted = null;
+  const docFetch = async (url, opts) => { posted = [url, opts]; return { ok: true, status: 200,
+    json: async () => ({ id: 'doc9', name: 'Grand Designs', webViewLink: 'https://docs.google.com/x', mimeType: 'application/vnd.google-apps.document' }) }; };
+  const docSaid = [];
+  const doc = await DrivePicker.createDoc(config, 'Grand <Designs>', 'https://myflipbookpro.com/s/abc', t => docSaid.push(t), docFetch);
+  assert.deepEqual(doc, { id: 'doc9', name: 'Grand Designs', url: 'https://docs.google.com/x' });
+  assert.ok(posted[0].startsWith('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'), 'multipart upload');
+  assert.equal(posted[1].method, 'POST');
+  assert.ok(posted[1].headers.Authorization.startsWith('Bearer '), 'user token, not a server key');
+  assert.ok(posted[1].headers['Content-Type'].startsWith('multipart/related; boundary='), 'multipart body');
+  assert.ok(posted[1].body.includes('"mimeType":"application/vnd.google-apps.document"'), 'created as a Google Doc');
+  assert.ok(posted[1].body.includes('Content-Type: text/html'), 'uploaded as HTML for conversion');
+  assert.ok(posted[1].body.includes('<h1>Grand &lt;Designs&gt;</h1>'), 'title escaped');
+  assert.ok(posted[1].body.includes('<a href="https://myflipbookpro.com/s/abc">https://myflipbookpro.com/s/abc</a>'), 'clickable link inside');
+  assert.ok(posted[1].body.includes('"name":"Grand <Designs>"'), 'metadata keeps the real title (JSON-quoted)');
+  assert.ok(!posted[1].body.includes('<h1>Grand <Designs>'), 'no raw markup in the converted HTML');
+  // Google refusing: its own message; cancel stays silent.
+  const denied = async () => ({ ok: false, status: 403, json: async () => ({ error: { message: 'The user has exceeded' } }) });
+  await assert.rejects(DrivePicker.createDoc(config, 'T', 'https://myflipbookpro.com/s/abc', () => {}, denied), /refused the document \(403: The user has exceeded\)/);
   console.log('PASS drive picker: scripts once, drive.file token reuse, Docs exported as PDF, files as is, cancel, Google reasons (export too large, Drive API off, other), 401 re-sign-in');
+  console.log('PASS drive doc: HTML converts to a Doc with a clickable share link, Google errors surfaced');
 })().catch(error => { console.error(error); process.exit(1); });

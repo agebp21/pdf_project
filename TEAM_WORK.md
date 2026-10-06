@@ -1267,3 +1267,9 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Masalah: launcher `.html` nang Windows iso kebukak Notepad (asosiasi file), member bingung. Solusi: tombol ke-3 nang popup share — file `.url` (InternetShortcut): double-click nang Windows **mesthi** mbukak browser (ora tau Notepad). Aturan pakai: Windows → `.url`, HP → `.html` launcher.
 - File: `shareShortcut(url)` + tombol popup + tes (format + gate URL). Suite + sintaks + HTTP ijo.
 - Durung commit/push/deploy.
+
+### 2026-10-06 — Doc nang Drive langsung seko aplikasi (request owner)
+- Owner: generate file Google Doc (jeneng = project) isine link siap-klik, member mbukak Doc → klik link → player. Solusi: tombol ke-4 nang popup share **📄 Save Doc to Drive** → aplikasi (token drive.file sing padha karo Picker) gawe Doc nang Drive-e dewe via `files.create` multipart (HTML → dikonversi Google dadi Doc, `<a>` dadi link tenan). Syarat: GOOGLE_CLIENT_ID + GOOGLE_API_KEY nang server (nek urung → pesan jelas + tombol liyane tetep jalan).
+- File: `assets/drive-picker.js` (`createDoc`, multipart builder, error Google asli) + tombol + status link nang popup (`flipbook.js/html`).
+- Tes: `drive-picker.test.cjs` (multipart shape, konversi Doc, link bisa diklik, escaping, error Google); qa-editor ijo; sintaks + diff bersih; HTTP 200 + tombol kesaji. E2E Google asli (akun owner) durung — nunggu klik tenan.
+- Durung commit/push/deploy.
