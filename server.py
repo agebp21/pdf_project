@@ -47,6 +47,7 @@ import share
 import messages_en
 import free_translate
 import geo
+import seo
 import book_seal
 import invoice
 import visits
@@ -2013,7 +2014,7 @@ class Handler(SimpleHTTPRequestHandler):
             size = int(self.headers.get('Content-Length', '0'))
             data = json.loads(self.rfile.read(size) if 0 < size <= 4096 else b'{}')
             page = str(data.get('path') or '/').split('?')[0].lstrip('/') or 'index.html'
-            if page in PAGES and page not in SOON_PAGES:
+            if (page in PAGES and page not in SOON_PAGES) or page in seo.LANDING:
                 user = self.current_user() if self.session_token() else None
                 team = {e.strip().lower() for e in os.environ.get('STATS_EXCLUDE_EMAILS', '').split(',') if e.strip()}
                 key = (self.client_ip(), self.headers.get('User-Agent', ''), page)
@@ -2696,6 +2697,16 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(page)
             return
+        found = seo.respond(path)
+        if found:
+            # Search pages: tool landing pages, robots.txt, sitemap.xml.
+            self.send_response(200)
+            self.send_header('Content-Type', found[1])
+            self.send_header('Cache-Control', 'public, max-age=3600')
+            self.send_header('Content-Length', str(len(found[0])))
+            self.end_headers()
+            self.wfile.write(found[0])
+            return
         relative = path.lstrip('/') or 'index.html'
         file = (ROOT / relative).resolve()
         allowed = relative in PAGES or (relative.startswith('assets/') and file.is_relative_to(ROOT / 'assets'))
@@ -2717,6 +2728,15 @@ class Handler(SimpleHTTPRequestHandler):
             if denied:
                 self.send_json(denied[0], {'error': denied[1]})
                 return
+        if relative in PAGES and seo.app_head(relative):
+            # App pages get their description / canonical / social tags here.
+            page = seo.add_head(relative, file.read_bytes())
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Length', str(len(page)))
+            self.end_headers()
+            self.wfile.write(page)
+            return
         super().do_GET()
 
     def fetch_source_route(self):
