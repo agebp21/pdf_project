@@ -204,7 +204,8 @@ def update(target=None, month=None):
             url = URL.format(name=filename[:-5], month=m)
             tmp = target / (filename + '.part')
             try:
-                with urllib.request.urlopen(url, timeout=120) as r, gzip.GzipFile(fileobj=r) as z, open(tmp, 'wb') as out:
+                request = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (MyFlipbook geo update)'})
+                with urllib.request.urlopen(request, timeout=120) as r, gzip.GzipFile(fileobj=r) as z, open(tmp, 'wb') as out:
                     shutil.copyfileobj(z, out)
                 Reader(tmp).close()                      # a broken download never replaces a good file
             except Exception as e:
