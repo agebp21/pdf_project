@@ -43,9 +43,14 @@
   .two{display:grid;grid-template-columns:repeat(auto-fit,minmax(280px,1fr));gap:18px}
   #login{max-width:360px;margin:80px auto;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px}
   #login h1{margin:0 0 4px;font-size:20px} #login input{width:100%;margin:6px 0 10px;min-width:0} #login button{width:100%}
-  dialog{border:1px solid var(--line);border-radius:16px;padding:0;max-width:900px;width:calc(100% - 32px);background:var(--card)}
-  dialog .head{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
-  dialog .body{padding:16px 18px;max-height:75vh;overflow:auto}
+  #member-detail{margin-top:6px;scroll-margin-top:16px}
+  #member-detail .dhead{display:flex;justify-content:space-between;align-items:flex-start;gap:12px;padding-bottom:12px;margin-bottom:14px;border-bottom:1px solid var(--line)}
+  #member-detail .dhead b{font-size:16px}
+  #member-detail h3{margin:20px 0 8px;font-size:15px}
+  .info{display:grid;grid-template-columns:repeat(auto-fill,minmax(210px,1fr));gap:10px 18px;margin:14px 0 4px}
+  .info div{border-left:3px solid var(--line);padding-left:10px}
+  .info span{display:block;font-size:11.5px;color:var(--muted)} .info b{font-weight:600;font-size:13.5px;word-break:break-word}
+  #member-table tr.sel td{background:#eef4ec}
   .yes{color:var(--good);font-weight:600} .no{color:#adb5bd}
   @media (max-width:640px){header{flex-wrap:wrap;padding:12px 16px} input[type=search]{min-width:0;flex:1}}
 </style>
@@ -81,6 +86,10 @@
       <div class="row"><input type="search" id="member-q" placeholder="Cari email atau nama…"><span class="muted" id="member-count"></span></div>
       <div class="panel"><table id="member-table"></table></div>
       <div class="row"><button class="ghost" id="member-prev">← Sebelumnya</button><button class="ghost" id="member-next">Berikutnya →</button></div>
+      <div class="panel" id="member-detail" hidden>
+        <div class="dhead"><div><b id="detail-title"></b><div class="muted" id="detail-sub"></div></div><button class="ghost" id="detail-close">Tutup</button></div>
+        <div id="detail-body"></div>
+      </div>
     </section>
     <section data-view="uploads" hidden>
       <h2>Data yang diupload member (My Library)</h2>
@@ -100,7 +109,6 @@
   </main>
 </div>
 
-<dialog id="detail"><div class="head"><b id="detail-title"></b><button class="ghost" id="detail-close">Tutup</button></div><div class="body" id="detail-body"></div></dialog>
 
 <script>
 'use strict';
@@ -178,23 +186,39 @@ async function loadMembers(page) {
       <td><span class="tag ${m.paid ? esc(m.plan) : ''}">${esc(m.paid ? PLAN[m.plan] || m.plan : 'Free')}</span></td><td>${m.paid ? date(m.planExpiresAt) : '—'}</td>
       <td class="${m.verified ? 'yes' : 'no'}">${m.verified ? '✓' : '—'}</td><td class="${m.google ? 'yes' : 'no'}">${m.google ? '✓' : '—'}</td>
       <td>${num(m.books)}</td><td>${size(m.bytes)}</td><td>${date(m.createdAt)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">Tidak ada member.</td></tr>');
-  document.querySelectorAll('#member-table tr.click').forEach(tr => tr.onclick = () => showMember(tr.dataset.id));
+  document.querySelectorAll('#member-table tr.click').forEach(tr => {
+    tr.classList.toggle('sel', tr.dataset.id === String(memberShown));
+    tr.onclick = () => showMember(tr.dataset.id);
+  });
 }
+let memberShown = null;
 async function showMember(id) {
   const m = await api('/api/members/' + id);
+  memberShown = String(id);
+  document.querySelectorAll('#member-table tr.click').forEach(tr => tr.classList.toggle('sel', tr.dataset.id === memberShown));
+  const info = (label, value) => `<div><span>${label}</span><b>${value}</b></div>`;
+  const r = m.referral;
   $('#detail-title').textContent = m.email;
+  $('#detail-sub').textContent = m.name || '';
   $('#detail-body').innerHTML = `<div class="grid">${card(esc(m.paid ? PLAN[m.plan] || m.plan : 'Free'), 'Paket' + (m.paid ? ' s/d ' + date(m.planExpiresAt) : ''))}
       ${card(num(m.books.length), 'Buku di My Library')}${card(num(m.visits), 'Kunjungan (saat masuk)')}${card(esc(when(m.lastVisit)), 'Terakhir berkunjung')}</div>
-    <p class="muted">Nama: ${esc(m.name) || '—'} · Daftar ${date(m.createdAt)} · Email ${m.verified ? 'terverifikasi' : 'belum terverifikasi'} · ${m.google ? 'Login Google' : 'Login email'} · ${num(m.sessions)} sesi aktif</p>
+    <div class="info">${info('Nama', esc(m.name) || '—')}${info('Daftar', date(m.createdAt))}
+      ${info('Email', m.verified ? '✓ Terverifikasi' : 'Belum terverifikasi')}${info('Cara masuk', m.google ? 'Google' : 'Email & password')}
+      ${info('Sesi aktif', num(m.sessions))}
+      ${r ? info('Kode referral', esc(r.code || '—')) + info('Diundang oleh', esc(r.referredBy || '—'))
+          + info('Mengundang', num(r.signups) + ' orang · ' + num(r.subscribed) + ' berlangganan') + info('Hadiah referral', num(r.rewards) + ' bulan') : ''}</div>
     ${m.places && m.places.length ? `<h3>Lokasi (perkiraan dari jaringan)</h3><table><tr><th>Tempat</th><th>Provider</th><th>Perangkat</th><th>Terakhir</th><th>Tampilan</th></tr>
       ${m.places.map(p => `<tr><td>${esc(place(p))}</td><td>${esc(p.isp) || '—'}</td><td>${esc(DEVICE[p.device] || p.device)}</td><td>${esc(when(p.last))}</td><td>${num(p.views)}</td></tr>`).join('')}</table>` : ''}
-    ${m.referral ? `<p class="muted">Referral: kode ${esc(m.referral.code || '—')} · diundang oleh ${esc(m.referral.referredBy || '—')} · mengundang ${num(m.referral.signups)} (berlangganan ${num(m.referral.subscribed)}) · hadiah ${num(m.referral.rewards)} bulan</p>` : ''}
     <h3>Buku</h3>${bookTable(m.books, false)}
     <h3>Order</h3><table><tr><th>Order</th><th>Paket</th><th>Jumlah</th><th>Status</th><th>Lewat</th><th>Dibuat</th><th>Lunas</th></tr>
     ${m.orders.map(o => `<tr><td>${esc(o.id)}</td><td>${esc(PLAN[o.plan] || o.plan)} · ${esc(o.cycle)}</td><td>${money(o.currency, o.amount)}</td><td><span class="tag ${esc(o.status)}">${esc(o.status)}</span></td><td>${esc(o.provider)}</td><td>${date(o.createdAt)}</td><td>${date(o.paidAt)}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Belum ada order.</td></tr>'}</table>`;
-  $('#detail').showModal();
+  $('#member-detail').hidden = false;
+  $('#member-detail').scrollIntoView({behavior: 'smooth', block: 'start'});
 }
-$('#detail-close').onclick = () => $('#detail').close();
+$('#detail-close').onclick = () => {
+  $('#member-detail').hidden = true; memberShown = null;
+  document.querySelectorAll('#member-table tr.sel').forEach(tr => tr.classList.remove('sel'));
+};
 function bookTable(items, owner) {
   return `<table><tr><th>Judul</th>${owner ? '<th>Member</th>' : ''}<th>Halaman</th><th>Ukuran</th><th>Hasil ekspor</th><th>Disimpan</th><th>Diubah</th></tr>` +
     (items.map(b => `<tr><td>${esc(b.title)}</td>${owner ? `<td>${esc(b.owner)}</td>` : ''}<td>${num(b.pages)}</td><td>${size(b.size)}</td>
