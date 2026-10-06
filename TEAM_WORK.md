@@ -33,6 +33,7 @@ Selesai & live (detail per fitur di PROJECT_HANDOFF.md, bagian bertanggal):
 
 **Menunggu keputusan owner (jangan dikerjakan dulu):**
 - Link baca online `myflipbookpro.com/b/<id>` dari My Library (supaya flipbook bisa dibuka dari Google Drive/WA/Google Sites tanpa unduh HTML) — tanya: link umum atau hanya member login; semua paket atau Pro/Business.
+- Email CS `cs@myflipbookpro.com` di panel admin (tab Email: inbox, baca, balas via IMAP/SMTP) — owner sedang menyiapkan mailbox. SEKARANG MX domain menunjuk VPS tanpa mail server → email ke cs@ mental. Butuh: provider + host/port IMAP & SMTP; password hanya di .env VPS.
 - Chat customer service — pilihan: tombol WhatsApp (butuh nomor CS), widget Tawk.to/Crisp, atau chat sendiri di panel admin (+ asisten AI). Owner: pending.
 
 Aturan singkat: satu file satu penulis aktif; catat di tabel di bawah sebelum mulai; deploy hanya lewat DEPLOY.md; perbarui bagian ini setiap selesai.
