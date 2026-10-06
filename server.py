@@ -225,6 +225,9 @@ def payments_paused():
     return os.environ.get('PAYMENTS_PAUSED', '').strip().lower() in ('1', 'true', 'yes', 'on')
 
 
+SIGNUP_IP_MESSAGE = 'Dari jaringan ini sudah ada akun MyFlipbook. Masuk dengan akun yang sudah ada, atau hubungi kami bila jaringan ini dipakai bersama.'
+
+
 def worker_key():
     return os.environ.get('BUILD_WORKER_KEY', '').strip()
 
@@ -1953,8 +1956,38 @@ class Handler(SimpleHTTPRequestHandler):
             pass
 
     def client_ip(self):
-        forwarded = self.headers.get('X-Forwarded-For', '') if hosted() else ''
-        return forwarded.split(',')[0].strip() or self.client_address[0]
+        # Behind nginx: X-Real-IP is set by nginx itself ($remote_addr); the
+        # first X-Forwarded-For entry can be written by the visitor, so it is
+        # only a fallback.
+        if hosted():
+            real = self.headers.get('X-Real-IP', '').strip()
+            if real:
+                return real
+            forwarded = [p.strip() for p in self.headers.get('X-Forwarded-For', '').split(',') if p.strip()]
+            if forwarded:
+                return forwarded[-1]
+        return self.client_address[0]
+
+    def signup_guard(self, email=None, google_sub=None):
+        """One new account per network (SIGNUP_PER_IP accounts per SIGNUP_IP_DAYS days,
+        default 1 per 365): a new account from an IP that already made one is
+        refused; signing in to an existing account is never blocked. Hosted only;
+        SIGNUP_IP_ALLOW lists IPs left free (an office). Returns the IP to record."""
+        ip = self.client_ip()
+        if not hosted() or get_accounts().account_exists(email, google_sub):
+            return None
+        allowed = {a.strip() for a in os.environ.get('SIGNUP_IP_ALLOW', '').split(',') if a.strip()}
+        try:
+            limit = int(os.environ.get('SIGNUP_PER_IP', '1')); days = int(os.environ.get('SIGNUP_IP_DAYS', '365'))
+        except ValueError:
+            limit, days = 1, 365
+        try:
+            local = ipaddress.ip_address(ip).is_loopback          # this machine itself (tools, tests); nginx always sends the real IP
+        except ValueError:
+            local = False
+        if ip not in allowed and not local and limit > 0 and get_accounts().signups_from(ip, days) >= limit:
+            raise accounts.AccountError(403, SIGNUP_IP_MESSAGE)
+        return ip
 
     def read_body(self, limit=64 * 1024):
         if self.headers.get_content_type() != 'application/json':
@@ -2223,8 +2256,11 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/api/auth/register':
             if CONFIG['verify_email']:
                 # Not signed in yet: the account opens from the link in the email.
+                ip = self.signup_guard(data.get('email'))
                 user_id, token = store.register_unverified(data.get('email'), data.get('password'), data.get('name'))
                 store.attach_referrer(user_id, self.ref_cookie())
+                if ip:
+                    store.record_signup(ip, user_id)
                 email = str(data.get('email')).strip().lower()
                 try:
                     sent = verification_mail(email, str(data.get('name') or '').strip(), self.base_url() + '/api/auth/verify?token=' + token)
@@ -2232,9 +2268,12 @@ class Handler(SimpleHTTPRequestHandler):
                     raise accounts.AccountError(502, str(cause))
                 self.send_json(201, {'verify': True, 'email': email, 'outbox': sent == 'outbox'})
                 return
+            ip = self.signup_guard(data.get('email'))
             token = store.register(data.get('email'), data.get('password'), data.get('name'))
             user = store.user_for(token)
             store.attach_referrer(user['id'], self.ref_cookie())
+            if ip:
+                store.record_signup(ip, user['id'])
             self.send_json(201, {'user': store.user_for(token)}, cookie=self.session_cookie(token))
             return
         if path == '/api/auth/resend':
@@ -2249,8 +2288,11 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if path == '/api/auth/google':
             claims = google_claims(data.get('credential'))
+            ip = self.signup_guard(claims.get('email'), claims.get('sub'))
             token = store.google_login(claims.get('sub'), claims.get('email'), claims.get('name', ''))
             store.attach_referrer(store.user_for(token)['id'], self.ref_cookie())      # only a brand-new account takes it
+            if ip:
+                store.record_signup(ip, store.user_for(token)['id'])
             self.send_json(200, {'user': store.user_for(token)}, cookie=self.session_cookie(token))
             return
         if path == '/api/auth/login':

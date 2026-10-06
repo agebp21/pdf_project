@@ -522,6 +522,9 @@ class Accounts:
             db.executescript('''
                 CREATE UNIQUE INDEX IF NOT EXISTS users_ref_code ON users(ref_code) WHERE ref_code IS NOT NULL;
                 CREATE INDEX IF NOT EXISTS users_referred_by ON users(referred_by);
+                CREATE TABLE IF NOT EXISTS signups(
+                    ip_hash TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at INTEGER NOT NULL);
+                CREATE INDEX IF NOT EXISTS signups_ip ON signups(ip_hash, created_at);
                 CREATE TABLE IF NOT EXISTS referral_rewards(
                     id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                     friends INTEGER NOT NULL, days INTEGER NOT NULL, granted_at INTEGER NOT NULL);
@@ -807,6 +810,31 @@ class Accounts:
             if order['plan'] in ('pro', 'business') and user['referred_by']:
                 self._reward_referrer(db, user['referred_by'], now)
         return True
+
+    # ---- one account per network (new sign-ups) ------------------------------
+    def ip_hash(self, ip):
+        """IPs are kept only as a keyed hash (secret next to the database)."""
+        salt = self.path.parent / 'signup.salt'
+        if not salt.exists():
+            salt.write_bytes(secrets.token_bytes(32))
+        return hashlib.sha256(salt.read_bytes() + str(ip or '').encode()).hexdigest()[:32]
+
+    def account_exists(self, email=None, google_sub=None):
+        """A sign-in that would not create a new account (a known email or Google account)."""
+        with self.connect() as db:
+            if google_sub and db.execute('SELECT 1 FROM users WHERE google_sub=?', (google_sub,)).fetchone():
+                return True
+            return bool(db.execute('SELECT 1 FROM users WHERE email=?', ((email or '').strip().lower(),)).fetchone())
+
+    def signups_from(self, ip, days):
+        with self.connect() as db:
+            return db.execute('SELECT COUNT(*) FROM signups WHERE ip_hash=? AND created_at>?',
+                              (self.ip_hash(ip), int(time.time()) - days * 86400)).fetchone()[0]
+
+    def record_signup(self, ip, user_id):
+        with self.connect() as db:
+            if not db.execute('SELECT 1 FROM signups WHERE user_id=?', (user_id,)).fetchone():
+                db.execute('INSERT INTO signups VALUES(?,?,?)', (self.ip_hash(ip), user_id, int(time.time())))
 
     # ---- referrals ---------------------------------------------------------
     def referral_code(self, user_id):

@@ -46,6 +46,8 @@ EXACT = {
     'Terjemahan sudah tidak ditunggu.': 'That translation is no longer awaited.',
     'Akun tidak ditemukan.': 'Account not found.',
     'Kode referral tidak bisa dibuat.': 'The referral code could not be made.',
+    'Dari jaringan ini sudah ada akun MyFlipbook. Masuk dengan akun yang sudah ada, atau hubungi kami bila jaringan ini dipakai bersama.':
+        'There is already a MyFlipbook account from this network. Sign in with that account, or contact us if this network is shared.',
     'Kunci worker tidak valid.': 'The worker key is not valid.',
     'Build ini tidak sedang berjalan.': 'This build is not running.',
     'Ukuran hasil build tidak valid.': 'The size of the build result is not valid.',
