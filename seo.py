@@ -290,6 +290,77 @@ tool('watermark-pdf', 'watermark', 'Watermark PDF',
      [('Apakah file asli berubah?', 'Tidak, hasil ber-watermark disimpan sebagai file baru.')],
      related=['nomor-halaman-pdf', 'kompres-pdf', 'pdf-ke-flipbook'])
 
+tool('tanda-tangan-pdf', 'sign-pdf', 'Tanda Tangan PDF',
+     'Tanda Tangan PDF Online Gratis — Tanpa Print & Scan | MyFlipbook',
+     'Tanda tangani PDF langsung di browser: gambar tanda tangan, ketik nama, atau upload gambar, lalu taruh di halaman. '
+     'File tidak diunggah ke server.',
+     'Tanda Tangan PDF Tanpa Print dan Scan',
+     'Surat perjanjian, formulir, atau dokumen kantor yang perlu ditandatangani? Tidak perlu mencetak lalu memindai ulang — '
+     'tanda tangani PDF langsung di HP atau laptop.',
+     ['Buka alat Tanda Tangan PDF dan pilih file.',
+      'Buat tanda tangan: gambar dengan jari/mouse, ketik nama, atau upload gambar tanda tangan (PNG/JPG).',
+      'Klik halaman tempat tanda tangan, geser dan atur ukurannya, lalu unduh PDF yang sudah ditandatangani.'],
+     ['Bisa memasang tanda tangan di beberapa halaman sekaligus.', PRIVATE,
+      'PNG berlatar transparan menghasilkan tanda tangan yang paling rapi.'],
+     [('Apakah ini tanda tangan elektronik tersertifikasi?', 'Bukan. Alat ini menempelkan gambar tanda tangan Anda di halaman, seperti tanda tangan basah yang dipindai. Untuk dokumen yang wajib memakai tanda tangan elektronik tersertifikasi, gunakan layanan penyelenggara sertifikasi elektronik resmi.'),
+      ('Apakah bisa dari HP?', 'Bisa. Tanda tangan bisa digambar langsung dengan jari di layar HP.'),
+      ('Apakah file saya diunggah?', 'Tidak. Semua proses berjalan di browser Anda.')],
+     related=['isi-formulir-pdf', 'gabung-pdf', 'kompres-pdf', 'scan-ke-pdf'])
+tool('scan-ke-pdf', 'scan-to-pdf', 'Scan ke PDF',
+     'Scan Dokumen ke PDF dengan Kamera HP — Tanpa Aplikasi | MyFlipbook',
+     'Foto dokumen dengan kamera HP dan jadikan PDF yang bersih: latar kertas diputihkan, tulisan lebih tegas. Langsung di '
+     'browser, tanpa memasang aplikasi.',
+     'Scan Dokumen ke PDF Langsung dari Kamera HP',
+     'Tidak punya mesin scanner? Foto dokumen dengan HP — MyFlipbook merapikan fotonya menjadi PDF yang bersih dan mudah dibaca.',
+     ['Buka Scan ke PDF di browser HP dan tekan tombol Foto dokumen.',
+      'Ambil satu foto untuk setiap halaman (atau pilih foto dari galeri).',
+      'Pilih tampilan Dokumen, Abu-abu, atau Warna asli, lalu unduh PDF-nya.'],
+     ['Mode Dokumen memutihkan latar kertas dan menegaskan tulisan.', 'Ukuran A4 mengikuti orientasi foto, atau sama dengan ukuran foto.', PRIVATE],
+     [('Apakah perlu aplikasi scanner?', 'Tidak. Cukup browser di HP; kamera terbuka langsung dari halaman ini.'),
+      ('Apakah tepi kertas dipotong otomatis?', 'Belum. Ambil foto tegak lurus dari atas dan isi bingkai dengan kertas agar hasilnya rapi.'),
+      ('Bagaimana membuat PDF-nya bisa dicari teksnya?', 'Setelah jadi, jalankan OCR PDF agar teks di hasil scan bisa dicari dan disalin.')],
+     related=['jpg-ke-pdf', 'ocr-pdf', 'kompres-pdf', 'gabung-pdf'])
+tool('isi-formulir-pdf', 'pdf-forms', 'Isi Formulir PDF',
+     'Isi Formulir PDF Online — Ketik Langsung di Kolom Isian | MyFlipbook',
+     'Isi kolom formulir PDF (teks, centang, pilihan) langsung di browser, lalu simpan. Bisa dikunci agar isian tidak '
+     'bisa diubah lagi.',
+     'Isi Formulir PDF Tanpa Mencetak',
+     'Formulir pendaftaran atau administrasi dalam bentuk PDF isian? Ketik jawabannya langsung, simpan, lalu kirim.',
+     ['Buka alat Isi Formulir PDF dan pilih file formulir.',
+      'Isi setiap kolom yang ditemukan: teks, centang, atau pilihan.',
+      'Centang Kunci isian bila perlu, lalu unduh PDF yang sudah terisi.'],
+     ['Membaca kolom teks, kotak centang, dropdown, dan pilihan ganda.', 'Opsi kunci (flatten) agar isian tidak bisa diubah.', PRIVATE],
+     [('Bagaimana kalau PDF saya tidak punya kolom isian?', 'Gunakan Edit PDF untuk menambahkan teks di atas halaman.'),
+      ('Apakah semua formulir didukung?', 'Formulir PDF standar (AcroForm) didukung. Formulir XFA belum, dan kolom formulir hanya bisa diisi huruf Latin.')],
+     related=['tanda-tangan-pdf', 'gabung-pdf', 'kompres-pdf'])
+tool('sensor-pdf', 'redact-pdf', 'Sensor PDF (Redact)',
+     'Sensor PDF Permanen (Redact) — Hitamkan NIK & Data Pribadi | MyFlipbook',
+     'Hitamkan NIK, nomor rekening, atau data pribadi di PDF secara permanen — teks di bawah kotak benar-benar dihapus, '
+     'bukan sekadar ditutupi.',
+     'Sensor Data Pribadi di PDF Secara Permanen',
+     'Mau membagikan dokumen tapi ada NIK, alamat, atau nomor rekening? Hitamkan bagian itu — dan pastikan teks di '
+     'baliknya benar-benar hilang.',
+     ['Buka alat Sensor PDF dan pilih file.',
+      'Seret kotak di area yang mau disensor, atau ketik teks (misalnya NIK) lalu tandai semua kemunculannya.',
+      'Unduh PDF yang sudah disensor.'],
+     ['Benar-benar permanen: halaman yang disensor diubah menjadi gambar, sehingga teks di bawah kotak tidak bisa disalin atau dicari.',
+      PRIVATE, 'Cari teks sekaligus di semua halaman.'],
+     [('Apa bedanya dengan menutup pakai kotak hitam biasa?', 'Kotak biasa hanya menutupi tampilan — teks di bawahnya masih bisa disalin. Di sini halaman yang disensor dibuat ulang sebagai gambar, jadi teksnya hilang.'),
+      ('Apakah teks lain di halaman itu masih bisa dipilih?', 'Tidak. Seluruh halaman yang diberi kotak menjadi gambar; halaman lain tetap seperti semula.')],
+     related=['tanda-tangan-pdf', 'kompres-pdf', 'watermark-pdf'])
+tool('bandingkan-pdf', 'compare-pdf', 'Bandingkan PDF',
+     'Bandingkan Dua PDF — Temukan Perubahan Teks Antar Versi | MyFlipbook',
+     'Bandingkan dua versi PDF dan lihat baris yang dihapus (merah) dan ditambah (hijau) lengkap dengan nomor halamannya. '
+     'Cocok untuk kontrak dan revisi dokumen.',
+     'Bandingkan Dua Versi PDF, Lihat Bedanya',
+     'Revisi kontrak, draf skripsi, atau penawaran harga — temukan apa saja yang berubah tanpa membaca ulang seluruh dokumen.',
+     ['Buka alat Bandingkan PDF.', 'Pilih dua file: versi lama dulu, lalu versi baru.',
+      'Lihat laporan perubahan dan unduh sebagai file HTML bila perlu.'],
+     ['Baris yang dihapus ditandai merah, yang ditambah hijau, lengkap dengan nomor halaman.', PRIVATE],
+     [('Apakah perubahan gambar ikut dibandingkan?', 'Belum. Yang dibandingkan adalah teksnya, baris demi baris.'),
+      ('Bagaimana dengan PDF hasil scan?', 'Jalankan OCR PDF dulu pada kedua file agar teksnya bisa dibandingkan.')],
+     related=['pdf-ke-word', 'ocr-pdf', 'gabung-pdf'])
+
 
 def esc(text):
     return html.escape(str(text), quote=True)
