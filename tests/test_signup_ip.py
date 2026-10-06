@@ -22,7 +22,8 @@ HOST = 'test.myflipbook.local'
 class SignupPerIp(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.env = mock.patch.dict(os.environ, {'MYFLIPBOOK_DB': str(Path(self.tmp.name) / 'a.sqlite3')})
+        # The strictest setting (the default is 3 a day): one new account per IP.
+        self.env = mock.patch.dict(os.environ, {'MYFLIPBOOK_DB': str(Path(self.tmp.name) / 'a.sqlite3'), 'SIGNUP_PER_IP': '1', 'SIGNUP_IP_DAYS': '365'})
         self.env.start()
         self.config = mock.patch.dict(server.CONFIG, {'public_hosts': {HOST}, 'secure': False, 'verify_email': False, 'paywall': True})
         self.config.start()

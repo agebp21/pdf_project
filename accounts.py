@@ -522,6 +522,10 @@ class Accounts:
             db.executescript('''
                 CREATE UNIQUE INDEX IF NOT EXISTS users_ref_code ON users(ref_code) WHERE ref_code IS NOT NULL;
                 CREATE INDEX IF NOT EXISTS users_referred_by ON users(referred_by);
+                CREATE TABLE IF NOT EXISTS usage(
+                    user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, kind TEXT NOT NULL,
+                    amount INTEGER NOT NULL, at INTEGER NOT NULL);
+                CREATE INDEX IF NOT EXISTS usage_user ON usage(user_id, kind, at);
                 CREATE TABLE IF NOT EXISTS signups(
                     ip_hash TEXT NOT NULL, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE, created_at INTEGER NOT NULL);
                 CREATE INDEX IF NOT EXISTS signups_ip ON signups(ip_hash, created_at);
@@ -810,6 +814,20 @@ class Accounts:
             if order['plan'] in ('pro', 'business') and user['referred_by']:
                 self._reward_referrer(db, user['referred_by'], now)
         return True
+
+    # ---- usage quotas (rolling window, like Claude's limits) -----------------
+    def usage_in(self, user_id, kind, since):
+        """(amount used since `since`, time of the oldest of those uses or None)."""
+        with self.connect() as db:
+            row = db.execute('SELECT COALESCE(SUM(amount), 0) AS used, MIN(at) AS first FROM usage WHERE user_id=? AND kind=? AND at>?',
+                             (user_id, kind, since)).fetchone()
+        return row['used'], row['first']
+
+    def spend(self, user_id, kind, amount, now=None):
+        now = int(now or time.time())
+        with self.connect() as db:
+            db.execute('INSERT INTO usage VALUES(?,?,?,?)', (user_id, kind, int(amount), now))
+            db.execute('DELETE FROM usage WHERE at<?', (now - 7 * 86400,))      # a week back is plenty
 
     # ---- one account per network (new sign-ups) ------------------------------
     def ip_hash(self, ip):

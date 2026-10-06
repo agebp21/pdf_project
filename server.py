@@ -225,6 +225,33 @@ def payments_paused():
     return os.environ.get('PAYMENTS_PAUSED', '').strip().lower() in ('1', 'true', 'yes', 'on')
 
 
+# Usage quotas per rolling window (hosted): None = no limit. Change with .env,
+# e.g. QUOTA_FREE_AI=5, QUOTA_PRO_TRANSLATE=400000, QUOTA_WINDOW_HOURS=5.
+QUOTAS = {
+    'free': {'office': 10, 'ai': 5, 'translate': 40_000},
+    'pro': {'office': None, 'ai': 50, 'translate': 400_000},
+    'business': {'office': None, 'ai': 150, 'translate': None},
+}
+QUOTA_LABELS = {'office': 'konversi', 'ai': 'AI', 'translate': 'terjemahan buku'}
+
+
+def quota_window():
+    try:
+        return max(1, int(float(os.environ.get('QUOTA_WINDOW_HOURS', '5')) * 3600))
+    except ValueError:
+        return 5 * 3600
+
+
+def quota_limit(user, kind):
+    # Free members (during their trial — afterwards these features need a plan) get
+    # the small allowance: that is what makes piles of new accounts not worth it.
+    tier = user['plan'] if user['plan'] in ('pro', 'business') else 'free'
+    value = os.environ.get(f'QUOTA_{tier.upper()}_{kind.upper()}', '').strip()
+    if value:
+        return None if value.lower() in ('0', 'none', 'unlimited') else int(value)
+    return QUOTAS[tier][kind]
+
+
 SIGNUP_IP_MESSAGE = 'Dari jaringan ini sudah ada akun MyFlipbook. Masuk dengan akun yang sudah ada, atau hubungi kami bila jaringan ini dipakai bersama.'
 
 
@@ -1938,6 +1965,34 @@ class Handler(SimpleHTTPRequestHandler):
                    download=f'/api/jobs/{job["id"]}/download', updated=time.time())
         self.send_json(200, {'ok': True})
 
+    def quota(self, kind, amount=1):
+        """Spend `amount` of the member's quota for `kind`, or raise 429 saying when it
+        fills up again. Hosted only (a local copy has no limits)."""
+        if not hosted():
+            return
+        user = self.current_user()
+        if not user:
+            return
+        limit = quota_limit(user, kind)
+        if limit is None:
+            return
+        store, window, now = get_accounts(), quota_window(), int(time.time())
+        used, first = store.usage_in(user['id'], kind, now - window)
+        if used + amount > limit:
+            back = time.strftime('%H:%M', time.localtime((first or now) + window))
+            raise accounts.AccountError(429, f'Jatah {QUOTA_LABELS[kind]} habis untuk sementara — terisi lagi pukul {back}. '
+                                             'Upgrade ke Pro atau Business untuk jatah lebih besar.')
+        store.spend(user['id'], kind, amount, now)
+
+    def usage_report(self, user):
+        window, now = quota_window(), int(time.time())
+        out = {}
+        for kind in QUOTA_LABELS:
+            limit = quota_limit(user, kind)
+            used, first = get_accounts().usage_in(user['id'], kind, now - window)
+            out[kind] = dict(used=used, limit=limit, resetAt=(first + window) if first else None)
+        return dict(windowHours=window / 3600, quotas=out, limited=hosted())
+
     def ref_cookie(self):
         """The referral code a visitor arrived with (cookie mf_ref, set by assets/auth.js)."""
         for part in self.headers.get('Cookie', '').split(';'):
@@ -1969,8 +2024,8 @@ class Handler(SimpleHTTPRequestHandler):
         return self.client_address[0]
 
     def signup_guard(self, email=None, google_sub=None):
-        """One new account per network (SIGNUP_PER_IP accounts per SIGNUP_IP_DAYS days,
-        default 1 per 365): a new account from an IP that already made one is
+        """Few new accounts per network (SIGNUP_PER_IP accounts per SIGNUP_IP_DAYS days,
+        default 3 a day — the usage quotas do the real work): a new account from an IP that already made one is
         refused; signing in to an existing account is never blocked. Hosted only;
         SIGNUP_IP_ALLOW lists IPs left free (an office). Returns the IP to record."""
         ip = self.client_ip()
@@ -1978,9 +2033,9 @@ class Handler(SimpleHTTPRequestHandler):
             return None
         allowed = {a.strip() for a in os.environ.get('SIGNUP_IP_ALLOW', '').split(',') if a.strip()}
         try:
-            limit = int(os.environ.get('SIGNUP_PER_IP', '1')); days = int(os.environ.get('SIGNUP_IP_DAYS', '365'))
+            limit = int(os.environ.get('SIGNUP_PER_IP', '3')); days = int(os.environ.get('SIGNUP_IP_DAYS', '1'))
         except ValueError:
-            limit, days = 1, 365
+            limit, days = 3, 1
         try:
             local = ipaddress.ip_address(ip).is_loopback          # this machine itself (tools, tests); nginx always sends the real IP
         except ValueError:
@@ -2170,6 +2225,11 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/api/auth/me':
             self.send_json(200, {'user': self.current_user(), 'loginRequired': hosted(),
                                  'googleClientId': os.environ.get('GOOGLE_CLIENT_ID', '').strip() or None})
+        elif path == '/api/auth/usage':
+            user = self.current_user()
+            if not user:
+                raise accounts.AccountError(401, 'Silakan masuk dulu.')
+            self.send_json(200, self.usage_report(user))
         elif path == '/api/auth/referral':
             user = self.current_user()
             if not user:
@@ -2437,6 +2497,12 @@ class Handler(SimpleHTTPRequestHandler):
         except (ValueError, UnicodeDecodeError) as cause:
             self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
             return
+        if free:
+            try:
+                self.quota('translate', sum(len(t) for t in clean.values()))
+            except accounts.AccountError as cause:
+                self.send_json(cause.status, {'error': str(cause)})
+                return
         try:
             if free:
                 if target not in free_translate.LANGS:
@@ -2484,7 +2550,8 @@ class Handler(SimpleHTTPRequestHandler):
             return 401, 'Silakan masuk dulu untuk memakai fitur ini.'
         if user.get('trialExpired') and feature in ('office', 'ai'):
             return 402, 'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.'
-        if feature == 'ai' and not payments_live() and user['plan'] not in ('pro', 'business'):
+        # Book translation runs on the free translator (no AI credit): only the allowance limits it.
+        if feature == 'ai' and not payments_live() and user['plan'] not in ('pro', 'business') and self.path != '/api/translate-free':
             # No gateway yet: paid members (their plan already covers AI credit)
             # keep working; free waits until payments are set up.
             return 503, 'Fitur AI belum aktif di server ini (pembayaran belum disiapkan).'
@@ -2785,6 +2852,12 @@ class Handler(SimpleHTTPRequestHandler):
         if not secrets.compare_digest(self.headers.get('X-Build-Token', ''), TOKEN):
             self.send_json(403, {'error': 'Sesi build tidak valid. Refresh halaman.'})
             return
+        if feature in ('office', 'ai') and self.path != '/api/translate-free':      # book translation counts its text
+            try:
+                self.quota(feature)
+            except accounts.AccountError as cause:
+                self.send_json(cause.status, {'error': str(cause)})
+                return
         if self.path == '/api/convert/html-to-pdf':
             self.convert_html()
             return

@@ -54,6 +54,13 @@
   th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #EFE9DC}
   th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#78716C}
   .orders{padding:6px 8px;overflow-x:auto}
+  .usage{padding:16px 22px;margin:18px 0}
+  .usage h2{margin:0 0 8px;font-size:17px}
+  .usage .row{display:grid;grid-template-columns:150px 1fr 220px;gap:10px;align-items:center;font-size:13px;margin:6px 0}
+  .usage .bar{height:8px;border-radius:999px;background:#f1ece2;overflow:hidden}
+  .usage .bar span{display:block;height:100%;background:#1a3c34;border-radius:999px}
+  .usage .bar span.low{background:#e8590c}
+  @media (max-width:560px){.usage .row{grid-template-columns:1fr;gap:4px}}
   .referral{padding:18px 22px;margin:18px 0}
   .referral h2{margin:0 0 4px;font-size:18px}
   .referral .ref-link{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
@@ -89,6 +96,10 @@
     </div>
   </div>
   <div id="notice"></div>
+  <div class="clay-panel usage" id="usage" hidden>
+    <h2 class="clay-h" id="usageTitle"></h2>
+    <div id="usageRows"></div>
+  </div>
   <div class="clay-panel referral" id="referral" hidden>
     <h2 class="clay-h" data-i18n="ref.title">Invite friends, get Pro free</h2>
     <p class="clay-muted" id="refRule"></p>
@@ -297,6 +308,27 @@
     }
     renderProfile();renderPlans();renderOrders();renderOrderNotice();
     renderReferral();
+    renderUsage();
+  }
+  // Allowance per rolling window (like Claude's limits): what is left and when it refills.
+  async function renderUsage(){
+    let u;
+    try{u=await MFAuth.api('GET','/api/auth/usage');}catch(e){return;}
+    if(!u.limited)return;
+    const names={office:t('use.office','Conversions & links'),ai:t('use.ai','AI'),translate:t('use.translate','Book translation')};
+    const rows=$('usageRows');rows.replaceChildren();
+    let any=false;
+    Object.entries(u.quotas).forEach(([kind,q])=>{
+      if(q.limit===null){rows.append(el('div',{className:'row'},el('b',{textContent:names[kind]}),el('span',{className:'clay-muted',textContent:t('use.unlimited','Unlimited')}),el('span')));return;}
+      any=true;
+      const left=Math.max(0,q.limit-q.used), pct=Math.min(100,left/q.limit*100);
+      const unit=kind==='translate'?t('use.chars','characters'):t('use.times','times');
+      const bar=el('div',{className:'bar'},el('span',{className:pct<20?'low':'',style:'width:'+pct+'%'}));
+      const when=q.resetAt?t('use.refill','refills at')+' '+new Date(q.resetAt*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):t('use.full','full');
+      rows.append(el('div',{className:'row'},el('b',{textContent:names[kind]}),bar,el('span',{className:'clay-muted',textContent:left.toLocaleString()+' / '+q.limit.toLocaleString()+' '+unit+' · '+when})));
+    });
+    $('usageTitle').textContent=t('use.title','Your allowance (every {h} hours)').replace('{h}',Math.round(u.windowHours));
+    $('usage').hidden=false;
   }
   // Invite friends: every 10 friends who subscribe through the link = 1 month free.
   async function renderReferral(){

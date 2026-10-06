@@ -197,6 +197,12 @@ EXACT = {
 }
 
 PATTERNS = [
+    (r'Jatah konversi habis untuk sementara — terisi lagi pukul (\d\d:\d\d)\. Upgrade ke Pro atau Business untuk jatah lebih besar\.',
+     r'Your conversion allowance is used up for now — it refills at \1. Upgrade to Pro or Business for a bigger allowance.'),
+    (r'Jatah AI habis untuk sementara — terisi lagi pukul (\d\d:\d\d)\. Upgrade ke Pro atau Business untuk jatah lebih besar\.',
+     r'Your AI allowance is used up for now — it refills at \1. Upgrade to Pro or Business for a bigger allowance.'),
+    (r'Jatah terjemahan buku habis untuk sementara — terisi lagi pukul (\d\d:\d\d)\. Upgrade ke Pro atau Business untuk jatah lebih besar\.',
+     r'Your book translation allowance is used up for now — it refills at \1. Upgrade to Pro or Business for a bigger allowance.'),
     (r'Layanan AI menolak permintaan \((\d+)\)\. ?(.*)', r'The AI service refused the request (\1). \2'),
     (r'Gambar halaman (\d+) bukan JPEG\.', r'Page image \1 is not a JPEG.'),
     (r'Layanan pencarian menolak permintaan \((\d+)\)\.', r'The search service refused the request (\1).'),
