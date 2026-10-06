@@ -2,7 +2,8 @@
 
 ## 📌 Status terkini (diperbarui 2026-10-04 oleh Claude) — BACA DULU
 
-**Live:** https://myflipbookpro.com = commit `ddd61fd` (deploy 2026-10-06: gabungan usage-allowance + referral/signup-IP + trial/gates/share-3x/nudge; tabrakan deploy didandani, lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect).
+**Live:** https://myflipbookpro.com = commit `5b0d489` (deploy 2026-10-06 16:12: + lokasi pengunjung di admin via `geo.py`/DB-IP; sebelumnya `ddd61fd` gabungan usage-allowance + referral/signup-IP + trial/gates/share-3x/nudge, lihat DEPLOY.md → Log deploy).
+**Disk VPS:** sempat 98% karena backup kode ikut `.build` (763 MB × 51). Backup sekarang `--exclude=pdf_project/.build`, simpan 3 terbaru saja (DEPLOY.md langkah 4) — WAJIB diikuti. Hanya alamat tanpa www (www di-redirect).
 **Build APK/EXE + Translate buku:** lewat PC build owner (`build_worker.py`, `start-build-worker.bat`); VPS hanya mengantrikan. PC mati = build menunggu.
 **Pembayaran: DIPAUSE** (`PAYMENTS_PAUSED=1` di `.env` live) — owner meng-update payment gateway malam 2026-10-04; nyalakan hanya setelah key gateway diisi dan dites.
 **Panel admin live:** https://myflipbookpro.com/admin/ (backend terpisah `admin_server.py`, login admin sendiri; password hanya di VPS `/root/myflipbook-admin-password.txt`).
