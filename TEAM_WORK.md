@@ -2,7 +2,7 @@
 
 ## 📌 Status terkini (diperbarui 2026-10-04 oleh Claude) — BACA DULU
 
-**Live:** https://myflipbookpro.com = commit `349d16f` (deploy 2026-10-06: Doc Drive; lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect).
+**Live:** https://myflipbookpro.com = commit `ba45b10` (deploy 2026-10-06: Doc Drive; lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect).
 **Build APK/EXE + Translate buku:** lewat PC build owner (`build_worker.py`, `start-build-worker.bat`); VPS hanya mengantrikan. PC mati = build menunggu.
 **Pembayaran: DIPAUSE** (`PAYMENTS_PAUSED=1` di `.env` live) — owner meng-update payment gateway malam 2026-10-04; nyalakan hanya setelah key gateway diisi dan dites.
 **Panel admin live:** https://myflipbookpro.com/admin/ (backend terpisah `admin_server.py`, login admin sendiri; password hanya di VPS `/root/myflipbook-admin-password.txt`).
@@ -35,6 +35,8 @@ Selesai & live (detail per fitur di PROJECT_HANDOFF.md, bagian bertanggal):
 - Link baca online `myflipbookpro.com/b/<id>` dari My Library (supaya flipbook bisa dibuka dari Google Drive/WA/Google Sites tanpa unduh HTML) — tanya: link umum atau hanya member login; semua paket atau Pro/Business.
 - Email CS `cs@myflipbookpro.com` di panel admin (tab Email: inbox, baca, balas via IMAP/SMTP) — owner sedang menyiapkan mailbox. SEKARANG MX domain menunjuk VPS tanpa mail server → email ke cs@ mental. Butuh: provider + host/port IMAP & SMTP; password hanya di .env VPS.
 - Chat customer service — pilihan: tombol WhatsApp (butuh nomor CS), widget Tawk.to/Crisp, atau chat sendiri di panel admin (+ asisten AI). Owner: pending.
+
+**Catatan untuk sesi lain (2026-10-06, Claude):** tes `test_ai_disabled_until_payments_exist` milikmu (BELUM di-commit, di tests/test_accounts.py) sudah kusesuaikan di working copy: `/api/translate-free` dikeluarkan dari daftar, karena terjemahan buku (Argos, gratis) sekarang TIDAK ditutup saat pembayaran mati — hanya dibatasi jatah. Free = selama trial memakai jatah kecil (QUOTA_FREE_*), setelah trial tetap diblok oleh aturanmu.
 
 Aturan singkat: satu file satu penulis aktif; catat di tabel di bawah sebelum mulai; deploy hanya lewat DEPLOY.md; perbarui bagian ini setiap selesai.
 
