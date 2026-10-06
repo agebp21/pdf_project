@@ -69,7 +69,7 @@ PLANS = {
                 entitlements=['office', 'ai', 'export', 'apk'],
                 features=dict(id=['Semua fitur Free', 'Ekspor flipbook: HTML offline', 'Share link tanpa batas', 'Build aplikasi Android (APK)'],
                               en=['Everything in Free', 'Flipbook export: offline HTML', 'Unlimited share links', 'Build Android apps (APK)'])),
-    'business': dict(name='Business', monthly=149_000, yearly=1_490_000, usd_monthly=1_999, usd_yearly=19_900,
+    'business': dict(name='Business', monthly=199_000, yearly=1_990_000, usd_monthly=1_999, usd_yearly=19_900,
                      entitlements=['office', 'ai', 'export', 'apk', 'exe'],
                      features=dict(id=['Semua fitur Pro', 'Build aplikasi Windows (EXE)', 'Cocok untuk tim & instansi'],
                                    en=['Everything in Pro', 'Build Windows apps (EXE)', 'Made for teams & institutions'])),

@@ -237,22 +237,22 @@ class MidtransTests(AccountsBase):
         request = self.captured[-1]
         self.assertTrue(request.full_url.endswith('/snap/v1/transactions'))
         payload = json.loads(request.data)
-        self.assertEqual(payload['transaction_details'], {'order_id': order['orderId'], 'gross_amount': 149000})
+        self.assertEqual(payload['transaction_details'], {'order_id': order['orderId'], 'gross_amount': 199000})
         self.assertTrue(request.get_header('Authorization').startswith('Basic '))
         # Mock payment is not available with a real gateway.
         self.assertEqual(client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})[0], 404)
         # Forged signature / wrong amount are rejected; plan unchanged.
-        self.assertEqual(self.notify(Client(self.base), order['orderId'], 149000, key='guess')[0], 403)
+        self.assertEqual(self.notify(Client(self.base), order['orderId'], 199000, key='guess')[0], 403)
         self.assertEqual(self.notify(Client(self.base), order['orderId'], 1000)[0], 400)
         self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'free')
         # A genuine settlement upgrades the account.
-        status, body, _ = self.notify(Client(self.base), order['orderId'], 149000)
+        status, body, _ = self.notify(Client(self.base), order['orderId'], 199000)
         self.assertEqual((status, body['status']), (200, 'paid'))
         user = client.call('GET', '/api/auth/me')[1]['user']
         self.assertEqual(user['plan'], 'business')
         self.assertIn('exe', user['entitlements'])
         # A later "expire" for the same order must not undo the payment.
-        self.notify(Client(self.base), order['orderId'], 149000, status='expire')
+        self.notify(Client(self.base), order['orderId'], 199000, status='expire')
         self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
 
 
@@ -287,7 +287,7 @@ class MidtransStatusTests(AccountsBase):
         self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
         # An expired order is marked as such; a wrong amount never activates a plan.
         second = client.call('POST', '/api/billing/checkout', {'plan': 'business', 'cycle': 'monthly'})[1]
-        self.gateway[second['orderId']] = {'transaction_status': 'expire', 'gross_amount': '149000.00'}
+        self.gateway[second['orderId']] = {'transaction_status': 'expire', 'gross_amount': '199000.00'}
         statuses = {o['id']: o['status'] for o in client.call('GET', '/api/billing/orders')[1]['orders']}
         self.assertEqual(statuses[second['orderId']], 'expired')
         third = client.call('POST', '/api/billing/checkout', {'plan': 'business', 'cycle': 'monthly'})[1]
