@@ -182,11 +182,11 @@ async function main(){
   }
   // --- Coming-soon catalog ids hide the upload area.
   {
-    const dom=new JSDOM(fs.readFileSync('converter.html','utf8'),{url:'http://127.0.0.1:8080/converter.html?tool=sign-pdf',runScripts:'outside-only'}),w=dom.window;
+    const dom=new JSDOM(fs.readFileSync('converter.html','utf8'),{url:'http://127.0.0.1:8080/converter.html?tool=protect-pdf',runScripts:'outside-only'}),w=dom.window;
     w.console.log=()=>{};w.eval(fs.readFileSync('assets/pdf-edit.js','utf8'));
     w.eval([...w.document.scripts].find(s=>s.textContent.includes('const TOOLS')).textContent);
     assert.ok(w.document.querySelector('#drop').classList.contains('hidden'));
-    assert.match(w.document.querySelector('#comingSoon').textContent,/Sign PDF — coming soon/);
+    assert.match(w.document.querySelector('#comingSoon').textContent,/Protect PDF — coming soon/);
     assert.equal(w.document.querySelector('#toolBadge').textContent,'Coming soon');
   }
   console.log('PASS layout model, PPT pictures lifted (free only) + mixed-style colon, Word keep-look/flow/scan, PPT text boxes/ratio/OCR notes, Excel Data sheet + numbers, flipbook source, coming-soon');

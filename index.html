@@ -190,7 +190,7 @@
     {id:"edit-pdf", title:"Edit PDF", desc:"Add text, images, shapes or freehand annotations to a PDF document.", cat:["Edit PDF"], color:"#7E22CE", icon:"✎", bg:"#FAE8FF", featured:true},
     {id:"pdf-to-jpg", title:"PDF to JPG", desc:"Convert each PDF page into a JPG or extract all images contained in a PDF.", cat:["Convert PDF"], color:"#92400E", icon:"🖼", bg:"#FEF9C3"},
     {id:"jpg-to-pdf", title:"Image to PDF", desc:"Any image to PDF: JPG, PNG, WebP, GIF, BMP, SVG, AVIF, TIFF, even iPhone HEIC.", cat:["Convert PDF"], color:"#92400E", icon:"IMG", bg:"#FEF9C3"},
-    {id:"sign-pdf", title:"Sign PDF", desc:"Sign yourself or request electronic signatures from others.", cat:["PDF Security","Edit PDF"], color:"#1E5A8A", icon:"✒", bg:"#DBEAFE"},
+    {id:"sign-pdf", title:"Sign PDF", desc:"Draw, type or upload your signature and place it anywhere on the pages.", cat:["PDF Security","Edit PDF"], color:"#1E5A8A", icon:"✒", bg:"#DBEAFE"},
     {id:"watermark", title:"Watermark", desc:"Stamp an image or text over your PDF in seconds.", cat:["Edit PDF"], color:"#7E22CE", icon:"◍", bg:"#FAE8FF"},
     {id:"rotate-pdf", title:"Rotate PDF", desc:"Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!", cat:["Organize PDF"], color:"#7E22CE", icon:"↻", bg:"#FAE8FF"},
     {id:"html-to-pdf", title:"HTML to PDF", desc:"Convert webpages in HTML to PDF. Paste the URL and convert with a click.", cat:["Convert PDF"], color:"#92400E", icon:"HTML", bg:"#FEF9C3"},
@@ -199,18 +199,18 @@
     {id:"pdf-to-pdfa", title:"PDF to PDF/A", desc:"Transform your PDF to PDF/A, the ISO-standardized version for archiving.", cat:["Convert PDF"], color:"#57534E", icon:"/A", bg:"#E7E5E4"},
     {id:"repair-pdf", title:"Repair PDF", desc:"Repair a damaged PDF and recover data from corrupt PDF.", cat:["Optimize PDF"], color:"#15803D", icon:"🛠", bg:"#DCFCE7"},
     {id:"page-numbers", title:"Page numbers", desc:"Add page numbers into PDFs with ease.", cat:["Edit PDF","Organize PDF"], color:"#7E22CE", icon:"1 2", bg:"#FAE8FF"},
-    {id:"scan-to-pdf", title:"Scan to PDF", desc:"Capture document scans from your mobile device instantly.", cat:["Convert PDF"], color:"#9A3412", icon:"⎙", bg:"#FFEDD5"},
+    {id:"scan-to-pdf", title:"Scan to PDF", desc:"Photograph documents with your phone camera and get a clean, readable PDF.", cat:["Convert PDF"], color:"#9A3412", icon:"⎙", bg:"#FFEDD5"},
     {id:"ocr-pdf", title:"OCR PDF", desc:"Easily convert scanned PDF into searchable and selectable documents.", cat:["PDF Intelligence","Convert PDF"], color:"#15803D", icon:"OCR", bg:"#DCFCE7"},
-    {id:"compare-pdf", title:"Compare PDF", desc:"Side-by-side comparison and easily spot changes.", cat:["Organize PDF"], color:"#1E5A8A", icon:"◫", bg:"#DBEAFE"},
+    {id:"compare-pdf", title:"Compare PDF", desc:"Find what changed between two versions of a PDF, line by line.", cat:["Organize PDF"], color:"#1E5A8A", icon:"◫", bg:"#DBEAFE"},
     {id:"redact-pdf", title:"Redact PDF", desc:"Permanently remove sensitive information from a PDF.", cat:["PDF Security","Edit PDF"], color:"#1D4ED8", icon:"█", bg:"#DBEAFE"},
     {id:"crop-pdf", title:"Crop PDF", desc:"Crop margins or select specific areas, apply to one page or all.", cat:["Edit PDF","Organize PDF"], color:"#7E22CE", icon:"◧", bg:"#FAE8FF"},
-    {id:"pdf-forms", title:"PDF Forms", desc:"Create interactive fillable PDFs, or fill forms yourself.", cat:["Edit PDF"], color:"#7E22CE", icon:"Ab", bg:"#FAE8FF", badge:"New!"},
+    {id:"pdf-forms", title:"PDF Forms", desc:"Fill in a fillable PDF form and save it — optionally locked.", cat:["Edit PDF"], color:"#7E22CE", icon:"Ab", bg:"#FAE8FF", badge:"New!"},
     {id:"translate-pdf", title:"Translate PDF", desc:"Translate PDF with AI. Keep fonts, layout, and formatting intact.", cat:["PDF Intelligence"], color:"#4C1D95", icon:"A", bg:"#E9E4FF", badge:"AI"},
     {id:"pdf-to-md", title:"PDF to Markdown", desc:"Turn PDFs into Markdown. Perfect for notes, docs, and LLMs.", cat:["Convert PDF","PDF Intelligence"], color:"#4C1D95", icon:"{ }", bg:"#E9E4FF", badge:"New!"},
   ];
 
   // Catalog tools not built yet: shown as "Coming soon", not clickable.
-  const SOON = new Set(["flipbook-animation","edit-pdf","sign-pdf","protect-pdf","pdf-to-pdfa","repair-pdf","scan-to-pdf","compare-pdf","redact-pdf","pdf-forms","translate-pdf"]);
+  const SOON = new Set(["flipbook-animation","edit-pdf","protect-pdf","pdf-to-pdfa","repair-pdf","translate-pdf"]);
   tools.forEach(t => { if (SOON.has(t.id)) t.soon = true; });
   const soonLabel = () => (window.I18N ? I18N.t('card.coming') : 'Coming soon');
 

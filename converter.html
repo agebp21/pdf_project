@@ -8,6 +8,7 @@
 <title>Converter — MyFlipbook</title>
 <script src="assets/flipbook-transfer.js"></script>
 <script src="assets/pdf-edit.js"></script>
+<script src="assets/pdf-extra.js"></script>
 <script src="assets/pdf-compress.js"></script>
 <script src="assets/pdf-ocr-layer.js"></script>
 <script src="assets/i18n.js"></script>
@@ -238,6 +239,11 @@ const TOOLS = [
   {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'Real .pptx: slides look like the PDF pages and every text line is an editable text box.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'PDF file — design kept, text editable on the slide (needs internet)'},
   {id:'pdf-to-md', title:'PDF to Markdown', desc:'Headings, lists, and tables detected — perfect food for AI, notes, and blogs.', cat:'Convert PDF', icon:'{ }', color:'#4C1D95', bg:'#E9E4FF', accept:'.pdf', hint:'PDF file — structure detected from fonts and columns'},
   {id:'ocr-pdf', title:'OCR PDF', desc:'Make scans searchable: the original pages stay exactly as they are, with invisible text you can search, select and copy.', cat:'Convert PDF', icon:'OCR', color:'#15803D', bg:'#DCFCE7', accept:'.pdf', hint:'PDF file — scanned pages are read with OCR (needs internet the first time)'},
+  {id:'sign-pdf', title:'Sign PDF', get desc(){return L('Draw, type or upload your signature and place it anywhere on the pages.','Gambar, ketik, atau upload tanda tangan lalu taruh di mana saja di halaman.')}, cat:'Edit PDF', icon:'✍', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', get hint(){return L('PDF file — signed in your browser, nothing is uploaded','File PDF — ditandatangani di browser, tidak diunggah')}},
+  {id:'pdf-forms', title:'PDF Forms', get desc(){return L('Fill in the fields of a fillable PDF form, then save — optionally locked.','Isi kolom formulir PDF yang bisa diisi, lalu simpan — bisa dikunci.')}, cat:'Edit PDF', icon:'☑', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', get hint(){return L('PDF with fillable fields (AcroForm)','PDF dengan kolom isian (AcroForm)')}},
+  {id:'redact-pdf', title:'Redact PDF', get desc(){return L('Black out names, ID numbers or any area for good — the hidden text is really removed.','Hitamkan nama, NIK, atau area mana pun secara permanen — teks di bawahnya benar-benar dihapus.')}, cat:'Edit PDF', icon:'▇', color:'#111827', bg:'#e7e5e4', accept:'.pdf', get hint(){return L('PDF file — drag boxes or search for text','File PDF — seret kotak atau cari teks')}},
+  {id:'scan-to-pdf', title:'Scan to PDF', get desc(){return L('Photograph documents with your phone camera and get a clean, readable PDF.','Foto dokumen dengan kamera HP dan jadikan PDF yang bersih dan mudah dibaca.')}, cat:'Convert PDF', icon:'📷', color:'#b45309', bg:'#fef9c3', accept:'.jpg,.jpeg,.png,.webp', multiple:true, get hint(){return L('Photos (JPG/PNG/WebP) — one per page','Foto (JPG/PNG/WebP) — satu per halaman')}},
+  {id:'compare-pdf', title:'Compare PDF', get desc(){return L('Find what changed between two versions of a PDF, line by line.','Temukan perubahan antara dua versi PDF, baris demi baris.')}, cat:'Organize PDF', icon:'⇆', color:'#0f766e', bg:'#ccfbf1', accept:'.pdf', multiple:true, get hint(){return L('Two PDFs — old version first, then the new one','Dua PDF — versi lama dulu, lalu versi baru')}},
 ];
 // English or Indonesian, with the site language (assets/i18n.js).
 const L = (en, id) => window.I18N ? I18N.pick(en, id) : en;
@@ -421,6 +427,7 @@ function renderHeader(){
     </div>`;
   }
   if(['watermark','page-numbers','crop-pdf'].includes(t.id))html=PDFEdit.controls(t.id);
+  if(window.PDFExtra&&PDFExtra.has(t.id))html=PDFExtra.controls(t.id);
   // Progress/error live in #fileList — except on organize, hosted by the
   // workspace sidebar. Rescue them BEFORE rebuilding options (innerHTML
   // would destroy them), then park them in the right place.
@@ -1287,7 +1294,9 @@ function updateFileUI({preserveError=false}={}){
       const grid0=document.getElementById('organizeGrid'); if(grid0) grid0.innerHTML='';
     }
   }
-  if(files.length===0){ $('#fileList').classList.add('hidden'); splitPageCount=0; document.getElementById('splitSelectBox')?.classList.add('hidden'); updateSplitBtn(); return; }
+  if(files.length===0){ $('#fileList').classList.add('hidden'); splitPageCount=0; document.getElementById('splitSelectBox')?.classList.add('hidden'); updateSplitBtn();
+    if(window.PDFExtra&&PDFExtra.has(active)) PDFExtra.onFiles(active, []).catch(()=>{});
+    return; }
   $('#fileList').classList.toggle('hidden', active==='organize-pdf');
   $('#fileCount').textContent=files.length;
   $('#files').innerHTML=files.map((f,i)=>`
@@ -1309,6 +1318,7 @@ function updateFileUI({preserveError=false}={}){
   else if(t.id==='rotate-pdf'){ buildRotatePreview(); $('#btnText').textContent=L('Rotate PDF →','Putar PDF →'); }
   else if(t.id==='compress-pdf'){ $('#btnText').textContent='Compress PDF →'; }
   else if(t.id==='organize-pdf'){ buildOrganizePreview(); $('#btnText').textContent=L(`Save organized PDF (${organizeOrder.length||'?'} pages) →`,`Simpan Organize (${organizeOrder.length||'?'} hal) →`); }
+  else if(window.PDFExtra&&PDFExtra.has(t.id)){ $('#btnText').textContent=PDFExtra.button(t.id); PDFExtra.onFiles(t.id, files).catch(e=>showError(e.message||String(e))); }
   else $('#btnText').textContent = `Convert now →`;
   $('#convertBtn').disabled = files.length===0;
   if(!preserveError)$('#error').classList.add('hidden');
@@ -1412,6 +1422,7 @@ $('#testBtn').addEventListener('click', async (e)=>{
 $('#convertBtn').addEventListener('click', async ()=>{
   const t=TOOLS.find(x=>x.id===active);
   if(files.length===0){ showError('Pick a file first!'); return; }
+  if(t.id==='compare-pdf' && files.length!==2){ showError(L('Compare needs exactly 2 PDFs: the old version and the new one.','Bandingkan butuh tepat 2 PDF: versi lama dan versi baru.')); return; }
   if(t.id==='merge-pdf' && files.length<2){ showError('Merge needs at least 2 PDF files! Pick 2 files or click 🧪 Test (auto 2 files)'); return; }
   // The 7-day trial is over: only the flipbook reader stays, everything
   // else needs Pro (guests may still try; members hit this wall).
@@ -1444,6 +1455,10 @@ $('#convertBtn').addEventListener('click', async ()=>{
     else if(t.id==='pdf-to-md') await pdfToMd();
     else if(t.id==='ocr-pdf') await ocrSearchablePdf();
     else if(['watermark','page-numbers','crop-pdf'].includes(t.id)) await editPdf(t.id);
+    else if(window.PDFExtra&&PDFExtra.has(t.id)){
+      const out=await PDFExtra.run(t.id, files, m=>{ $('#progress').textContent=m; });
+      downloadBlob(out.blob, out.name);
+    }
     else throw new Error('Tool belum diimplementasikan');
     log('Convert success');
   }catch(e){

@@ -38,6 +38,11 @@ Diperbarui: 29 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 | [x] | Validasi / error | Range salah, crop kosong, watermark terlalu besar, input PDF rusak, tool tak tersedia; pesan error tetap terlihat. |
 | [x] | Penghapusan pemotongan konten | Batas buatan teks/baris/kolom sudah dihapus. Tes ekstraksi >300 baris, teks panjang, dan >6 kolom lolos. Memori, format output, print area, dan timeout proses Office tetap berlaku. |
 | [x] | Share link flipbook | 6 Okt: Pro/Business upload HTML tersegel → `/s/<id>` publik (buku main di browser + tombol ⬇ Download, `?dl=1` attachment); gate 401/402/403, tolak non-buku 400/413, 404, kuota paket, hapus hanya pemilik. `tests/test_share.py` + E2E HTTP server lokal. Tombol Share 1-klik di editor belum diuji di browser asli. |
+| [x] | Sign PDF | 6 Okt (`assets/pdf-extra.js`): tanda tangan digambar / upload PNG-JPEG / ketik nama, ditaruh dengan klik + geser + ubah ukuran di pratinjau, banyak halaman. `tests/pdf-extra.test.cjs`: posisi dicek raster (termasuk halaman diputar 90°) + E2E Chromium (gambar di pad → klik halaman → unduh). |
+| [x] | Redact PDF (permanen) | 6 Okt: seret kotak atau cari teks (semua halaman); halaman berkotak dirender jadi gambar + kotak hitam, jadi teks di bawahnya benar-benar hilang. Tes: PDF.js tidak menemukan teks lagi di halaman itu, halaman lain utuh, piksel kotak hitam + E2E. Halaman hasil scan: kotak manual. |
+| [x] | PDF Forms (isi formulir) | 6 Okt: kolom AcroForm (teks, centang, dropdown, radio, list) dibaca + diisi, opsi kunci (flatten). Tes isi/flatten + E2E. XFA belum; huruf non-Latin ditolak jujur (font formulir). Membuat formulir baru belum. |
+| [x] | Scan to PDF | 6 Okt: kamera HP (`capture`) / galeri, mode Dokumen (abu-abu, kertas diputihkan) / Abu-abu / Warna, A4 mengikuti orientasi foto atau ukuran foto 150 dpi. Tes enhance + ukuran halaman + E2E. Deteksi tepi/crop otomatis belum. |
+| [x] | Compare PDF | 6 Okt: teks dua PDF per baris (PDF.js) dibandingkan dengan diff Myers, laporan merah/hijau dengan nomor halaman + unduh HTML. Tes diff + PDF nyata + escape + E2E. Perbandingan visual (gambar/tata letak) belum. |
 
 ## Sudah ada, belum boleh dianggap tuntas
 
@@ -51,14 +56,9 @@ Diperbarui: 29 September 2026. Status berdasarkan kode dan bukti tes, bukan hany
 ## Belum dibuat
 
 - [ ] Edit PDF umum (teks/gambar/shape).
-- [ ] Sign PDF.
 - [ ] Protect PDF.
 - [ ] PDF/A.
 - [ ] Repair PDF.
-- [ ] Scan to PDF.
-- [ ] Compare PDF.
-- [ ] Redact permanen.
-- [ ] PDF Forms.
 - [ ] AI Summarizer sebagai tool terpisah.
 - [ ] Translate PDF.
 - [x] Workflow tahap 1 (`workflow.html`): gabung PDF + langkah Rotate, Keep/Remove pages, Watermark teks, Page numbers, Crop, Optimize; template; resep disimpan di browser; hasil -> download / Flipbook. Tahap berikut: langkah konversi (Word/Excel/PPT/Gambar -> PDF), OCR, export flipbook.
