@@ -44,6 +44,8 @@ EXACT = {
     'PC penerjemah sedang offline. Coba lagi nanti.': 'The translation PC is offline. Try again later.',
     'PC penerjemah tidak menjawab. Coba lagi.': 'The translation PC did not answer. Try again.',
     'Terjemahan sudah tidak ditunggu.': 'That translation is no longer awaited.',
+    'Akun tidak ditemukan.': 'Account not found.',
+    'Kode referral tidak bisa dibuat.': 'The referral code could not be made.',
     'Kunci worker tidak valid.': 'The worker key is not valid.',
     'Build ini tidak sedang berjalan.': 'This build is not running.',
     'Ukuran hasil build tidak valid.': 'The size of the build result is not valid.',

@@ -186,6 +186,7 @@ async function showMember(id) {
   $('#detail-body').innerHTML = `<div class="grid">${card(esc(m.paid ? PLAN[m.plan] || m.plan : 'Free'), 'Paket' + (m.paid ? ' s/d ' + date(m.planExpiresAt) : ''))}
       ${card(num(m.books.length), 'Buku di My Library')}${card(num(m.visits), 'Kunjungan (saat masuk)')}${card(esc(when(m.lastVisit)), 'Terakhir berkunjung')}</div>
     <p class="muted">Nama: ${esc(m.name) || '—'} · Daftar ${date(m.createdAt)} · Email ${m.verified ? 'terverifikasi' : 'belum terverifikasi'} · ${m.google ? 'Login Google' : 'Login email'} · ${num(m.sessions)} sesi aktif</p>
+    ${m.referral ? `<p class="muted">Referral: kode ${esc(m.referral.code || '—')} · diundang oleh ${esc(m.referral.referredBy || '—')} · mengundang ${num(m.referral.signups)} (berlangganan ${num(m.referral.subscribed)}) · hadiah ${num(m.referral.rewards)} bulan</p>` : ''}
     <h3>Buku</h3>${bookTable(m.books, false)}
     <h3>Order</h3><table><tr><th>Order</th><th>Paket</th><th>Jumlah</th><th>Status</th><th>Lewat</th><th>Dibuat</th><th>Lunas</th></tr>
     ${m.orders.map(o => `<tr><td>${esc(o.id)}</td><td>${esc(PLAN[o.plan] || o.plan)} · ${esc(o.cycle)}</td><td>${money(o.currency, o.amount)}</td><td><span class="tag ${esc(o.status)}">${esc(o.status)}</span></td><td>${esc(o.provider)}</td><td>${date(o.createdAt)}</td><td>${date(o.paidAt)}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Belum ada order.</td></tr>'}</table>`;

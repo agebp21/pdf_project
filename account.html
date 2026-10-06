@@ -54,6 +54,14 @@
   th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #EFE9DC}
   th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#78716C}
   .orders{padding:6px 8px;overflow-x:auto}
+  .referral{padding:18px 22px;margin:18px 0}
+  .referral h2{margin:0 0 4px;font-size:18px}
+  .referral .ref-link{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
+  .referral .ref-link input{flex:1;min-width:220px;padding:9px 12px;border:1.5px solid #1c1917;border-radius:12px;font:600 13px 'Plus Jakarta Sans',system-ui,sans-serif;background:#fff}
+  .referral .bar{height:10px;border-radius:999px;background:#f1ece2;overflow:hidden;margin:6px 0}
+  .referral .bar span{display:block;height:100%;background:linear-gradient(90deg,#ff5c28,#c026d3);border-radius:999px}
+  .referral .stats{display:flex;gap:18px;flex-wrap:wrap;font-size:13px}
+  .referral .stats b{font-size:16px}
   .invoice-link{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid #E4DED0;background:#fff;color:#1A3C34;font-weight:800;font-size:11.5px;text-decoration:none;white-space:nowrap}
   .invoice-link:hover{background:#EFF6EC}
   .fine{font-size:11.5px;margin-top:8px}
@@ -81,6 +89,14 @@
     </div>
   </div>
   <div id="notice"></div>
+  <div class="clay-panel referral" id="referral" hidden>
+    <h2 class="clay-h" data-i18n="ref.title">Invite friends, get Pro free</h2>
+    <p class="clay-muted" id="refRule"></p>
+    <div class="ref-link"><input id="refLink" readonly aria-label="Referral link"><button type="button" class="clay-btn clay-btn-dark" id="refCopy" data-i18n="ref.copy">Copy link</button></div>
+    <div class="bar"><span id="refBar" style="width:0%"></span></div>
+    <p class="clay-muted" id="refNext"></p>
+    <div class="stats"><span><b id="refSignups">0</b> <span data-i18n="ref.signups">signed up</span></span><span><b id="refSubscribed">0</b> <span data-i18n="ref.subscribed">subscribed</span></span><span><b id="refRewards">0</b> <span data-i18n="ref.rewards">months earned</span></span></div>
+  </div>
 
   <section id="plansSection">
     <div class="head">
@@ -280,6 +296,23 @@
 
     }
     renderProfile();renderPlans();renderOrders();renderOrderNotice();
+    renderReferral();
+  }
+  // Invite friends: every 10 friends who subscribe through the link = 1 month free.
+  async function renderReferral(){
+    let r;
+    try{r=await MFAuth.api('GET','/api/auth/referral');}catch(e){return;}
+    $('referral').hidden=false;
+    $('refLink').value=r.link;
+    $('refRule').textContent=t('ref.rule','Share your link. Every {n} friends who sign up through it and subscribe to Pro or Business give you {d} days of Pro free (or more days of your current paid plan).').replace('{n}',r.target).replace('{d}',r.days);
+    const done=r.subscribed%r.target;
+    $('refBar').style.width=(done/r.target*100)+'%';
+    $('refNext').textContent=t('ref.next','{x} of {n} friends subscribed — {left} more for the next free month.').replace('{x}',done).replace('{n}',r.target).replace('{left}',r.toNext);
+    $('refSignups').textContent=r.signups;$('refSubscribed').textContent=r.subscribed;$('refRewards').textContent=r.rewards;
+    $('refCopy').onclick=async()=>{
+      try{await navigator.clipboard.writeText(r.link);}catch(e){$('refLink').select();document.execCommand('copy');}
+      $('refCopy').textContent=t('ref.copied','Copied ✓');setTimeout(()=>{$('refCopy').textContent=t('ref.copy','Copy link');},1500);
+    };
   }
 
   document.querySelectorAll('[data-cycle]').forEach(b=>b.addEventListener('click',()=>{state.cycle=b.dataset.cycle;renderPlans();}));

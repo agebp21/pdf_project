@@ -181,6 +181,14 @@ def member(user_id, now=None):
                          for o in db.execute('SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 100', (user_id,))]
         out['books'] = uploads_rows(db, 'WHERE b.user_id=?', [user_id], 500) if has_table(db, 'library_books') else []
         out['sessions'] = db.execute('SELECT COUNT(*) FROM sessions WHERE user_id=? AND expires_at>?', (user_id, now)).fetchone()[0]
+        if 'referred_by' in r.keys():
+            by = db.execute('SELECT email FROM users WHERE id=?', (r['referred_by'],)).fetchone() if r['referred_by'] else None
+            subscribed = db.execute("""SELECT COUNT(DISTINCT u.id) FROM users u JOIN orders o ON o.user_id=u.id
+                                       WHERE u.referred_by=? AND o.status='paid' AND o.plan IN ('pro','business')""", (user_id,)).fetchone()[0]
+            rewards = db.execute('SELECT COUNT(*) FROM referral_rewards WHERE user_id=?', (user_id,)).fetchone()[0] if has_table(db, 'referral_rewards') else 0
+            out['referral'] = dict(code=r['ref_code'], referredBy=by['email'] if by else None,
+                                   signups=db.execute('SELECT COUNT(*) FROM users WHERE referred_by=?', (user_id,)).fetchone()[0],
+                                   subscribed=subscribed, rewards=rewards)
     db.close()
     v = read_only(db_path().parent / 'visits.sqlite3')
     if v:
