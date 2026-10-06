@@ -2586,7 +2586,11 @@ class Handler(SimpleHTTPRequestHandler):
 
     def end_headers(self):
         self.send_header('X-Content-Type-Options', 'nosniff')
+        self.send_header('Referrer-Policy', 'strict-origin-when-cross-origin')
         page = unquote(urlsplit(self.path).path).lstrip('/')
+        if not page.startswith('s/'):
+            # No other site may frame the app (clickjacking); share links stay embeddable.
+            self.send_header('X-Frame-Options', 'SAMEORIGIN')
         has_cache = any(line.lower().startswith(b'cache-control:') for line in getattr(self, '_headers_buffer', []))
         if page in EXPORT_TEMPLATES:
             self.send_header('Cache-Control', 'no-store')

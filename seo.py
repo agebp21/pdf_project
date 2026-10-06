@@ -9,11 +9,15 @@ is not uploaded); the others go to the server (LibreOffice / AI / translation).
 """
 import html
 import json
+import os
+import re
 import time
 
 SITE = 'https://myflipbookpro.com'
 BRAND = 'MyFlipbook'
-OG_IMAGE = SITE + '/assets/img/apple-touch-icon.png?v=green'
+OG_IMAGE = SITE + '/assets/img/hero-1671.jpg'
+OG_SIZE = (1671, 941)
+HOME_TITLE = 'MyFlipbook — Buat Flipbook dari PDF & Alat PDF Lengkap Berbahasa Indonesia'
 UPDATED = '2026-10-06'
 
 # slug, link into the app, short name, <title>, meta description, h1, lead,
@@ -326,8 +330,8 @@ def head(title, description, path, extra=''):
 <link rel="canonical" href="{esc(url)}">
 <meta property="og:type" content="website"><meta property="og:site_name" content="{BRAND}">
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(description)}">
-<meta property="og:url" content="{esc(url)}"><meta property="og:image" content="{OG_IMAGE}"><meta property="og:locale" content="id_ID">
-<meta name="twitter:card" content="summary"><meta name="twitter:title" content="{esc(title)}"><meta name="twitter:description" content="{esc(description)}">
+<meta property="og:url" content="{esc(url)}"><meta property="og:image" content="{OG_IMAGE}"><meta property="og:image:width" content="{OG_SIZE[0]}"><meta property="og:image:height" content="{OG_SIZE[1]}"><meta property="og:locale" content="id_ID">
+<meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{esc(title)}"><meta name="twitter:description" content="{esc(description)}">
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=green">
 <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=green">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -393,6 +397,16 @@ APP_META = {
 NOINDEX = {'login.html', 'account.html', 'library.html', 'coming-soon.html', 'animation.html'}
 
 
+def verification():
+    """Search Console / Bing ownership tags (GOOGLE_SITE_VERIFICATION, BING_SITE_VERIFICATION in .env)."""
+    out = ''
+    for env, name in (('GOOGLE_SITE_VERIFICATION', 'google-site-verification'), ('BING_SITE_VERIFICATION', 'msvalidate.01')):
+        for code in os.environ.get(env, '').split(','):
+            if code.strip():
+                out += f'<meta name="{name}" content="{esc(code.strip())}">'
+    return out
+
+
 def app_head(page_name):
     """Tags added to an app page's <head> (bytes), or b'' when it has none."""
     if page_name in NOINDEX:
@@ -402,10 +416,13 @@ def app_head(page_name):
     description, path = APP_META[page_name]
     tags = [f'<link rel="canonical" href="{SITE}{path}">', f'<meta property="og:site_name" content="{BRAND}">',
             f'<meta property="og:url" content="{SITE}{path}">', f'<meta property="og:image" content="{OG_IMAGE}">',
-            '<meta property="og:type" content="website">', '<meta name="twitter:card" content="summary">']
+            '<meta property="og:type" content="website">', '<meta name="twitter:card" content="summary_large_image">',
+            f'<meta property="og:image:width" content="{OG_SIZE[0]}">', f'<meta property="og:image:height" content="{OG_SIZE[1]}">']
     if description:
         tags += [f'<meta name="description" content="{esc(description)}">', f'<meta property="og:description" content="{esc(description)}">']
     if page_name == 'index.html':
+        tags.append(verification())
+        tags.append(f'<meta property="og:title" content="{esc(HOME_TITLE)}">')
         tags.append(ld({'@context': 'https://schema.org', '@graph': [
             {'@type': 'Organization', 'name': BRAND, 'url': SITE + '/', 'logo': SITE + '/assets/img/logo.png'},
             {'@type': 'WebSite', 'name': BRAND, 'url': SITE + '/', 'inLanguage': ['id', 'en']}]}))
@@ -426,6 +443,8 @@ def add_head(page_name, body):
     i = body.find(b'</head>')
     body = body[:i] + extra + body[i:] if i >= 0 else body
     if page_name == 'index.html':
+        # The title search engines see (the page's script still switches it to the visitor's language).
+        body = re.sub(rb'(<title[^>]*>)[^<]*(</title>)', lambda m: m[1] + esc(HOME_TITLE).encode() + m[2], body, count=1)
         i = body.rfind(b'</footer>')
         body = body[:i] + footer_links() + body[i:] if i >= 0 else body
     return body

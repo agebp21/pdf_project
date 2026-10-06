@@ -74,8 +74,18 @@ class SeoPages(unittest.TestCase):
         self.assertIn('<meta name="description"', home); self.assertIn('rel="canonical" href="https://myflipbookpro.com/"', home)
         self.assertIn('href="/kompres-pdf"', home, 'crawlable links to the landing pages')
         self.assertEqual(home.count('</head>'), 1)
+        self.assertIn('<title data-i18n="meta.title">MyFlipbook — Buat Flipbook dari PDF', home)
+        with mock.patch.dict(os.environ, {'GOOGLE_SITE_VERIFICATION': 'abc123'}):
+            self.assertIn('<meta name="google-site-verification" content="abc123">', self.get('/')[2])
         _, _, login = self.get('/login.html')
         self.assertIn('<meta name="robots" content="noindex">', login)
+
+    def test_security_headers(self):
+        conn = http.client.HTTPConnection('127.0.0.1', self.httpd.server_port, timeout=10)
+        conn.request('GET', '/kompres-pdf'); r = conn.getresponse(); r.read(); conn.close()
+        self.assertEqual(r.getheader('X-Frame-Options'), 'SAMEORIGIN')
+        self.assertEqual(r.getheader('Referrer-Policy'), 'strict-origin-when-cross-origin')
+        self.assertEqual(r.getheader('X-Content-Type-Options'), 'nosniff')
 
     def test_landing_visits_counted(self):
         self.assertEqual(self.get('/api/visit', 'POST', {'path': '/kompres-pdf'})[0], 204)
