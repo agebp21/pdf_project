@@ -13,11 +13,22 @@ import os
 import re
 import time
 
+import articles
+
 SITE = 'https://myflipbookpro.com'
 BRAND = 'MyFlipbook'
 OG_IMAGE = SITE + '/assets/img/hero-1671.jpg'
 OG_SIZE = (1671, 941)
 HOME_TITLE = 'MyFlipbook — Buat Flipbook dari PDF & Alat PDF Lengkap Berbahasa Indonesia'
+# The titles search engines see on the app pages (their scripts may still switch the tab title).
+APP_TITLES = {
+    'index.html': HOME_TITLE,
+    'converter.html': 'Alat PDF Online Lengkap — Kompres, Gabung, Pisah, PDF ke Word | MyFlipbook',
+    'flipbook.html': 'PDF ke Flipbook — Buat Majalah & E-book Digital Interaktif | MyFlipbook',
+    'journals.html': 'Cari Jurnal Ilmiah & Ebook Open Access | MyFlipbook',
+    'notebook.html': 'AI Summarizer — Ringkas PDF & Jurnal dengan AI | MyFlipbook',
+    'workflow.html': 'Buat Alur Kerja PDF Otomatis | MyFlipbook',
+}
 UPDATED = '2026-10-06'
 
 # slug, link into the app, short name, <title>, meta description, h1, lead,
@@ -307,6 +318,14 @@ details{border-bottom:1px solid var(--hair);padding:12px 0}details:last-child{bo
 summary{font-weight:700;cursor:pointer}details p{margin:8px 0 0;color:var(--muted)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
 @media(max-width:520px){header nav{gap:10px;font-size:13px;justify-content:flex-end}header img{height:28px}}
+.list{display:grid;gap:12px}.list a{display:block;background:var(--paper);border:1px solid var(--hair);border-radius:16px;
+  padding:16px 18px;text-decoration:none;color:var(--ink)}.list a:hover{border-color:var(--pine)}
+.list b{display:block;font:700 18px/1.35 'Fraunces',Georgia,serif;margin-bottom:4px}.list span{color:var(--muted);font-size:14.5px}
+article p,article li{font-size:17px}article h2{margin-top:30px}article ol,article ul{padding-left:22px;display:grid;gap:6px}
+.crumb{font-size:13.5px;color:var(--muted);margin-top:24px}.crumb a{color:var(--muted)}.date{color:var(--muted);font-size:14px;margin:0 0 18px}
+.tip{background:#F1F6EA;border:1px solid #D8E6C6;border-radius:14px;padding:14px 16px;margin:18px 0}
+.box{background:var(--pine);color:#FFF7EA;border-radius:18px;padding:22px;margin:30px 0}.box h2{color:#FFF7EA;margin:0 0 8px}
+.box p{margin:0 0 14px;color:#E8EFE6}
 .grid a{display:block;background:var(--paper);border:1px solid var(--hair);border-radius:14px;padding:12px 14px;text-decoration:none;
   color:var(--ink);font-weight:600}.grid a:hover{border-color:var(--pine)}
 footer{border-top:1px solid var(--hair);margin-top:30px;padding:22px 0 40px;font-size:14px;color:var(--muted)}
@@ -363,10 +382,12 @@ def landing_html(slug):
     ]
     related = ''.join(f'<a href="/{s}">{esc(LANDING[s]["name"])}</a>' for s in p['related'] if s in LANDING)
     privacy = PRIVATE if p['browser'] and PRIVATE not in p['why'] else ''
+    guides = [a for a in articles.ARTICLES if a['tool'] == slug]
+    guide_html = (f'<section><h2>Panduan terkait</h2><div class="list">{"".join(article_card(a) for a in guides)}</div></section>'
+                  if guides else '')
     return head(p['title'], p['description'], path, ''.join(ld(d) for d in data)) + f'''
 <body><div class="wrap">
-<header><a href="/" aria-label="{BRAND}"><img src="/assets/img/logo.png?v=green" alt="{BRAND}" width="128" height="34"></a>
-<nav><a href="/pdf-ke-flipbook">PDF ke Flipbook</a><a href="/converter.html">Semua alat PDF</a><a href="/login.html">Masuk</a></nav></header>
+{TOP}
 <main>
 <div class="hero"><h1>{esc(p['h1'])}</h1><p>{esc(p['lead'])}</p>
 <a class="cta" href="/{esc(p['link'])}">Mulai {esc(p['name'])} sekarang →</a>
@@ -374,10 +395,105 @@ def landing_html(slug):
 <section><h2>Cara memakai {esc(p['name'])}</h2><div class="card"><ol class="steps">{''.join(f'<li>{esc(s)}</li>' for s in p['steps'])}</ol></div></section>
 <section><h2>Kenapa memakai MyFlipbook?</h2><div class="card"><ul class="why">{''.join(f'<li>{esc(w)}</li>' for w in p['why'])}</ul></div></section>
 <section><h2>Pertanyaan yang sering diajukan</h2><div class="card">{''.join(f'<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>' for q, a in p['faq'])}</div></section>
+{guide_html}
 <section><h2>Alat terkait</h2><div class="grid">{related}</div></section>
 <section><h2>Semua alat MyFlipbook</h2><div class="grid">{all_tools_links(slug)}</div></section>
 </main>
-<footer>© {time.strftime('%Y')} {BRAND} — dikelola oleh Sarvamaya. <a href="/privacy.html">Kebijakan Privasi</a> · <a href="/terms.html">Syarat &amp; Ketentuan</a> · <a href="/">Beranda</a></footer>
+{FOOT}
+</div></body></html>'''
+
+
+TOP = f'''<header><a href="/" aria-label="{BRAND}"><img src="/assets/img/logo.png?v=green" alt="{BRAND}" width="128" height="34"></a>
+<nav><a href="/pdf-ke-flipbook">PDF ke Flipbook</a><a href="/converter.html">Semua alat PDF</a><a href="/artikel">Artikel</a><a href="/login.html">Masuk</a></nav></header>'''
+FOOT = (f'<footer>© {time.strftime("%Y")} {BRAND} — dikelola oleh Sarvamaya. <a href="/artikel">Artikel</a> · '
+        '<a href="/privacy.html">Kebijakan Privasi</a> · <a href="/terms.html">Syarat &amp; Ketentuan</a> · <a href="/">Beranda</a></footer>')
+ARTICLES = {a['slug']: a for a in articles.ARTICLES}
+MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
+LINK = re.compile(r'\[([^\]]+)\]\((/[^)\s]*)\)')
+
+
+def rich(text):
+    """Escaped text with [label](/path) turned into internal links."""
+    return LINK.sub(lambda m: f'<a href="{m[2]}">{m[1]}</a>', esc(text))
+
+
+def tanggal(day):
+    y, m, d = (int(x) for x in day.split('-'))
+    return f'{d} {MONTHS[m - 1]} {y}'
+
+
+def article_card(a):
+    return f'<a href="/artikel/{a["slug"]}"><b>{esc(a["title"])}</b><span>{esc(a["description"])}</span></a>'
+
+
+def article_html(slug):
+    a = ARTICLES[slug]
+    path = f'/artikel/{slug}'
+    body = []
+    for kind, value in a['blocks']:
+        if kind == 'p':
+            body.append(f'<p>{rich(value)}</p>')
+        elif kind == 'h2':
+            body.append(f'<h2>{esc(value)}</h2>')
+        elif kind in ('ol', 'ul'):
+            body.append(f'<{kind}>' + ''.join(f'<li>{rich(i)}</li>' for i in value) + f'</{kind}>')
+        elif kind == 'tip':
+            body.append(f'<div class="tip"><b>Tips:</b> {rich(value)}</div>')
+        elif kind == 'faq':
+            body.append('<h2>Pertanyaan umum</h2><div class="card">' + ''.join(
+                f'<details><summary>{esc(q)}</summary><p>{rich(ans)}</p></details>' for q, ans in value) + '</div>')
+        elif kind == 'cta':
+            t = LANDING[value]
+            body.append(f'<div class="box"><h2>Coba {esc(t["name"])} sekarang</h2><p>{esc(TRIAL)}</p>'
+                        f'<a class="cta" href="/{esc(t["link"])}">Buka {esc(t["name"])} →</a></div>')
+    others = [x for x in articles.ARTICLES if x['slug'] != slug][:5]
+    data = [
+        {'@context': 'https://schema.org', '@type': 'BlogPosting', 'headline': a['title'], 'description': a['description'],
+         'datePublished': a['published'], 'dateModified': a['published'], 'inLanguage': 'id', 'image': OG_IMAGE,
+         'mainEntityOfPage': SITE + path, 'author': {'@type': 'Organization', 'name': BRAND, 'url': SITE + '/'},
+         'publisher': {'@type': 'Organization', 'name': BRAND, 'logo': {'@type': 'ImageObject', 'url': SITE + '/assets/img/logo.png'}}},
+        {'@context': 'https://schema.org', '@type': 'BreadcrumbList', 'itemListElement': [
+            {'@type': 'ListItem', 'position': 1, 'name': BRAND, 'item': SITE + '/'},
+            {'@type': 'ListItem', 'position': 2, 'name': 'Artikel', 'item': SITE + '/artikel'},
+            {'@type': 'ListItem', 'position': 3, 'name': a['title'], 'item': SITE + path}]},
+    ]
+    faq = [qa for kind, value in a['blocks'] if kind == 'faq' for qa in value]
+    if faq:
+        data.append({'@context': 'https://schema.org', '@type': 'FAQPage', 'mainEntity': [
+            {'@type': 'Question', 'name': q, 'acceptedAnswer': {'@type': 'Answer', 'text': ans}} for q, ans in faq]})
+    page = head(a['title'] + ' | MyFlipbook', a['description'], path, ''.join(ld(d) for d in data)).replace(
+        '<meta property="og:type" content="website">', '<meta property="og:type" content="article">')
+    return page + f'''
+<body><div class="wrap">
+{TOP}
+<main><article>
+<p class="crumb"><a href="/">Beranda</a> › <a href="/artikel">Artikel</a></p>
+<div class="hero" style="padding:14px 0 6px"><h1>{esc(a['title'])}</h1></div>
+<p class="date">Diperbarui {tanggal(a['published'])} · Tim {BRAND}</p>
+{''.join(body)}
+</article>
+<section><h2>Artikel lainnya</h2><div class="list">{''.join(article_card(x) for x in others)}</div></section>
+<section><h2>Semua alat MyFlipbook</h2><div class="grid">{all_tools_links()}</div></section>
+</main>
+{FOOT}
+</div></body></html>'''
+
+
+def articles_index():
+    title = 'Artikel & Tutorial PDF, Flipbook, dan AI | MyFlipbook'
+    description = ('Panduan praktis berbahasa Indonesia: membuat flipbook, kompres dan gabung PDF untuk pendaftaran, '
+                   'menerjemahkan jurnal, merangkum dengan AI, dan lainnya.')
+    data = {'@context': 'https://schema.org', '@type': 'CollectionPage', 'name': title, 'url': SITE + '/artikel', 'inLanguage': 'id',
+            'hasPart': [{'@type': 'BlogPosting', 'headline': a['title'], 'url': f'{SITE}/artikel/{a["slug"]}'} for a in articles.ARTICLES]}
+    return head(title, description, '/artikel', ld(data)) + f'''
+<body><div class="wrap">
+{TOP}
+<main>
+<div class="hero"><h1>Artikel &amp; Tutorial</h1><p>{esc(description)}</p></div>
+<div class="list">{''.join(article_card(a) for a in articles.ARTICLES)}</div>
+<section><h2>Semua alat MyFlipbook</h2><div class="grid">{all_tools_links()}</div></section>
+</main>
+{FOOT}
 </div></body></html>'''
 
 
@@ -432,7 +548,8 @@ def app_head(page_name):
 def footer_links():
     """Plain links to every landing page (the home page's tool grid is built by script)."""
     links = ' <span style="color:#D6CFBF">·</span> '.join(
-        f'<a href="/{s}" style="color:#78716C">{esc(p["name"])}</a>' for s, p in LANDING.items())
+        [f'<a href="/{s}" style="color:#78716C">{esc(p["name"])}</a>' for s, p in LANDING.items()]
+        + ['<a href="/artikel" style="color:#78716C">Artikel &amp; tutorial</a>'])
     return f'<nav aria-label="Alat PDF" style="text-align:center;font-size:11px;font-weight:600;margin-top:10px;line-height:2">{links}</nav>'.encode('utf-8')
 
 
@@ -442,9 +559,11 @@ def add_head(page_name, body):
         return body
     i = body.find(b'</head>')
     body = body[:i] + extra + body[i:] if i >= 0 else body
+    if page_name in APP_TITLES:
+        # The title search engines see (a page's script may still switch it to the visitor's language).
+        title = esc(APP_TITLES[page_name]).encode()
+        body = re.sub(rb'(<title[^>]*>)[^<]*(</title>)', lambda m: m[1] + title + m[2], body, count=1)
     if page_name == 'index.html':
-        # The title search engines see (the page's script still switches it to the visitor's language).
-        body = re.sub(rb'(<title[^>]*>)[^<]*(</title>)', lambda m: m[1] + esc(HOME_TITLE).encode() + m[2], body, count=1)
         i = body.rfind(b'</footer>')
         body = body[:i] + footer_links() + body[i:] if i >= 0 else body
     return body
@@ -459,8 +578,10 @@ def robots():
 def sitemap():
     urls = [('/', '1.0')] + [('/' + s, '0.9') for s in LANDING] + [
         (APP_META[p][1], '0.7') for p in ('converter.html', 'flipbook.html', 'journals.html', 'notebook.html', 'workflow.html')] + [
-        ('/privacy.html', '0.2'), ('/terms.html', '0.2')]
+        ('/privacy.html', '0.2'), ('/terms.html', '0.2'), ('/artikel', '0.8')]
     rows = ''.join(f'<url><loc>{esc(SITE + u)}</loc><lastmod>{UPDATED}</lastmod><priority>{pr}</priority></url>' for u, pr in urls)
+    rows += ''.join(f'<url><loc>{SITE}/artikel/{a["slug"]}</loc><lastmod>{a["published"]}</lastmod><priority>0.8</priority></url>'
+                    for a in articles.ARTICLES)
     return f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{rows}</urlset>\n'
 
 
@@ -477,5 +598,13 @@ def respond(path):
     if slug in LANDING and path == '/' + slug:
         if slug not in CACHE:
             CACHE[slug] = landing_html(slug).encode('utf-8')
+        return CACHE[slug], 'text/html; charset=utf-8'
+    if path in ('/artikel', '/artikel/'):
+        if 'artikel' not in CACHE:
+            CACHE['artikel'] = articles_index().encode('utf-8')
+        return CACHE['artikel'], 'text/html; charset=utf-8'
+    if slug.startswith('artikel/') and slug[8:] in ARTICLES and path == '/' + slug:
+        if slug not in CACHE:
+            CACHE[slug] = article_html(slug[8:]).encode('utf-8')
         return CACHE[slug], 'text/html; charset=utf-8'
     return None

@@ -80,6 +80,33 @@ class SeoPages(unittest.TestCase):
         _, _, login = self.get('/login.html')
         self.assertIn('<meta name="robots" content="noindex">', login)
 
+    def test_articles(self):
+        status, _, index = self.get('/artikel')
+        self.assertEqual(status, 200)
+        _, _, xml = self.get('/sitemap.xml')
+        for a in seo.articles.ARTICLES:
+            self.assertIn(f'href="/artikel/{a["slug"]}"', index)
+            self.assertIn(f'<loc>https://myflipbookpro.com/artikel/{a["slug"]}</loc>', xml)
+            status, _, html = self.get('/artikel/' + a['slug'])
+            self.assertEqual(status, 200, a['slug'])
+            self.assertEqual(html.count('<h1>'), 1)
+            self.assertIn('"@type": "BlogPosting"', html)
+            for block in re.findall(r'<script type="application/ld\+json">(.*?)</script>', html, re.S):
+                json.loads(block)
+            self.assertIn(a['tool'], seo.LANDING)
+            # Every link inside the article leads somewhere real.
+            for href in re.findall(r'<a href="(/[^"#]*)"', html):
+                href = href.replace('&amp;', '&')
+                target = href.split('?')[0].lstrip('/')
+                ok = (target in seo.LANDING or target in server.PAGES or target == 'artikel' or target == ''
+                      or (target.startswith('artikel/') and target[8:] in seo.ARTICLES))
+                self.assertTrue(ok, f'{a["slug"]}: {href}')
+        self.assertEqual(self.get('/artikel/tidak-ada')[0], 404)
+        _, _, landing = self.get('/kompres-pdf')
+        self.assertIn('href="/artikel/cara-kompres-pdf-200kb"', landing, 'guides on the tool page')
+        _, _, converter = self.get('/converter.html')
+        self.assertIn('<title>Alat PDF Online Lengkap', converter)
+
     def test_security_headers(self):
         conn = http.client.HTTPConnection('127.0.0.1', self.httpd.server_port, timeout=10)
         conn.request('GET', '/kompres-pdf'); r = conn.getresponse(); r.read(); conn.close()
