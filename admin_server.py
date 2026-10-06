@@ -26,6 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 import accounts
+import geo
 import visits
 
 ROOT = Path(__file__).resolve().parent
@@ -196,6 +197,10 @@ def member(user_id, now=None):
             if has_table(v, 'visits'):
                 row = v.execute('SELECT COUNT(*) AS n, MAX(ts) AS last FROM visits WHERE user_id=?', (user_id,)).fetchone()
                 out['visits'], out['lastVisit'] = row['n'], row['last']
+                if {'country', 'region', 'city', 'isp'} <= {r[1] for r in v.execute('PRAGMA table_info(visits)')}:
+                    out['places'] = [dict(r) for r in v.execute(
+                        """SELECT country, region, city, isp, device, MAX(ts) AS last, COUNT(*) AS views FROM visits
+                           WHERE user_id=? AND country != '' GROUP BY country, region, city, isp, device ORDER BY last DESC LIMIT 10""", (user_id,))]
         v.close()
     return out
 
@@ -279,7 +284,8 @@ def visitor_stats(days=30):
         with v:
             out = visits.stats(v, days, None, team_ids()) if has_table(v, 'visits') else None
         v.close()
-    out = out or {'days': days, 'daily': [], 'pages': [], 'referrers': [], 'devices': [], 'views': 0, 'visitors': 0, 'average': 0, 'members': 0, 'today': {}}
+    out = out or {'days': days, 'daily': [], 'pages': [], 'referrers': [], 'devices': [], 'countries': [], 'regions': [], 'cities': [],
+                  'isps': [], 'recent': [], 'views': 0, 'visitors': 0, 'average': 0, 'members': 0, 'today': {}}
     more = growth(days)
     for d in out['daily']:
         extra = more.get(d['day'], {})
@@ -289,6 +295,15 @@ def visitor_stats(days=30):
         out['daily'] = [dict(day=day, views=0, visitors=0, **{k: more[day].get(k, 0) for k in ('members', 'office', 'ai', 'translate', 'books')})
                         for day in sorted(more)]
     out['newMembers'] = sum(d.get('members', 0) for d in out['daily'])
+    out['geoReady'] = all((geo.folder() / f).exists() for f in geo.FILES.values())
+    ids = {r['user_id'] for r in out.get('recent', []) if r.get('user_id')}
+    db = read_only(db_path()) if ids else None
+    if db:
+        with db:
+            emails = {r['id']: r['email'] for r in db.execute('SELECT id, email FROM users WHERE id IN (%s)' % ','.join('?' * len(ids)), list(ids))}
+        db.close()
+        for r in out['recent']:
+            r['member'] = emails.get(r.get('user_id'))
     out['teamExcluded'] = len(team_ids())
     return out
 

@@ -46,6 +46,7 @@ import library
 import share
 import messages_en
 import free_translate
+import geo
 import book_seal
 import invoice
 import visits
@@ -2025,7 +2026,8 @@ class Handler(SimpleHTTPRequestHandler):
                             RECENT_VISITS.pop(k, None)
                 if fresh and not (user and user['email'].lower() in team):
                     get_visits().record('/' + page, key[0], key[1], str(data.get('ref') or '')[:500],
-                                        user['id'] if user else None, own_hosts=CONFIG['public_hosts'] | {'localhost', '127.0.0.1'})
+                                        user['id'] if user else None, own_hosts=CONFIG['public_hosts'] | {'localhost', '127.0.0.1'},
+                                        place=geo.lookup(key[0]))
         except Exception:
             pass
         self.send_response(204)

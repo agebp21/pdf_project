@@ -186,6 +186,8 @@ async function showMember(id) {
   $('#detail-body').innerHTML = `<div class="grid">${card(esc(m.paid ? PLAN[m.plan] || m.plan : 'Free'), 'Paket' + (m.paid ? ' s/d ' + date(m.planExpiresAt) : ''))}
       ${card(num(m.books.length), 'Buku di My Library')}${card(num(m.visits), 'Kunjungan (saat masuk)')}${card(esc(when(m.lastVisit)), 'Terakhir berkunjung')}</div>
     <p class="muted">Nama: ${esc(m.name) || '—'} · Daftar ${date(m.createdAt)} · Email ${m.verified ? 'terverifikasi' : 'belum terverifikasi'} · ${m.google ? 'Login Google' : 'Login email'} · ${num(m.sessions)} sesi aktif</p>
+    ${m.places && m.places.length ? `<h3>Lokasi (perkiraan dari jaringan)</h3><table><tr><th>Tempat</th><th>Provider</th><th>Perangkat</th><th>Terakhir</th><th>Tampilan</th></tr>
+      ${m.places.map(p => `<tr><td>${esc(place(p))}</td><td>${esc(p.isp) || '—'}</td><td>${esc(DEVICE[p.device] || p.device)}</td><td>${esc(when(p.last))}</td><td>${num(p.views)}</td></tr>`).join('')}</table>` : ''}
     ${m.referral ? `<p class="muted">Referral: kode ${esc(m.referral.code || '—')} · diundang oleh ${esc(m.referral.referredBy || '—')} · mengundang ${num(m.referral.signups)} (berlangganan ${num(m.referral.subscribed)}) · hadiah ${num(m.referral.rewards)} bulan</p>` : ''}
     <h3>Buku</h3>${bookTable(m.books, false)}
     <h3>Order</h3><table><tr><th>Order</th><th>Paket</th><th>Jumlah</th><th>Status</th><th>Lewat</th><th>Dibuat</th><th>Lunas</th></tr>
@@ -208,6 +210,8 @@ async function loadUploads() {
 }
 
 document.querySelectorAll('[data-days]').forEach(b => b.onclick = () => loadVisits(Number(b.dataset.days)));
+const DEVICE = {desktop: 'Komputer', mobile: 'HP', tablet: 'Tablet'};
+const place = p => [p.city, p.region, p.country].filter((x, i, all) => x && all.indexOf(x) === i).join(', ') || '—';
 async function loadVisits(days) {
   const d = await api('/api/visits?days=' + days);
   const list = (rows, label) => `<table>${rows.map(r => `<tr><td>${esc(label(r.name))}</td><td style="text-align:right">${num(r.views)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada data.</td></tr>'}</table>`;
@@ -223,9 +227,19 @@ async function loadVisits(days) {
     <div class="two">
       <div class="panel"><h3>Halaman</h3>${list(d.pages, n => n)}</div>
       <div class="panel"><h3>Datang dari</h3>${list(d.referrers, n => n)}</div>
-      <div class="panel"><h3>Perangkat</h3>${list(d.devices, n => ({desktop: 'Komputer', mobile: 'HP', tablet: 'Tablet'})[n] || n)}</div>
+      <div class="panel"><h3>Perangkat</h3>${list(d.devices, n => DEVICE[n] || n)}</div>
     </div>
-    <p class="muted">Dihitung hanya saat halaman benar-benar terbuka di browser (bot & alat otomatis tidak terhitung), reload dalam 1 menit dihitung sekali. Tanpa menyimpan IP: pengunjung dihitung dengan kode acak yang berganti setiap hari, jadi "total kunjungan" = jumlah pengunjung harian.</p>`;
+    <h3 style="margin-top:22px">Lokasi pengunjung <span class="muted" style="font-weight:400;font-size:13px">(jumlah pengunjung)</span></h3>
+    ${d.geoReady ? '' : '<p class="muted">Database lokasi belum dipasang di server (python3 geo.py --update) — kolom lokasi masih kosong.</p>'}
+    <div class="two">
+      <div class="panel"><h3>Negara</h3>${list(d.countries, n => n)}</div>
+      <div class="panel"><h3>Provinsi</h3>${list(d.regions, n => n)}</div>
+      <div class="panel"><h3>Kota</h3>${list(d.cities, n => n)}</div>
+      <div class="panel"><h3>Provider internet</h3>${list(d.isps, n => n)}</div>
+    </div>
+    <div class="panel"><h3>Kunjungan terbaru</h3><table><tr><th>Waktu</th><th>Halaman</th><th>Lokasi</th><th>Provider</th><th>Perangkat</th><th>Member</th><th>Datang dari</th></tr>
+      ${(d.recent || []).map(r => `<tr><td>${esc(when(r.ts))}</td><td>${esc(r.path)}</td><td>${esc(place(r))}</td><td>${esc(r.isp) || '—'}</td><td>${esc(DEVICE[r.device] || r.device)}</td><td>${esc(r.member || '') || '<span class="muted">tamu</span>'}</td><td>${esc(r.ref) || '—'}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Belum ada data.</td></tr>'}</table></div>
+    <p class="muted">Dihitung hanya saat halaman benar-benar terbuka di browser (bot & alat otomatis tidak terhitung), reload dalam 1 menit dihitung sekali. Tanpa menyimpan IP: pengunjung dihitung dengan kode acak yang berganti setiap hari, jadi "total kunjungan" = jumlah pengunjung harian. Lokasi = perkiraan dari jaringan (biasanya tepat sampai provinsi; kota bisa meleset, terutama jaringan HP), dicari di server saat itu juga — alamat IP-nya tidak disimpan. <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>.</p>`;
 }
 
 async function loadServer() {

@@ -1,8 +1,9 @@
 """Visitor statistics for the admin panel (admin_server.py).
 
 Each page view of a public page is one row: when, which page, the device kind,
-the site it came from (host only) and, when logged in, the member id. No IP
-address or browser string is stored: a visitor is a short hash of IP + browser
+the site it came from (host only), the approximate place (country, province,
+city, internet provider — looked up from the IP on this server by geo.py) and,
+when logged in, the member id. No IP address or browser string is stored: a visitor is a short hash of IP + browser
 + a secret that changes every day, so the same person counts once per day and
 cannot be followed from one day to the next. Bots are not counted. Rows older
 than KEEP_DAYS are removed.
@@ -18,6 +19,7 @@ import time
 from urllib.parse import urlsplit
 
 KEEP_DAYS = 400
+PLACE = ('country', 'region', 'city', 'isp')
 BOT = re.compile(r'bot|crawl|spider|slurp|preview|monitor|curl|wget|python-requests|httpclient|headless|lighthouse', re.I)
 
 
@@ -55,6 +57,10 @@ class Visits:
                     user_id INTEGER, ref TEXT NOT NULL DEFAULT '', device TEXT NOT NULL DEFAULT 'desktop');
                 CREATE INDEX IF NOT EXISTS visits_day ON visits(day);
             ''')
+            have = {r[1] for r in db.execute('PRAGMA table_info(visits)')}
+            for column in PLACE:
+                if column not in have:
+                    db.execute(f"ALTER TABLE visits ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
 
     @contextlib.contextmanager
     def connect(self):
@@ -66,8 +72,8 @@ class Visits:
         finally:
             db.close()
 
-    def record(self, path, ip, agent, referer='', user_id=None, own_hosts=(), now=None):
-        """One page view; False when it is not counted (a bot)."""
+    def record(self, path, ip, agent, referer='', user_id=None, own_hosts=(), now=None, place=None):
+        """One page view; False when it is not counted (a bot). place: geo.lookup(ip)."""
         if BOT.search(agent or '') or not agent:
             return False
         now = int(now or time.time())
@@ -77,8 +83,10 @@ class Visits:
         if ref in own_hosts or ref.startswith('www.') and ref[4:] in own_hosts:
             ref = ''
         with self.connect() as db:
-            db.execute('INSERT INTO visits(ts, day, path, visitor, user_id, ref, device) VALUES(?,?,?,?,?,?,?)',
-                       (now, day, (path or '/')[:200], visitor, user_id, ref, device(agent)))
+            place = place or {}
+            db.execute('INSERT INTO visits(ts, day, path, visitor, user_id, ref, device, country, region, city, isp) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+                       (now, day, (path or '/')[:200], visitor, user_id, ref, device(agent),
+                        *(str(place.get(k) or '')[:100] for k in PLACE)))
             if now - self.pruned > 86400:                 # once a day: forget old rows
                 db.execute('DELETE FROM visits WHERE ts < ?', (now - KEEP_DAYS * 86400,))
                 self.pruned = now
@@ -109,6 +117,12 @@ def stats(db, days=30, now=None, exclude_users=()):
 
     def top(column, limit=10, extra=''):
         return [dict(name=r[0], views=r[1]) for r in q(f'SELECT {column}, COUNT(*) FROM v WHERE 1=1 {extra} GROUP BY {column} ORDER BY 2 DESC LIMIT ?', [limit])]
+    def places(column, need=None, limit=10):
+        """Where visitors come from: visitors (one per day), not page views."""
+        return [dict(name=r[0], views=r[1]) for r in q(f"SELECT {column}, COUNT(DISTINCT visitor || day) FROM v WHERE {need or column} != '' GROUP BY 1 ORDER BY 2 DESC LIMIT ?", [limit])]
+    have = {r[1] for r in db.execute('PRAGMA table_info(visits)')}
+    located = all(c in have for c in PLACE)
+    recent = [dict(r) for r in q(f"SELECT ts, path, device, user_id, ref{', country, region, city, isp' if located else ''} FROM v ORDER BY ts DESC LIMIT 50")]
     total = q('SELECT COUNT(*), COUNT(DISTINCT visitor || day) FROM v').fetchone()
     members = q('SELECT COUNT(DISTINCT user_id) FROM v WHERE user_id IS NOT NULL').fetchone()[0]
     counted = [d for d in daily if d['views']] or daily[-1:]
@@ -116,4 +130,8 @@ def stats(db, days=30, now=None, exclude_users=()):
     span = max(1, sum(1 for d in daily if first and d['day'] >= first))
     return dict(days=days, today=dict(zip(('views', 'visitors'), by_day.get(today, (0, 0)))),
                 views=total[0], visitors=total[1], average=round(total[1] / span, 1), since=first, members=members, daily=daily,
-                pages=top('path'), referrers=top('ref', extra="AND ref != ''"), devices=top('device', 5))
+                pages=top('path'), referrers=top('ref', extra="AND ref != ''"), devices=top('device', 5),
+                countries=places('country') if located else [],
+                regions=places("region || ', ' || country", 'region') if located else [],
+                cities=places("city || CASE WHEN region != '' THEN ' · ' || region ELSE '' END", 'city') if located else [],
+                isps=places('isp') if located else [], recent=recent)

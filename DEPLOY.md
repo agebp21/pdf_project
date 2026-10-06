@@ -31,7 +31,8 @@
 1. **Lokal:** `git status` — yen ana owahan agen liya sing durung di-commit, **ojo di-deploy lan ojo dibuwang**; takon owner / agen sing nduwe. Sing di-deploy **mung commit sing wis di-push**.
 2. Tes lokal kabeh lulus (`for f in tests/*.test.cjs tests/qa-*.cjs; do node "$f"; done` + `python -m unittest discover -s tests`).
 3. Paket: `git archive --format=tar.gz -o mf-deploy.tgz HEAD`, kirim: `scp mf-deploy.tgz root@38.103.170.218:/root/`.
-4. **Backup nang VPS dhisik:** `cd /opt && tar czf /root/pdf_project-code-backup-<tanggal>.tgz --exclude=pdf_project/.data --exclude=pdf_project/__pycache__ pdf_project`
+4. **Backup nang VPS dhisik:** `cd /opt && tar czf /root/pdf_project-code-backup-<tanggal>.tgz --exclude=pdf_project/.data --exclude=pdf_project/.build --exclude=pdf_project/__pycache__ pdf_project && ls -t /root/pdf_project-code-backup-*.tgz | tail -n +4 | xargs -r rm -f --`
+   - `.build` (±800 MB hasil build APK/EXE) **ojo melu** dibackup; mung 3 backup kode paling anyar sing disimpen (kode wis aman nang git). 2026-10-06 disk VPS tekan 98% gara-gara 51 backup × 763 MB.
 5. Pasang: `cd /opt/pdf_project && tar xzf /root/mf-deploy.tgz` (file anyar ditimpa, `.env`/`.data` aman).
 6. Restart: `systemctl restart myflipbook` (lan `myflipbook-admin` yen `admin_server.py`/`admin/` owah). Cek `systemctl is-active ...`, `journalctl -u myflipbook -n 20`.
 7. Verifikasi: `curl -s -o /dev/null -w "%{http_code}" https://myflipbookpro.com/api/capabilities` (200) lan `https://myflipbookpro.com/admin/api/session` (200).
