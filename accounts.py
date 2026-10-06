@@ -539,6 +539,9 @@ class Accounts:
                     token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                     created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL);
             ''')
+            # Every member has a referral code (older accounts got one only on request).
+            for row in db.execute('SELECT id FROM users WHERE ref_code IS NULL').fetchall():
+                self._give_code(db, row['id'])
 
     @contextlib.contextmanager
     def connect(self):
@@ -580,6 +583,7 @@ class Accounts:
                 cursor = db.execute('INSERT INTO users(email, name, password_hash, created_at) VALUES(?,?,?,?)',
                                     (email, name, hash_password(password), int(time.time())))
                 user_id = cursor.lastrowid
+                self._give_code(db, user_id)
         except sqlite3.IntegrityError:
             raise AccountError(409, 'Email sudah terdaftar. Silakan masuk.')
         return self.start_session(user_id)
@@ -603,6 +607,7 @@ class Accounts:
             else:
                 user_id = db.execute('INSERT INTO users(email, name, password_hash, created_at, verified) VALUES(?,?,?,?,0)',
                                      (email, name, hash_password(password), int(time.time()))).lastrowid
+                self._give_code(db, user_id)
         return user_id, self.email_token(user_id)
 
     def email_token(self, user_id, hours=48):
@@ -657,6 +662,7 @@ class Accounts:
             else:
                 user_id = db.execute('INSERT INTO users(email, name, password_hash, created_at, verified, google_sub) VALUES(?,?,?,?,1,?)',
                                      (email, (name or '').strip()[:80], hash_password(secrets.token_urlsafe(32)), int(time.time()), sub)).lastrowid
+                self._give_code(db, user_id)
         return self.start_session(user_id)
 
     def _throttled(self, key):
@@ -855,22 +861,27 @@ class Accounts:
                 db.execute('INSERT INTO signups VALUES(?,?,?)', (self.ip_hash(ip), user_id, int(time.time())))
 
     # ---- referrals ---------------------------------------------------------
+    @staticmethod
+    def _give_code(db, user_id):
+        """A fresh referral code for a member without one (inside an open transaction)."""
+        for _ in range(20):
+            code = ''.join(secrets.choice(REF_ALPHABET) for _ in range(7))
+            try:
+                db.execute('UPDATE users SET ref_code=? WHERE id=? AND ref_code IS NULL', (code, user_id))
+                return
+            except sqlite3.IntegrityError:
+                continue
+        raise AccountError(500, 'Kode referral tidak bisa dibuat.')
+
     def referral_code(self, user_id):
-        """The member's own code (made the first time it is asked for)."""
+        """The member's own code (every account gets one when it is made)."""
         with self.connect() as db:
             row = db.execute('SELECT ref_code FROM users WHERE id=?', (user_id,)).fetchone()
             if not row:
                 raise AccountError(404, 'Akun tidak ditemukan.')
-            if row['ref_code']:
-                return row['ref_code']
-            for _ in range(20):
-                code = ''.join(secrets.choice(REF_ALPHABET) for _ in range(7))
-                try:
-                    db.execute('UPDATE users SET ref_code=? WHERE id=? AND ref_code IS NULL', (code, user_id))
-                    return db.execute('SELECT ref_code FROM users WHERE id=?', (user_id,)).fetchone()['ref_code']
-                except sqlite3.IntegrityError:
-                    continue
-        raise AccountError(500, 'Kode referral tidak bisa dibuat.')
+            if not row['ref_code']:
+                self._give_code(db, user_id)
+            return db.execute('SELECT ref_code FROM users WHERE id=?', (user_id,)).fetchone()['ref_code']
 
     def attach_referrer(self, user_id, code, now=None):
         """A brand-new account that came through a referral link remembers who

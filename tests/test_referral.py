@@ -60,6 +60,19 @@ class ReferralTests(unittest.TestCase):
         self.assertFalse(self.store.attach_referrer(old, code, now=time.time() + 3600), 'not an older account')
         self.assertFalse(self.store.attach_referrer(self.member(), 'NOPE123'))
 
+    def test_every_member_has_a_code(self):
+        a = self.member()
+        b, _ = self.store.register_unverified('new@example.com', 'secret-pass-1')
+        c = self.store.user_for(self.store.google_login('g-1', 'g@example.com'))['id']
+        with self.store.connect() as db:
+            db.execute("INSERT INTO users(email, name, password_hash, created_at) VALUES('old@example.com', '', 'x', 1)")
+            codes = dict(db.execute('SELECT id, ref_code FROM users').fetchall())
+        self.assertTrue(all(codes[i] for i in (a, b, c)), 'email, unverified and Google sign-ups')
+        self.assertEqual(len({codes[i] for i in (a, b, c)}), 3)
+        accounts.Accounts(str(Path(self.tmp.name) / 'a.sqlite3'))      # restart: older accounts get one
+        with self.store.connect() as db:
+            self.assertEqual(db.execute('SELECT COUNT(*) FROM users WHERE ref_code IS NULL').fetchone()[0], 0)
+
     def test_every_ten_paying_friends(self):
         owner = self.member('owner@example.com')
         code = self.store.referral_code(owner)
