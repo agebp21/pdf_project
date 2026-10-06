@@ -16,4 +16,10 @@ assert.throws(() => api.shareLauncher('x', 'javascript:alert(1)'), /tidak valid/
 assert.throws(() => api.shareLauncher('x', '/s/relative'), /tidak valid/, 'relative URL refused');
 assert.throws(() => api.shareLauncher('x', 'ftp://host/f'), /tidak valid/, 'non-http refused');
 assert.throws(() => api.shareLauncher('x', ''), /tidak valid/, 'empty refused');
-console.log('PASS drive launcher: redirect + fallback + escaping + URL gate');
+// Windows shortcut: double-click always opens the browser, never Notepad.
+const shortcut = api.shareShortcut(url);
+assert.ok(shortcut.startsWith('[InternetShortcut]'), 'shortcut header');
+assert.ok(shortcut.includes('URL=' + url), 'shortcut carries the link');
+assert.throws(() => api.shareShortcut('javascript:alert(1)'), /tidak valid/, 'script URL refused');
+assert.throws(() => api.shareShortcut(''), /tidak valid/, 'empty refused');
+console.log('PASS drive launcher + windows shortcut: redirect + fallback + escaping + URL gate');

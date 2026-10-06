@@ -1012,8 +1012,18 @@
       const title = ($('#export-title') && $('#export-title').value) || 'book';
       FlipbookExport.download(new Blob([FlipbookExport.shareLauncher(title, url)], {type: 'text/html'}),
         'Open-' + FlipbookExport.titleFile(title) + '.html');
-      $('#share-popup-status').textContent = L('Launcher downloaded — upload it to Google Drive and share that file.',
-        'Launcher ke-download — upload nang Google Drive terus bagi file kui.');
+      $('#share-popup-status').textContent = L('Launcher downloaded — upload it to Google Drive and share that file. Phones open this one; Windows members can use the .url shortcut below.',
+        'Launcher ke-download — upload nang Google Drive terus bagi file kui. HP mbukak iki; member Windows iso nganggo shortcut .url ngisore.');
+    } catch (cause) { $('#share-popup-status').textContent = cause.message; }
+  };
+  $('#share-popup-shortcut').onclick=()=>{
+    const url = $('#share-popup-url').value; if (!url) return;
+    try {
+      const title = ($('#export-title') && $('#export-title').value) || 'book';
+      FlipbookExport.download(new Blob([FlipbookExport.shareShortcut(url)], {type: 'application/internet-shortcut'}),
+        'Open-' + FlipbookExport.titleFile(title) + '.url');
+      $('#share-popup-status').textContent = L('Shortcut downloaded — upload it to Google Drive. On Windows a double-click always opens the browser (never Notepad).',
+        'Shortcut ke-download — upload nang Google Drive. Nang Windows double-click mesthi mbukak browser (ora Notepad).');
     } catch (cause) { $('#share-popup-status').textContent = cause.message; }
   };
   $('#share-popup-close').onclick=closeSharePopup;

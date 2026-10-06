@@ -1262,3 +1262,8 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - File: `flipbook-export.js` (`shareLauncher(title,url)` pure: gate URL http(s) mutlak, escape judul/URL) + tombol nang popup share (+ sidebar ora usah, popup wis dadi alur). Judul file manut judul buku.
 - Tes: `tests/share-launcher.test.cjs` anyar (redirect 3 jalur, escaping, gate URL); qa-editor/export ijo; sintaks + diff bersih; HTTP 200 + tombol kesaji. Redirect nang browser asli durung dites langsung (meta+JS standar + fallback link).
 - Durung commit/push/deploy.
+
+### 2026-10-06 — Shortcut .url kanggo Windows (request owner, Notepad buntu)
+- Masalah: launcher `.html` nang Windows iso kebukak Notepad (asosiasi file), member bingung. Solusi: tombol ke-3 nang popup share — file `.url` (InternetShortcut): double-click nang Windows **mesthi** mbukak browser (ora tau Notepad). Aturan pakai: Windows → `.url`, HP → `.html` launcher.
+- File: `shareShortcut(url)` + tombol popup + tes (format + gate URL). Suite + sintaks + HTTP ijo.
+- Durung commit/push/deploy.
