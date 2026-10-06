@@ -8,6 +8,14 @@
 (function () {
   'use strict';
   var cache = null;
+  // Visit statistics: counted once the page runs in a real browser (once per page).
+  if (!window.__mfVisitSent && /^https?:$/.test(location.protocol)) {
+    window.__mfVisitSent = true;
+    try {
+      fetch('/api/visit', { method: 'POST', keepalive: true, credentials: 'same-origin', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ path: location.pathname, ref: document.referrer || '' }) }).catch(function () {});
+    } catch (e) {}
+  }
   // Referral link (?ref=CODE): kept 30 days, read when an account is created.
   try {
     var ref = new URLSearchParams(location.search).get('ref');

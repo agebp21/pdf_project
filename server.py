@@ -90,6 +90,8 @@ ACCOUNTS = None
 ACCOUNTS_LOCK = threading.Lock()
 LIBRARY = None
 VISITS = None
+RECENT_VISITS = {}
+VISIT_LOCK = threading.Lock()
 
 
 def load_env(path):
@@ -2001,14 +2003,33 @@ class Handler(SimpleHTTPRequestHandler):
                 return value.strip()[:12]
         return ''
 
-    def count_visit(self, page):
-        """One page view for the admin statistics (never stops the page)."""
+    def count_visit(self):
+        """POST /api/visit {path, ref}: one page view, sent by the page itself once it
+        has loaded in a real browser (assets/auth.js) — tools and most bots never
+        run it. The team (STATS_EXCLUDE_EMAILS) is not counted; a reload of the
+        same page within a minute counts once."""
         try:
-            user = self.current_user() if self.session_token() else None
-            get_visits().record('/' + page, self.client_ip(), self.headers.get('User-Agent', ''), self.headers.get('Referer', ''),
-                                user['id'] if user else None, own_hosts=CONFIG['public_hosts'] | {'localhost', '127.0.0.1'})
+            size = int(self.headers.get('Content-Length', '0'))
+            data = json.loads(self.rfile.read(size) if 0 < size <= 4096 else b'{}')
+            page = str(data.get('path') or '/').split('?')[0].lstrip('/') or 'index.html'
+            if page in PAGES and page not in SOON_PAGES:
+                user = self.current_user() if self.session_token() else None
+                team = {e.strip().lower() for e in os.environ.get('STATS_EXCLUDE_EMAILS', '').split(',') if e.strip()}
+                key = (self.client_ip(), self.headers.get('User-Agent', ''), page)
+                now = time.time()
+                with VISIT_LOCK:
+                    fresh = now - RECENT_VISITS.get(key, 0) > 60
+                    RECENT_VISITS[key] = now
+                    if len(RECENT_VISITS) > 5000:
+                        for k in [k for k, t in RECENT_VISITS.items() if now - t > 120]:
+                            RECENT_VISITS.pop(k, None)
+                if fresh and not (user and user['email'].lower() in team):
+                    get_visits().record('/' + page, key[0], key[1], str(data.get('ref') or '')[:500],
+                                        user['id'] if user else None, own_hosts=CONFIG['public_hosts'] | {'localhost', '127.0.0.1'})
         except Exception:
             pass
+        self.send_response(204)
+        self.end_headers()
 
     def client_ip(self):
         # Behind nginx: X-Real-IP is set by nginx itself ($remote_addr); the
@@ -2689,8 +2710,6 @@ class Handler(SimpleHTTPRequestHandler):
             self.end_headers()
             self.wfile.write(page)
             return
-        if relative in PAGES and relative not in SOON_PAGES:
-            self.count_visit(relative)
         if relative in EXPORT_TEMPLATES:
             denied = self.entitlement_error('export')
             if denied:
@@ -2824,6 +2843,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path.startswith('/api/worker/'):
             self.worker_route('POST')
+            return
+        if self.path == '/api/visit':
+            self.count_visit()
             return
         if self.path.startswith(('/api/auth/', '/api/billing/', '/api/payment/')):
             try:

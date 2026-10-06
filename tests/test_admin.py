@@ -109,6 +109,16 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(up['items'][0]['owner'], 'alice@example.com'); self.assertEqual(up['items'][0]['exports'][0]['kind'], 'html')
         _, v, _ = self.call('GET', '/api/visits?days=7')
         self.assertEqual(len(v['daily']), 7)
+        self.assertEqual(v['average'], 2.0, '2 visitors over the 1 day with data')
+        self.assertEqual(sum(d['members'] for d in v['daily']), 2, 'new members per day')
+        status, csv, _ = self.call('GET', '/api/report.csv?days=7')
+        self.assertEqual(status, 200)
+        self.assertTrue(csv.lstrip('﻿').startswith('tanggal,pengunjung,tampilan_halaman,member_baru'))
+        # The team is left out: Alice (and her browser that day) disappear.
+        with mock.patch.dict(os.environ, {'STATS_EXCLUDE_EMAILS': 'alice@example.com'}):
+            _, t, _ = self.call('GET', '/api/visits?days=7')
+        self.assertEqual((t['views'], t['visitors'], t['teamExcluded']), (1, 1, 1))
+        self.assertEqual(sum(d['members'] for d in t['daily']), 1)
         self.assertEqual(v['referrers'], [{'name': 'www.google.com', 'views': 1}], 'own site is not a referrer')
         self.assertEqual({x['name'] for x in v['devices']}, {'desktop', 'mobile'})
         _, srv, _ = self.call('GET', '/api/server')
@@ -157,9 +167,16 @@ class SiteCountsVisits(unittest.TestCase):
             httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
             threading.Thread(target=httpd.serve_forever, daemon=True).start()
             try:
-                for agent in ('Mozilla/5.0 Chrome/150', 'bingbot/2.0'):
+                def send(method, path, agent, body=None):
                     conn = http.client.HTTPConnection('127.0.0.1', httpd.server_port, timeout=10)
-                    conn.request('GET', '/privacy.html', headers={'User-Agent': agent}); conn.getresponse().read(); conn.close()
+                    conn.request(method, path, json.dumps(body) if body else None,
+                                 {'User-Agent': agent, 'Host': f'127.0.0.1:{httpd.server_port}', 'Content-Type': 'application/json'})
+                    r = conn.getresponse(); r.read(); conn.close(); return r.status
+                send('GET', '/privacy.html', 'Mozilla/5.0 Chrome/150')                 # loading a page counts nothing by itself
+                self.assertEqual(send('POST', '/api/visit', 'Mozilla/5.0 Chrome/150', {'path': '/privacy.html'}), 204)
+                send('POST', '/api/visit', 'Mozilla/5.0 Chrome/150', {'path': '/privacy.html'})      # a reload within a minute
+                send('POST', '/api/visit', 'bingbot/2.0', {'path': '/index.html'})
+                send('POST', '/api/visit', 'Mozilla/5.0 Chrome/150', {'path': '/secret.php'})
                 db = sqlite3.connect(Path(tmp) / 'visits.sqlite3')
                 rows = db.execute('SELECT path, device FROM visits').fetchall(); db.close()
                 self.assertEqual(rows, [('/privacy.html', 'desktop')])

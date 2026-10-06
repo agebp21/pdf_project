@@ -85,25 +85,35 @@ class Visits:
         return True
 
 
-def stats(db, days=30, now=None):
-    """Numbers for the admin panel from an open visits database."""
+def stats(db, days=30, now=None, exclude_users=()):
+    """Numbers for the admin panel from an open visits database. exclude_users:
+    member ids of the team — their visits, and every other visit from the same
+    browser that day (the visitor code changes daily), are left out."""
     now = int(now or time.time())
     since = day_of(now - (days - 1) * 86400)
     today = day_of(now)
-    rows = db.execute('SELECT day, COUNT(*) AS views, COUNT(DISTINCT visitor) AS visitors FROM visits WHERE day >= ? '
-                      'GROUP BY day ORDER BY day', (since,)).fetchall()
+    ids = [int(u) for u in exclude_users]
+    team = (' AND (visitor || day) NOT IN (SELECT visitor || day FROM visits WHERE user_id IN (%s))' % ','.join('?' * len(ids))) if ids else ''
+    base = f'SELECT * FROM visits WHERE day >= ?{team}'
+    args = [since] + ids
+
+    def q(sql, extra=()):
+        return db.execute(f'WITH v AS ({base}) ' + sql, args + list(extra))
+    rows = q('SELECT day, COUNT(*) AS views, COUNT(DISTINCT visitor) AS visitors FROM v GROUP BY day ORDER BY day').fetchall()
     by_day = {r['day']: (r['views'], r['visitors']) for r in rows}
     daily = []
     for i in range(days - 1, -1, -1):
         d = day_of(now - i * 86400)
         views, visitors = by_day.get(d, (0, 0))
         daily.append(dict(day=d, views=views, visitors=visitors))
+
     def top(column, limit=10, extra=''):
-        return [dict(name=r[0], views=r[1]) for r in db.execute(
-            f'SELECT {column}, COUNT(*) FROM visits WHERE day >= ? {extra} GROUP BY {column} ORDER BY 2 DESC LIMIT ?',
-            (since, limit))]
-    total = db.execute('SELECT COUNT(*), COUNT(DISTINCT visitor || day) FROM visits WHERE day >= ?', (since,)).fetchone()
-    members = db.execute('SELECT COUNT(DISTINCT user_id) FROM visits WHERE day >= ? AND user_id IS NOT NULL', (since,)).fetchone()[0]
+        return [dict(name=r[0], views=r[1]) for r in q(f'SELECT {column}, COUNT(*) FROM v WHERE 1=1 {extra} GROUP BY {column} ORDER BY 2 DESC LIMIT ?', [limit])]
+    total = q('SELECT COUNT(*), COUNT(DISTINCT visitor || day) FROM v').fetchone()
+    members = q('SELECT COUNT(DISTINCT user_id) FROM v WHERE user_id IS NOT NULL').fetchone()[0]
+    counted = [d for d in daily if d['views']] or daily[-1:]
+    first = q('SELECT MIN(day) FROM v').fetchone()[0]
+    span = max(1, sum(1 for d in daily if first and d['day'] >= first))
     return dict(days=days, today=dict(zip(('views', 'visitors'), by_day.get(today, (0, 0)))),
-                views=total[0], visitors=total[1], members=members, daily=daily,
+                views=total[0], visitors=total[1], average=round(total[1] / span, 1), since=first, members=members, daily=daily,
                 pages=top('path'), referrers=top('ref', extra="AND ref != ''"), devices=top('device', 5))

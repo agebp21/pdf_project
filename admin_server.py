@@ -131,7 +131,7 @@ def overview(now=None):
     v = read_only(db_path().parent / 'visits.sqlite3')
     if v:
         with v:
-            out['visits'] = visits.stats(v, 30, now) if has_table(v, 'visits') else None
+            out['visits'] = visits.stats(v, 30, now, team_ids()) if has_table(v, 'visits') else None
         v.close()
     return out
 
@@ -226,14 +226,79 @@ def uploads(q='', limit=200):
     return dict(items=items)
 
 
+def team_ids():
+    """Member ids of the team (STATS_EXCLUDE_EMAILS): left out of the statistics."""
+    emails = [e.strip().lower() for e in os.environ.get('STATS_EXCLUDE_EMAILS', '').split(',') if e.strip()]
+    if not emails:
+        return []
+    db = read_only(db_path())
+    if not db:
+        return []
+    with db:
+        ids = [r[0] for r in db.execute('SELECT id FROM users WHERE email IN (%s)' % ','.join('?' * len(emails)), emails)]
+    db.close()
+    return ids
+
+
+def day_of(ts):
+    return time.strftime('%Y-%m-%d', time.localtime(ts))
+
+
+def growth(days, now=None):
+    """Per day: new members, feature use (conversions, AI, translated characters)
+    and books kept in My Library — without the team."""
+    now = int(now or time.time())
+    since_ts = int(time.mktime(time.strptime(day_of(now - (days - 1) * 86400), '%Y-%m-%d')))
+    team = set(team_ids())
+    rows = {}
+    db = read_only(db_path())
+    if db:
+        with db:
+            for r in db.execute('SELECT id, created_at FROM users WHERE created_at >= ?', (since_ts,)):
+                if r['id'] not in team:
+                    rows.setdefault(day_of(r['created_at']), {}).setdefault('members', 0)
+                    rows[day_of(r['created_at'])]['members'] += 1
+            if has_table(db, 'usage'):
+                for r in db.execute('SELECT user_id, kind, amount, at FROM usage WHERE at >= ?', (since_ts,)):
+                    if r['user_id'] not in team:
+                        day = rows.setdefault(day_of(r['at']), {})
+                        day[r['kind']] = day.get(r['kind'], 0) + r['amount']
+            if has_table(db, 'library_books'):
+                for r in db.execute('SELECT user_id, created_at FROM library_books WHERE created_at >= ?', (since_ts,)):
+                    if r['user_id'] not in team:
+                        day = rows.setdefault(day_of(r['created_at']), {})
+                        day['books'] = day.get('books', 0) + 1
+        db.close()
+    return rows
+
+
 def visitor_stats(days=30):
     v = read_only(db_path().parent / 'visits.sqlite3')
-    if not v:
-        return None
-    with v:
-        out = visits.stats(v, days) if has_table(v, 'visits') else None
-    v.close()
+    out = None
+    if v:
+        with v:
+            out = visits.stats(v, days, None, team_ids()) if has_table(v, 'visits') else None
+        v.close()
+    out = out or {'days': days, 'daily': [], 'pages': [], 'referrers': [], 'devices': [], 'views': 0, 'visitors': 0, 'average': 0, 'members': 0, 'today': {}}
+    more = growth(days)
+    for d in out['daily']:
+        extra = more.get(d['day'], {})
+        d.update(members=extra.get('members', 0), office=extra.get('office', 0), ai=extra.get('ai', 0),
+                 translate=extra.get('translate', 0), books=extra.get('books', 0))
+    if not out['daily']:
+        out['daily'] = [dict(day=day, views=0, visitors=0, **{k: more[day].get(k, 0) for k in ('members', 'office', 'ai', 'translate', 'books')})
+                        for day in sorted(more)]
+    out['newMembers'] = sum(d.get('members', 0) for d in out['daily'])
+    out['teamExcluded'] = len(team_ids())
     return out
+
+
+def report_csv(days=30):
+    rows = ['tanggal,pengunjung,tampilan_halaman,member_baru,konversi,ai,huruf_diterjemahkan,buku_disimpan']
+    for d in visitor_stats(days)['daily']:
+        rows.append(','.join(str(x) for x in (d['day'], d['visitors'], d['views'], d.get('members', 0), d.get('office', 0),
+                                              d.get('ai', 0), d.get('translate', 0), d.get('books', 0))))
+    return '\n'.join(rows) + '\n'
 
 
 def server_status():
@@ -340,7 +405,17 @@ class AdminHandler(BaseHTTPRequestHandler):
                 self.send_json(200, uploads(arg('q').strip()[:100]))
             elif url.path == '/api/visits':
                 days = max(1, min(365, int(arg('days', '30') or 30)))
-                self.send_json(200, visitor_stats(days) or {'days': days, 'daily': [], 'pages': [], 'referrers': [], 'devices': []})
+                self.send_json(200, visitor_stats(days))
+            elif url.path == '/api/report.csv':
+                days = max(1, min(365, int(arg('days', '30') or 30)))
+                body = ('\ufeff' + report_csv(days)).encode('utf-8')        # BOM: Excel reads it as UTF-8
+                self.send_response(200)
+                self.send_header('Content-Type', 'text/csv; charset=utf-8')
+                self.send_header('Content-Disposition', f'attachment; filename="myflipbook-laporan-{days}-hari.csv"')
+                self.send_header('Content-Length', str(len(body)))
+                self.common_headers()
+                self.end_headers()
+                self.wfile.write(body)
             elif url.path == '/api/server':
                 self.send_json(200, server_status())
             else:

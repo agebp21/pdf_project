@@ -147,7 +147,7 @@ async function loadOverview() {
       ${card(num(d.members), 'Member terdaftar')}${card(num(d.paid), 'Member berbayar aktif')}
       ${card(num(d.new7) + ' / ' + num(d.new30), 'Member baru 7 / 30 hari')}${card(num(d.verified), 'Email terverifikasi')}
       ${card(revenue, 'Pendapatan (order lunas)')}${card(num(v.today.visitors) + ' / ' + num(v.today.views), 'Pengunjung / tampilan hari ini')}
-      ${card(num(v.visitors), 'Pengunjung 30 hari')}${card(num(d.books), 'Buku di My Library')}
+      ${card(num(v.average || 0), 'Rata-rata pengunjung / hari')}${card(num(d.books), 'Buku di My Library')}
       ${card(size(d.bookBytes), 'Ukuran arsip member')}${card(num(d.exports), 'Hasil ekspor tersimpan')}
     </div>
     <div class="two">
@@ -211,15 +211,21 @@ document.querySelectorAll('[data-days]').forEach(b => b.onclick = () => loadVisi
 async function loadVisits(days) {
   const d = await api('/api/visits?days=' + days);
   const list = (rows, label) => `<table>${rows.map(r => `<tr><td>${esc(label(r.name))}</td><td style="text-align:right">${num(r.views)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada data.</td></tr>'}</table>`;
-  $('#visit-view').innerHTML = `<div class="grid">${card(num(d.visitors), 'Pengunjung unik per hari (' + days + ' hari)')}${card(num(d.views), 'Tampilan halaman')}
-      ${card(num(d.members), 'Member yang berkunjung')}${card(num((d.today || {}).visitors), 'Pengunjung hari ini')}</div>
+  const report = d.daily.slice().reverse().filter(r => r.visitors || r.views || r.members || r.office || r.ai || r.translate || r.books);
+  $('#visit-view').innerHTML = `<div class="row"><a class="ghost" href="api/report.csv?days=${days}" style="text-decoration:none">⬇ Unduh laporan (CSV, ${days} hari)</a>
+      <span class="muted">${d.teamExcluded ? 'Tim (' + d.teamExcluded + ' akun) tidak dihitung.' : 'Tim belum dikecualikan (STATS_EXCLUDE_EMAILS).'}${d.since ? ' Data mulai ' + esc(d.since) + '.' : ''}</span></div>
+    <div class="grid">${card(num(d.average), 'Rata-rata pengunjung / hari')}${card(num(d.visitors), 'Total kunjungan (' + days + ' hari)')}
+      ${card(num(d.views), 'Tampilan halaman')}${card(num((d.today || {}).visitors), 'Pengunjung hari ini')}
+      ${card(num(d.members), 'Member yang berkunjung')}${card(num(d.newMembers), 'Member baru')}</div>
     <div class="panel"><h3>Per hari</h3>${bars(d.daily)}</div>
+    <div class="panel"><h3>Laporan harian</h3><table><tr><th>Tanggal</th><th>Pengunjung</th><th>Tampilan</th><th>Member baru</th><th>Konversi</th><th>AI</th><th>Huruf diterjemahkan</th><th>Buku disimpan</th></tr>
+      ${report.map(r => `<tr><td>${esc(r.day)}</td><td>${num(r.visitors)}</td><td>${num(r.views)}</td><td>${num(r.members)}</td><td>${num(r.office)}</td><td>${num(r.ai)}</td><td>${num(r.translate)}</td><td>${num(r.books)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Belum ada data.</td></tr>'}</table></div>
     <div class="two">
       <div class="panel"><h3>Halaman</h3>${list(d.pages, n => n)}</div>
       <div class="panel"><h3>Datang dari</h3>${list(d.referrers, n => n)}</div>
       <div class="panel"><h3>Perangkat</h3>${list(d.devices, n => ({desktop: 'Komputer', mobile: 'HP', tablet: 'Tablet'})[n] || n)}</div>
     </div>
-    <p class="muted">Tanpa menyimpan IP: pengunjung dihitung dengan kode acak yang berganti setiap hari. Bot tidak dihitung.</p>`;
+    <p class="muted">Dihitung hanya saat halaman benar-benar terbuka di browser (bot & alat otomatis tidak terhitung), reload dalam 1 menit dihitung sekali. Tanpa menyimpan IP: pengunjung dihitung dengan kode acak yang berganti setiap hari, jadi "total kunjungan" = jumlah pengunjung harian.</p>`;
 }
 
 async function loadServer() {
