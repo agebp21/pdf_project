@@ -44,6 +44,9 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 
 ## 4. Watesan
 
+- **Firewall UFW (2026-10-06):** mung 22/80/443 sing mlebu; metu bebas. Kabeh situs (MyFlipbook, numa :3000, sarvamaya.id :3001/:3002) lewat nginx — tes app langsung saka njero VPS (`curl http://127.0.0.1:PORT`), dudu `IP:PORT` saka njaba. Port publik anyar kudu `ufw allow <port>/tcp`.
+- **SSH mung nganggo key** (password dipateni owner 2026-10-06; backup config `/root/50-cloud-init.conf.bak-20261006`). Agen / PC anyar: tambahke public key-e nang `authorized_keys` (root utowo `deploy`) dhisik.
+
 - VPS 2 GB RAM / 38 GB disk, dienggo bareng numa + sarvamaya.id. RAM mepet (±600 MB kosong) — ojo nglakoni proses abot (build, OCR massal) nang VPS. Owner arep upgrade nang RAM 4 GB.
 - **Ojo install Flutter/Android SDK** nang VPS — build APK/EXE lewat PC build (`build_worker.py` nang PC owner, `start-build-worker.bat`).
 - Paywall ON; pembayaran **dipause** (`PAYMENTS_PAUSED=1` nang `.env`, key Midtrans/Tripay/Lemon durung diisi) — upgrade member saiki lewat `--grant`. Nguripke: isi key gateway, tes, banjur guwang/setel `PAYMENTS_PAUSED=0` + `systemctl restart myflipbook`.
