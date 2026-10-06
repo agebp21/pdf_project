@@ -31,6 +31,10 @@ Selesai & live (detail per fitur di PROJECT_HANDOFF.md, bagian bertanggal):
 - Halaman gambar belum ikut terjemahan buku penuh (usulan: terjemahkan teks OCR untuk audio, gambar tidak diubah).
 - Tes Python `test_library...ownership` kadang gagal saat suite penuh (lulus bila sendiri).
 
+**Menunggu keputusan owner (jangan dikerjakan dulu):**
+- Link baca online `myflipbookpro.com/b/<id>` dari My Library (supaya flipbook bisa dibuka dari Google Drive/WA/Google Sites tanpa unduh HTML) — tanya: link umum atau hanya member login; semua paket atau Pro/Business.
+- Chat customer service — pilihan: tombol WhatsApp (butuh nomor CS), widget Tawk.to/Crisp, atau chat sendiri di panel admin (+ asisten AI). Owner: pending.
+
 Aturan singkat: satu file satu penulis aktif; catat di tabel di bawah sebelum mulai; deploy hanya lewat DEPLOY.md; perbarui bagian ini setiap selesai.
 
 
@@ -1272,4 +1276,22 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Owner: generate file Google Doc (jeneng = project) isine link siap-klik, member mbukak Doc → klik link → player. Solusi: tombol ke-4 nang popup share **📄 Save Doc to Drive** → aplikasi (token drive.file sing padha karo Picker) gawe Doc nang Drive-e dewe via `files.create` multipart (HTML → dikonversi Google dadi Doc, `<a>` dadi link tenan). Syarat: GOOGLE_CLIENT_ID + GOOGLE_API_KEY nang server (nek urung → pesan jelas + tombol liyane tetep jalan).
 - File: `assets/drive-picker.js` (`createDoc`, multipart builder, error Google asli) + tombol + status link nang popup (`flipbook.js/html`).
 - Tes: `drive-picker.test.cjs` (multipart shape, konversi Doc, link bisa diklik, escaping, error Google); qa-editor ijo; sintaks + diff bersih; HTTP 200 + tombol kesaji. E2E Google asli (akun owner) durung — nunggu klik tenan.
+- Durung commit/push/deploy.
+
+### 2026-10-06 — Lokasi Doc ditampilke (request owner)
+- Owner pengen ngerti Doc-e kesimpen nang ndi. Saiki status sukses nampilke: jeneng Doc (link) + **lokasi: My Drive** (link folder-e, diklik mbukak panggone) + prentah mindah/share. Doc anyar mesthi nang root (default API); `parents` dijaluk seko Google kanggo jaga-jaga.
+- File: `createDoc` mbalekke `parentId` + status link ganda (`flipbook.js`); tes parentId root.
+- Tes: drive-picker + qa-editor ijo; sintaks + diff bersih; HTTP 200.
+- Durung commit/push/deploy.
+
+### 2026-10-06 — Popup login otomatis sawise 3 menit (request owner)
+- Free tetep iso nyoba kabeh; sawise 3 menit aktif muncul popup login (mlebu + Google + link daftar). Aturan: mingguan maksimal (localStorage), ora kanggo member sing wis mlebu, ora pas ngetik / dialog kebukak / kaca login-akun, timer mlaku pas tab ketok + ono aktivitas (idle ora diitung).
+- File: `assets/auth.js` (site-wide, gaya ES5 mbuntut file) + 5 key i18n EN/ID (`auth.nudge*`). Sukses → reload (chip + paywall state bener).
+- Tes: `tests/auth-nudge.test.cjs` anyar (cadence, popup + POST login, snooze, skip member/ngetik/dialog/kaca-login); 42 suite Node ijo; sintaks + diff bersih; HTTP 200.
+- Durung commit/push/deploy.
+
+### 2026-10-06 — Tamu dikunci: download + mlebu flipbook login, share = Pro (request owner)
+- Aturan: tamu iso nyoba KABEH tool + cangkang flipbook; download hasil converter opo wae + mlebu flipbook nganggo dokumen (upload/add/drive/link/transfer/library/draft) → popup login, bar mlebu aksine DITERUSKE (ora baleni klik). Share/publish = Pro: tamu → login dhisik; member Free → pesan payment-pending (bayaran online durung jalan, upgrade manual via admin) — dudu checkout mati. Link `/s/` publik tetep umum.
+- File: `assets/auth.js` (`loginPopup(cb)` + modal nutup resik), `converter.html` (cegat downloadBtn + makeFlipbook), `flipbook.html` (+auth.js), `flipbook.js` (bungkus openPdf + pesan payment share via MFDialog).
+- Tes: `auth-nudge` + `guest-gates.test.cjs` anyar (cegat/lanjut/member/offline); 43 Node ijo; sintaks + diff bersih; HTTP 200 kabeh.
 - Durung commit/push/deploy.
