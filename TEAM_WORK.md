@@ -1290,6 +1290,12 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Tes: `tests/auth-nudge.test.cjs` anyar (cadence, popup + POST login, snooze, skip member/ngetik/dialog/kaca-login); 42 suite Node ijo; sintaks + diff bersih; HTTP 200.
 - Durung commit/push/deploy.
 
+### 2026-10-06 — Tamu dikunci + trial 7 hari + share gratis 3x (request owner)
+- Aturan: tamu iso nyoba KABEH tool + cangkang flipbook; download hasil + mlebu flipbook nganggo dokumen → popup login, bar mlebu aksine DITERUSKE. Trial 7 hari: Free lawas mung moco flipbook; convert/download/project/AI/library-save/share → popup upgrade Pro (server 402 + modal). Share = Pro tapi Free entuk 3x (sawise iku 402). Link `/s/` tetep umum.
+- File: `accounts.py` (TRIAL_DAYS/SHARE_FREE, trial nang public_user, fitur pricing), `server.py` (gate office/ai/library-save/share + `freeLeft`), `share.py` (kuota free 3), `messages_en.py` + scan-list tes (2 pesan), `auth.js` (loginPopup + trialWall/upgradePopup), `converter.html` (cegat download/entry + gate Convert), `flipbook.html` (+auth.js), `flipbook.js` (bungkus openPdf + gate project + share gate anyar).
+- Tes: `test_trial.py` + `test_share.py` (3x + trial) + `auth-nudge`/`guest-gates` (loginPopup/trialWall/upgrade/gate) anyar; test_accounts-e sesi liyo TETEP IJO (24/24) — ora tabrakan; 44 Node + 126 Python ijo; sintaks + diff bersih; HTTP 200.
+- Durung commit/push/deploy.
+
 ### 2026-10-06 — Tamu dikunci: download + mlebu flipbook login, share = Pro (request owner)
 - Aturan: tamu iso nyoba KABEH tool + cangkang flipbook; download hasil converter opo wae + mlebu flipbook nganggo dokumen (upload/add/drive/link/transfer/library/draft) → popup login, bar mlebu aksine DITERUSKE (ora baleni klik). Share/publish = Pro: tamu → login dhisik; member Free → pesan payment-pending (bayaran online durung jalan, upgrade manual via admin) — dudu checkout mati. Link `/s/` publik tetep umum.
 - File: `assets/auth.js` (`loginPopup(cb)` + modal nutup resik), `converter.html` (cegat downloadBtn + makeFlipbook), `flipbook.html` (+auth.js), `flipbook.js` (bungkus openPdf + pesan payment share via MFDialog).

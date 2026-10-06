@@ -18,10 +18,10 @@ from pathlib import Path
 from accounts import AccountError
 
 MB = 1024 * 1024
-# plan -> (max links or None, max bytes). Free can only publish when the
-# paywall is off (internal use): the 'export' gate already stops free
-# members on a live server, so this small quota never opens paid sharing.
-SHARE_LIMITS = {'free': (5, 200 * MB), 'pro': (20, 2 * 1024 * MB), 'business': (100, 10 * 1024 * MB)}
+# plan -> (max links or None, max bytes). Free members publish at most
+# SHARE_FREE links (see accounts.SHARE_FREE): the route checks that first
+# with its own message; the quota below only bounds bytes for them.
+SHARE_LIMITS = {'free': (3, 200 * MB), 'pro': (20, 2 * 1024 * MB), 'business': (100, 10 * 1024 * MB)}
 MAX_SHARE_FILE = 200 * MB
 CHUNK = MB
 MARKER = b'book-payload'

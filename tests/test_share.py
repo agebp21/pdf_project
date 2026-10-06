@@ -6,6 +6,7 @@ from pathlib import Path
 import sys
 import tempfile
 import threading
+import time
 import unittest
 import urllib.error
 import urllib.parse
@@ -78,15 +79,38 @@ class ShareTests(unittest.TestCase):
         return member.json('POST', '/api/share', data, 'text/html',
                            {'X-Build-Token': server.TOKEN, 'X-Title': urllib.parse.quote(title)})
 
+    def backdate(self, email, days):
+        with server.ACCOUNTS.connect() as db:
+            db.execute('UPDATE users SET created_at=? WHERE email=?',
+                       (int(time.time()) - days * 86400, email))
+
     def test_gates(self):
         guest = Member(self.base)
         self.assertEqual(guest.json('POST', '/api/share', sealed(), 'text/html',
                                    {'X-Build-Token': server.TOKEN})[0], 401, 'login first')
         free = self.member('free@s.co')
-        self.assertEqual(self.upload(free, sealed())[0], 402, 'free cannot publish')
+        status, body = self.upload(free, sealed())
+        self.assertEqual(status, 200, 'free taster: first shares go through')
+        self.assertEqual(body['freeLeft'], 2)
         pro = self.member('pro@s.co', 'pro')
         status, _, raw = pro.call('POST', '/api/share', sealed(), 'text/html', {'X-Title': 'x'})
         self.assertEqual(status, 403, 'build token still required')
+
+    def test_free_three_then_pro(self):
+        free = self.member('tiga@s.co')
+        for n in range(3):
+            status, body = self.upload(free, sealed(), f'Buku {n}')
+            self.assertEqual(status, 200, f'share {n + 1} of 3')
+        self.assertEqual(body['freeLeft'], 0)
+        status, body = self.upload(free, sealed(), 'Buku 4')
+        self.assertEqual(status, 402, 'fourth share needs Pro')
+        self.assertIn('3 share', body['error'])
+        # Old free accounts (trial over) cannot publish at all.
+        old = self.member('lawas@s.co')
+        self.backdate('lawas@s.co', 9)
+        status, body = self.upload(old, sealed())
+        self.assertEqual(status, 402)
+        self.assertIn('7 hari', body['error'])
 
     def test_publish_read_download_delete(self):
         pro = self.member('pub@s.co', 'pro')

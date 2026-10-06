@@ -106,7 +106,18 @@
     const label = document.createElement('span'); label.textContent = config.label;
     element.append(number, label); pageElements[index].append(element);
   }
-  async function openPdf(blob, name, project = null, pictures = {}) {
+  // Bringing a document into the reader needs an account: guests may look
+  // around the empty reader, but the book itself unlocks after signing in.
+  // (Shared /s/ links use the standalone reader and are unaffected.)
+  function openPdf(blob, name, project = null, pictures = {}) {
+    if (!window.MFAuth) return openPdfNow(blob, name, project, pictures);
+    return window.MFAuth.me().then(data => {
+      if (data.user || data.offline) return openPdfNow(blob, name, project, pictures);
+      window.MFAuth.loginPopup(() => openPdfNow(blob, name, project, pictures));
+      return false;
+    });
+  }
+  async function openPdfNow(blob, name, project = null, pictures = {}) {
     if (opening || exporting) return false;
     opening = true; $('#pdf-file').disabled = true; $('#add-file').disabled = true; $('#overlay-fields').disabled = true;
     $('#home').disabled = $('#prev').disabled = $('#next').disabled = $('#replay').disabled = true;
@@ -860,6 +871,12 @@
       const saveHandle = await FlipbookExport.chooseSave(outputName);
       status(L('Preparing the export…', 'Menyiapkan ekspor…')); progress(0);
       if (target === 'project') {
+        // Project files unlock exports later: expired trials keep the
+        // reader only, so saving one needs Pro too.
+        try {
+          const who = window.MFAuth ? await window.MFAuth.me() : null;
+          if (who && who.user && !who.offline && window.MFAuth.trialWall(who.user)) return;
+        } catch (e) {}
         const blob = await FlipbookExport.saveProject(data, sourcePdf, (message, fraction) => { status(message); step(0, .9)(fraction); }, bookVersions);
         status(L('Saving the project…', 'Menyimpan proyek…'));
         const saved = await FlipbookExport.saveBlob(blob, outputName, saveHandle); progress(1);
@@ -978,7 +995,15 @@
     if(!sourcePdf||opening||exporting) return;
     if(!buildConfig){ try{ const r=await fetch('/api/capabilities',{cache:'no-store'}); if(r.ok){ buildConfig=await r.json(); markLocked(); } }catch(e){} }
     const plan=lockedFor('html', buildConfig);
-    if(plan){ showPaywall(plan); return; }
+    if(plan){
+      // Publishing is Pro, but Free gets its first shares: guests sign in
+      // first, members go through — the server counts the 3 free shares and
+      // answers 402 (trial over / quota spent) with the upgrade message.
+      let loggedIn = false;
+      try { const d = window.MFAuth ? await window.MFAuth.me() : null; loggedIn = !!(d && (d.user || d.offline)); } catch (e) {}
+      if (!loggedIn && window.MFAuth) { window.MFAuth.loginPopup(() => shareBook()); return; }
+      if (!loggedIn) return;
+    }
     if(!buildConfig||!buildConfig.token){ error(L('Please sign in to share a book.','Silakan masuk dulu untuk membagikan buku.')); return; }
     exporting=true; exportState(); $('#pdf-file').disabled=true; $('#overlay-fields').disabled=true;
     error(''); $('#share-box').hidden=true;
@@ -1044,8 +1069,14 @@
       const title = ($('#export-title') && $('#export-title').value) || 'book';
       const doc = await DrivePicker.createDoc(driveConfig, title, url, message => { statusEl.textContent = message; });
       if (!doc) { statusEl.textContent = L('Cancelled.', 'Batal.'); return; }
+      // Where it landed: fresh Docs always start in My Drive (root), so the
+      // owner knows exactly where to find, move and share it.
+      const folderUrl = !doc.parentId || doc.parentId === 'root'
+        ? 'https://drive.google.com/drive/my-drive'
+        : 'https://drive.google.com/drive/folders/' + encodeURIComponent(doc.parentId);
       statusEl.replaceChildren(L('Document created: ', 'Dokumen dadi: '), link(doc.name, doc.url),
-        L(' — open it in Google Drive and share it with members.', ' — bukaken nang Google Drive terus bagi ke member.'));
+        L(' — saved in ', ' — kesimpen nang '), link(L('My Drive', 'Drive-ku'), folderUrl),
+        L('. Open it there to move or share it with members.', '. Bukaken nang kono kanggo mindah / bagi ke member.'));
     } catch (cause) { statusEl.textContent = cause.message; }
   };
   $('#share-popup-close').onclick=closeSharePopup;

@@ -1413,6 +1413,14 @@ $('#convertBtn').addEventListener('click', async ()=>{
   const t=TOOLS.find(x=>x.id===active);
   if(files.length===0){ showError('Pick a file first!'); return; }
   if(t.id==='merge-pdf' && files.length<2){ showError('Merge needs at least 2 PDF files! Pick 2 files or click 🧪 Test (auto 2 files)'); return; }
+  // The 7-day trial is over: only the flipbook reader stays, everything
+  // else needs Pro (guests may still try; members hit this wall).
+  if (window.MFAuth) {
+    try {
+      const data = await window.MFAuth.me();
+      if (data.user && !data.offline && window.MFAuth.trialWall(data.user)) return;
+    } catch (e) {}
+  }
   $('#btnSpinner').classList.remove('hidden'); $('#btnText').textContent='Working...'; $('#convertBtn').disabled=true;
   $('#progress').classList.remove('hidden'); $('#progress').textContent='Getting files ready...'; $('#error').classList.add('hidden');
   $('#result').classList.add('hidden');
@@ -1462,7 +1470,7 @@ function downloadBlob(blob, filename, {flipbookSource=null}={}){
   flipbookButton.hidden = !bookPdf;
   flipbookButton.disabled = false;
   flipbookButton.textContent = blob.type.includes('pdf') ? 'Turn into Flipbook →' : 'Turn source PDF into Flipbook →';
-  flipbookButton.onclick = async () => {
+  const goFlipbook = async () => {
     flipbookButton.disabled = true;
     flipbookButton.textContent = 'Preparing book…';
     try {
@@ -1473,6 +1481,13 @@ function downloadBlob(blob, filename, {flipbookSource=null}={}){
       flipbookButton.disabled = false;
       flipbookButton.textContent = 'Turn into Flipbook →';
     }
+  };
+  flipbookButton.onclick = () => {
+    if (!window.MFAuth) { goFlipbook(); return; }
+    window.MFAuth.me().then(data => {
+      if (data.user || data.offline) goFlipbook();
+      else window.MFAuth.loginPopup(goFlipbook);
+    });
   };
   // Keep the previous blob alive until it is replaced: revoking too early
   // aborts big/slow downloads mid-flight ("check internet connection").
@@ -1512,6 +1527,21 @@ function downloadBlob(blob, filename, {flipbookSource=null}={}){
     $('#result').append(warn);
   }
 }
+// Guests may try every tool, but taking the file (or the book) needs an
+// account: the download keeps working after they sign in.
+let dlContinue = false;
+$('#downloadBtn').addEventListener('click', event => {
+  if (dlContinue) { dlContinue = false; return; }
+  if (!window.MFAuth) return;
+  event.preventDefault();
+  window.MFAuth.me().then(data => {
+    if (data.user || data.offline) {
+      if (data.user && !data.offline && window.MFAuth.trialWall(data.user)) return;
+      dlContinue = true; $('#downloadBtn').click();
+    }
+    else window.MFAuth.loginPopup(() => { dlContinue = true; $('#downloadBtn').click(); });
+  });
+});
 // UTIF.js 3.1.0 (MIT, https://github.com/photopea/UTIF.js) — decodes TIFF,
 // which browsers can't read natively. Lazy-loaded only for .tif/.tiff files.
 let _utifLoading=null;

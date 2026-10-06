@@ -52,16 +52,23 @@ EMAIL_RE = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$')
 #   export -> flipbook export (offline HTML package, also the animation editor)
 #   apk    -> Android build, exe -> Windows build
 # Browser tools and flipbook preview / project save stay free.
+# Free trial: new Free members get everything for TRIAL_DAYS days; afterwards
+# only the flipbook reader stays (share links keep the first SHARE_FREE
+# publishes, then need Pro).
+TRIAL_DAYS = 7
+SHARE_FREE = 3
 PLANS = {
     'free': dict(name='Free', monthly=0, yearly=0, usd_monthly=0, usd_yearly=0, entitlements=['office', 'ai'],
                  features=dict(id=['Semua tool PDF di browser', 'PDF to Flipbook: baca & preview',
-                                   'Word/Excel/PPT ke PDF', 'AI Summarizer: ringkasan, terjemahan, podcast'],
+                                   'Word/Excel/PPT ke PDF', 'AI Summarizer: ringkasan, terjemahan, podcast',
+                                   '3 share link flipbook gratis'],
                                en=['Every in-browser PDF tool', 'PDF to Flipbook: read & preview',
-                                   'Word/Excel/PPT to PDF', 'AI Summarizer: summary, translation, podcast'])),
+                                   'Word/Excel/PPT to PDF', 'AI Summarizer: summary, translation, podcast',
+                                   '3 free flipbook share links'])),
     'pro': dict(name='Pro', monthly=99_000, yearly=990_000, usd_monthly=999, usd_yearly=9_900,
                 entitlements=['office', 'ai', 'export', 'apk'],
-                features=dict(id=['Semua fitur Free', 'Ekspor flipbook: HTML offline', 'Build aplikasi Android (APK)'],
-                              en=['Everything in Free', 'Flipbook export: offline HTML', 'Build Android apps (APK)'])),
+                features=dict(id=['Semua fitur Free', 'Ekspor flipbook: HTML offline', 'Share link tanpa batas', 'Build aplikasi Android (APK)'],
+                              en=['Everything in Free', 'Flipbook export: offline HTML', 'Unlimited share links', 'Build Android apps (APK)'])),
     'business': dict(name='Business', monthly=149_000, yearly=1_490_000, usd_monthly=1_999, usd_yearly=19_900,
                      entitlements=['office', 'ai', 'export', 'apk', 'exe'],
                      features=dict(id=['Semua fitur Pro', 'Build aplikasi Windows (EXE)', 'Cocok untuk tim & instansi'],
@@ -459,6 +466,14 @@ class MidtransProvider:
             raise AccountError(403, 'Signature notifikasi tidak valid.')
         return fields[0], self._status(payload), fields[2]
 
+# Referrals: every REFERRAL_TARGET friends who sign up through a member's link
+# and pay for Pro or Business give that member REFERRAL_DAYS more days.
+REFERRAL_TARGET = 10
+REFERRAL_DAYS = 30
+REF_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'      # no 0/O, 1/I
+REFERRAL_NEW_SECONDS = 15 * 60                         # only a brand-new account takes a referrer
+
+
 class Accounts:
     def __init__(self, path, provider=None, usd_provider=None):
         self.path = Path(path)
@@ -500,6 +515,17 @@ class Accounts:
                 db.execute('ALTER TABLE users ADD COLUMN verified INTEGER NOT NULL DEFAULT 1')
             if 'google_sub' not in columns:
                 db.execute('ALTER TABLE users ADD COLUMN google_sub TEXT')
+            if 'ref_code' not in columns:
+                db.execute('ALTER TABLE users ADD COLUMN ref_code TEXT')
+            if 'referred_by' not in columns:
+                db.execute('ALTER TABLE users ADD COLUMN referred_by INTEGER')
+            db.executescript('''
+                CREATE UNIQUE INDEX IF NOT EXISTS users_ref_code ON users(ref_code) WHERE ref_code IS NOT NULL;
+                CREATE INDEX IF NOT EXISTS users_referred_by ON users(referred_by);
+                CREATE TABLE IF NOT EXISTS referral_rewards(
+                    id INTEGER PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    friends INTEGER NOT NULL, days INTEGER NOT NULL, granted_at INTEGER NOT NULL);
+            ''')
             db.executescript('''
                 CREATE UNIQUE INDEX IF NOT EXISTS users_google ON users(google_sub) WHERE google_sub IS NOT NULL;
                 CREATE TABLE IF NOT EXISTS email_tokens(
@@ -525,11 +551,15 @@ class Accounts:
         plan, expires = row['plan'], row['plan_expires_at']
         if plan != 'free' and (not expires or expires < time.time()):
             plan = 'free'
+        created = row['created_at'] if 'created_at' in row.keys() else int(time.time())
+        trial_left = min(TRIAL_DAYS, max(0, TRIAL_DAYS - (int(time.time()) - created) // 86400))
+        trial_expired = plan == 'free' and trial_left <= 0
         return dict(id=row['id'], email=row['email'], name=row['name'], plan=plan,
                     verified=bool(row['verified']) if 'verified' in row.keys() else True,
                     google=bool(row['google_sub']) if 'google_sub' in row.keys() else False,
                     planName=PLANS[plan]['name'], planExpiresAt=expires if plan != 'free' else None,
-                    entitlements=PLANS[plan]['entitlements'])
+                    entitlements=PLANS[plan]['entitlements'],
+                    trialDaysLeft=trial_left if plan == 'free' else None, trialExpired=trial_expired)
 
     def register(self, email, password, name=''):
         email = (email or '').strip().lower()
@@ -774,7 +804,75 @@ class Accounts:
             db.execute('UPDATE users SET plan=?, plan_expires_at=? WHERE id=?',
                        (order['plan'], start + CYCLE_SECONDS[order['cycle']], user['id']))
             db.execute("UPDATE orders SET status='paid', paid_at=? WHERE id=?", (now, order_id))
+            if order['plan'] in ('pro', 'business') and user['referred_by']:
+                self._reward_referrer(db, user['referred_by'], now)
         return True
+
+    # ---- referrals ---------------------------------------------------------
+    def referral_code(self, user_id):
+        """The member's own code (made the first time it is asked for)."""
+        with self.connect() as db:
+            row = db.execute('SELECT ref_code FROM users WHERE id=?', (user_id,)).fetchone()
+            if not row:
+                raise AccountError(404, 'Akun tidak ditemukan.')
+            if row['ref_code']:
+                return row['ref_code']
+            for _ in range(20):
+                code = ''.join(secrets.choice(REF_ALPHABET) for _ in range(7))
+                try:
+                    db.execute('UPDATE users SET ref_code=? WHERE id=? AND ref_code IS NULL', (code, user_id))
+                    return db.execute('SELECT ref_code FROM users WHERE id=?', (user_id,)).fetchone()['ref_code']
+                except sqlite3.IntegrityError:
+                    continue
+        raise AccountError(500, 'Kode referral tidak bisa dibuat.')
+
+    def attach_referrer(self, user_id, code, now=None):
+        """A brand-new account that came through a referral link remembers who
+        invited it (never itself, never later). True when attached."""
+        code = (code or '').strip().upper()
+        if not re.fullmatch(r'[A-Z0-9]{4,12}', code):
+            return False
+        now = int(now or time.time())
+        with self.connect() as db:
+            owner = db.execute('SELECT id FROM users WHERE ref_code=?', (code,)).fetchone()
+            user = db.execute('SELECT id, referred_by, created_at FROM users WHERE id=?', (user_id,)).fetchone()
+            if (not owner or not user or owner['id'] == user['id'] or user['referred_by']
+                    or now - user['created_at'] > REFERRAL_NEW_SECONDS):
+                return False
+            db.execute('UPDATE users SET referred_by=? WHERE id=?', (owner['id'], user['id']))
+        return True
+
+    @staticmethod
+    def _qualified(db, user_id):
+        return db.execute("""SELECT COUNT(DISTINCT u.id) FROM users u JOIN orders o ON o.user_id = u.id
+                             WHERE u.referred_by=? AND o.status='paid' AND o.plan IN ('pro', 'business')""", (user_id,)).fetchone()[0]
+
+    def _reward_referrer(self, db, referrer_id, now):
+        """Every REFERRAL_TARGET paying friends: REFERRAL_DAYS more days — of the
+        member's running paid plan, else Pro. Each reward is given once."""
+        qualified = self._qualified(db, referrer_id)
+        given = db.execute('SELECT COUNT(*) FROM referral_rewards WHERE user_id=?', (referrer_id,)).fetchone()[0]
+        while qualified // REFERRAL_TARGET > given:
+            ref = db.execute('SELECT plan, plan_expires_at FROM users WHERE id=?', (referrer_id,)).fetchone()
+            if not ref:
+                return
+            if ref['plan'] != 'free' and (ref['plan_expires_at'] or 0) > now:
+                plan, until = ref['plan'], min(self.LIFETIME, ref['plan_expires_at'] + REFERRAL_DAYS * 86400)
+            else:
+                plan, until = 'pro', now + REFERRAL_DAYS * 86400
+            db.execute('UPDATE users SET plan=?, plan_expires_at=? WHERE id=?', (plan, until, referrer_id))
+            given += 1
+            db.execute('INSERT INTO referral_rewards(user_id, friends, days, granted_at) VALUES(?,?,?,?)',
+                       (referrer_id, given * REFERRAL_TARGET, REFERRAL_DAYS, now))
+
+    def referral_stats(self, user_id):
+        code = self.referral_code(user_id)
+        with self.connect() as db:
+            signups = db.execute('SELECT COUNT(*) FROM users WHERE referred_by=?', (user_id,)).fetchone()[0]
+            qualified = self._qualified(db, user_id)
+            rewards = db.execute('SELECT COUNT(*) AS n, COALESCE(SUM(days), 0) AS days FROM referral_rewards WHERE user_id=?', (user_id,)).fetchone()
+        return dict(code=code, signups=signups, subscribed=qualified, rewards=rewards['n'], rewardDays=rewards['days'],
+                    target=REFERRAL_TARGET, days=REFERRAL_DAYS, toNext=REFERRAL_TARGET - qualified % REFERRAL_TARGET)
 
     # Far in the future: a plan granted for good ("lifetime").
     LIFETIME = 4102444800          # 2100-01-01

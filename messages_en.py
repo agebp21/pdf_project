@@ -178,6 +178,10 @@ EXACT = {
     'Jenis ekspor tidak dikenal.': 'Unknown export type.',
     'File ekspor terlalu besar untuk arsip.': 'The export file is too large for the library.',
     'Ekspor tidak ditemukan.': 'Export not found.',
+    'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.':
+        'Your 7-day free trial has ended. Upgrade to Pro to use this feature.',
+    'Jatah 3 share gratis habis. Upgrade ke Pro untuk share tanpa batas.':
+        'Your 3 free shares are used up. Upgrade to Pro for unlimited sharing.',
     # --- Share link
     'Silakan masuk dulu untuk membagikan buku.': 'Please sign in to share a book.',
     'Batas tautan berbagi paket ini sudah penuh. Hapus tautan lama atau upgrade paket.':

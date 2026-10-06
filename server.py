@@ -1935,6 +1935,14 @@ class Handler(SimpleHTTPRequestHandler):
                    download=f'/api/jobs/{job["id"]}/download', updated=time.time())
         self.send_json(200, {'ok': True})
 
+    def ref_cookie(self):
+        """The referral code a visitor arrived with (cookie mf_ref, set by assets/auth.js)."""
+        for part in self.headers.get('Cookie', '').split(';'):
+            name, _, value = part.strip().partition('=')
+            if name == 'mf_ref':
+                return value.strip()[:12]
+        return ''
+
     def count_visit(self, page):
         """One page view for the admin statistics (never stops the page)."""
         try:
@@ -2033,6 +2041,9 @@ class Handler(SimpleHTTPRequestHandler):
     def library_post(self, path):
         user, store = self.member(), get_library()
         if path == '/api/library/save':
+            if user.get('trialExpired'):
+                self.send_json(402, {'error': 'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.'})
+                return
             data = self.read_raw(library.MAX_PROJECT)
             book_id = store.save_project(user, data, self.headers.get('X-Book-Id') or None)
             self.send_json(200, {'id': book_id, 'usage': store.usage(user)})
@@ -2042,6 +2053,9 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(404, {'error': 'Tidak ditemukan.'})
             return
         book_id, action = match.groups()
+        if action in ('cover', 'export') and user.get('trialExpired'):
+            self.send_json(402, {'error': 'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.'})
+            return
         if action == 'cover':
             store.save_cover(user, book_id, self.read_raw(library.MAX_COVER))
         elif action == 'export':
@@ -2067,9 +2081,14 @@ class Handler(SimpleHTTPRequestHandler):
     def share_post(self, path):
         user, store = self.share_member(), get_share()
         if path == '/api/share':
-            denied = self.entitlement_error('export')
-            if denied:
-                self.send_json(denied[0], {'error': denied[1]})
+            # Publishing needs Pro — except a Free taster: the first
+            # SHARE_FREE links go through, then it is time to upgrade.
+            # (Trial-expired members only read books; they cannot publish.)
+            if user.get('trialExpired'):
+                self.send_json(402, {'error': 'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.'})
+                return
+            if 'export' not in user['entitlements'] and store.usage(user)['links'] >= accounts.SHARE_FREE:
+                self.send_json(402, {'error': 'Jatah 3 share gratis habis. Upgrade ke Pro untuk share tanpa batas.'})
                 return
             if not secrets.compare_digest(self.headers.get('X-Build-Token', ''), TOKEN):
                 self.send_json(403, {'error': 'Sesi build tidak valid. Refresh halaman.'})
@@ -2102,8 +2121,9 @@ class Handler(SimpleHTTPRequestHandler):
                 store.discard(link_id)
                 self.send_json(cause.status, {'error': str(cause)})
                 return
+            left = max(0, accounts.SHARE_FREE - store.usage(user)['links']) if 'export' not in user['entitlements'] else None
             self.send_json(200, {'id': link_id, 'url': '/s/' + link_id, 'title': clean,
-                                 'usage': store.usage(user)})
+                                 'usage': store.usage(user), 'freeLeft': left})
             return
         match = re.fullmatch(r'/api/share/([0-9a-f]{32})/delete', path)
         if not match:
@@ -2117,6 +2137,12 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/api/auth/me':
             self.send_json(200, {'user': self.current_user(), 'loginRequired': hosted(),
                                  'googleClientId': os.environ.get('GOOGLE_CLIENT_ID', '').strip() or None})
+        elif path == '/api/auth/referral':
+            user = self.current_user()
+            if not user:
+                raise accounts.AccountError(401, 'Silakan masuk dulu.')
+            stats = store.referral_stats(user['id'])
+            self.send_json(200, dict(stats, link=self.base_url() + '/?ref=' + stats['code']))
         elif path == '/api/auth/verify':
             # The link in the verification email: sign in and go to the account page.
             token = (parse_qs(urlsplit(self.path).query).get('token') or [''])[0]
@@ -2198,6 +2224,7 @@ class Handler(SimpleHTTPRequestHandler):
             if CONFIG['verify_email']:
                 # Not signed in yet: the account opens from the link in the email.
                 user_id, token = store.register_unverified(data.get('email'), data.get('password'), data.get('name'))
+                store.attach_referrer(user_id, self.ref_cookie())
                 email = str(data.get('email')).strip().lower()
                 try:
                     sent = verification_mail(email, str(data.get('name') or '').strip(), self.base_url() + '/api/auth/verify?token=' + token)
@@ -2206,6 +2233,8 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(201, {'verify': True, 'email': email, 'outbox': sent == 'outbox'})
                 return
             token = store.register(data.get('email'), data.get('password'), data.get('name'))
+            user = store.user_for(token)
+            store.attach_referrer(user['id'], self.ref_cookie())
             self.send_json(201, {'user': store.user_for(token)}, cookie=self.session_cookie(token))
             return
         if path == '/api/auth/resend':
@@ -2221,6 +2250,7 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/api/auth/google':
             claims = google_claims(data.get('credential'))
             token = store.google_login(claims.get('sub'), claims.get('email'), claims.get('name', ''))
+            store.attach_referrer(store.user_for(token)['id'], self.ref_cookie())      # only a brand-new account takes it
             self.send_json(200, {'user': store.user_for(token)}, cookie=self.session_cookie(token))
             return
         if path == '/api/auth/login':
@@ -2410,6 +2440,8 @@ class Handler(SimpleHTTPRequestHandler):
         user = self.current_user()
         if not user:
             return 401, 'Silakan masuk dulu untuk memakai fitur ini.'
+        if user.get('trialExpired') and feature in ('office', 'ai'):
+            return 402, 'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.'
         if feature == 'ai' and not payments_live() and user['plan'] not in ('pro', 'business'):
             # No gateway yet: paid members (their plan already covers AI credit)
             # keep working; free waits until payments are set up.
