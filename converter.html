@@ -80,6 +80,8 @@
   .org-sel-del{background:none;border:0;color:#ef2d2d;font-weight:800;font-size:12px;cursor:pointer;text-align:left;padding:0}
   .org-sel-row{display:flex;flex-wrap:wrap;gap:.4rem}
   .org-sel-row button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .7rem;font-size:11px;font-weight:700;cursor:pointer}
+  .org-sel-row input{flex:1;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .7rem;font-size:11px}
+  .org-sel-row select{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px;font-weight:700;cursor:pointer;max-width:100%}
   .org-foot{margin-top:.75rem;background:#fdf0f0;padding:.75rem 1.25rem;border-radius:0 0 15px 0}
   .org-go{width:100%;background:#ef2d2d;color:#fff;border:0;border-radius:12px;padding:.75rem;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.35)}
   .org-cell{position:relative;min-width:0;display:flex;align-items:center}
@@ -223,6 +225,7 @@ const TOOLS = [
   {id:'watermark', title:'Watermark', desc:'Add a text or image watermark to selected pages.', cat:'Edit PDF', icon:'WM', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - text or PNG/JPEG watermark'},
   {id:'page-numbers', title:'Page numbers', desc:'Number all pages or a selected range.', cat:'Edit PDF', icon:'1 2', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - choose position and starting number'},
   {id:'crop-pdf', title:'Crop PDF', desc:'Trim visible page margins while preserving PDF content.', cat:'Edit PDF', icon:'Crop', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - margins in millimeters'},
+  {id:'edit-pdf', title:'Edit PDF', desc:'Add text, image stamps, rectangles, ellipses or lines anywhere. Stack annotations, then apply.', cat:'Edit PDF', icon:'✎', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - stack annotations, then apply'},
   {id:'jpg-to-pdf', title:'Image to PDF', desc:'Any image to PDF in seconds: JPG, PNG, WebP, GIF, BMP, SVG, AVIF, TIFF, HEIC. Set orientation & margins.', cat:'Convert PDF', icon:'IMG', color:'#b45309', bg:'#fef9c3', accept:'.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.avif,.ico,.tif,.tiff,.heic,.heif', multiple:true, hint:'All image types — TIFF decoded locally, HEIC converted in-browser, animated/multi-page uses first frame'},
   {id:'pdf-to-jpg', title:'PDF to JPG', desc:'Turn every PDF page into a JPG (or PNG) image.', cat:'Convert PDF', icon:'🖼', color:'#a16207', bg:'#fef9c3', accept:'.pdf', hint:'PDF file — one image per page (ZIP when there are several pages)'},
   {id:'word-to-pdf', title:'Word to PDF', desc:'Convert DOC/DOCX to PDF with document layout via local LibreOffice.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'DOCX/DOC file - requires the project server and LibreOffice'},
@@ -411,22 +414,46 @@ function renderHeader(){
         <input id="blankInput" type="file" accept="image/*" hidden onchange="orgBlankPicked(this)">
         <div id="orgSelBox" class="org-sel is-hidden">
           <p class="org-sel-count"><b id="orgSelCount">0</b> ${L('selected','dipilih')}</p>
-          <button onclick="orgDelete()" class="org-sel-del">🗑️ ${L('Delete selected','Hapus yang dipilih')}</button>
+          <div class="org-sel-row">
+            <button onclick="toggleAllOrg(true)">Select all</button>
+            <button onclick="toggleAllOrg(false)">Clear</button>
+          </div>
           <div class="org-sel-row">
             <button onclick="orgRotate(90)">↻ 90°</button>
             <button onclick="orgRotate(180)">↻ 180°</button>
             <button onclick="orgDuplicate()">${L('⎘ Duplicate','⎘ Duplikat')}</button>
           </div>
+          <button onclick="orgDelete()" class="org-sel-del">🗑️ ${L('Delete selected','Hapus yang dipilih')}</button>
           <div class="org-sel-row">
-            <button onclick="toggleAllOrg(true)">Select all</button>
-            <button onclick="toggleAllOrg(false)">Clear</button>
+            <button onclick="orgExtract()">${L('⎘ Extract selected','⎘ Extract sing dipilih')}</button>
           </div>
+          <div class="org-sel-row">
+            <input id="orgNumStart" type="number" value="1" min="0" step="1" aria-label="${L('Starting number','Nomor awal')}">
+            <button onclick="orgNumber()">${L('Number pages','Nomeri halaman')}</button>
+          </div>
+          <div class="org-sel-row">
+            <input id="orgWmText" type="text" maxlength="60" placeholder="${L('Watermark text…','Teks watermark…')}" aria-label="${L('Watermark text','Teks watermark')}">
+            <button onclick="orgWatermark()">${L('Watermark','Watermark')}</button>
+          </div>
+          <div class="org-sel-row">
+            <select id="orgAnnKind" aria-label="${L('Annotation kind','Jenis anotasi')}">
+              <option value="text">${L('Text','Teks')}</option>
+              <option value="rect">${L('Rectangle','Kotak')}</option>
+              <option value="ellipse">${L('Ellipse','Elips')}</option>
+              <option value="line">${L('Line','Garis')}</option>
+              <option value="image">${L('Image','Gambar')}</option>
+            </select>
+            <input id="orgAnnText" type="text" maxlength="60" placeholder="${L('Text or W×H…','Teks atawa P×L…')}" aria-label="${L('Text or size','Teks atawa ukuran')}">
+            <input id="orgAnnSize" type="number" value="14" min="0.1" step="0.5" aria-label="${L('Size','Ukuran')}">
+            <button onclick="orgAnnotate()">✎ ${L('Add','Tambah')}</button>
+          </div>
+          <input id="orgAnnImage" type="file" accept=".png,.jpg,.jpeg" hidden onchange="orgAnnPicked(this)">
         </div>
         <div class="org-foot"><div id="orgFootExtra"></div><button onclick="document.getElementById('convertBtn').click()" class="org-go">Organize <span aria-hidden="true">→</span></button></div>
       </aside>
     </div>`;
   }
-  if(['watermark','page-numbers','crop-pdf'].includes(t.id))html=PDFEdit.controls(t.id);
+  if(['watermark','page-numbers','crop-pdf','edit-pdf'].includes(t.id))html=PDFEdit.controls(t.id);
   if(window.PDFExtra&&PDFExtra.has(t.id))html=PDFExtra.controls(t.id);
   // Progress/error live in #fileList — except on organize, hosted by the
   // workspace sidebar. Rescue them BEFORE rebuilding options (innerHTML
@@ -435,6 +462,7 @@ function renderHeader(){
   const flCard=document.getElementById('fileList');
   if(flCard&&progNode&&errNode) flCard.append(progNode,errNode);
   $('#options').innerHTML=html;
+  if(t.id==='edit-pdf'&&window.PDFEdit){PDFEdit.toggleKind();PDFEdit.renderDrafts();}
   if(active==='organize-pdf'){
     const foot=document.getElementById('orgFootExtra');
     const p2=document.getElementById('progress'), e2=document.getElementById('error');
@@ -1454,7 +1482,7 @@ $('#convertBtn').addEventListener('click', async ()=>{
     else if(t.id==='pdf-to-ppt') await pdfToPpt();
     else if(t.id==='pdf-to-md') await pdfToMd();
     else if(t.id==='ocr-pdf') await ocrSearchablePdf();
-    else if(['watermark','page-numbers','crop-pdf'].includes(t.id)) await editPdf(t.id);
+    else if(['watermark','page-numbers','crop-pdf','edit-pdf'].includes(t.id)) await editPdf(t.id);
     else if(window.PDFExtra&&PDFExtra.has(t.id)){
       const out=await PDFExtra.run(t.id, files, m=>{ $('#progress').textContent=m; });
       downloadBlob(out.blob, out.name);
@@ -1884,27 +1912,26 @@ async function rotatePdf(){
   downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,`-rotated-${angle}.pdf`));
   $('#resultPreview').innerHTML=L(`<p class="text-center py-2">🔄 Rotated <b>${angle}°</b> for ${idxs.length} pages (${idxs.map(i=>i+1).join(', ')})<br><span class="text-xs text-gray-500">Out of ${n} pages</span></p>`,`<p class="text-center py-2">🔄 Putar <b>${angle}°</b> untuk ${idxs.length} hal (${idxs.map(i=>i+1).join(', ')})<br><span class="text-xs text-gray-500">Dari ${n} hal</span></p>`)+$('#resultPreview').innerHTML;
 }
-async function organizePdf(){
+async function buildOrganizePdf(order){
   if(!window.PDFLib) throw new Error('pdf-lib not loaded');
-  if(organizeOrder.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
-  if(organizeOrder.length===0) throw new Error(L('No pages','Tidak ada halaman'));
-  log('Organize order '+organizeOrder.map(orgName).join(',')+' rotations '+JSON.stringify(organizeRotations));
+  if(!order || order.length===0) throw new Error(L('Tick pages first','Centang halaman dulu'));
+  log('Organize order '+order.map(orgName).join(',')+' rotations '+JSON.stringify(organizeRotations));
   const out=await PDFLib.PDFDocument.create();
   // Pages may come from several documents: copy per file, then interleave.
-  const needFiles=[...new Set(organizeOrder.filter(i=>typeof i==='number').map(i=>Math.floor(i/1000000)))].sort((a,b)=>a-b);
+  const needFiles=[...new Set(order.filter(i=>typeof i==='number').map(i=>Math.floor(i/1000000)))].sort((a,b)=>a-b);
   const srcs=new Map(), copied=new Map();
   for(const fi of needFiles){
     const buf=await files[fi].arrayBuffer();
     const src=await PDFLib.PDFDocument.load(buf,{ignoreEncryption:true});
     srcs.set(fi,src);
-    const pages=organizeOrder.filter(i=>typeof i==='number'&&Math.floor(i/1000000)===fi).map(i=>i%1000000);
+    const pages=order.filter(i=>typeof i==='number'&&Math.floor(i/1000000)===fi).map(i=>i%1000000);
     copied.set(fi,await out.copyPages(src,pages));
   }
   let firstSize=null;
   if(srcs.has(0)) firstSize=srcs.get(0).getPage(0).getSize();
   else if(files.length){ const s0=await PDFLib.PDFDocument.load(await files[0].arrayBuffer(),{ignoreEncryption:true}); firstSize=s0.getPage(0).getSize(); }
   const used=new Map();
-  for(const idx of organizeOrder){
+  for(const idx of order){
     if(typeof idx==='number'){
       const f=Math.floor(idx/1000000), n=used.get(f)||0; used.set(f,n+1);
       const p=copied.get(f)[n];
@@ -1927,10 +1954,124 @@ async function organizePdf(){
       if(rot) p.setRotation(PDFLib.degrees(rot%360));
     }
   }
-  const bytes=await out.save();
+  return out.save();
+}
+async function organizePdf(){
+  if(organizeOrder.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
+  if(organizeOrder.length===0) throw new Error(L('No pages','Tidak ada halaman'));
+  const bytes=await buildOrganizePdf(organizeOrder);
   downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'-organized.pdf'));
   $('#resultPreview').innerHTML=L(`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} pages saved<br><span class="text-xs text-gray-500">Order: ${organizeOrder.map(orgName).join(' → ')}</span></p>`,`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} hal tersimpan<br><span class="text-xs text-gray-500">Urutan: ${organizeOrder.map(orgName).join(' → ')}</span></p>`)+$('#resultPreview').innerHTML;
 }
+// Grid positions (0-based) of the selected pages, in grid order.
+function orgSelectedPositions(){
+  const out=[];
+  organizeOrder.forEach((code,pos)=>{ if(organizeSelected.has(code)) out.push(pos); });
+  return out;
+}
+function orgBaseName(){ return (files.length?files[0].name:'organize.pdf').replace(/\.pdf$/i,''); }
+function orgNote(html){ const box=$('#resultPreview'); if(box) box.innerHTML=html+box.innerHTML; }
+// Split: the selected pages (grid order) become their own PDF.
+window.orgExtract=async ()=>{
+  try{
+    if(files.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
+    const order=organizeOrder.filter(code=>organizeSelected.has(code));
+    const bytes=await buildOrganizePdf(order);
+    downloadBlob(new Blob([bytes],{type:'application/pdf'}), orgBaseName()+'-extract.pdf');
+    orgNote(L(`<p class="text-center py-2">✅ Extract: ${order.length} selected pages saved</p>`,`<p class="text-center py-2">✅ Extract: ${order.length} halaman dipilih tersimpan</p>`));
+    log('Org extract '+order.length+' pages');
+  }catch(e){ showError(e.message); }
+};
+// Page numbers on the selected pages (consecutive from the starting number).
+window.orgNumber=async ()=>{
+  try{
+    if(files.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
+    const positions=orgSelectedPositions();
+    if(!positions.length) throw new Error(L('Tick pages first','Centang halaman dulu'));
+    const start=Number(($('#orgNumStart')||{}).value);
+    if(!Number.isSafeInteger(start)||start<0) throw new Error(L('Starting number must be 0 or more.','Nomor awal minimal 0.'));
+    const bytes=await buildOrganizePdf(organizeOrder);
+    const stamped=await PDFEdit.apply(bytes,{tool:'page-numbers',range:positions.map(p=>p+1).join(','),position:'bottom-center',margin:'10',size:'12',color:'#214d40',start:String(start)});
+    downloadBlob(new Blob([stamped],{type:'application/pdf'}), orgBaseName()+'-numbered.pdf');
+    orgNote(L(`<p class="text-center py-2">✅ Numbers ${start}–${start+positions.length-1} on ${positions.length} selected pages</p>`,`<p class="text-center py-2">✅ Nomor ${start}–${start+positions.length-1} nang ${positions.length} halaman dipilih</p>`));
+    log('Org numbers '+positions.length+' pages from '+start);
+  }catch(e){ showError(e.message); }
+};
+// Free annotation on the selected pages (grid order): text, rectangle,
+// ellipse (W×H like 40x20, or one number for square/circle), line (length,
+// thickness from the size box) or a picked image. Centred, theme color,
+// fully opaque — the standalone Edit PDF tool covers the fancy options.
+function orgAnnElement(kind) {
+  const text = String(($('#orgAnnText') || {}).value ?? '').trim();
+  const sizeRaw = Number(($('#orgAnnSize') || {}).value);
+  const base = { kind, range: 'all', position: 'center', margin: '10', dx: '0', dy: '0',
+    rotation: '0', color: '#214d40', opacity: '100' };
+  if (kind === 'text') {
+    if (!text) throw Error(L('Enter annotation text.', 'Isi teks anotasi.'));
+    base.text = text;
+    base.size = (Number.isFinite(sizeRaw) && sizeRaw > 0) ? sizeRaw : 14;
+  } else if (kind === 'rect' || kind === 'ellipse') {
+    const match = text.match(/^\s*(\d+(?:\.\d+)?)\s*(?:x\s*(\d+(?:\.\d+)?))?\s*$/i);
+    if (!match) throw Error(L('Size like 40x20 (or one number for square).', 'Ukuran kaya 40x20 (utawa siji angka kanggo persegi).'));
+    base.width = Number(match[1]); base.height = Number(match[2] || match[1]);
+    base.border = 0;
+  } else if (kind === 'line') {
+    const len = Number(text);
+    if (!Number.isFinite(len) || len <= 0) throw Error(L('Line length must be a number above 0.', 'Dawa garis kudu angka di atas 0.'));
+    base.length = len;
+    base.thickness = (Number.isFinite(sizeRaw) && sizeRaw > 0) ? sizeRaw : 1;
+  } else if (kind === 'image') {
+    return null; // picked through the file dialog below
+  } else throw Error(L('Pick an annotation kind first.', 'Pilih jenis anotasi dhisik.'));
+  return base;
+}
+async function orgApplyAnnotate(elements, positions) {
+  const bytes = await buildOrganizePdf(organizeOrder);
+  const range = positions.map(p => p + 1).join(',');
+  const stamped = await PDFEdit.apply(bytes, { tool: 'edit-pdf', elements: elements.map(el => Object.assign({}, el, { range })) });
+  downloadBlob(new Blob([stamped], { type: 'application/pdf' }), orgBaseName() + '-annotated.pdf');
+  orgNote(L(`<p class="text-center py-2">✅ Annotation on ${positions.length} selected pages</p>`, `<p class="text-center py-2">✅ Anotasi nang ${positions.length} halaman dipilih</p>`));
+  log('Org annotate ' + positions.length + ' pages');
+}
+window.orgAnnotate = async () => {
+  try {
+    if (files.length === 0) throw new Error(L('Upload a PDF first', 'Upload PDF dulu'));
+    const positions = orgSelectedPositions();
+    if (!positions.length) throw new Error(L('Tick pages first', 'Centang halaman dulu'));
+    const kind = ($('#orgAnnKind') || {}).value || 'text';
+    if (kind === 'image') { window.orgAnnPick(); return; }
+    await orgApplyAnnotate([orgAnnElement(kind)], positions);
+  } catch (e) { showError(e.message); }
+};
+window.orgAnnPick = () => { const inp = document.getElementById('orgAnnImage'); if (inp) { inp.value = ''; inp.click(); } };
+window.orgAnnPicked = async (inp) => {
+  const picked = inp && inp.files && inp.files[0]; if (inp) inp.value = '';
+  if (!picked) return;
+  try {
+    if (files.length === 0) throw new Error(L('Upload a PDF first', 'Upload PDF dulu'));
+    const positions = orgSelectedPositions();
+    if (!positions.length) throw new Error(L('Tick pages first', 'Centang halaman dulu'));
+    const sizeRaw = Number(($('#orgAnnSize') || {}).value);
+    const bytes = new Uint8Array(await picked.arrayBuffer());
+    await orgApplyAnnotate([{ kind: 'image', image: [...bytes], size: (Number.isFinite(sizeRaw) && sizeRaw > 0) ? sizeRaw : 40,
+      range: 'all', position: 'center', margin: '10', dx: '0', dy: '0', rotation: '0', color: '#214d40', opacity: '100' }], positions);
+  } catch (e) { showError(e.message); }
+};
+// Text watermark centred on the selected pages.
+window.orgWatermark=async ()=>{
+  try{
+    if(files.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
+    const positions=orgSelectedPositions();
+    if(!positions.length) throw new Error(L('Tick pages first','Centang halaman dulu'));
+    const text=String(($('#orgWmText')||{}).value||'').trim();
+    if(!text) throw new Error(L('Enter watermark text.','Isi teks watermark.'));
+    const bytes=await buildOrganizePdf(organizeOrder);
+    const stamped=await PDFEdit.apply(bytes,{tool:'watermark',mode:'text',text,range:positions.map(p=>p+1).join(','),position:'center',margin:'10',size:'36',opacity:'25',color:'#214d40'});
+    downloadBlob(new Blob([stamped],{type:'application/pdf'}), orgBaseName()+'-watermarked.pdf');
+    orgNote(L(`<p class="text-center py-2">✅ Watermark on ${positions.length} selected pages</p>`,`<p class="text-center py-2">✅ Watermark nang ${positions.length} halaman dipilih</p>`));
+    log('Org watermark '+positions.length+' pages');
+  }catch(e){ showError(e.message); }
+};
 async function wordToPdf(){
   return convertOfficeToPdf('word-to-pdf', ['docx','doc']);
 }

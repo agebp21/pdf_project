@@ -1305,3 +1305,20 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - File: `assets/auth.js` (`loginPopup(cb)` + modal nutup resik), `converter.html` (cegat downloadBtn + makeFlipbook), `flipbook.html` (+auth.js), `flipbook.js` (bungkus openPdf + pesan payment share via MFDialog).
 - Tes: `auth-nudge` + `guest-gates.test.cjs` anyar (cegat/lanjut/member/offline); 43 Node ijo; sintaks + diff bersih; HTTP 200 kabeh.
 - Durung commit/push/deploy.
+
+### 2026-10-06 — Split/number/watermark mlebu grid organize (request owner)
+- Owner: merge wes ono; kari split + page number + edit PDF — dadi aksi grid (teko halaman sing dipilih). Implementasi (`converter.html`, reuse `PDFEdit` sing wes dites): split = extract halaman dipilih (urutan grid) dadi PDF dewe; number = nomor konsekutif seko angka awal nang halaman dipilih (bottom-center); watermark = teks tengah halaman dipilih (default ala tool dewe). Output liwat `downloadBlob` (preview + download + Jadikan Flipbook podo tool liyo); blanks/rotasi/duplikat melu aturan organize sing ono.
+- Tes: `tests/organize-actions.test.cjs` anyar (PDF 4 kaca tenanan → extract 2 kaca isi bener, nomor 7–8 mung nang dipilih, watermark mung nang dipilih, guard kosong); suite organize/converter/pdf-edit/qa-editor ijo; sintaks + diff bersih; HTTP 200.
+- Durung commit/push/deploy.
+
+### 2026-10-06 — Anotasi grid organize + layout menu ditata (request owner)
+- Edit PDF mlebu grid: baris kind (teks/kotak/elips/garis/gambar) + isian + ukuran + tombol ✎ Tambah — marang halaman dipilih, posisi tengah warna tema, gambar lewat picker (auto-apply); standalone Edit PDF kanggo opsi lengkap (rotasi/posisi/warna).
+- Layout menu ditata ulang: count → select/clear → rotate/duplikat → delete → extract → nomor → watermark → anotasi (seleksi dhisik, lagi aksi).
+- Tes: organize-actions +annotate (teks/rect/line + guard format); 7 suite ijo; sintaks + diff bersih; HTTP 200 organize + edit-pdf.
+- Durung commit/push/deploy (commit nunggu prentah: "kabeh engko").
+
+### 2026-10-06 — Edit PDF tool tenanan (request owner, kartu SOON → live)
+- Kartu "Edit PDF" urip: tambah teks, stempel gambar, kotak, elips, garis nang posisi bebas (preset + geser mm + rotasi), warna/opacity, rentang halaman — ditumpuk pirang-pirang nang sedino jalan (daftar draft + busak per item). Mesin `PDFEdit` anyar reuse geometri matriks/rotasi sing wes kebukti (watermark/nomer); jujur nang watesan: font Helvetica tok (script liyo → dikandhani nganggo gambar), font system liyo ora di-embed, freehand durung (butuh canvas gambar).
+- File: `assets/pdf-edit.js` (annotate + validasi + form + draft list), `converter.html` (TOOLS + wiring + toggleKind hook), `index.html` (metu seko SOON).
+- Tes: `tests/pdf-annotate.test.cjs` anyar (teks/gambar/kotak/elips/garis kepasang tenan dicek raster + teks PDF.js, validasi jujur, DOM draft, wiring); suite pdf-edit/ui/limits/converter/organize/office-export ijo (renderDrafts ketinggalan nang ekspor → konangan + didandani); sintaks + diff bersih; HTTP 200 `?tool=edit-pdf`.
+- Durung commit/push/deploy.

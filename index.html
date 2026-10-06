@@ -210,7 +210,7 @@
   ];
 
   // Catalog tools not built yet: shown as "Coming soon", not clickable.
-  const SOON = new Set(["flipbook-animation","edit-pdf","protect-pdf","pdf-to-pdfa","repair-pdf","translate-pdf"]);
+  const SOON = new Set(["flipbook-animation","protect-pdf","pdf-to-pdfa","repair-pdf","translate-pdf"]);
   tools.forEach(t => { if (SOON.has(t.id)) t.soon = true; });
   const soonLabel = () => (window.I18N ? I18N.t('card.coming') : 'Coming soon');
 
