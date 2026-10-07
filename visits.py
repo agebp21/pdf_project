@@ -20,6 +20,17 @@ from urllib.parse import urlsplit
 
 KEEP_DAYS = 400
 PLACE = ('country', 'region', 'city', 'isp')
+# Internet providers that are data centres / clouds: visits from there are
+# machines (crawlers, link checkers, scanners), not people.
+DATACENTER = ('Google', 'Amazon', 'Microsoft', 'Azure', 'DigitalOcean', 'OVH', 'Hetzner', 'Linode', 'Akamai',
+              'LogicWeb', 'Oracle', 'Alibaba', 'Tencent', 'Contabo', 'Vultr', 'Choopa', 'Constant Company', 'M247',
+              'Leaseweb', 'Cloudflare', 'Facebook', 'Meta Platforms', 'Datacamp', 'Hostinger', 'IONOS', 'Scaleway',
+              'Zenlayer', 'GoDaddy', 'Censys', 'Fastly', 'Huawei Cloud', 'Biznet GIO')
+
+
+def is_datacenter(isp):
+    isp = (isp or '').lower()
+    return any(name.lower() in isp for name in DATACENTER)
 BOT = re.compile(r'bot|crawl|spider|slurp|preview|monitor|curl|wget|python-requests|httpclient|headless|lighthouse', re.I)
 
 
@@ -58,7 +69,7 @@ class Visits:
                 CREATE INDEX IF NOT EXISTS visits_day ON visits(day);
             ''')
             have = {r[1] for r in db.execute('PRAGMA table_info(visits)')}
-            for column in PLACE:
+            for column in PLACE + ('kind',):
                 if column not in have:
                     db.execute(f"ALTER TABLE visits ADD COLUMN {column} TEXT NOT NULL DEFAULT ''")
 
@@ -72,8 +83,10 @@ class Visits:
         finally:
             db.close()
 
-    def record(self, path, ip, agent, referer='', user_id=None, own_hosts=(), now=None, place=None):
-        """One page view; False when it is not counted (a bot). place: geo.lookup(ip)."""
+    def record(self, path, ip, agent, referer='', user_id=None, own_hosts=(), now=None, place=None, kind=''):
+        """One page view; False when it is not counted (a bot). place: geo.lookup(ip).
+        kind: '' a person, 'team' a team browser, 'bot' a data-centre network —
+        kept for the admin's visitor list, left out of the numbers."""
         if BOT.search(agent or '') or not agent:
             return False
         now = int(now or time.time())
@@ -84,26 +97,43 @@ class Visits:
             ref = ''
         with self.connect() as db:
             place = place or {}
-            db.execute('INSERT INTO visits(ts, day, path, visitor, user_id, ref, device, country, region, city, isp) VALUES(?,?,?,?,?,?,?,?,?,?,?)',
+            if not kind and is_datacenter(place.get('isp')):
+                kind = 'bot'
+            db.execute('INSERT INTO visits(ts, day, path, visitor, user_id, ref, device, country, region, city, isp, kind) VALUES(?,?,?,?,?,?,?,?,?,?,?,?)',
                        (now, day, (path or '/')[:200], visitor, user_id, ref, device(agent),
-                        *(str(place.get(k) or '')[:100] for k in PLACE)))
+                        *(str(place.get(k) or '')[:100] for k in PLACE), kind if kind in ('team', 'bot') else ''))
             if now - self.pruned > 86400:                 # once a day: forget old rows
                 db.execute('DELETE FROM visits WHERE ts < ?', (now - KEEP_DAYS * 86400,))
                 self.pruned = now
         return True
 
 
-def stats(db, days=30, now=None, exclude_users=()):
+def stats(db, days=30, now=None, exclude_users=(), skip_keys=(), keep_keys=()):
     """Numbers for the admin panel from an open visits database. exclude_users:
     member ids of the team — their visits, and every other visit from the same
-    browser that day (the visitor code changes daily), are left out."""
+    browser that day (the visitor code changes daily), are left out. Team
+    browsers and data-centre machines are left out too; skip_keys / keep_keys
+    (visitor || day) are the admin's own corrections."""
     now = int(now or time.time())
     since = day_of(now - (days - 1) * 86400)
     today = day_of(now)
+    have = {r[1] for r in db.execute('PRAGMA table_info(visits)')}
     ids = [int(u) for u in exclude_users]
-    team = (' AND (visitor || day) NOT IN (SELECT visitor || day FROM visits WHERE user_id IN (%s))' % ','.join('?' * len(ids))) if ids else ''
-    base = f'SELECT * FROM visits WHERE day >= ?{team}'
-    args = [since] + ids
+    skip, keep = list(skip_keys), list(keep_keys)
+    marks = lambda n: ','.join('?' * n)
+    where = ''
+    if ids:
+        where += ' AND (visitor || day) NOT IN (SELECT visitor || day FROM visits WHERE user_id IN (%s))' % marks(len(ids))
+    if skip:
+        where += ' AND (visitor || day) NOT IN (%s)' % marks(len(skip))
+    if 'kind' in have and 'isp' in have:
+        machine = ' OR '.join(['isp LIKE ?'] * len(DATACENTER))
+        people = f"(visitor || day) NOT IN (SELECT visitor || day FROM visits WHERE day >= ? AND (kind != '' OR {machine}))"
+        where += f' AND ({people}' + (' OR (visitor || day) IN (%s))' % marks(len(keep)) if keep else ')')
+    base = f'SELECT * FROM visits WHERE day >= ?{where}'
+    args = [since] + ids + skip
+    if 'kind' in have and 'isp' in have:
+        args += [since] + [f'%{name}%' for name in DATACENTER] + keep
 
     def q(sql, extra=()):
         return db.execute(f'WITH v AS ({base}) ' + sql, args + list(extra))
@@ -120,7 +150,6 @@ def stats(db, days=30, now=None, exclude_users=()):
     def places(column, need=None, limit=10):
         """Where visitors come from: visitors (one per day), not page views."""
         return [dict(name=r[0], views=r[1]) for r in q(f"SELECT {column}, COUNT(DISTINCT visitor || day) FROM v WHERE {need or column} != '' GROUP BY 1 ORDER BY 2 DESC LIMIT ?", [limit])]
-    have = {r[1] for r in db.execute('PRAGMA table_info(visits)')}
     located = all(c in have for c in PLACE)
     recent = [dict(r) for r in q(f"SELECT ts, path, device, user_id, ref{', country, region, city, isp' if located else ''} FROM v ORDER BY ts DESC LIMIT 50")]
     total = q('SELECT COUNT(*), COUNT(DISTINCT visitor || day) FROM v').fetchone()
@@ -135,3 +164,58 @@ def stats(db, days=30, now=None, exclude_users=()):
                 regions=places("region || ', ' || country", 'region') if located else [],
                 cities=places("city || CASE WHEN region != '' THEN ' · ' || region ELSE '' END", 'city') if located else [],
                 isps=places('isp') if located else [], recent=recent)
+
+
+def visitors(db, days=30, now=None, team_users=(), labels=None, limit=300):
+    """One row per visitor per day (the visitor code changes daily): where,
+    which network and device, when, the pages in order — and whether it looks
+    like a person, the team, a machine, or is unsure, with the reason.
+    labels: {visitor || day: 'team' | 'bot' | 'human'} set by the admin."""
+    labels = labels or {}
+    now = int(now or time.time())
+    since = day_of(now - (days - 1) * 86400)
+    have = {r[1] for r in db.execute('PRAGMA table_info(visits)')}
+    extra = [c for c in PLACE + ('kind',) if c in have]
+    rows = db.execute(f"SELECT ts, day, path, visitor, user_id, ref, device{''.join(', ' + c for c in extra)} "
+                      'FROM visits WHERE day >= ? ORDER BY ts', (since,)).fetchall()
+    team_users = {int(u) for u in team_users}
+    groups = {}
+    for r in rows:
+        r = dict(r)
+        g = groups.setdefault(r['visitor'] + r['day'], dict(
+            key=r['visitor'] + r['day'], day=r['day'], first=r['ts'], last=r['ts'], views=0, pages=[], hits=[], users=set(),
+            ref='', device=r['device'], country=r.get('country', ''), region=r.get('region', ''), city=r.get('city', ''),
+            isp=r.get('isp', ''), kinds=set()))
+        g['last'] = r['ts']; g['views'] += 1; g['hits'].append((r['path'], r['ts']))
+        if r['path'] not in g['pages']:
+            g['pages'].append(r['path'])
+        if r['user_id']:
+            g['users'].add(r['user_id'])
+        if r['ref'] and not g['ref']:
+            g['ref'] = r['ref']
+        if r.get('kind'):
+            g['kinds'].add(r['kind'])
+    for g in groups.values():
+        label = labels.get(g['key'])
+        if label in ('team', 'bot', 'human'):
+            g['status'], g['reason'] = label, 'Ditandai admin'
+        elif 'team' in g['kinds']:
+            g['status'], g['reason'] = 'team', 'Browser tim (tombol "Jangan hitung browser ini")'
+        elif g['users'] & team_users:
+            g['status'], g['reason'] = 'team', 'Login dengan akun tim'
+        elif 'bot' in g['kinds'] or is_datacenter(g['isp']):
+            g['status'], g['reason'] = 'bot', 'Jaringan pusat data / mesin otomatis' + (f" ({g['isp']})" if g['isp'] else '')
+        elif g['users']:
+            g['status'], g['reason'] = 'human', 'Member yang login'
+        else:
+            g['status'], g['reason'] = 'human', ''
+    team_hits = [h for g in groups.values() if g['status'] == 'team' for h in g['hits']]
+    for g in groups.values():
+        if g['status'] == 'human' and not g['users'] and g['key'] not in labels:
+            if any(path == tp and abs(ts - tts) <= 120 for path, ts in g['hits'] for tp, tts in team_hits):
+                g['status'], g['reason'] = 'unsure', 'Membuka halaman yang sama pada menit yang sama dengan tim'
+    out = sorted(groups.values(), key=lambda g: g['last'], reverse=True)[:limit]
+    for g in out:
+        g['users'] = sorted(g['users'])
+        del g['hits'], g['kinds']
+    return out

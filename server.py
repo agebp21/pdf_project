@@ -2005,6 +2005,10 @@ class Handler(SimpleHTTPRequestHandler):
                 return value.strip()[:12]
         return ''
 
+    def team_browser(self):
+        """A browser the admin marked "do not count" (cookie mf_team=1, set from the admin panel)."""
+        return any(part.strip() == 'mf_team=1' for part in self.headers.get('Cookie', '').split(';'))
+
     def count_visit(self):
         """POST /api/visit {path, ref}: one page view, sent by the page itself once it
         has loaded in a real browser (assets/auth.js) — tools and most bots never
@@ -2028,7 +2032,7 @@ class Handler(SimpleHTTPRequestHandler):
                 if fresh and not (user and user['email'].lower() in team):
                     get_visits().record('/' + page, key[0], key[1], str(data.get('ref') or '')[:500],
                                         user['id'] if user else None, own_hosts=CONFIG['public_hosts'] | {'localhost', '127.0.0.1'},
-                                        place=geo.lookup(key[0]))
+                                        place=geo.lookup(key[0]), kind='team' if self.team_browser() else '')
         except Exception:
             pass
         self.send_response(204)

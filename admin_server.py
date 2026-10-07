@@ -132,7 +132,8 @@ def overview(now=None):
     v = read_only(db_path().parent / 'visits.sqlite3')
     if v:
         with v:
-            out['visits'] = visits.stats(v, 30, now, team_ids()) if has_table(v, 'visits') else None
+            skip, keep = label_keys()
+            out['visits'] = visits.stats(v, 30, now, team_ids(), skip, keep) if has_table(v, 'visits') else None
         v.close()
     return out
 
@@ -277,12 +278,83 @@ def growth(days, now=None):
     return rows
 
 
+def labels_path():
+    return db_path().parent / 'admin-labels.sqlite3'
+
+
+def log_admin(text):
+    try:
+        with open(db_path().parent / 'admin.log', 'a', encoding='utf-8') as log:
+            log.write(time.strftime('%Y-%m-%d %H:%M:%S') + ' ' + text + '\n')
+    except OSError:
+        pass
+
+
+def get_labels():
+    """The admin's own corrections in the visitor list: {visitor || day: 'team' | 'bot' | 'human'}."""
+    path = labels_path()
+    if not path.exists():
+        return {}
+    db = sqlite3.connect(path, timeout=10)
+    try:
+        return dict(db.execute('SELECT key, kind FROM labels'))
+    except sqlite3.Error:
+        return {}
+    finally:
+        db.close()
+
+
+def set_label(key, kind):
+    if not re.fullmatch(r'[0-9a-f]{16}\d{4}-\d{2}-\d{2}', str(key or '')) or kind not in ('team', 'bot', 'human', ''):
+        raise ValueError('Label tidak valid.')
+    db = sqlite3.connect(labels_path(), timeout=10)
+    try:
+        with db:
+            db.execute('CREATE TABLE IF NOT EXISTS labels(key TEXT PRIMARY KEY, kind TEXT NOT NULL, at INTEGER NOT NULL)')
+            if kind:
+                db.execute('INSERT OR REPLACE INTO labels VALUES(?,?,?)', (key, kind, int(time.time())))
+            else:
+                db.execute('DELETE FROM labels WHERE key=?', (key,))
+    finally:
+        db.close()
+    log_admin(f'label {key} {kind or "cleared"}')
+
+
+def label_keys():
+    labels = get_labels()
+    return [k for k, v in labels.items() if v in ('team', 'bot')], [k for k, v in labels.items() if v == 'human']
+
+
+def visitor_list(days=30):
+    v = read_only(db_path().parent / 'visits.sqlite3')
+    items = []
+    if v:
+        with v:
+            if has_table(v, 'visits'):
+                items = visits.visitors(v, days, None, team_ids(), get_labels())
+        v.close()
+    ids = {u for g in items for u in g['users']}
+    db = read_only(db_path()) if ids else None
+    emails = {}
+    if db:
+        with db:
+            emails = {r['id']: r['email'] for r in db.execute('SELECT id, email FROM users WHERE id IN (%s)' % ','.join('?' * len(ids)), list(ids))}
+        db.close()
+    for g in items:
+        g['members'] = [emails.get(u, f'#{u}') for u in g.pop('users')]
+    counts = {}
+    for g in items:
+        counts[g['status']] = counts.get(g['status'], 0) + 1
+    return {'days': days, 'items': items, 'counts': counts}
+
+
 def visitor_stats(days=30):
     v = read_only(db_path().parent / 'visits.sqlite3')
     out = None
     if v:
         with v:
-            out = visits.stats(v, days, None, team_ids()) if has_table(v, 'visits') else None
+            skip, keep = label_keys()
+            out = visits.stats(v, days, None, team_ids(), skip, keep) if has_table(v, 'visits') else None
         v.close()
     out = out or {'days': days, 'daily': [], 'pages': [], 'referrers': [], 'devices': [], 'countries': [], 'regions': [], 'cities': [],
                   'isps': [], 'recent': [], 'views': 0, 'visitors': 0, 'average': 0, 'members': 0, 'today': {}}
@@ -421,6 +493,9 @@ class AdminHandler(BaseHTTPRequestHandler):
             elif url.path == '/api/visits':
                 days = max(1, min(365, int(arg('days', '30') or 30)))
                 self.send_json(200, visitor_stats(days))
+            elif url.path == '/api/visitors':
+                days = max(1, min(90, int(arg('days', '7') or 7)))
+                self.send_json(200, visitor_list(days))
             elif url.path == '/api/report.csv':
                 days = max(1, min(365, int(arg('days', '30') or 30)))
                 body = ('\ufeff' + report_csv(days)).encode('utf-8')        # BOM: Excel reads it as UTF-8
@@ -475,6 +550,19 @@ class AdminHandler(BaseHTTPRequestHandler):
             with LOCK:
                 SESSIONS.pop(self.token(), None)
             self.send_json(200, {'ok': True}, cookie=self.cookie('', 0))
+            return
+        if not self.signed_in():
+            self.send_json(401, {'error': 'Masuk sebagai admin dulu.'})
+            return
+        if url.path == '/api/visitors/label':
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                body = json.loads(self.rfile.read(size) if 0 < size <= 4096 else b'{}')
+                set_label(body.get('key'), body.get('kind') or '')
+            except (ValueError, json.JSONDecodeError, AttributeError) as cause:
+                self.send_json(400, {'error': str(cause) or 'Label tidak valid.'})
+                return
+            self.send_json(200, {'ok': True})
             return
         self.send_json(404, {'error': 'Tidak ditemukan.'})
 
