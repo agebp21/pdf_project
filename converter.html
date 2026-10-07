@@ -87,9 +87,17 @@
   .org-sel-row input[type=text]{flex:2 1 0;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .7rem;font-size:11px}
   .org-sel-row input[type=number]{flex:0 0 64px;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px}
   .org-sel-row select{flex:0 0 auto;max-width:45%;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px;font-weight:700;cursor:pointer}
-  .org-tabs{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem}
-  .org-tabs button{flex:1 1 0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .7rem;font-size:12px;font-weight:800;cursor:pointer;color:#374151;white-space:nowrap}
-  .org-tabs button.active{background:#ef2d2d;border-color:#ef2d2d;color:#fff}
+  /* Mode tabs as mini feature cards (same look as the home tool cards, smaller). */
+  .org-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem;margin-bottom:.85rem}
+  .org-tabs button{display:flex;align-items:center;gap:.6rem;text-align:left;min-width:0;cursor:pointer;color:#1C1917;padding:.6rem .7rem;border-radius:16px;border:1px solid #E9E2D4;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,0) 38%),linear-gradient(180deg,#FFFFFF,#F8F4EA);box-shadow:0 8px 20px rgba(28,25,23,.08),inset 0 1px 0 #fff,inset 0 -2px 6px rgba(28,25,23,.04);transition:all .2s ease}
+  .org-tabs button:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(28,25,23,.12),inset 0 1px 0 #fff;border-color:#DCD3BE}
+  .org-tabs button.active{border-color:#FF5C28;box-shadow:0 0 0 2px rgba(255,92,40,.25),0 12px 26px rgba(255,92,40,.16),inset 0 1px 0 #fff;background:linear-gradient(180deg,#FFFFFF,#FFF1EA)}
+  .org-tabs .ot-ic{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:800;box-shadow:inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 6px rgba(28,25,23,.12),0 5px 10px rgba(28,25,23,.12)}
+  .org-tabs .ot-tx{min-width:0;display:flex;flex-direction:column}
+  .org-tabs .ot-t{font-family:'Fraunces',Georgia,serif;font-size:13.5px;font-weight:800;line-height:1.15}
+  .org-tabs .ot-d{font-size:10.5px;font-weight:600;color:#78716C;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .org-tabs button.active .ot-t{color:#C2410C}
+  @media (max-width:640px){.org-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.org-tabs .ot-d{white-space:normal}}
   /* Edit-mode toolbar above the preview: zoom, hand, text, shapes. */
   .org-edittools{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin-bottom:.75rem}
   .org-edittools button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .7rem;font-size:12px;font-weight:800;cursor:pointer;color:#374151;white-space:nowrap}
@@ -412,10 +420,10 @@ function renderHeader(){
     html=`<div class="org-ws" ondragover="orgWsOver(event)" ondrop="orgWsDrop(event)">
       <div class="org-main">
         <div class="org-tabs" id="orgTabs" role="tablist" aria-label="Organize modes">
-          <button data-mode="merge" onclick="orgModeSet('merge')">Merge</button>
-          <button data-mode="split" onclick="orgModeSet('split')">Split</button>
-          <button data-mode="edit" onclick="orgModeSet('edit')">Edit</button>
-          <button data-mode="compress" onclick="orgModeSet('compress')">Compress</button>
+          <button data-mode="merge" onclick="orgModeSet('merge')"><span class="ot-ic" style="background:#FFE3D9;color:#9A3412">↘↖</span><span class="ot-tx"><span class="ot-t">Merge</span><span class="ot-d">${L('Combine & reorder','Gabung & atur urutan')}</span></span></button>
+          <button data-mode="split" onclick="orgModeSet('split')"><span class="ot-ic" style="background:#FFE3D9;color:#9A3412">↗↙</span><span class="ot-tx"><span class="ot-t">Split</span><span class="ot-d">${L('Take out pages','Pisahkan halaman')}</span></span></button>
+          <button data-mode="edit" onclick="orgModeSet('edit')"><span class="ot-ic" style="background:#FAE8FF;color:#7E22CE">✎</span><span class="ot-tx"><span class="ot-t">Edit</span><span class="ot-d">${L('Text, pictures, numbers','Teks, gambar, nomor')}</span></span></button>
+          <button data-mode="compress" onclick="orgModeSet('compress')"><span class="ot-ic" style="background:#E4F3C2;color:#1A3C34">⇲</span><span class="ot-tx"><span class="ot-t">Compress</span><span class="ot-d">${L('Make the file smaller','Perkecil ukuran file')}</span></span></button>
         </div>
         <div id="orgEditTools" class="org-edittools is-hidden">
           <button onclick="orgZoomStep(-0.25)" title="Zoom out">−</button>
