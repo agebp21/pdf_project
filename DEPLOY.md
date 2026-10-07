@@ -179,3 +179,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-07 | `cfab711` | Claude | Editor: judul gambar/huruf dekoratif ora dadi teks palsu (OCR mung halaman scan, conf >= 75; teks Type3/glyph ora cocog tetep desain). Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007ab.tgz`. |
 | 2026-10-07 | `3fb8ebf` | Claude | Editor: teks kaya Word (tanpa bingkai/gagang pojok; titik cilik ndek kiwa gawe mindah). Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007ac.tgz`. |
 | 2026-10-07 | `2ad1f1d` | Claude | Editor: teks ngalir kaya Word (Enter/teks tambah dawa nggeser unsur ngisor ndek kolom padha + unsur sabaris; Ctrl+Z mbalekno). Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007ad.tgz`. |
+| 2026-10-07 | `d33114d` | Claude | Editor: Enter nggeser kabeh sing ngisor (judul tengah -> judul kiwa melu), kajaba kolom paralel; isi cendhak sabaris melu. Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007ae.tgz`. |
