@@ -45,3 +45,15 @@ body.clay .feedback{background:#EFF6EC;border-color:#1A3C34}
 body.clay #export-fields button.primary.apply{background:#fff!important;color:#1C1917!important;border:1.5px solid #1C1917!important;box-shadow:none!important;font-weight:700}
 body.clay #export-fields button{transition:background .15s,color .15s,box-shadow .15s,transform .15s}
 body.clay #export-fields button:not(:disabled):hover,body.clay #export-fields button:not(:disabled):focus-visible{background:linear-gradient(180deg,#FF7A45,#FF5C28)!important;color:#fff!important;border-color:#E04E1F!important;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45)!important;transform:translateY(-1px)}
+/* Phones: tidy headers — buttons never break their labels, the menu wraps to a second row (owner request 7 Oct) */
+@media (max-width:560px){
+  .clay-nav{flex-wrap:wrap;row-gap:8px;padding:8px 10px}
+  .clay-nav .clay-brand-logo{height:28px}
+  .clay-nav .nav-right{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-end;gap:6px;margin-left:auto}
+  .clay-nav .nav-right .clay-btn,.clay-nav .nav-right a,.clay-nav .nav-right button{white-space:nowrap;padding:6px 11px!important;font-size:11.5px!important;line-height:1.2}
+  .clay-nav .nav-right .lang{padding:6px 9px!important}
+  .topbar{flex-wrap:wrap!important;row-gap:8px;gap:8px;padding:10px 12px!important}
+  .topbar .brand img{height:28px}
+  .topbar>span{flex-wrap:wrap;justify-content:flex-end;gap:6px!important;margin-left:auto}
+  .topbar .badge,.topbar .back-link{white-space:nowrap;padding:5px 10px!important;font-size:11.5px!important;box-shadow:2px 2px 0 var(--ink,#1C1917)!important}
+}
