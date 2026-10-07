@@ -834,8 +834,9 @@
       'Ekspor ini butuh paket ' + (plan === 'Business' ? 'Business' : 'Pro atau Business') + '. Preview dan simpan proyek tetap gratis. '), link);
   }
   function markLocked() {
-    for (const [id, target] of [['#export-html','html'],['#export-apk','apk'],['#export-exe','exe'],['#share-link','html'],['#share-link-top','html']]) {
+    for (const [id, target] of [['#export-html','html'],['#export-apk','apk'],['#export-exe','exe'],['#share-link-top','html']]) {
       const button = $(id), plan = lockedFor(target, buildConfig);
+      if (!button) continue;
       if (!button.dataset.label) button.dataset.label = button.textContent;
       button.textContent = button.dataset.label + (plan ? ' · ' + plan.toUpperCase() : '');
     }
@@ -1084,7 +1085,6 @@
   document.addEventListener('keydown', event => { if (event.key === 'Escape' && !$('#share-popup').hidden) closeSharePopup(); });
   $('#save-project').onclick=()=>exportBook('project');$('#export-html').onclick=()=>exportBook('html');
   $('#export-apk').onclick=()=>exportBook('apk');$('#export-exe').onclick=()=>exportBook('exe');
-  $('#share-link').onclick=()=>shareBook();
   $('#share-link-top').onclick=()=>shareBook();
   $('#organize-pages').onclick=async ()=>{
     if(!sourcePdf){ error(L('Open a PDF first.','Buka PDF dulu.')); return; }
