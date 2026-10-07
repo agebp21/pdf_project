@@ -43,8 +43,12 @@
     const sorted = items.filter(it => it.str && it.str.trim() && it.w > 0 && it.h > 0).sort((a, b) => (a.y + a.h) - (b.y + b.h) || a.x - b.x);
     for (const it of sorted) {
       const base = it.y + it.h;
+      // A gap wider than ~1.6 em is a column (a table of contents' page numbers, a
+      // price column), not a word gap. `em` is the font's width scale: condensed
+      // fonts are narrower than they are tall.
       const line = lines.find(l => Math.abs((l.y + l.h) - base) < Math.max(l.h, it.h) * 0.35 &&
-        it.x >= l.x + l.w - Math.max(l.h, it.h) * 0.6 && it.x <= l.x + l.w + Math.max(l.h, it.h) * 2.5);
+        it.x >= l.x + l.w - Math.max(l.h, it.h) * 0.6 &&
+        it.x <= l.x + l.w + Math.min(Math.max(l.h, it.h) * 2.5, Math.min(l.em || l.h, it.em || it.h) * 1.6));
       if (!line) { lines.push({ ...it, text: it.str }); continue; }
       const gap = it.x - (line.x + line.w);
       const space = gap > Math.min(line.h, it.h) * 0.18 && !/\s$/.test(line.text) && !/^\s/.test(it.str) ? ' ' : '';

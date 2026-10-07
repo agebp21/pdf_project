@@ -147,7 +147,7 @@
       const h = Math.hypot(t[2], t[3]);
       let fname = (content.styles[it.fontName] || {}).fontFamily || '';
       try { const fo = p.commonObjs.get(it.fontName); if (fo && fo.name) fname = fo.name + ' ' + fname; } catch (e) {}
-      items.push({ str: it.str, x: t[4], y: t[5] - h * 0.82, w: (it.width || 0) * scale, h, size: h, family: C.family(fname),
+      items.push({ str: it.str, x: t[4], y: t[5] - h * 0.82, w: (it.width || 0) * scale, h, size: h, em: Math.hypot(t[0], t[1]), family: C.family(fname),
         bold: /bold|black|heavy|semibold|demi/i.test(fname), italic: /italic|oblique/i.test(fname) });
     }
     let lines = C.groupLines(items);
@@ -195,14 +195,16 @@
     const measure = document.createElement('canvas').getContext('2d');
     const textEls = blocks.map(b => {
       let size = b.size;
-      // Our fonts may run wider than the PDF's own: shrink a little rather than reflow.
+      // Our fonts may run wider than the PDF's own (condensed fonts much wider):
+      // a single line shrinks to fit and never wraps onto the line below.
       measure.font = `${b.italic ? 'italic ' : ''}${b.bold ? '700 ' : ''}${size}px ${CSS_FONT[b.family] || CSS_FONT.sans}`;
       const words = b.text.split(' '), perLine = Math.ceil(words.length / b.lines);
       let widest = 0; for (let i = 0; i < words.length; i += perLine) widest = Math.max(widest, measure.measureText(words.slice(i, i + perLine).join(' ')).width);
-      if (b.lines === 1 && widest > b.w) size *= Math.max(0.8, b.w / widest);
+      if (b.lines === 1 && widest > b.w) size *= Math.max(0.5, b.w / widest);
+      const fitted = b.lines === 1 ? widest * size / b.size : b.w;
       // Keep the first line's baseline where it was (the editor and the PDF share this offset).
       const lh = b.lineHeight || C.LINE, top = b.y + b.size * 0.82 - size * C.baseline(lh);
-      return { id: newId(), type: 'text', x: b.x / W, y: Math.max(0, top) / H, w: Math.min(1 - b.x / W, (b.w + size * 0.6) / W), h: b.h / H, text: b.text,
+      return { id: newId(), type: 'text', x: b.x / W, y: Math.max(0, top) / H, w: Math.min(1 - b.x / W, (Math.max(b.w, fitted) + size * 0.6) / W), h: b.h / H, text: b.text,
         fontSize: size / H, family: b.family || 'sans', bold: !!b.bold, italic: !!b.italic, color: b.color || '#1c1917', align: 'left', lineHeight: b.lineHeight || C.LINE };
     });
     pg.layered = !!layer;

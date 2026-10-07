@@ -35,6 +35,11 @@ async function main() {
   ];
   const lines = E.groupLines(runs);
   assert.deepEqual(lines.map(l => l.text), ['Judul', 'Sebagaimana pelayaran sebuah perahu dimungkinkan karena', 'aneka faktor pendukung dan awak kapal']);
+  // Table of contents: title and page number are columns, also with a condensed font (em < h).
+  const toc = E.groupLines([{ str: '13. Rencana Besar Wanda', x: 100, y: 300, w: 150, h: 12 }, { str: '106', x: 290, y: 300, w: 20, h: 12 },
+    { str: '14. Buku Harta', x: 100, y: 320, w: 90, h: 16, em: 10 }, { str: '116', x: 212, y: 320, w: 20, h: 16, em: 10 },
+    { str: 'kata', x: 100, y: 340, w: 30, h: 12 }, { str: 'biasa', x: 134, y: 340, w: 30, h: 12 }]);
+  assert.deepEqual(toc.map(l => l.text), ['13. Rencana Besar Wanda', '106', '14. Buku Harta', '116', 'kata biasa']);
   // Paragraphs: the two body lines merge, the big title stays alone; hyphenated words rejoin.
   const blocks = E.paragraphs([...lines, { text: 'ini kalimat panjang yang berakhir se-', x: 10, y: 160, w: 280, h: 12 }, { text: 'hari penuh', x: 10, y: 176, w: 80, h: 12 }]);
   assert.deepEqual(blocks.map(b => b.text), ['Judul', 'Sebagaimana pelayaran sebuah perahu dimungkinkan karena aneka faktor pendukung dan awak kapal',
