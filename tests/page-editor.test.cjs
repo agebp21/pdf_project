@@ -121,6 +121,34 @@ async function main() {
     assert.ok(open1[1] > 120 && open1[0] < 60, 'new picture visible ' + open1);
     assert.ok(under[1] > under[0] + 40 && under[0] > 90, 'panel still lightens the picture under it ' + under);
   }
+  // Table of contents rows (title + page number on one baseline) never merge into a paragraph.
+  const tocRows = ['8. Memulai dari yang Kecil sekali', '9. Proyek Percomblangan yang panjang', '10. Kurator Muda di kota besar'].flatMap((t, i) => [
+    { text: t, x: 100, y: 300 + i * 16, w: 200, h: 12 }, { text: String(65 + i * 7), x: 330, y: 300 + i * 16, w: 14, h: 12 }]);
+  assert.equal(E.paragraphs(tocRows).length, 6, 'rows with a page number stay one line each');
+
+  // The PDF's own embedded font: pdf.js hands its file over, the export embeds it again.
+  const narrow = 'C:/Windows/Fonts/ARIALN.TTF';
+  if (require('node:fs').existsSync(narrow)) {
+    globalThis.fontkit = require('../assets/vendor/fontkit.umd.min.js');
+    const d0 = await PDFDocument.create(); d0.registerFontkit(globalThis.fontkit);
+    const an = await d0.embedFont(require('node:fs').readFileSync(narrow), { subset: true });
+    d0.addPage([300, 200]).drawText('Memulai dari yang Kecil 65', { x: 20, y: 150, size: 14, font: an });
+    const srcBytes = await d0.save();
+    const doc = await pdfjs.getDocument({ data: new Uint8Array(srcBytes), isEvalSupported: false, fontExtraProperties: true, canvasFactory: factory }).promise;
+    const pg = await doc.getPage(1), vp = pg.getViewport({ scale: 1 }), cv = createCanvas(300, 200);
+    await pg.render({ canvasContext: cv.getContext('2d'), viewport: vp }).promise;
+    const key = (await pg.getTextContent()).items[0].fontName, fo = pg.commonObjs.get(key);
+    assert.ok(fo.data && fo.data.length > 1000, 'pdf.js keeps the font file');
+    const el = (text, font) => ({ type: 'text', x: 0.05, y: 0.2, w: 0.9, h: 0.1, text, fontSize: 14 / 200, family: 'sans', color: '#000000', font });
+    const ownOut = await E.exportPdf(srcBytes, { 0: { size: [300, 200], elements: [el('Memulai dari yang Kecil 56', key)] } }, { fonts: { [key]: fo.data } });
+    const fontsOf = async b => { const dd = await PDFDocument.load(b); return dd.context.enumerateIndirectObjects().map(([, o]) => o.get && o.get(PDFLib.PDFName.of('BaseFont'))).filter(Boolean).map(String).join(' '); };
+    assert.match(await fontsOf(ownOut), /ArialNarrow/, 'text keeps the PDF font');
+    assert.match(await text(ownOut, 1), /Memulai dari yang Kecil 56/);
+    // A character the font subset lacks: the whole text falls back to the standard font.
+    const fbOut = await E.exportPdf(srcBytes, { 0: { size: [300, 200], elements: [el('Zebra Quiz 66', key)] } }, { fonts: { [key]: fo.data } });
+    assert.match(await fontsOf(fbOut), /Helvetica/); assert.doesNotMatch(await fontsOf(fbOut), /ArialNarrow/);
+    await doc.destroy();
+  } else console.log('(skip own-font export: no Arial Narrow on this machine)');
   console.log('page-editor core tests passed');
 }
 main().catch(e => { console.error(e); process.exit(1); });

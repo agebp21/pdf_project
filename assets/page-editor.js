@@ -23,7 +23,9 @@
     st.bytes = new Uint8Array(await blob.arrayBuffer());
     st.name = name || 'dokumen.pdf';
     pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
-    st.pdf = await pdfjsLib.getDocument({ data: st.bytes.slice() }).promise;
+    // fontExtraProperties keeps each font's file: text keeps the PDF's own font.
+    st.pdf = await pdfjsLib.getDocument({ data: st.bytes.slice(), fontExtraProperties: true }).promise;
+    st.fonts = {};
     st.pages = [];
     for (let i = 0; i < st.pdf.numPages; i++) {
       const p = await st.pdf.getPage(i + 1), v = p.getViewport({ scale: 1 });
@@ -145,9 +147,17 @@
       const t = pdfjsLib.Util.transform(vp.transform, it.transform);
       if (Math.abs(t[1]) > Math.abs(t[0]) * 0.2 || Math.abs(t[2]) > Math.abs(t[3]) * 0.2) continue;      // rotated text stays in the background
       const h = Math.hypot(t[2], t[3]);
-      let fname = (content.styles[it.fontName] || {}).fontFamily || '';
-      try { const fo = p.commonObjs.get(it.fontName); if (fo && fo.name) fname = fo.name + ' ' + fname; } catch (e) {}
-      items.push({ str: it.str, x: t[4], y: t[5] - h * 0.82, w: (it.width || 0) * scale, h, size: h, em: Math.hypot(t[0], t[1]), family: C.family(fname),
+      let fname = (content.styles[it.fontName] || {}).fontFamily || '', font;
+      try {
+        const fo = p.commonObjs.get(it.fontName);
+        if (fo && fo.name) fname = fo.name + ' ' + fname;
+        // An embedded font pdf.js loaded into the page (its FontFace is named loadedName).
+        if (fo && fo.data && fo.loadedName && !fo.isType3Font && !fo.missingFile) {
+          font = fo.loadedName;
+          st.fonts[font] ||= { data: fo.data, name: String(fo.name || '').replace(/^[A-Z]{6}\+/, '').replace(/-\d+$/, '') };
+        }
+      } catch (e) {}
+      items.push({ str: it.str, x: t[4], y: t[5] - h * 0.82, w: (it.width || 0) * scale, h, size: h, em: Math.hypot(t[0], t[1]), font, family: C.family(fname),
         bold: /bold|black|heavy|semibold|demi/i.test(fname), italic: /italic|oblique/i.test(fname) });
     }
     let lines = C.groupLines(items);
@@ -197,7 +207,8 @@
       let size = b.size;
       // Our fonts may run wider than the PDF's own (condensed fonts much wider):
       // a single line shrinks to fit and never wraps onto the line below.
-      measure.font = `${b.italic ? 'italic ' : ''}${b.bold ? '700 ' : ''}${size}px ${CSS_FONT[b.family] || CSS_FONT.sans}`;
+      measure.font = b.font ? `${size}px "${b.font}", ${CSS_FONT[b.family] || CSS_FONT.sans}`
+        : `${b.italic ? 'italic ' : ''}${b.bold ? '700 ' : ''}${size}px ${CSS_FONT[b.family] || CSS_FONT.sans}`;
       const words = b.text.split(' '), perLine = Math.ceil(words.length / b.lines);
       let widest = 0; for (let i = 0; i < words.length; i += perLine) widest = Math.max(widest, measure.measureText(words.slice(i, i + perLine).join(' ')).width);
       if (b.lines === 1 && widest > b.w) size *= Math.max(0.5, b.w / widest);
@@ -205,7 +216,8 @@
       // Keep the first line's baseline where it was (the editor and the PDF share this offset).
       const lh = b.lineHeight || C.LINE, top = b.y + b.size * 0.82 - size * C.baseline(lh);
       return { id: newId(), type: 'text', x: b.x / W, y: Math.max(0, top) / H, w: Math.min(1 - b.x / W, (Math.max(b.w, fitted) + size * 0.6) / W), h: b.h / H, text: b.text,
-        fontSize: size / H, family: b.family || 'sans', bold: !!b.bold, italic: !!b.italic, color: b.color || '#1c1917', align: 'left', lineHeight: b.lineHeight || C.LINE };
+        fontSize: size / H, family: b.family || 'sans', bold: !!b.bold, italic: !!b.italic, color: b.color || '#1c1917', align: 'left', lineHeight: b.lineHeight || C.LINE,
+        ...(b.font ? { font: b.font } : {}) };
     });
     pg.layered = !!layer;
     pg.bg = canvas.toDataURL(pg.layered ? 'image/png' : 'image/jpeg', 0.9);
@@ -269,8 +281,10 @@
   }
   function styleText(node, el) {
     const H = stageH();
-    Object.assign(node.style, { fontFamily: CSS_FONT[el.family] || CSS_FONT.sans, fontSize: el.fontSize * H + 'px', lineHeight: String(el.lineHeight || C.LINE),
-      fontWeight: el.bold ? '700' : '400', fontStyle: el.italic ? 'italic' : 'normal', color: el.color || '#1c1917', textAlign: el.align || 'left' });
+    // The PDF's own font already is bold/italic where it was: no faux styles on top.
+    const own = el.font && st.fonts && st.fonts[el.font];
+    Object.assign(node.style, { fontFamily: (own ? `"${el.font}", ` : '') + (CSS_FONT[el.family] || CSS_FONT.sans), fontSize: el.fontSize * H + 'px', lineHeight: String(el.lineHeight || C.LINE),
+      fontWeight: !own && el.bold ? '700' : '400', fontStyle: !own && el.italic ? 'italic' : 'normal', color: el.color || '#1c1917', textAlign: el.align || 'left' });
   }
   function build(el) {
     const div = document.createElement('div');
@@ -379,7 +393,13 @@
     const fill = $('#pe-fill'); if (fill) fill.disabled = !(el && (el.type === 'rect' || el.type === 'ellipse'));
     const rep = $('#pe-replace'); if (rep) rep.parentElement.style.display = el && el.type === 'image' ? '' : 'none';
     if (text) {
-      $('#pe-family').value = el.family || 'sans';
+      const fam = $('#pe-family'), own = el.font && st.fonts && st.fonts[el.font];
+      let orig = fam.querySelector('option[value="orig"]');
+      if (own) {
+        if (!orig) { orig = document.createElement('option'); orig.value = 'orig'; fam.prepend(orig); }
+        orig.textContent = L('Original: ', 'Asli: ') + (own.name || 'PDF');
+        fam.value = 'orig';
+      } else { if (orig) orig.remove(); fam.value = el.family || 'sans'; }
       $('#pe-size').value = Math.round(el.fontSize * H * 10) / 10;
       $('#pe-bold').classList.toggle('on', !!el.bold); $('#pe-italic').classList.toggle('on', !!el.italic);
       for (const a of ['left', 'center', 'right']) $('#pe-align-' + a).classList.toggle('on', (el.align || 'left') === a);
@@ -471,10 +491,11 @@
       try { const { src, ratio } = await readImage(f); change(el => { if (el.type !== 'image') return; el.src = src; const [W, H] = page().size; el.h = el.w * ratio * W / H; }); }
       catch (err) { status(err.message); }
     };
-    $('#pe-family').onchange = e => change(el => { el.family = e.target.value; });
+    $('#pe-family').onchange = e => change(el => { if (e.target.value === 'orig') return; el.family = e.target.value; delete el.font; });
     $('#pe-size').onchange = e => change(el => { const v = Number(e.target.value); if (v > 0) el.fontSize = v / page().size[1]; });
-    $('#pe-bold').onclick = () => change(el => { el.bold = !el.bold; });
-    $('#pe-italic').onclick = () => change(el => { el.italic = !el.italic; });
+    // Bold/italic are standard-font styles: the text leaves the PDF's own font.
+    $('#pe-bold').onclick = () => change(el => { el.bold = !el.bold; delete el.font; });
+    $('#pe-italic').onclick = () => change(el => { el.italic = !el.italic; delete el.font; });
     for (const a of ['left', 'center', 'right']) $('#pe-align-' + a).onclick = () => change(el => { el.align = a; });
     $('#pe-color').oninput = e => change(el => { if (el.type === 'text') el.color = e.target.value; else el.stroke = e.target.value; });
     $('#pe-fill').oninput = e => change(el => { el.fill = e.target.value; });
@@ -527,7 +548,14 @@
     const btns = ['#pe-save', '#pe-download', '#pe-flipbook'].map(s => $(s)).filter(Boolean); btns.forEach(b => b.disabled = true);
     status(L('Building the PDF…', 'Menyusun PDF…'));
     try {
-      const { bytes, missing } = await C.exportPdf(st.bytes, edits, { report: true });
+      // The PDF's own fonts go back in with fontkit (loaded only when needed).
+      const fonts = {};
+      for (const e of Object.values(edits)) for (const el of e.elements) if (el.font && st.fonts[el.font]) fonts[el.font] = st.fonts[el.font].data;
+      if (Object.keys(fonts).length && !window.fontkit) await new Promise(res => {
+        const s = Object.assign(document.createElement('script'), { src: 'assets/vendor/fontkit.umd.min.js' });
+        s.onload = s.onerror = res; document.head.append(s);
+      });
+      const { bytes, missing } = await C.exportPdf(st.bytes, edits, { report: true, fonts });
       const blob = new Blob([bytes], { type: 'application/pdf' }), name = st.name.replace(/\.pdf$/i, '') + '-edit.pdf';
       const note = missing.length ? L(` Some characters are not in the PDF fonts and became "?": ${missing.join(' ')}`, ` Beberapa huruf tidak ada di font PDF dan menjadi "?": ${missing.join(' ')}`) : '';
       if ((where === 'flipbook' || where === 'organize') && window.FlipbookTransfer) {

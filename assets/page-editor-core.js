@@ -71,7 +71,12 @@
     const blocks = [];
     const sorted = [...lines].sort((a, b) => a.y - b.y || a.x - b.x);
     const words = l => l.text.trim().split(/\s+/).length;
+    // A line with a short neighbour on its baseline (a page number, an amount) is a
+    // table row: it never becomes part of a paragraph.
+    const row = l => sorted.some(o => o !== l && words(o) <= 2 && Math.abs((o.y + o.h) - (l.y + l.h)) < (l.size || l.h) * 0.35 &&
+      (o.x >= l.x + l.w - 1 || o.x + o.w <= l.x + 1));
     const prose = l => {
+      if (row(l)) return false;
       const size = l.size || l.h;
       const col = sorted.filter(o => Math.abs(o.x - l.x) < size * 2.2 && Math.abs((o.size || o.h) - size) <= size * 0.15);
       const widest = Math.max(...col.map(o => o.w));
@@ -79,11 +84,11 @@
     };
     for (const l of sorted) {
       const size = l.size || l.h;
-      const b = blocks.find(b => !b.closed && b.lastProse && Math.abs(b.size - size) <= size * 0.15 && b.family === (l.family || 'sans') && !!b.bold === !!l.bold &&
+      const b = !row(l) && blocks.find(b => !b.closed && b.lastProse && Math.abs(b.size - size) <= size * 0.15 && b.family === (l.family || 'sans') && !!b.bold === !!l.bold && b.font === l.font &&
         l.y - (b.y + b.h) < size * 0.9 && l.y - (b.y + b.h) > -size * 0.5 &&
         (Math.abs(l.x - b.x) < size * 2.2 || Math.abs(l.x - b.lastX) < size * 2.2) &&
         Math.min(l.x + l.w, b.x + b.w) - Math.max(l.x, b.x) > Math.min(l.w, b.w) * 0.3);
-      if (!b) { blocks.push({ x: l.x, y: l.y, w: l.w, h: l.h, size, text: l.text, lines: 1, lastX: l.x, lastProse: prose(l), family: l.family || 'sans', bold: !!l.bold, italic: !!l.italic, color: l.color }); continue; }
+      if (!b) { blocks.push({ x: l.x, y: l.y, w: l.w, h: l.h, size, text: l.text, lines: 1, lastX: l.x, lastProse: prose(l), family: l.family || 'sans', bold: !!l.bold, italic: !!l.italic, color: l.color, font: l.font }); continue; }
       // Words split over two lines ("se-" + "hari") join again.
       if (/[\p{L}]-$/u.test(b.text) && /^\p{Ll}/u.test(l.text)) b.text = b.text.slice(0, -1) + l.text;
       else b.text += ' ' + l.text;
@@ -250,6 +255,26 @@
       const name = (FAMILIES[fam] || FAMILIES.sans)[(bold ? 1 : 0) + (italic ? 2 : 0)];
       return fonts[name] ||= await out.embedFont(lib.StandardFonts[name]);
     };
+    // The PDF's own fonts (opts.fonts: {key: font file}, embedded with fontkit) when
+    // they hold every character of the text; otherwise the standard font.
+    const parsed = {}, custom = {};
+    let fontkitOn = false;
+    const ownFont = async (key, text) => {
+      const data = key && opts.fonts && opts.fonts[key], fk = globalThis.fontkit;
+      if (!data || !fk) return null;
+      // Check the characters first: a font that cannot write the text is not embedded at all.
+      if (!(key in parsed)) { try { parsed[key] = fk.create(data); } catch (e) { parsed[key] = null; } }
+      // (pdf.js often leaves the space out of the font: words are then placed one by one.)
+      const glyphs = parsed[key];
+      if (!glyphs || !Array.from(text).every(ch => ch === '\n' || ch === ' ' || glyphs.hasGlyphForCodePoint(ch.codePointAt(0)))) return null;
+      if (!(key in custom)) {
+        try {
+          if (!fontkitOn) { out.registerFontkit(fk); fontkitOn = true; }
+          custom[key] = await out.embedFont(data, { subset: false });
+        } catch (e) { custom[key] = null; }
+      }
+      return custom[key] && { font: custom[key], space: glyphs.hasGlyphForCodePoint(32) };
+    };
     const missing = new Set();
     const order = opts.order || src.getPageIndices();
     for (const index of order) {
@@ -281,19 +306,27 @@
         } else if (el.type === 'line') {
           page.drawLine({ start: { x, y: y + h }, end: { x: x + w, y }, thickness: (el.strokeWidth || 0.003) * H, color: hex(el.stroke) });
         } else if (el.type === 'text') {
-          const f = await font(el.family, el.bold, el.italic), size = el.fontSize * H;
+          const size = el.fontSize * H;
+          const own = el.font ? await ownFont(el.font, clean(el.text)) : null;
+          const f = own ? own.font : await font(el.family, el.bold, el.italic);
           // Characters outside the standard fonts become "?" (reported to the user).
-          const text = Array.from(clean(el.text)).map(ch => {
+          const text = own ? clean(el.text) : Array.from(clean(el.text)).map(ch => {
             if (ch === '\n') return ch;
             try { f.widthOfTextAtSize(ch, size); return ch; } catch (e) { missing.add(ch); return '?'; }
           }).join('');
+          const gap = own && !own.space ? size * 0.25 : 0;            // a font without a space glyph
+          const width = s => gap ? s.split(' ').reduce((a, word, i) => a + (i ? gap : 0) + f.widthOfTextAtSize(word, size), 0) : f.widthOfTextAtSize(s, size);
           const lh = size * (el.lineHeight || LINE);
-          const lines = wrap(text, s => f.widthOfTextAtSize(s, size), Math.max(w, size));
+          const lines = wrap(text, width, Math.max(w, size));
           let base = H - el.y * H - size * baseline(el.lineHeight || LINE);
           for (const line of lines) {
-            const lw = f.widthOfTextAtSize(line, size);
-            const dx = el.align === 'center' ? (w - lw) / 2 : el.align === 'right' ? w - lw : 0;
-            if (line) page.drawText(line, { x: x + dx, y: base, size, font: f, color: hex(el.color) });
+            const lw = width(line);
+            let cx = x + (el.align === 'center' ? (w - lw) / 2 : el.align === 'right' ? w - lw : 0);
+            if (!gap) { if (line) page.drawText(line, { x: cx, y: base, size, font: f, color: hex(el.color) }); }
+            else for (const word of line.split(' ')) {
+              if (word) page.drawText(word, { x: cx, y: base, size, font: f, color: hex(el.color) });
+              cx += f.widthOfTextAtSize(word, size) + gap;
+            }
             base -= lh;
           }
         }
