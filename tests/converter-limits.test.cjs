@@ -25,7 +25,7 @@ async function main(){
    }
    w.fetch=async()=>({ok:true,json:async()=>({office:false})});
    await assert.rejects(()=>w.wordToPdf(),/Supported files/);
-   w.qaFiles([{name:'test.docx'}]);await assert.rejects(()=>w.wordToPdf(),/LibreOffice/);
+   w.qaFiles([{name:'test.docx'}]);await assert.rejects(()=>w.wordToPdf(),/Office conversion is unavailable|Konversi Office/);
    // More than six table columns must survive extraction.
    const items=Array.from({length:9},(_,i)=>({str:'COL'+i,width:20,transform:[1,0,0,1,i*100,0]}));
    assert.equal(w.cellsOf(items).length,9);

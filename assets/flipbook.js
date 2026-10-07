@@ -657,7 +657,7 @@
   async function serverCaps() {
     let caps = null;
     try { const r = await fetch('/api/capabilities', {cache:'no-store'}); if (r.ok) caps = await r.json(); } catch (e) {}
-    if (!caps) throw Error('This needs the MyFlipbook server (python server.py).');
+    if (!caps) throw Error(L('Could not reach the MyFlipbook server. Check your connection and reload the page.', 'Server MyFlipbook tidak terjangkau. Periksa koneksi lalu muat ulang halaman.'));
     if (caps.loginRequired && !caps.token) throw Error('Please log in first to add Office files or links.');
     return caps;
   }
@@ -900,7 +900,7 @@
       status(L('Preparing the pages…', 'Menyiapkan halaman…')); await pagesReady;
       const bundle = await FlipbookExport.packageBook(data, allPictures(data), (message, fraction) => { status(message); if (fraction !== undefined) pack(fraction); });
       const capabilities=await fetch('/api/capabilities',{cache:'no-store'});
-      if(!capabilities.ok)throw Error(L('The local build service is not available. Run python server.py.', 'Layanan build lokal tidak tersedia. Jalankan python server.py.'));
+      if(!capabilities.ok)throw Error(L('The app build service is not available right now. Please try again later.', 'Layanan build aplikasi sedang tidak tersedia. Coba lagi nanti.'));
       buildConfig=await capabilities.json();
       if(!buildConfig[target])throw Error(L(target.toUpperCase()+' builds are not available on this computer yet.', 'Build '+target.toUpperCase()+' belum tersedia di komputer ini.'));
       status(L('Sending the book to the build service…', 'Mengirim buku ke layanan build…'));
@@ -1100,8 +1100,8 @@
     if(!response.ok)throw Error(L('The build service is not running','Layanan build belum berjalan'));
     buildConfig=await response.json();exportState();markLocked();
     const buildNote=$('#build-availability');
-    if(buildNote)buildNote.textContent=buildConfig.apk||buildConfig.exe?L('APK/EXE builds use this computer. The first build can take a few minutes and needs internet for dependencies.','Build APK/EXE memakai komputer ini. Build pertama dapat memerlukan beberapa menit dan internet untuk dependensi.'):L('Flutter is not available yet. HTML export and saving projects still work.','Flutter belum tersedia. Ekspor HTML dan simpan proyek tetap bisa digunakan.');
-  }).catch(()=>{ const buildNote=$('#build-availability'); if(buildNote)buildNote.textContent=L('For APK/EXE builds, run the project server with python server.py. HTML export still works.','Untuk build APK/EXE, jalankan server proyek dengan python server.py. Ekspor HTML tetap tersedia.'); });
+    if(buildNote)buildNote.textContent=buildConfig.apk||buildConfig.exe?L('APK/EXE builds run on the MyFlipbook build service and can take a few minutes.','Build APK/EXE diproses di layanan build MyFlipbook dan bisa memakan waktu beberapa menit.'):L('Building apps is not available right now. HTML export and saving projects still work.','Build aplikasi sedang tidak tersedia. Ekspor HTML dan simpan proyek tetap bisa digunakan.');
+  }).catch(()=>{ const buildNote=$('#build-availability'); if(buildNote)buildNote.textContent=L('Building apps is not available right now. HTML export still works.','Build aplikasi sedang tidak tersedia. Ekspor HTML tetap bisa digunakan.'); });
   const fromLibrary = new URLSearchParams(location.search).get('library');
   if (/^[0-9a-f]{32}$/.test(fromLibrary || '')) {
     (async () => {

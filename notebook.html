@@ -134,7 +134,7 @@ window.addEventListener('DOMContentLoaded', () => {
   async function caps() {
     let c = null;
     try { const r = await fetch('/api/capabilities', {cache: 'no-store'}); if (r.ok) c = await r.json(); } catch (e) {}
-    if (!c) throw Error(L('This needs the MyFlipbook server (python server.py).', 'Butuh server MyFlipbook (python server.py).'));
+    if (!c) throw Error(L('Could not reach the MyFlipbook server. Check your connection and reload the page.', 'Server MyFlipbook tidak terjangkau. Periksa koneksi lalu muat ulang halaman.'));
     if (c.loginRequired && !c.token) throw Error(L('Log in first to use the AI features.', 'Masuk dulu untuk memakai fitur AI.'));
     return c;
   }

@@ -211,7 +211,6 @@
         </div>
         <input id="fileInput" type="file" class="hidden">
         <p class="text-[11px] text-[#A8A29E] mt-2 font-semibold">♾️ No size limits — big files are processed right in your browser (depends on RAM)</p>
-        <button id="testBtn" class="mt-1 py-1.5 text-[11px] text-gray-500 underline hover:text-gray-700">🧪 Test converter without a file (generate dummy)</button>
       </div>
 
       </div><!-- /right -->
@@ -220,7 +219,6 @@
   </div>
 
 <script>
-function copyServe(){ navigator.clipboard.writeText('npx serve .'); const b=document.getElementById('serveBtn'); b.textContent='✅ Copied!'; setTimeout(()=>b.textContent='📋 Copy: npx serve .',1500); }
 const TOOLS = [
   {id:'watermark', title:'Watermark', desc:'Add a text or image watermark to selected pages.', cat:'Edit PDF', icon:'WM', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - text or PNG/JPEG watermark'},
   {id:'page-numbers', title:'Page numbers', desc:'Number all pages or a selected range.', cat:'Edit PDF', icon:'1 2', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - choose position and starting number'},
@@ -228,9 +226,9 @@ const TOOLS = [
   {id:'edit-pdf', title:'Edit PDF', desc:'Add text, image stamps, rectangles, ellipses or lines anywhere. Stack annotations, then apply.', cat:'Edit PDF', icon:'✎', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', hint:'PDF file - stack annotations, then apply'},
   {id:'jpg-to-pdf', title:'Image to PDF', desc:'Any image to PDF in seconds: JPG, PNG, WebP, GIF, BMP, SVG, AVIF, TIFF, HEIC. Set orientation & margins.', cat:'Convert PDF', icon:'IMG', color:'#b45309', bg:'#fef9c3', accept:'.jpg,.jpeg,.png,.webp,.gif,.bmp,.svg,.avif,.ico,.tif,.tiff,.heic,.heif', multiple:true, hint:'All image types — TIFF decoded locally, HEIC converted in-browser, animated/multi-page uses first frame'},
   {id:'pdf-to-jpg', title:'PDF to JPG', desc:'Turn every PDF page into a JPG (or PNG) image.', cat:'Convert PDF', icon:'🖼', color:'#a16207', bg:'#fef9c3', accept:'.pdf', hint:'PDF file — one image per page (ZIP when there are several pages)'},
-  {id:'word-to-pdf', title:'Word to PDF', desc:'Convert DOC/DOCX to PDF with document layout via local LibreOffice.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'DOCX/DOC file - requires the project server and LibreOffice'},
+  {id:'word-to-pdf', title:'Word to PDF', desc:'Convert DOC/DOCX to PDF, keeping the document layout.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.docx,.doc', hint:'DOCX/DOC file — converted on the MyFlipbook server (log in first)'},
   {id:'pdf-to-word', title:'PDF to Word', desc:'Real .docx that looks like the PDF: text stays editable right on the page (OCR for scans). Or pick a flowing document with real tables.', cat:'Convert PDF', icon:'W', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', hint:'PDF file — layout kept, text editable in place (needs internet)'},
-  {id:'excel-to-pdf', title:'Excel to PDF', desc:'Convert spreadsheets using their layout and print settings via local LibreOffice.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file - requires the project server and LibreOffice'},
+  {id:'excel-to-pdf', title:'Excel to PDF', desc:'Convert spreadsheets to PDF using their layout and print settings.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file — converted on the MyFlipbook server (log in first)'},
   {id:'pdf-to-excel', title:'PDF to Excel', desc:'Data sheet first: columns split into cells, numbers become real numbers. Page images kept on a second sheet.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pages embedded as images, text/OCR on extra sheets (needs internet)'},
   {id:'html-to-pdf', title:'HTML to PDF', desc:'Print a saved web page / HTML file to PDF with its real layout, colours and images.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'.html / .htm file — printed by Edge/Chrome on the project server'},
   {id:'merge-pdf', title:'Merge PDF', get desc(){return L('Combine PDFs in the order you want.','Gabungkan PDF sesuai urutan yang kamu mau.')}, cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, get hint(){return L('Choose 2+ PDF files to merge','Pilih 2+ file PDF untuk digabungkan')}},
@@ -238,7 +236,7 @@ const TOOLS = [
   {id:'compress-pdf', title:'Compress PDF', desc:'Shrink PDFs full of photos and scans: images are resized and re-encoded, text stays sharp.', cat:'Optimize PDF', icon:'⇲', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pick Light / Balanced / Strong'},
   {id:'rotate-pdf', title:'Rotate PDF', get desc(){return L('Rotate PDF pages 90° / 180° / 270° — some pages or all.','Putar halaman PDF 90° / 180° / 270° — per halaman atau semua.')}, cat:'Organize PDF', icon:'↻', color:'#a855a7', bg:'#fae8ff', accept:'.pdf', get hint(){return L('PDF file — pick the angle & pages','File PDF — pilih sudut & halaman')}},
   {id:'organize-pdf', title:'Organize PDF', get desc(){return L('Reorder, delete, rotate or extract pages — drag & drop like a pro tool.','Atur ulang, hapus, putar, atau extract halaman — drag & drop kaya UI pro.')}, cat:'Organize PDF', icon:'A↕B', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, get hint(){return L('PDF files — pages merge into one grid, drag to reorder','File-file PDF — halaman gabung satu grid, drag untuk urutkan')}},
-  {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Real PPTX→PDF via local LibreOffice (needs the project server).', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'PPTX/PPT file — converted on your computer via the local server + LibreOffice'},
+  {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Convert PPTX/PPT slides to PDF with their design kept.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'PPTX/PPT file — converted on the MyFlipbook server (log in first)'},
   {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'Real .pptx: slides look like the PDF pages and every text line is an editable text box.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'PDF file — design kept, text editable on the slide (needs internet)'},
   {id:'pdf-to-md', title:'PDF to Markdown', desc:'Headings, lists, and tables detected — perfect food for AI, notes, and blogs.', cat:'Convert PDF', icon:'{ }', color:'#4C1D95', bg:'#E9E4FF', accept:'.pdf', hint:'PDF file — structure detected from fonts and columns'},
   {id:'ocr-pdf', title:'OCR PDF', desc:'Make scans searchable: the original pages stay exactly as they are, with invisible text you can search, select and copy.', cat:'Convert PDF', icon:'OCR', color:'#15803D', bg:'#DCFCE7', accept:'.pdf', hint:'PDF file — scanned pages are read with OCR (needs internet the first time)'},
@@ -273,7 +271,7 @@ function checkLibs(){
   if(!window.XLSX) missing.push('SheetJS');
   if(!window.mammoth) missing.push('mammoth');
   const el=$('#libStatus');
-  if(missing.length){ el.classList.remove('hidden'); el.innerHTML='⚠️ Library gagal load: <b>'+missing.join(', ')+'</b><br>Cek internet / buka via <b>http://localhost</b> bukan file://'; }
+  if(missing.length){ el.classList.remove('hidden'); el.innerHTML=L('⚠️ Some components failed to load: <b>','⚠️ Sebagian komponen gagal dimuat: <b>')+missing.join(', ')+L('</b><br>Check your internet connection and reload the page.','</b><br>Periksa koneksi internet lalu muat ulang halaman.'); }
   else { el.classList.add('hidden'); }
   log('Libs: jsPDF=' +(!!window.jspdf)+', PDFLib='+!!window.PDFLib+', pdfjs='+!!window.pdfjsLib+', JSZip='+!!window.JSZip+', XLSX='+!!window.XLSX+', mammoth='+!!window.mammoth);
   log('Protocol: '+location.protocol+' | Tool: '+active);
@@ -1422,36 +1420,11 @@ function handleFiles(list){
   if(files.length===0) showError('No valid files');
   updateFileUI();
 }
-$('#testBtn').addEventListener('click', async (e)=>{
-  e.stopPropagation();
-  log('Test dummy start active='+active);
-  if(active==='jpg-to-pdf'){
-    const c=document.createElement('canvas'); c.width=600; c.height=400;
-    const ctx=c.getContext('2d'); ctx.fillStyle='#ff6b35'; ctx.fillRect(0,0,600,400); ctx.fillStyle='white'; ctx.font='40px Inter'; ctx.fillText('TEST JPG',180,210);
-    const blob=await new Promise(r=>c.toBlob(r,'image/jpeg',0.92));
-    const f=new File([blob],'test-image.jpg',{type:'image/jpeg'});
-    files=[f]; updateFileUI(); log('Dummy JPG created '+f.size+' bytes');
-  }else if(active==='merge-pdf'){
-    const {jsPDF}=window.jspdf;
-    const pdf1=new jsPDF(); pdf1.text('DUMMY PDF 1 - halaman 1',20,20); pdf1.addPage(); pdf1.text('PDF 1 - halaman 2',20,20);
-    const b1=pdf1.output('blob'); const f1=new File([b1],'dummy1.pdf',{type:'application/pdf'});
-    const pdf2=new jsPDF(); pdf2.text('DUMMY PDF 2 - halaman 1',20,20); pdf2.text('Ini file kedua untuk test merge',20,30);
-    const b2=pdf2.output('blob'); const f2=new File([b2],'dummy2.pdf',{type:'application/pdf'});
-    files=[f1,f2]; updateFileUI(); log('Dummy merge: 2 PDFs created '+f1.size+'+'+f2.size);
-  }else if(active==='watermark' || active==='page-numbers' || active==='compress-pdf' || active==='rotate-pdf' || active==='organize-pdf' || active.includes('pdf') || active==='split-pdf' || active==='pdf-to-word' || active==='pdf-to-excel' || active==='pdf-to-jpg'){
-    const {jsPDF}=window.jspdf; const pdf=new jsPDF(); pdf.text('Hello PDF Test - halaman 1',20,20); pdf.addPage(); pdf.text('Halaman 2',20,20); pdf.addPage(); pdf.text('Halaman 3',20,20);
-    const blob=pdf.output('blob'); const f=new File([blob],'test.pdf',{type:'application/pdf'});
-    files=[f]; updateFileUI(); log('Dummy PDF created '+blob.size+' pages=3');
-  }else{
-    log('Test untuk tool ini belum ada dummy');
-    showError('For this tool, please upload a real file to test');
-  }
-});
 $('#convertBtn').addEventListener('click', async ()=>{
   const t=TOOLS.find(x=>x.id===active);
   if(files.length===0){ showError('Pick a file first!'); return; }
   if(t.id==='compare-pdf' && files.length!==2){ showError(L('Compare needs exactly 2 PDFs: the old version and the new one.','Bandingkan butuh tepat 2 PDF: versi lama dan versi baru.')); return; }
-  if(t.id==='merge-pdf' && files.length<2){ showError('Merge needs at least 2 PDF files! Pick 2 files or click 🧪 Test (auto 2 files)'); return; }
+  if(t.id==='merge-pdf' && files.length<2){ showError(L('Merge needs at least 2 PDF files.','Gabung PDF butuh minimal 2 file PDF.')); return; }
   // The 7-day trial is over: only the flipbook reader stays, everything
   // else needs Pro (guests may still try; members hit this wall).
   if (window.MFAuth) {
@@ -1491,7 +1464,7 @@ $('#convertBtn').addEventListener('click', async ()=>{
     log('Convert success');
   }catch(e){
     console.error(e);
-    showError('Convert failed: '+(e.message||e)+'\nOpen via http://'+(location.host||'localhost:8080')+' (not file://) or check the F12 console');
+    showError(L('Convert failed: ','Gagal: ')+(e.message||e));
     log(e.stack||e);
   }finally{
     $('#btnSpinner').classList.add('hidden'); $('#convertBtn').disabled=false; updateFileUI({preserveError:true});
@@ -2716,8 +2689,7 @@ async function htmlToPdf(){
   for(let l of lines){ if(y>280){pdf.addPage(); y=15;} pdf.text(l,15,y); y+=5; }
   downloadBlob(pdf.output('blob'), file.name.replace(/\.html?$/i,'')+'.pdf');
   const note=document.createElement('p'); note.className='text-[11px] leading-relaxed bg-amber-50 p-3 rounded border border-amber-200';
-  note.textContent=!caps ? 'Text only: open this page via the project server (python server.py) to keep the layout, colours and images.'
-    : 'Text only: Microsoft Edge or Google Chrome was not found on the server, so the layout could not be kept.';
+  note.textContent=L('Text only: the full layout, colours and images could not be kept for this file right now.','Hanya teks: tata letak, warna, dan gambar file ini belum bisa dipertahankan saat ini.');
   $('#resultPreview').prepend(note);
 }
 async function serverCapabilities(){
@@ -2731,21 +2703,21 @@ async function convertOfficeToPdf(tool, extensions){
   if(!extensions.includes(ext)) throw new Error('Supported files: '+extensions.map(x=>'.'+x).join(', '));
   let caps;
   try { caps=await serverCapabilities(); } catch(e) {}
-  if(!caps) throw new Error('This conversion needs the project server. Run: python server.py, then reopen this page on localhost.');
-  if(caps.loginRequired && !caps.token) throw new Error('Please log in first (login.html) to convert Office files on this server.');
-  if(!caps.office) throw new Error('LibreOffice was not found. Install LibreOffice and restart the project server.');
+  if(!caps) throw new Error(L('Could not reach the MyFlipbook server. Check your connection and reload the page.','Server MyFlipbook tidak terjangkau. Periksa koneksi lalu muat ulang halaman.'));
+  if(caps.loginRequired && !caps.token) throw new Error(L('Please log in first to convert Office files.','Masuk dulu untuk mengonversi file Office.'));
+  if(!caps.office) throw new Error(L('Office conversion is unavailable right now. Please try again later.','Konversi Office sedang tidak tersedia. Coba lagi nanti.'));
   const types={
     docx:'application/vnd.openxmlformats-officedocument.wordprocessingml.document',doc:'application/msword',
     xlsx:'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',xls:'application/vnd.ms-excel',csv:'text/csv',
     pptx:'application/vnd.openxmlformats-officedocument.presentationml.presentation',ppt:'application/vnd.ms-powerpoint'
   };
   const endpoint=tool==='ppt-to-pdf'?'pptx-to-pdf':tool;
-  $('#progress').textContent='Converting with local LibreOffice...';
+  $('#progress').textContent=L('Converting…','Mengonversi…');
   const response=await fetch('/api/convert/'+endpoint,{method:'POST',headers:{
     'Content-Type':types[ext],'X-Build-Token':caps.token,'X-Filename':encodeURIComponent(file.name)
   },body:file});
   if(!response.ok){
-    let message='Conversion failed. Restart the project server if it is running an older version.';
+    let message=L('Conversion failed. Please try again.','Konversi gagal. Coba lagi.');
     try { message=(await response.json()).error||message; } catch(e) {}
     throw new Error(message);
   }
