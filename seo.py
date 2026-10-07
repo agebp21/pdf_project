@@ -583,7 +583,7 @@ APP_META = {
     'privacy.html': (None, '/privacy.html'),
     'terms.html': (None, '/terms.html'),
 }
-NOINDEX = {'login.html', 'account.html', 'library.html', 'coming-soon.html', 'animation.html'}
+NOINDEX = {'login.html', 'account.html', 'library.html', 'coming-soon.html', 'animation.html', 'editor.html'}
 
 
 def verification():

@@ -75,7 +75,7 @@ REMOTE_TRANSLATE_SECONDS = 150      # one batch, PC included
 TRANSLATE_CLAIM_WAIT = 25           # the PC's long poll
 POSITIONS = {'top-left', 'top-right', 'bottom-left', 'bottom-right'}
 SESSION_COOKIE = 'mf_session'
-PAGES = {'index.html', 'converter.html', 'workflow.html', 'library.html', 'journals.html', 'flipbook.html', 'animation.html', 'notebook.html',
+PAGES = {'index.html', 'editor.html', 'converter.html', 'workflow.html', 'library.html', 'journals.html', 'flipbook.html', 'animation.html', 'notebook.html',
          'login.html', 'account.html', 'coming-soon.html', 'privacy.html', 'terms.html'}
 # Unreleased features: on a normal run (paywall on) these pages show the
 # coming-soon page; --no-paywall keeps them usable internally.
