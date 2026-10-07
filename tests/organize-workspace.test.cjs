@@ -156,6 +156,11 @@ async function main(){
   assert.equal(s.raf,0,'scroll loop stopped after dragend');
   assert.equal(s.ptr,null,'pointer cleared after dragend');
   w.close();
+  // Result note: page order as short ranges, never a 212-item arrow chain.
+  const ot=w.orgOrderText;
+  assert.equal(ot(Array.from({length:212},(_,i)=>i)),'1–212');
+  assert.match(ot([0,1,2,8,3,4,'blank-1']),/^1–3, 9, 4–5, (blank|kosong)$/);
+  assert.match(ot(Array.from({length:40},(_,i)=>39-i)),/^40, 39, .* \+16 (more|lagi)$/);
   console.log('PASS organize workspace: empty state, sidebar, no duplicate panel');
 }
 main().catch(e=>{console.error(e);process.exit(1)});

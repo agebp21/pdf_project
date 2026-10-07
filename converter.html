@@ -127,6 +127,10 @@
   .org-textfoot button.primary{background:#ef2d2d;border-color:#ef2d2d;color:#fff}
   .org-textstatus{font-size:12px;color:#15803d;min-height:18px;margin:4px 2px 0}
   .org-foot{margin-top:.75rem;background:#fdf0f0;padding:.75rem 1.25rem;border-radius:0 0 15px 0}
+  .org-done{margin:.7rem 0 .5rem;font-size:12.5px;font-weight:800;color:#1A3C34;text-align:center}
+  .org-done span{display:block;font-size:11px;font-weight:600;color:#78716C;margin-top:.15rem;overflow-wrap:anywhere}
+  .org-after{display:flex;flex-direction:column;gap:.45rem}
+  .org-after>*{width:100%;justify-content:center;text-align:center}
   .org-go{width:100%;background:#ef2d2d;color:#fff;border:0;border-radius:12px;padding:.75rem;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.35)}
   .org-cell{position:relative;min-width:0}
   .org-card{background:#fff;border:1.5px solid #f3c4c4;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:stretch;gap:6px;cursor:move;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.04);height:100%}
@@ -539,6 +543,7 @@ function renderHeader(){
   const progNode=document.getElementById('progress'), errNode=document.getElementById('error');
   const flCard=document.getElementById('fileList');
   if(flCard&&progNode&&errNode) flCard.append(progNode,errNode);
+  if($('#resultActions')?.closest('#options')) resultActionsHome();   // don't lose the buttons with the old sidebar
   $('#options').innerHTML=html;
   if(t.id==='edit-pdf'&&window.PDFEdit){PDFEdit.toggleKind();PDFEdit.renderDrafts();}
   if(active==='organize-pdf'){
@@ -1358,6 +1363,18 @@ function renderOrganizeGrid(){
   if(sig!==orgReaderSig||!orgBook){ orgReaderSig=sig; orgReaderBuild(); }
 }
 const orgName=i=>typeof i==='number'?(i+1):'blank';
+// Page order as short ranges: [0..211] -> "1–212", [0,1,2,8,3,4,'blank-1'] -> "1–3, 9, 4–5, blank".
+// Long, shuffled orders are cut after `max` parts ("… +N more").
+function orgOrderText(order, max=24){
+  const parts=[];
+  for(const code of order){
+    const last=parts[parts.length-1];
+    if(typeof code==='number' && last && typeof last.b==='number' && code===last.b+1){ last.b=code; continue; }
+    parts.push({a:code,b:code});
+  }
+  const txt=parts.map(r=>typeof r.a!=='number'?L('blank','kosong'):(r.a===r.b?`${r.a+1}`:`${r.a+1}–${r.b+1}`));
+  return txt.length>max ? txt.slice(0,max).join(', ')+L(` … +${txt.length-max} more`,` … +${txt.length-max} lagi`) : txt.join(', ');
+}
 // Click a blank page -> pick an image to fill it (stored as JPEG, embedded on save).
 window.orgBlankAsk=(id)=>{ orgBlankTarget=id; const inp=document.getElementById('blankInput'); if(inp){ inp.value=''; inp.click(); } };
 window.orgBlankPicked=async (inp)=>{
@@ -1911,7 +1928,13 @@ window.orgDriveDirect=async ()=>{
   }catch(e){ const m=(e&&(e.message||e))||'Drive error'; status(m); showError(String(m)); }
 };
 window.clearFiles=()=>{files=[]; updateFileUI(); $('#fileInput').value=''; log('Cleared');}
-window.resetAll=()=>{clearFiles(); $('#result').classList.add('hidden'); $('#progress').classList.add('hidden'); $('#error').classList.add('hidden');}
+// Organize shows the result buttons in its sidebar, under the Organize button;
+// every other tool (and a reset) puts them back under the result preview.
+function resultActionsHome(){
+  $('#resultNote')?.remove();
+  const box=$('#resultActions'); box.className='flex flex-wrap gap-2 mt-4'; $('#resultPreview').after(box);
+}
+window.resetAll=()=>{resultActionsHome(); clearFiles(); $('#result').classList.add('hidden'); $('#progress').classList.add('hidden'); $('#error').classList.add('hidden');}
 const drop=$('#drop'), input=$('#fileInput'), pickBtn=$('#pickBtn');
 // Choose files: the shared Add source dialog (link, upload, Google Drive, drop), like the flipbook's.
 pickBtn.addEventListener('click',(e)=>{
@@ -2049,8 +2072,7 @@ function downloadBlob(blob, filename, {flipbookSource=null}={}){
   _lastObjectUrl=url;
   const a=$('#downloadBtn'); a.href=url; a.download=filename;
   $('#result').classList.remove('hidden');
-  // Buttons back under the preview (Organize moves them up, see organizePdf).
-  $('#resultNote')?.remove(); $('#resultActions').className='flex flex-wrap gap-2 mt-4'; $('#resultPreview').after($('#resultActions'));
+  resultActionsHome();
   $('#progress').textContent='✅ Done — grab your download below.';
   log('Download ready: '+filename+' '+(blob.size/1024).toFixed(1)+'KB type='+blob.type);
   if(blob.type.includes('pdf')){
@@ -2475,12 +2497,15 @@ async function organizePdf(){
   if(organizeOrder.length===0) throw new Error(L('No pages','Tidak ada halaman'));
   const bytes=await buildOrganizePdf(organizeOrder);
   downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'-organized.pdf'));
-  $('#resultPreview').innerHTML=L(`<p class="text-center py-2 text-xs text-gray-500">Order: ${organizeOrder.map(orgName).join(' → ')}</p>`,`<p class="text-center py-2 text-xs text-gray-500">Urutan: ${organizeOrder.map(orgName).join(' → ')}</p>`)+$('#resultPreview').innerHTML;
-  // The buttons go right under the "pages saved" line, above the long order + preview.
-  const note=document.createElement('p'); note.id='resultNote'; note.className='text-[13px] font-bold text-[#1A3C34]';
-  note.textContent=L(`✅ Organize: ${organizeOrder.length} pages saved`,`✅ Organize: ${organizeOrder.length} halaman tersimpan`);
-  $('#resultActions').className='flex flex-wrap gap-2 mt-3 mb-4';
-  $('#resultPreview').before(note,$('#resultActions'));
+  // No big preview here: the page grid already shows the result. The note and
+  // the buttons go in the sidebar, right under the Organize button.
+  $('#result').classList.add('hidden'); $('#progress').classList.add('hidden');
+  const foot=document.querySelector('#orgSide .org-foot');
+  if(!foot){ resultActionsHome(); $('#result').classList.remove('hidden'); return; }
+  const note=document.createElement('p'); note.id='resultNote'; note.className='org-done';
+  note.innerHTML=L(`✅ ${organizeOrder.length} pages saved`,`✅ ${organizeOrder.length} halaman tersimpan`)+`<span>${L('Pages','Halaman')}: ${orgOrderText(organizeOrder)}</span>`;
+  const box=$('#resultActions'); box.className='org-after';
+  foot.append(note,box);
 }
 // Grid positions (0-based) of the selected pages, in grid order.
 function orgSelectedPositions(){
@@ -2617,7 +2642,7 @@ window.orgSplitEvery=async ()=>{
     }
     const blob=await zip.generateAsync({type:'blob'});
     downloadBlob(blob, orgBaseName()+`-split-every-${n}.zip`);
-    orgNote(L(`<p class="text-center py-2">✅ Split every ${n} pages → <b>${chunks} files</b> in a ZIP</p>`,`<p class="text-center py-2">✅ Pisah per ${n} halaman → <b>${chunks} file</b> nang ZIP</p>`));
+    orgNote(L(`<p class="text-center py-2">✅ Split every ${n} pages → <b>${chunks} files</b> in a ZIP</p>`,`<p class="text-center py-2">✅ Pisah per ${n} halaman → <b>${chunks} file</b> dalam ZIP</p>`));
     log('Org split every '+n+' -> '+chunks+' files');
   }catch(e){ showError(e.message); }
 };
