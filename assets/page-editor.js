@@ -206,13 +206,24 @@
       } catch (e) { layer = null; }
     }
     if (!layer) imgEls.length = 0;                                       // could not separate: keep pictures in the background
+    // Only a big photo, or one with see-through design over it (a panel), stays under
+    // the design. Others (logos, figures) sit on top, so they can move anywhere; the
+    // paper fills the hole they leave.
+    const holes = [];
+    for (const im of imgEls) {
+      const b = im.clip, x0 = Math.floor(b.x0), y0 = Math.floor(b.y0), x1 = Math.ceil(b.x1), y1 = Math.ceil(b.y1);
+      let semi = 0, n = 0;
+      for (let y = y0; y < y1; y += 2) for (let x = x0; x < x1; x += 2) { const a = layer[(y * W + x) * 4 + 3]; n++; if (a > 25 && a < 230) semi++; }
+      im.under = im.w * im.h > 0.25 || semi / Math.max(1, n) > 0.08;
+      if (!im.under) holes.push({ x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, padding: 2 });
+    }
 
     // Text colours from the page as printed; then the text leaves the design layer.
     const lineBoxes = lines.map(l => ({ x0: l.x, y0: l.y, x1: l.x + l.w, y1: l.y + l.h }));
     const colors = C.textColors(original.data, W, H, lineBoxes);
     lines.forEach((l, i) => { l.color = colors[i]; });
     const bgData = new ImageData(layer || new Uint8ClampedArray(original.data), W, H);
-    C.repair(bgData.data, W, H, lineBoxes);
+    C.repair(bgData.data, W, H, [...lineBoxes, ...holes]);
     ctx.clearRect(0, 0, W, H); ctx.putImageData(bgData, 0, 0);
 
     const blocks = C.paragraphs(lines);
