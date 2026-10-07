@@ -41,3 +41,7 @@ body.clay button.secondary,body.clay a.secondary{background:#fff;color:#1C1917;b
 body.clay .controls button{background:#fff;border:1px solid #E4DED0;border-radius:999px;box-shadow:0 4px 12px rgba(28,25,23,.06)}
 body.clay .back-link{color:#1A3C34}
 body.clay .feedback{background:#EFF6EC;border-color:#1A3C34}
+/* Save & export panel: every button white, orange only on hover (owner request 7 Oct) */
+body.clay #export-fields button.primary.apply{background:#fff!important;color:#1C1917!important;border:1.5px solid #1C1917!important;box-shadow:none!important;font-weight:700}
+body.clay #export-fields button{transition:background .15s,color .15s,box-shadow .15s,transform .15s}
+body.clay #export-fields button:not(:disabled):hover,body.clay #export-fields button:not(:disabled):focus-visible{background:linear-gradient(180deg,#FF7A45,#FF5C28)!important;color:#fff!important;border-color:#E04E1F!important;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45)!important;transform:translateY(-1px)}

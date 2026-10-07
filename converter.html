@@ -1117,10 +1117,18 @@ async function orgReaderBuild(){
     if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('No pages','Tidak ada halaman')+'</p>';
     return;
   }
+  // Page shape: the median of a sample of pages (a landscape cover must not
+  // shrink a book of portrait pages, and the other way round).
   let ratio=0.72;
   try{
-    const first=orgPdfDocs[0];
-    if(first){ const pg=await first.getPage(1); const v=pg.getViewport({scale:1}); ratio=v.width/v.height; pg.cleanup(); }
+    const shapes=[];
+    for(const doc of orgPdfDocs){
+      if(!doc) continue;
+      for(let n=1;n<=Math.min(doc.numPages,8)&&shapes.length<24;n++){
+        const pg=await doc.getPage(n); const v=pg.getViewport({scale:1}); shapes.push(v.width/v.height); pg.cleanup();
+      }
+    }
+    if(shapes.length){ shapes.sort((a,b)=>a-b); ratio=shapes[Math.floor(shapes.length/2)]; }
   }catch(e){}
   const avail=Math.max(280,(wrap.clientWidth||600)-24);
   const single=avail<520;
