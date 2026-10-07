@@ -46,7 +46,13 @@
   .pe-ghost{pointer-events:none;z-index:6}
   .pe-ghost .pe-h{pointer-events:auto}
   .pe-text .pe-txt{outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;cursor:text}
-  .pe-text{padding:0;cursor:move}
+  .pe-text{padding:0;cursor:text}
+  /* Text works like Word: no frame, no corner handles, just the caret. A small grip
+     on the left (on hover / while editing) moves the block. */
+  .pe-el.pe-text,.pe-el.pe-text:hover,.pe-el.pe-text.sel{outline:none}
+  .pe-el.pe-text .pe-h:not([data-h=move]){display:none!important}
+  .pe-el.pe-text .pe-h[data-h=move]{display:block;opacity:0;width:9px;height:9px;left:-15px;margin-top:-5px;border:0;border-radius:50%;background:#FF5C28;transition:opacity .15s}
+  .pe-el.pe-text:hover .pe-h[data-h=move],.pe-el.pe-text.sel .pe-h[data-h=move]{opacity:.8}
   .pe-image img{width:100%;height:100%;display:block;user-select:none;pointer-events:none}
   .pe-image,.pe-rect,.pe-ellipse,.pe-line{cursor:move}
   .pe-ellipse{border-radius:50%}
