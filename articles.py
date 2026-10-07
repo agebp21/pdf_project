@@ -553,3 +553,106 @@ article(
         ]),
         ('cta', 'pdf-ke-flipbook'),
     ], tool='pdf-ke-flipbook')
+
+article(
+    'cara-membaca-jurnal-pdf-lebih-nyaman',
+    'Cara Membaca Jurnal PDF Lebih Nyaman: Jadikan Seperti Buku',
+    'Jurnal dan e-book PDF melelahkan dibaca di HP? Ubah jadi flipbook yang bisa dibalik, distabilo, diberi catatan, '
+    'dibacakan, dan diterjemahkan — semua tersimpan di satu tempat.',
+    '2026-10-07',
+    [
+        ('p', 'Membaca jurnal PDF di HP sering bikin pusing: harus zoom dan geser ke kanan-kiri, catatan tercecer di aplikasi '
+              'lain, dan besok lupa sampai halaman berapa. Padahal mahasiswa bisa membaca puluhan artikel dalam satu semester.'),
+        ('p', 'Dengan [PDF ke Flipbook](/pdf-ke-flipbook), jurnal tampil seperti buku yang halamannya bisa dibalik, lengkap '
+              'dengan alat untuk belajar.'),
+        ('h2', 'Langkahnya'),
+        ('ol', ['Buka [PDF ke Flipbook](/flipbook.html) dan tambahkan jurnal dari HP, laptop, Google Drive, atau link.',
+                'Baca dalam mode layar penuh; balik halaman seperti membaca buku.',
+                'Tekan Save My Library agar jurnal tersimpan di akun dan bisa dibuka lagi kapan saja tanpa mengunggah ulang.']),
+        ('h2', 'Alat yang membuat belajar lebih ringan'),
+        ('ul', ['Stabilo untuk menandai kalimat penting — dan ringkas bagian yang distabilo dengan AI menjadi catatan singkat.',
+                'Catatan per halaman yang bisa ditambah, diedit, dan diekspor sebagai teks untuk bahan tinjauan pustaka.',
+                'Bookmark untuk menandai halaman penting dan langsung melompat ke sana.',
+                'Audio book: halaman dibacakan dengan suara, cocok untuk mengulang materi sambil di perjalanan.',
+                'Terjemahan seluruh jurnal berbahasa Inggris ke Bahasa Indonesia, tata letaknya tetap mengikuti kolom asli.',
+                'Spidol untuk mencoret-coret diagram atau rumus.']),
+        ('h2', 'Jurnal hasil scan?'),
+        ('p', 'Halaman bergambar atau hasil scan tetap bisa distabilo dan dibacakan karena teksnya dikenali dengan OCR. Untuk '
+              'menyalin teksnya ke Word, gunakan [OCR PDF](/ocr-pdf) lalu [PDF ke Word](/pdf-ke-word).'),
+        ('faq', [
+            ('Apakah stabilo dan catatan saya tersimpan?', 'Ya, stabilo, catatan, dan bookmark tersimpan untuk setiap buku sehingga bisa dilanjutkan saat dibuka lagi di perangkat yang sama.'),
+            ('Apakah jurnal saya bisa dilihat orang lain?', 'Tidak. Jurnal di My Library disimpan terenkripsi di akun Anda; hanya terbuka untuk orang lain bila Anda sendiri membuat share link.'),
+            ('Berapa jurnal yang bisa saya simpan?', 'Sesuai kuota paket Anda. Jurnal yang sudah tidak dipakai bisa dihapus dari My Library.'),
+        ]),
+        ('cta', 'pdf-ke-flipbook'),
+    ], tool='pdf-ke-flipbook')
+
+article(
+    'cara-menggabungkan-jurnal-jadi-buku-referensi',
+    'Cara Menggabungkan Banyak Jurnal Jadi Satu Buku Referensi Skripsi',
+    'Satukan jurnal-jurnal referensi skripsi menjadi satu buku flipbook: urut per bab, diberi bookmark dan catatan, '
+    'siap dibaca kapan saja.',
+    '2026-10-07',
+    [
+        ('p', 'Saat menyusun skripsi atau tesis, folder "Referensi" biasanya penuh puluhan file PDF dengan nama acak. Mencari '
+              'kembali kutipan yang pernah dibaca jadi membuang waktu. Solusinya: kumpulkan jurnal per bab menjadi satu buku.'),
+        ('h2', '1. Kelompokkan jurnal per bab'),
+        ('p', 'Misalnya Bab 2 (landasan teori), Bab 3 (metode), dan jurnal pembanding hasil penelitian. Beri nama file yang '
+              'jelas, misalnya "Bab2-01-Kotler-2020.pdf", agar urutannya rapi.'),
+        ('h2', '2. Gabungkan jadi satu PDF'),
+        ('ol', ['Buka [Gabung PDF](/converter.html?tool=merge-pdf) dan pilih jurnal satu bab.',
+                'Atur urutannya, lalu gabungkan.',
+                'Halaman yang tidak perlu (misalnya daftar pustaka panjang) bisa dibuang dengan [Atur Halaman PDF](/atur-halaman-pdf).',
+                'Bila ukurannya besar, kecilkan dengan [Kompres PDF](/kompres-pdf) agar ringan dibuka di HP.']),
+        ('h2', '3. Jadikan buku referensi'),
+        ('ol', ['Buka hasil gabungan di [PDF ke Flipbook](/flipbook.html) dan beri judul, misalnya "Referensi Bab 2".',
+                'Pasang bookmark di halaman pertama setiap jurnal agar mudah berpindah antarartikel.',
+                'Stabilo kalimat yang akan dikutip dan tulis catatan — catatan bisa diekspor sebagai teks.',
+                'Simpan ke My Library.']),
+        ('h2', 'Belum punya cukup referensi?'),
+        ('p', 'Cari jurnal dan ebook open access lewat [Cari Jurnal & Ebook](/cari-jurnal-ebook), ringkas dengan '
+              '[AI Summarizer](/ringkas-pdf-ai) untuk memilah yang relevan, lalu terjemahkan jurnal berbahasa Inggris dengan '
+              '[Terjemahkan PDF](/terjemahkan-pdf).'),
+        ('tip', 'Buku referensi ini untuk belajar pribadi. Tetap tulis sitasi dari jurnal aslinya (penulis, tahun, judul, DOI), '
+                'dan jangan menyebarkan ulang jurnal berbayar.'),
+        ('faq', [
+            ('Apakah urutan jurnal bisa diubah setelah digabung?', 'Bisa, dengan Atur Halaman PDF; lalu buat flipbook ulang dari hasilnya.'),
+            ('Apakah ada batas jumlah file yang digabung?', 'Tidak ada batas jumlah khusus; batasnya kemampuan memori perangkat. Untuk puluhan jurnal besar, gabungkan per bab.'),
+        ]),
+        ('cta', 'gabung-pdf'),
+    ], tool='gabung-pdf')
+
+article(
+    'cara-membaca-jurnal-dengan-cepat',
+    'Cara Membaca Jurnal dengan Cepat untuk Skripsi',
+    'Strategi membaca jurnal secara efisien: pilah dulu dengan abstrak dan ringkasan AI, baca bagian yang perlu, '
+    'stabilo dan catat untuk tinjauan pustaka.',
+    '2026-10-07',
+    [
+        ('p', 'Membaca jurnal dari halaman pertama sampai terakhir satu per satu bisa memakan berjam-jam. Peneliti '
+              'berpengalaman membaca secara bertahap: memilah dulu, baru membaca mendalam yang benar-benar relevan.'),
+        ('h2', 'Tahap 1: Pilah dalam 5 menit'),
+        ('ol', ['Baca judul dan abstrak — apakah topiknya sesuai skripsi Anda?',
+                'Lompat ke kesimpulan untuk melihat temuan utamanya.',
+                'Lihat tabel dan gambar hasil.',
+                'Belum yakin? Buat ringkasan dengan [AI Summarizer](/ringkas-pdf-ai) — biasanya selesai dalam 15–60 detik.']),
+        ('h2', 'Tahap 2: Baca bagian yang dibutuhkan'),
+        ('ul', ['Untuk landasan teori: bagian pendahuluan dan tinjauan pustaka jurnal tersebut.',
+                'Untuk metode: bagian metode (sampel, variabel, alat analisis).',
+                'Untuk pembahasan: hasil dan diskusi, lalu bandingkan dengan penelitian Anda.']),
+        ('h2', 'Tahap 3: Tandai dan catat'),
+        ('p', 'Buka jurnal sebagai flipbook — lihat [cara membaca jurnal PDF lebih nyaman](/artikel/cara-membaca-jurnal-pdf-lebih-nyaman):'),
+        ('ul', ['Stabilo kalimat yang akan dikutip; bagian yang distabilo bisa diringkas AI menjadi catatan.',
+                'Tulis catatan per halaman: poin penting, kritik, dan kaitannya dengan skripsi Anda.',
+                'Ekspor catatan sebagai teks untuk mulai menulis tinjauan pustaka.']),
+        ('h2', 'Jurnal berbahasa Inggris'),
+        ('p', 'Terjemahkan seluruh jurnal ke Bahasa Indonesia dengan tombol Translate di flipbook untuk memahami isi lebih '
+              'cepat, lalu periksa istilah teknis di teks aslinya. Panduan lengkap: '
+              '[cara menerjemahkan jurnal bahasa Inggris](/artikel/cara-menerjemahkan-jurnal-bahasa-inggris).'),
+        ('tip', 'Ringkasan dan terjemahan AI membantu memahami, tetapi kutipan dan angka harus selalu dicek di jurnal aslinya.'),
+        ('faq', [
+            ('Berapa jurnal ideal untuk skripsi S1?', 'Ikuti pedoman kampus Anda. Yang penting relevan dan cukup baru; mulai dengan memilah 30–50 abstrak lalu baca mendalam yang paling sesuai.'),
+            ('Di mana mencari jurnal gratis yang legal?', 'Coba Cari Jurnal & Ebook di MyFlipbook, yang mengambil dari sumber open access seperti OpenAlex dan OAPEN.'),
+        ]),
+        ('cta', 'ringkas-pdf-ai'),
+    ], tool='ringkas-pdf-ai')
