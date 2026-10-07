@@ -162,3 +162,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-07 | `f15e5b1` | sesi iki | Seleksi biru mini-reader dipateni + takeout tombol + sela kartu. Backup `...-20261007-0945.tgz` (--exclude=.build → 13MB, jeneng unik timestamp). Verifikasi: suite organize ijo, capabilities 200, user-select live OK. |
 | 2026-10-07 | `0b7c66b` | Claude | Tampilan HP: header kabeh halaman rapi (tombol ora pecah, menu turun baris), topbar flipbook ora mlebar. Backup `...-20261007l.tgz`. |
 | 2026-10-07 | (kartu beranda) | Claude | Beranda: kartu Merge/Split/Compress dibusak, Organize PDF munggah sakwise Create a workflow. Backup `...-20261007m.tgz`. |
+| 2026-10-07 | `865ecc5` | Claude | Prototipe Editor PDF `editor.html` (durung ana link, noindex). HEAD uga ngemot `cd7c901` (garapan OpenCode: tab Merge/Split/Edit/Compress + Edit text OCR nang Organize) — saiki melu live. Backup `...-20261007n.tgz`. |
