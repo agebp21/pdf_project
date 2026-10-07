@@ -157,3 +157,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-07 | (reader+tombol) | Claude | Pembaca Organize: bentuk halaman saka median sampel (sampul landscape ora nyilikke halaman portrait); tombol Save & export flipbook putih, oranye mung pas hover. Backup `...-20261007h.tgz`. |
 | 2026-10-07 | (share sidebar) | Claude | Tombol Share link nang sidebar flipbook dibusak (share tetep nang tombol 🔗 Share ndhuwur). Backup `...-20261007i.tgz`. |
 | 2026-10-07 | (refresh draf) | Claude | Flipbook: refresh = buku bali otomatis saka draf (tanpa klik Continue); kunjungan anyar tetep takon. Backup `...-20261007j.tgz`. |
+| 2026-10-07 | `e6e2679` | Claude | Admin: Detail pengunjung (Asli/Tim/Mesin/Ragu + alasan, label manual nang `.data/admin-labels.sqlite3`), tombol "Jangan hitung browser ini" (cookie `mf_team`), kolom anyar `visits.kind`. Backup `.data/visits-backup-20261007-before-kind.sqlite3`, kode `...-20261007k.tgz`. |
