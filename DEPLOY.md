@@ -170,3 +170,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-07 | `5a4ab97` | Claude | Beranda: kartu + ikon hero Edit PDF dibusak (editor tetep liwat Organize → Edit). Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007s.tgz`. |
 | 2026-10-07 | `263f76a` | Claude | Organize: tombol asil (Unduh/Flipbook/Konversi maneh/Library) pindah ndek ngisor 'Organize: N halaman tersimpan', urutan + preview ndek ngisore. Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007t.tgz`. |
 | 2026-10-07 | `84c17e8` | Claude | Converter: tombol 📚 Open My Library dibusak teko panel asil (sing ndek kotak upload tetep). Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007u.tgz`. |
+| 2026-10-07 | `c0c497e` | Claude | Organize: tab Merge/Split/Edit/Compress dadi card mini (ikon + judul + keterangan), aktif pinggir oranye; HP 2 kolom. Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007v.tgz`. |
