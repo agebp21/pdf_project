@@ -333,14 +333,19 @@
   }
   function grow(div, el) { el.h = Math.max(el.h, div.getBoundingClientRect().height / stageH()); }
   // Like Word: when a text block gets taller (Enter, a longer paragraph) or shorter,
-  // everything below it in the same column moves down / up with it — and whatever
-  // shares a row with a moving block (a page number, an amount) moves along.
+  // everything below it moves down / up with it, except a parallel column (one that
+  // runs beside the edited block, as in a two-column layout); whatever shares a row
+  // with a moving block (a page number, an amount) moves along.
   function reflow(el, div, t, h0) {
     const H = stageH(), d = (t.getBoundingClientRect().height - h0) / H;
     if (!h0 || Math.abs(d) < 0.5 / H) { grow(div, el); return; }
     const bottom = el.y + h0 / H, below = els().filter(o => o !== el && o.y >= bottom - 0.002);
-    const moving = new Set(below.filter(o => o.x < el.x + el.w && o.x + o.w > el.x));
-    for (const o of below) if (!moving.has(o) && [...moving].some(m => Math.abs(m.y - o.y) < 0.004)) moving.add(o);
+    const apart = o => o.x >= el.x + el.w || o.x + o.w <= el.x;
+    const beside = els().filter(p => p !== el && apart(p) && p.y < bottom && p.y + p.h > el.y);
+    const parallel = o => apart(o) && beside.some(p => p.x < o.x + o.w && p.x + p.w > o.x);
+    const moving = new Set(below.filter(o => !parallel(o)));
+    const short = o => o.type === 'text' && String(o.text).trim().split(/\s+/).length <= 2;
+    for (const o of below) if (!moving.has(o) && short(o) && [...moving].some(m => Math.abs(m.y - o.y) < 0.004)) moving.add(o);
     for (const o of moving) {
       o.y = Math.max(0, o.y + d);
       document.querySelectorAll(`#pe-stage [data-id="${o.id}"]`).forEach(n => place(n, o));
