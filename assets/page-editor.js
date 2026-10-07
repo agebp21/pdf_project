@@ -142,6 +142,14 @@
     // Text: the PDF's own text, or OCR for scanned pages.
     const content = await p.getTextContent();
     const items = [];
+    // Does the PDF's own font draw these characters? Missing ones fall back to the
+    // second family, so two different fallbacks measure differently.
+    const probe = document.createElement('canvas').getContext('2d');
+    const drawable = (key, s) => {
+      s = s.replace(/\s+/g, '');
+      probe.font = `40px "${key}", monospace`; const a = probe.measureText(s).width;
+      probe.font = `40px "${key}", serif`; return Math.abs(a - probe.measureText(s).width) < 0.5;
+    };
     for (const it of content.items) {
       if (!it.str || !it.str.trim()) continue;
       const t = pdfjsLib.Util.transform(vp.transform, it.transform);
@@ -151,8 +159,12 @@
       try {
         const fo = p.commonObjs.get(it.fontName);
         if (fo && fo.name) fname = fo.name + ' ' + fname;
+        // Artwork lettering (Type3 glyphs, or a font whose characters do not match its
+        // shapes) stays in the background: as text it would come out as other letters.
+        if (fo && fo.isType3Font) continue;
         // An embedded font pdf.js loaded into the page (its FontFace is named loadedName).
-        if (fo && fo.data && fo.loadedName && !fo.isType3Font && !fo.missingFile) {
+        if (fo && fo.data && fo.loadedName && !fo.missingFile) {
+          if (!drawable(fo.loadedName, it.str)) continue;
           font = fo.loadedName;
           st.fonts[font] ||= { data: fo.data, name: String(fo.name || '').replace(/^[A-Z]{6}\+/, '').replace(/-\d+$/, '') };
         }
@@ -161,20 +173,22 @@
         bold: /bold|black|heavy|semibold|demi/i.test(fname), italic: /italic|oblique/i.test(fname) });
     }
     let lines = C.groupLines(items);
-    const scanned = !lines.length;
+    let ops = [];
+    try { ops = pictureOps(await p.getOperatorList(), vp.transform); } catch (e) {}
+    const area = o => (o.box.x1 - o.box.x0) * (o.box.y1 - o.box.y0) / (W * H);
+    // OCR only for a scan (a picture over most of the page). A page without text that
+    // is not a scan (a title drawn as artwork) stays design: OCR there reads nonsense.
+    const scanned = !content.items.some(it => it.str && it.str.trim()) && ops.some(o => area(o) > 0.5);
     if (scanned) {
       status(L('Scanned page: reading the text (OCR)…', 'Halaman hasil scan: membaca teks (OCR)…'));
       const found = await AnimationOCR.read(canvas, e => { if (e.status === 'recognizing text') status(L('OCR ', 'OCR ') + Math.round((e.progress || 0) * 100) + '%'); });
-      lines = found.map(l => ({ text: C.clean(l.text), x: l.bbox.x0, y: l.bbox.y0, w: l.bbox.x1 - l.bbox.x0, h: l.bbox.y1 - l.bbox.y0, size: (l.bbox.y1 - l.bbox.y0) * 0.92, family: 'sans' }));
+      lines = found.filter(l => l.confidence >= 75 && (l.text.match(/[\p{L}\p{N}]/gu) || []).length >= 2)
+        .map(l => ({ text: C.clean(l.text), x: l.bbox.x0, y: l.bbox.y0, w: l.bbox.x1 - l.bbox.x0, h: l.bbox.y1 - l.bbox.y0, size: (l.bbox.y1 - l.bbox.y0) * 0.92, family: 'sans' }));
     }
 
     // Pictures become movable, replaceable images under the page's design.
     // (A scanned page's full-page picture holds its text: it stays the background.)
-    let ops = [];
-    try { ops = pictureOps(await p.getOperatorList(), vp.transform).filter(o => {
-      const a = (o.box.x1 - o.box.x0) * (o.box.y1 - o.box.y0) / (W * H);
-      return a > 0.004 && !(scanned && a > 0.6);
-    }); } catch (e) {}
+    ops = ops.filter(o => area(o) > 0.004 && !(scanned && area(o) > 0.6));
     const imgEls = [];
     for (const o of ops) {
       const src = pictureSrc(p, o);
