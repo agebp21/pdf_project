@@ -307,9 +307,13 @@
     if (el.type === 'text') {
       const t = document.createElement('div'); t.className = 'pe-txt'; t.contentEditable = 'true'; t.spellcheck = false;
       t.textContent = el.text; styleText(t, el); div.append(t);
-      t.addEventListener('focus', () => select(el.id, false));
+      let h0 = 0;                                                         // the text's height before this keystroke
+      t.addEventListener('focus', () => { select(el.id, false); h0 = t.getBoundingClientRect().height; });
       t.addEventListener('blur', commitTyping);
-      t.addEventListener('input', () => { el.text = t.innerText.replace(/\n$/, ''); touched(true); grow(div, el); });
+      t.addEventListener('input', () => {
+        el.text = t.innerText.replace(/\n$/, ''); touched(true);
+        reflow(el, div, t, h0); h0 = t.getBoundingClientRect().height;
+      });
       t.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); document.execCommand('insertLineBreak'); } if (e.key === 'Escape') t.blur(); });
       t.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData || window.clipboardData).getData('text/plain')); });
     } else if (el.type === 'image') {
@@ -328,6 +332,21 @@
     return div;
   }
   function grow(div, el) { el.h = Math.max(el.h, div.getBoundingClientRect().height / stageH()); }
+  // Like Word: when a text block gets taller (Enter, a longer paragraph) or shorter,
+  // everything below it in the same column moves down / up with it — and whatever
+  // shares a row with a moving block (a page number, an amount) moves along.
+  function reflow(el, div, t, h0) {
+    const H = stageH(), d = (t.getBoundingClientRect().height - h0) / H;
+    if (!h0 || Math.abs(d) < 0.5 / H) { grow(div, el); return; }
+    const bottom = el.y + h0 / H, below = els().filter(o => o !== el && o.y >= bottom - 0.002);
+    const moving = new Set(below.filter(o => o.x < el.x + el.w && o.x + o.w > el.x));
+    for (const o of below) if (!moving.has(o) && [...moving].some(m => Math.abs(m.y - o.y) < 0.004)) moving.add(o);
+    for (const o of moving) {
+      o.y = Math.max(0, o.y + d);
+      document.querySelectorAll(`#pe-stage [data-id="${o.id}"]`).forEach(n => place(n, o));
+    }
+    el.h = Math.max(0.005, el.h + d); place(div, el);
+  }
 
   // ---- select / drag / resize / rotate -----------------------------------------------------------
   function select(id, rerender = true) {
