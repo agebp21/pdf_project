@@ -183,3 +183,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-07 | `ea155c1` | Claude | Editor: logo/gambar cilik ndek dhuwur desain (bebas digeser, transparan), bolongane ditambal warna kertas; mung foto gedhe/ketumpangan panel sing ndek ngisor. Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007af.tgz`. |
 | 2026-10-07 | `8427d9d` | Claude | Editor: seleksi akeh blok (Ctrl+A, seret kotak, Shift+klik): format/geser/hapus/salin barengan. Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007ag.tgz`. |
 | 2026-10-07 | `5e977e4` | Claude | Editor: seret seleksi teks nyabrang paragraf (kaya Word); drag-and-drop teks dipateni. Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007ah.tgz`. |
+| 2026-10-07 | `b3f4256` | Claude | Editor: rata kiri-kanan (justify) ndek toolbar + export (baris pungkasan paragraf rata kiwa). Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007ai.tgz`. |
