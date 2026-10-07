@@ -172,3 +172,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-07 | `84c17e8` | Claude | Converter: tombol 📚 Open My Library dibusak teko panel asil (sing ndek kotak upload tetep). Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007u.tgz`. |
 | 2026-10-07 | `c0c497e` | Claude | Organize: tab Merge/Split/Edit/Compress dadi card mini (ikon + judul + keterangan), aktif pinggir oranye; HP 2 kolom. Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007v.tgz`. |
 | 2026-10-07 | `b443dfc` | Claude | Organize: tombol asil (Unduh/Flipbook/Konversi maneh) ndek sidebar ngisor tombol Organize, preview PDF gedhe dibusak, urutan diringkes dadi rentang. Tes: JS kabeh lulus; Python siji error flaky, 2 putaran ulang 145 OK. Backup `...-20261007w.tgz`. |
+| 2026-10-07 | `b3118f0` | Claude | Organize: card mode luwih gedhe (ikon 42px, judul 16px), HP disetel, fokus ora outline ireng. Tes: JS kabeh lulus, Python 145 OK. Backup `...-20261007x.tgz`. |
