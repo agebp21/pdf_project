@@ -79,9 +79,10 @@
   .org-sel-count{margin:0;font-size:12px;color:#555}
   .org-sel-del{background:none;border:0;color:#ef2d2d;font-weight:800;font-size:12px;cursor:pointer;text-align:left;padding:0}
   .org-sel-row{display:flex;flex-wrap:wrap;gap:.4rem}
-  .org-sel-row button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .7rem;font-size:11px;font-weight:700;cursor:pointer}
-  .org-sel-row input{flex:1;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .7rem;font-size:11px}
-  .org-sel-row select{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px;font-weight:700;cursor:pointer;max-width:100%}
+  .org-sel-row button{flex:1 1 0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .7rem;font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+  .org-sel-row input[type=text]{flex:2 1 0;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .7rem;font-size:11px}
+  .org-sel-row input[type=number]{flex:0 0 64px;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px}
+  .org-sel-row select{flex:0 0 auto;max-width:45%;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px;font-weight:700;cursor:pointer}
   .org-foot{margin-top:.75rem;background:#fdf0f0;padding:.75rem 1.25rem;border-radius:0 0 15px 0}
   .org-go{width:100%;background:#ef2d2d;color:#fff;border:0;border-radius:12px;padding:.75rem;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.35)}
   .org-cell{position:relative;min-width:0;display:flex;align-items:center}
@@ -441,9 +442,11 @@ function renderHeader(){
               <option value="line">${L('Line','Garis')}</option>
               <option value="image">${L('Image','Gambar')}</option>
             </select>
+            <button onclick="orgAnnotate()">✎ ${L('Add','Tambah')}</button>
+          </div>
+          <div class="org-sel-row">
             <input id="orgAnnText" type="text" maxlength="60" placeholder="${L('Text or W×H…','Teks atau P×L…')}" aria-label="${L('Text or size','Teks atau ukuran')}">
             <input id="orgAnnSize" type="number" value="14" min="0.1" step="0.5" aria-label="${L('Size','Ukuran')}">
-            <button onclick="orgAnnotate()">✎ ${L('Add','Tambah')}</button>
           </div>
           <input id="orgAnnImage" type="file" accept=".png,.jpg,.jpeg" hidden onchange="orgAnnPicked(this)">
         </div>

@@ -1317,6 +1317,11 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Tes: organize-actions +annotate (teks/rect/line + guard format); 7 suite ijo; sintaks + diff bersih; HTTP 200 organize + edit-pdf.
 - Durung commit/push/deploy (commit nunggu prentah: "kabeh engko").
 
+### 2026-10-07 — Layout menu organize ditata (request owner + screenshot)
+- Masalah nang screenshot: baris anotasi sesek (select + 2 input + tombol nang 1 baris → input menciut dadi sliver). Formula anyar: saben baris = tombol flex rata (select-all/clear, rotate/duplikat, extract full), input angka fixed 64px + tombol flex, teks flex + tombol flex, anotasi pecah 2 baris (kind+Tambah / teks+ukuran); select max 45%.
+- Tes: suite organize ijo (markup order-agnostic); sintaks + diff bersih.
+- Durung commit/push/deploy.
+
 ### 2026-10-06 — Edit PDF tool tenanan (request owner, kartu SOON → live)
 - Kartu "Edit PDF" urip: tambah teks, stempel gambar, kotak, elips, garis nang posisi bebas (preset + geser mm + rotasi), warna/opacity, rentang halaman — ditumpuk pirang-pirang nang sedino jalan (daftar draft + busak per item). Mesin `PDFEdit` anyar reuse geometri matriks/rotasi sing wes kebukti (watermark/nomer); jujur nang watesan: font Helvetica tok (script liyo → dikandhani nganggo gambar), font system liyo ora di-embed, freehand durung (butuh canvas gambar).
 - File: `assets/pdf-edit.js` (annotate + validasi + form + draft list), `converter.html` (TOOLS + wiring + toggleKind hook), `index.html` (metu seko SOON).
