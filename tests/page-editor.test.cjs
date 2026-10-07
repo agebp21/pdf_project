@@ -121,6 +121,19 @@ async function main() {
     assert.ok(open1[1] > 120 && open1[0] < 60, 'new picture visible ' + open1);
     assert.ok(under[1] > under[0] + 40 && under[0] > 90, 'panel still lightens the picture under it ' + under);
   }
+  // Justify: every line but a paragraph's last reaches the right edge.
+  {
+    const j0 = await PDFDocument.create(); j0.addPage([300, 200]);
+    const jb = await j0.save();
+    const para = 'satu dua tiga empat lima enam tujuh delapan sembilan sepuluh sebelas';
+    const jOut = await E.exportPdf(jb, { 0: { size: [300, 200], elements: [{ type: 'text', x: 0.1, y: 0.1, w: 0.6, h: 0.3, text: para, fontSize: 12 / 200, family: 'sans', color: '#000000', align: 'justify' }] } });
+    const jd = await open(jOut), jc = await (await jd.getPage(1)).getTextContent(); await jd.destroy();
+    const rows = {}; for (const it of jc.items) if (it.str.trim()) (rows[Math.round(it.transform[5])] ||= []).push(it.transform[4] + it.width);
+    const ends = Object.keys(rows).map(Number).sort((a, b) => b - a).map(y => Math.max(...rows[y]));
+    assert.ok(ends.length >= 2, 'wraps onto several lines');
+    for (const e of ends.slice(0, -1)) assert.ok(Math.abs(e - (30 + 180)) < 1, 'justified line ends at the right edge: ' + e);
+    assert.ok(ends[ends.length - 1] < 30 + 180 - 5, 'the last line stays left');
+  }
   // Table of contents rows (title + page number on one baseline) never merge into a paragraph.
   const tocRows = ['8. Memulai dari yang Kecil sekali', '9. Proyek Percomblangan yang panjang', '10. Kurator Muda di kota besar'].flatMap((t, i) => [
     { text: t, x: 100, y: 300 + i * 16, w: 200, h: 12 }, { text: String(65 + i * 7), x: 330, y: 300 + i * 16, w: 14, h: 12 }]);

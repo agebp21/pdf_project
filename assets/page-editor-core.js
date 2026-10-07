@@ -317,15 +317,22 @@
           const gap = own && !own.space ? size * 0.25 : 0;            // a font without a space glyph
           const width = s => gap ? s.split(' ').reduce((a, word, i) => a + (i ? gap : 0) + f.widthOfTextAtSize(word, size), 0) : f.widthOfTextAtSize(s, size);
           const lh = size * (el.lineHeight || LINE);
-          const lines = wrap(text, width, Math.max(w, size));
+          // Each paragraph wraps on its own: in justified text its last line stays left.
+          const lines = String(text).split('\n').flatMap(para => {
+            const ls = wrap(para, width, Math.max(w, size));
+            return ls.map((line, i) => ({ line, last: i === ls.length - 1 }));
+          });
           let base = H - el.y * H - size * baseline(el.lineHeight || LINE);
-          for (const line of lines) {
-            const lw = width(line);
+          for (const { line, last } of lines) {
+            const lw = width(line), words = line.split(/ +/).filter(Boolean);
             let cx = x + (el.align === 'center' ? (w - lw) / 2 : el.align === 'right' ? w - lw : 0);
-            if (!gap) { if (line) page.drawText(line, { x: cx, y: base, size, font: f, color: hex(el.color) }); }
-            else for (const word of line.split(' ')) {
-              if (word) page.drawText(word, { x: cx, y: base, size, font: f, color: hex(el.color) });
-              cx += f.widthOfTextAtSize(word, size) + gap;
+            // Justify: the words spread to both edges, the space between them grows.
+            const spread = el.align === 'justify' && !last && words.length > 1
+              ? (w - words.reduce((a, word) => a + f.widthOfTextAtSize(word, size), 0)) / (words.length - 1) : 0;
+            if (!gap && !spread) { if (line) page.drawText(line, { x: cx, y: base, size, font: f, color: hex(el.color) }); }
+            else for (const word of words) {
+              page.drawText(word, { x: cx, y: base, size, font: f, color: hex(el.color) });
+              cx += f.widthOfTextAtSize(word, size) + (spread || gap);
             }
             base -= lh;
           }

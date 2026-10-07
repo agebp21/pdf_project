@@ -468,7 +468,7 @@
   function toolbar() {
     const el = find(st.sel), H = page() ? page().size[1] : 0;
     const text = el && (el.type === 'text' || selected().some(o => o.type === 'text'));
-    for (const id of ['#pe-family', '#pe-size', '#pe-bold', '#pe-italic', '#pe-align-left', '#pe-align-center', '#pe-align-right']) { const b = $(id); if (b) b.disabled = !text; }
+    for (const id of ['#pe-family', '#pe-size', '#pe-bold', '#pe-italic', '#pe-align-left', '#pe-align-center', '#pe-align-right', '#pe-align-justify']) { const b = $(id); if (b) b.disabled = !text; }
     for (const id of ['#pe-delete', '#pe-front', '#pe-back', '#pe-color']) { const b = $(id); if (b) b.disabled = !el; }
     const fill = $('#pe-fill'); if (fill) fill.disabled = !(el && (el.type === 'rect' || el.type === 'ellipse'));
     const rep = $('#pe-replace'); if (rep) rep.parentElement.style.display = el && el.type === 'image' ? '' : 'none';
@@ -482,7 +482,7 @@
       } else { if (orig) orig.remove(); fam.value = el.family || 'sans'; }
       $('#pe-size').value = Math.round(el.fontSize * H * 10) / 10;
       $('#pe-bold').classList.toggle('on', !!el.bold); $('#pe-italic').classList.toggle('on', !!el.italic);
-      for (const a of ['left', 'center', 'right']) $('#pe-align-' + a).classList.toggle('on', (el.align || 'left') === a);
+      for (const a of ['left', 'center', 'right', 'justify']) $('#pe-align-' + a).classList.toggle('on', (el.align || 'left') === a);
     }
     if (el) { const c = el.type === 'text' ? el.color : el.stroke; if (c && /^#[0-9a-f]{6}$/i.test(c)) $('#pe-color').value = c; if (el.fill && /^#[0-9a-f]{6}$/i.test(el.fill)) $('#pe-fill').value = el.fill; }
     $('#pe-undo').disabled = !st.past.length; $('#pe-redo').disabled = !st.future.length;
@@ -578,7 +578,7 @@
     // With several blocks, all follow the first one (all on, or all off).
     $('#pe-bold').onclick = () => { const v = !(find(st.sel) || {}).bold; change(textOnly(el => { el.bold = v; delete el.font; })); };
     $('#pe-italic').onclick = () => { const v = !(find(st.sel) || {}).italic; change(textOnly(el => { el.italic = v; delete el.font; })); };
-    for (const a of ['left', 'center', 'right']) $('#pe-align-' + a).onclick = () => change(textOnly(el => { el.align = a; }));
+    for (const a of ['left', 'center', 'right', 'justify']) $('#pe-align-' + a).onclick = () => change(textOnly(el => { el.align = a; }));
     $('#pe-color').oninput = e => change(el => { if (el.type === 'text') el.color = e.target.value; else el.stroke = e.target.value; });
     $('#pe-fill').oninput = e => change(el => { el.fill = e.target.value; });
     // Front: a picture under the design comes above it; Back: to the bottom of its layer, then under the design.
