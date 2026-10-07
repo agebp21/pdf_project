@@ -17,6 +17,7 @@ import articles
 
 SITE = 'https://myflipbookpro.com'
 BRAND = 'MyFlipbook'
+CONTACT = 'cs@myflipbookpro.com'
 OG_IMAGE = SITE + '/assets/img/hero-1671.jpg'
 OG_SIZE = (1671, 941)
 HOME_TITLE = 'MyFlipbook — Buat Flipbook dari PDF & Alat PDF Lengkap Berbahasa Indonesia'
@@ -477,7 +478,8 @@ def landing_html(slug):
 TOP = f'''<header><a href="/" aria-label="{BRAND}"><img src="/assets/img/logo.png?v=green" alt="{BRAND}" width="128" height="34"></a>
 <nav><a href="/pdf-ke-flipbook">PDF ke Flipbook</a><a href="/converter.html">Semua alat PDF</a><a href="/artikel">Artikel</a><a href="/login.html">Masuk</a></nav></header>'''
 FOOT = (f'<footer>© {time.strftime("%Y")} {BRAND} — dikelola oleh Sarvamaya. <a href="/artikel">Artikel</a> · '
-        '<a href="/privacy.html">Kebijakan Privasi</a> · <a href="/terms.html">Syarat &amp; Ketentuan</a> · <a href="/">Beranda</a></footer>')
+        '<a href="/privacy.html">Kebijakan Privasi</a> · <a href="/terms.html">Syarat &amp; Ketentuan</a> · '
+        '<a href="mailto:cs@myflipbookpro.com">cs@myflipbookpro.com</a> · <a href="/">Beranda</a></footer>')
 ARTICLES = {a['slug']: a for a in articles.ARTICLES}
 MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 LINK = re.compile(r'\[([^\]]+)\]\((/[^)\s]*)\)')
@@ -611,7 +613,8 @@ def app_head(page_name):
         tags.append(verification())
         tags.append(f'<meta property="og:title" content="{esc(HOME_TITLE)}">')
         tags.append(ld({'@context': 'https://schema.org', '@graph': [
-            {'@type': 'Organization', 'name': BRAND, 'url': SITE + '/', 'logo': SITE + '/assets/img/logo.png'},
+            {'@type': 'Organization', 'name': BRAND, 'url': SITE + '/', 'logo': SITE + '/assets/img/logo.png', 'email': CONTACT,
+             'contactPoint': {'@type': 'ContactPoint', 'contactType': 'customer support', 'email': CONTACT, 'availableLanguage': ['id', 'en']}},
             {'@type': 'WebSite', 'name': BRAND, 'url': SITE + '/', 'inLanguage': ['id', 'en']}]}))
     return ''.join(tags).encode('utf-8')
 
