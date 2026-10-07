@@ -49,6 +49,10 @@
   .conv-cols.single{grid-template-columns:minmax(0,1fr)}
   .conv-cols.single #colLeft{display:none}
   .conv-cols.single #colRight{max-width:640px;margin:0 auto;width:100%}
+  /* Organize: the right column is empty (drop zone hidden), so the result
+     card takes the full width and its buttons sit in one row below. */
+  .conv-cols.org-full{grid-template-columns:minmax(0,1fr)!important}
+  .conv-cols.org-full #colRight{display:none}
   /* Deterministic show/hide: beats every display rule, no cascade fights. */
   .is-hidden{display:none!important}
   /* Organize workspace (iLovePDF-style): page grid + floating actions + sidebar. */
@@ -83,6 +87,37 @@
   .org-sel-row input[type=text]{flex:2 1 0;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .7rem;font-size:11px}
   .org-sel-row input[type=number]{flex:0 0 64px;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px}
   .org-sel-row select{flex:0 0 auto;max-width:45%;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px;font-weight:700;cursor:pointer}
+  .org-tabs{display:flex;flex-wrap:wrap;gap:.4rem;margin-bottom:.75rem}
+  .org-tabs button{flex:1 1 0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .7rem;font-size:12px;font-weight:800;cursor:pointer;color:#374151;white-space:nowrap}
+  .org-tabs button.active{background:#ef2d2d;border-color:#ef2d2d;color:#fff}
+  /* Edit-mode toolbar above the preview: zoom, hand, text, shapes. */
+  .org-edittools{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin-bottom:.75rem}
+  .org-edittools button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .7rem;font-size:12px;font-weight:800;cursor:pointer;color:#374151;white-space:nowrap}
+  .org-edittools button.active{background:#ef2d2d;border-color:#ef2d2d;color:#fff}
+  .org-edittools input[type=text]{flex:2 1 120px;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .7rem;font-size:12px}
+  .org-edittools input[type=number]{flex:0 0 60px;width:60px;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .5rem;font-size:12px}
+  #orgZoomLabel{font-size:12px;font-weight:800;min-width:46px;text-align:center;color:#374151}
+  #orgReader.org-hand{cursor:grab;overflow:auto;touch-action:none}
+  #orgReader.org-hand:active{cursor:grabbing}
+  #orgReader.org-zoomed{overflow:auto}
+  /* Direct text editing: OCR lines become editable boxes over the page picture. */
+  .org-textmodal{position:fixed;inset:0;z-index:90;display:flex;align-items:center;justify-content:center;padding:12px;background:rgba(20,16,12,.55)}
+  .org-textcard{width:min(860px,100%);max-height:94vh;overflow:auto;background:#fff;border-radius:16px;padding:12px 14px;box-shadow:0 24px 60px rgba(0,0,0,.35)}
+  .org-texthead{display:flex;align-items:center;gap:.6rem;font-size:13px}
+  .org-texthead strong{flex:1}
+  .org-texthead>button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;width:30px;height:30px;font-size:16px;cursor:pointer;flex:none}
+  .org-textstage{position:relative;width:fit-content;max-width:100%;margin:8px auto;background:#f3f4f6;border-radius:8px}
+  .org-textstage img{display:block;max-width:100%;max-height:62vh;width:auto;height:auto}
+  #orgTextBoxes{position:absolute;inset:0}
+  .org-tbox{position:absolute}
+  .org-tbox textarea{width:100%;height:100%;border:1.5px solid #ef2d2d;border-radius:4px;background:rgba(255,255,255,.93);color:#111;padding:0 14px 0 1px;font-family:Helvetica,Arial,sans-serif;line-height:1.1;resize:none;overflow:hidden}
+  .org-tbox.is-gone textarea{opacity:.25;text-decoration:line-through}
+  .org-tdel{position:absolute;top:-9px;right:-9px;width:18px;height:18px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#ef2d2d;font-size:12px;line-height:1;cursor:pointer;padding:0}
+  .org-texthint{font-size:11px;color:#6b7280;margin:6px 2px}
+  .org-textfoot{display:flex;flex-wrap:wrap;gap:.4rem;margin-top:6px}
+  .org-textfoot button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .8rem;font-size:12px;font-weight:800;cursor:pointer}
+  .org-textfoot button.primary{background:#ef2d2d;border-color:#ef2d2d;color:#fff}
+  .org-textstatus{font-size:12px;color:#15803d;min-height:18px;margin:4px 2px 0}
   .org-foot{margin-top:.75rem;background:#fdf0f0;padding:.75rem 1.25rem;border-radius:0 0 15px 0}
   .org-go{width:100%;background:#ef2d2d;color:#fff;border:0;border-radius:12px;padding:.75rem;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.35)}
   .org-cell{position:relative;min-width:0}
@@ -377,6 +412,28 @@ function renderHeader(){
     // iLovePDF-style workspace: page grid + floating actions + right sidebar.
     html=`<div class="org-ws" ondragover="orgWsOver(event)" ondrop="orgWsDrop(event)">
       <div class="org-main">
+        <div class="org-tabs" id="orgTabs" role="tablist" aria-label="Organize modes">
+          <button data-mode="merge" onclick="orgModeSet('merge')">Merge</button>
+          <button data-mode="split" onclick="orgModeSet('split')">Split</button>
+          <button data-mode="edit" onclick="orgModeSet('edit')">Edit</button>
+          <button data-mode="compress" onclick="orgModeSet('compress')">Compress</button>
+        </div>
+        <div id="orgEditTools" class="org-edittools is-hidden">
+          <button onclick="orgZoomStep(-0.25)" title="Zoom out">−</button>
+          <span id="orgZoomLabel">100%</span>
+          <button onclick="orgZoomStep(0.25)" title="Zoom in">+</button>
+          <button id="orgHandBtn" onclick="orgHandToggle()" title="Drag to pan">✋ Hand</button>
+          <button onclick="orgEditTextOcr()" title="Read text with OCR, then edit it directly">🔤 Edit text</button>
+          <button onclick="orgEditTextToggle()" title="Add text">T Text</button>
+          <button onclick="orgEditShape('rect')" title="Add rectangle">▢</button>
+          <button onclick="orgEditShape('ellipse')" title="Add ellipse">⬯</button>
+          <button onclick="orgEditShape('line')" title="Add line">╲</button>
+          <span id="orgEditTextRow" class="is-hidden" style="display:contents">
+            <input id="orgEditText" type="text" maxlength="60" placeholder="Text…" aria-label="Text">
+            <input id="orgEditSize" type="number" value="14" min="1" step="1" aria-label="Size">
+            <button onclick="orgEditTextApply()">Add</button>
+          </span>
+        </div>
         <div id="orgReader" class="is-hidden">
           <div class="org-reader-bar">
             <button onclick="orgReaderGo(-1)" aria-label="Previous">←</button>
@@ -404,6 +461,65 @@ function renderHeader(){
         <button class="org-addfile" onclick="addMoreFiles()">＋ ${L('Add file','Tambah file')}</button>
         <input id="blankInput" type="file" accept="image/*" hidden onchange="orgBlankPicked(this)">
         <input id="orgAnnImage" type="file" accept=".png,.jpg,.jpeg" hidden onchange="orgAnnPicked(this)">
+        <div id="orgSelBox" class="org-sel is-hidden">
+          <p class="org-sel-count"><b id="orgSelCount">0</b> ${L('selected','dipilih')}</p>
+          <div class="org-sel-row">
+            <button onclick="toggleAllOrg(true)">Select all</button>
+            <button onclick="toggleAllOrg(false)">Clear</button>
+          </div>
+          <div class="org-sel-row">
+            <button onclick="orgRotate(90)">↻ 90°</button>
+            <button onclick="orgRotate(180)">↻ 180°</button>
+            <button onclick="orgDuplicate()">${L('⎘ Duplicate','⎘ Duplikat')}</button>
+          </div>
+          <button onclick="orgDelete()" class="org-sel-del">🗑️ ${L('Delete selected','Hapus yang dipilih')}</button>
+          <div class="org-sel-row">
+            <button onclick="orgExtract()">${L('⎘ Extract selected','⎘ Ambil halaman terpilih')}</button>
+          </div>
+          <div class="org-sel-row">
+            <input id="orgNumStart" type="number" value="1" min="0" step="1" aria-label="${L('Starting number','Nomor awal')}">
+            <button onclick="orgNumber()">${L('Number pages','Beri nomor halaman')}</button>
+          </div>
+          <div class="org-sel-row">
+            <input id="orgWmText" type="text" maxlength="60" placeholder="${L('Watermark text…','Teks watermark…')}" aria-label="${L('Watermark text','Teks watermark')}">
+            <button onclick="orgWatermark()">${L('Watermark','Watermark')}</button>
+          </div>
+          <div class="org-sel-row">
+            <select id="orgAnnKind" aria-label="${L('Annotation kind','Jenis anotasi')}">
+              <option value="text">${L('Text','Teks')}</option>
+              <option value="rect">${L('Rectangle','Kotak')}</option>
+              <option value="ellipse">${L('Ellipse','Elips')}</option>
+              <option value="line">${L('Line','Garis')}</option>
+              <option value="image">${L('Image','Gambar')}</option>
+            </select>
+            <button onclick="orgAnnotate()">✎ ${L('Add','Tambah')}</button>
+          </div>
+          <div class="org-sel-row">
+            <input id="orgAnnText" type="text" maxlength="60" placeholder="${L('Text or W×H…','Teks atau P×L…')}" aria-label="${L('Text or size','Teks atau ukuran')}">
+            <input id="orgAnnSize" type="number" value="14" min="0.1" step="0.5" aria-label="${L('Size','Ukuran')}">
+          </div>
+        </div>
+        <div id="orgSplitTools" class="org-sel is-hidden">
+          <p class="org-sel-count">${L('Split the arranged pages','Pisah halaman yang tersusun')}</p>
+          <div class="org-sel-row">
+            <input id="orgSplitN" type="number" value="2" min="1" step="1" aria-label="${L('Pages per file','Halaman per file')}">
+            <button onclick="orgSplitEvery()">${L('Split every N','Pisah per N')}</button>
+          </div>
+          <div class="org-sel-row">
+            <button onclick="orgSplitZip()">${L('Split selected → ZIP','Pisah pilihan → ZIP')}</button>
+          </div>
+        </div>
+        <div id="orgCompressTools" class="org-sel is-hidden">
+          <p class="org-sel-count">${L('Shrink photos and scans, text stays sharp','Kecilkan foto dan scan, teks tetap tajam')}</p>
+          <div class="org-sel-row">
+            <select id="orgCompressLevel" aria-label="${L('Compression level','Level kompresi')}">
+              <option value="low">${L('Light','Ringan')}</option>
+              <option value="medium" selected>${L('Balanced','Seimbang')}</option>
+              <option value="high">${L('Strong','Kuat')}</option>
+            </select>
+            <button onclick="orgCompress()">${L('Compress','Kompres')}</button>
+          </div>
+        </div>
         <div class="org-foot"><div id="orgFootExtra"></div><button onclick="document.getElementById('convertBtn').click()" class="org-go">Organize <span aria-hidden="true">→</span></button></div>
       </aside>
     </div>`;
@@ -459,6 +575,434 @@ function renderHeader(){
   }
 }
 let organizeOrder = []; // page indices (numbers) or 'blank-N' ids, in current order
+// Workspace mode: merge keeps today's behavior (click flips); split and
+// edit select pages (red) for their actions; compress needs no selection.
+let orgMode = 'merge';
+// Edit-toolbar state (zoom level + hand/pan). Declared up here so
+// paintOrgMode can read them even on the very first render.
+let orgZoom = 1, orgHand = false;
+window.orgModeSet = (mode) => {
+  if (!['merge', 'split', 'edit', 'compress'].includes(mode)) return;
+  orgMode = mode;
+  paintOrgMode();
+  renderOrganizeGrid();
+  log('Org mode ' + mode);
+};
+function paintOrgMode() {
+  document.querySelectorAll('.org-tabs button').forEach(b => b.classList.toggle('active', b.dataset.mode === orgMode));
+  // The Merge/Split/Edit/Compress menu above the preview stays visible even
+  // before a file is picked; only the mode toolboxes wait for pages.
+  const loaded = files.length > 0;
+  const editTools = document.getElementById('orgEditTools');
+  if (editTools) editTools.classList.toggle('is-hidden', !loaded || orgMode !== 'edit');
+  const hand = document.getElementById('orgHandBtn');
+  if (hand) hand.classList.toggle('active', orgHand);
+  const zoom = document.getElementById('orgZoomLabel');
+  if (zoom) zoom.textContent = Math.round(orgZoom * 100) + '%';
+  const split = document.getElementById('orgSplitTools');
+  if (split) split.classList.toggle('is-hidden', !loaded || orgMode !== 'split');
+  const compress = document.getElementById('orgCompressTools');
+  if (compress) compress.classList.toggle('is-hidden', !loaded || orgMode !== 'compress');
+}
+// ---------- Edit toolbar above the preview: zoom, hand, text, shapes.
+// Zoom rebuilds the mini-reader at a new size; hand swaps page-flip input
+// for drag-to-pan; text/shapes reuse the annotate pipeline (PDFEdit) on the
+// selected pages, so the result downloads like the sidebar Add button.
+function orgReaderZoomRebuild() {
+  orgReaderClose(); orgBook = null; orgStatic = false;
+  orgReaderBuild();
+}
+window.orgZoomStep = step => {
+  orgZoom = Math.min(2, Math.max(0.5, Math.round((orgZoom + step) * 100) / 100));
+  paintOrgMode();
+  if (!organizeOrder.length) return;
+  orgReaderZoomRebuild();
+};
+window.orgHandToggle = () => {
+  orgHand = !orgHand;
+  paintOrgMode();
+  if (!organizeOrder.length) return;
+  orgReaderZoomRebuild();
+};
+window.orgEditTextToggle = () => {
+  const row = document.getElementById('orgEditTextRow');
+  if (!row) return;
+  row.classList.toggle('is-hidden');
+  const input = document.getElementById('orgEditText');
+  if (input && !row.classList.contains('is-hidden')) input.focus();
+};
+window.orgEditTextApply = async () => {
+  try {
+    if (files.length === 0) throw new Error('Upload a PDF first');
+    const positions = orgSelectedPositions();
+    if (!positions.length) throw new Error('Tick pages first');
+    const text = String((document.getElementById('orgEditText') || {}).value ?? '').trim();
+    if (!text) throw new Error('Enter annotation text.');
+    const sizeRaw = Number((document.getElementById('orgEditSize') || {}).value);
+    await orgApplyAnnotate([{ kind: 'text', text, size: (Number.isFinite(sizeRaw) && sizeRaw > 0) ? sizeRaw : 14,
+      range: 'all', position: 'center', margin: '10', dx: '0', dy: '0',
+      rotation: '0', color: '#214d40', opacity: '100' }], positions);
+  } catch (e) { showError(e.message); }
+};
+window.orgEditShape = async kind => {
+  try {
+    if (files.length === 0) throw new Error('Upload a PDF first');
+    const positions = orgSelectedPositions();
+    if (!positions.length) throw new Error('Tick pages first');
+    const base = { kind, range: 'all', position: 'center', margin: '10', dx: '0', dy: '0',
+      rotation: '0', color: '#214d40', opacity: '100', border: 0 };
+    if (kind === 'rect') { base.width = 60; base.height = 40; }
+    else if (kind === 'ellipse') { base.width = 60; base.height = 60; }
+    else if (kind === 'line') { base.length = 100; base.thickness = 3; }
+    else throw new Error('Pick a shape first.');
+    await orgApplyAnnotate([base], positions);
+  } catch (e) { showError(e.message); }
+};
+// Hand tool: drag the zoomed preview to pan (delegated — #orgReader is
+// re-rendered with the workspace, so no permanent listener survives).
+let orgPan = null;
+document.addEventListener('pointerdown', event => {
+  if (!orgHand) return;
+  const wrap = event.target && event.target.closest ? event.target.closest('#orgReader') : null;
+  if (!wrap) return;
+  orgPan = { x: event.clientX, y: event.clientY, left: wrap.scrollLeft, top: wrap.scrollTop };
+});
+document.addEventListener('pointermove', event => {
+  if (!orgPan) return;
+  const wrap = document.getElementById('orgReader');
+  if (!wrap) { orgPan = null; return; }
+  wrap.scrollLeft = orgPan.left - (event.clientX - orgPan.x);
+  wrap.scrollTop = orgPan.top - (event.clientY - orgPan.y);
+});
+['pointerup', 'pointercancel'].forEach(type => document.addEventListener(type, () => { orgPan = null; }));
+// ---------- Direct text editing (Edit mode): the selected pages are read
+// with the local OCR engine, every recognised line becomes an editable box
+// sitting exactly on the page picture, and only the changed lines are burned
+// into the PDF (white cover + new words). All exports build through
+// buildOrganizePdf, so Organize / Extract / Split / Compress all carry edits.
+let orgOcr = {}, orgTextEdits = {}, orgOcrWorker = null, orgOcrLoading = null;
+const orgOcrImg = new Map();
+async function orgOcrEngine(onEvent) {
+  if (!orgOcrWorker) {
+    if (!orgOcrLoading) orgOcrLoading = new Promise((resolve, reject) => {
+      const s = document.createElement('script');
+      s.src = 'assets/vendor/ocr/tesseract.min.js';
+      s.onload = resolve;
+      s.onerror = () => { orgOcrLoading = null; reject(new Error('OCR engine failed to load.')); };
+      document.head.appendChild(s);
+    });
+    await orgOcrLoading;
+    const base = String(location.href).split(/[?#]/)[0];
+    const under = base.slice(0, base.lastIndexOf('/') + 1) + 'assets/vendor/ocr/';
+    orgOcrWorker = await Tesseract.createWorker('eng+ind', 1, {
+      workerPath: under + 'worker.min.js', corePath: under, langPath: under,
+      logger: onEvent || (() => {})
+    });
+    await orgOcrWorker.setParameters({ tessedit_pageseg_mode: '6', preserve_interword_spaces: '1' });
+  }
+  return orgOcrWorker;
+}
+// Page rendered straight up (rotation normalised) so OCR boxes map 1:1 to
+// the burn step, which runs before organizeRotations are applied.
+async function orgRenderOcrCanvas(code, maxSide) {
+  const fi = Math.floor(code / 1000000), n = code % 1000000;
+  const doc = orgPdfDocs[fi];
+  if (!doc) throw new Error('Page not found.');
+  const page = await doc.getPage(n + 1);
+  const base = page.getViewport({ scale: 1, rotation: 0 });
+  const scale = Math.min(2.5, (maxSide || 1400) / Math.max(base.width, base.height));
+  const view = page.getViewport({ scale, rotation: 0 });
+  const canvas = document.createElement('canvas');
+  canvas.width = Math.ceil(view.width); canvas.height = Math.ceil(view.height);
+  await page.render({ canvasContext: canvas.getContext('2d'), viewport: view }).promise;
+  page.cleanup();
+  return canvas;
+}
+function orgOcrLines(data, canvas) {
+  const out = [];
+  for (const line of (data.lines || [])) {
+    const words = (line.words || []).filter(w => /[\p{L}\p{N}]/u.test(w.text || '') && (w.confidence || 0) >= 50);
+    if (!words.length) continue;
+    const said = words.map(w => String(w.text).trim()).join(' ').replace(/\s+/g, ' ');
+    if ((said.match(/[\p{L}\p{N}]/gu) || []).length < 2) continue;
+    out.push({
+      text: said,
+      x0: Math.min(...words.map(w => w.bbox.x0)) / canvas.width,
+      y0: Math.min(...words.map(w => w.bbox.y0)) / canvas.height,
+      x1: Math.max(...words.map(w => w.bbox.x1)) / canvas.width,
+      y1: Math.max(...words.map(w => w.bbox.y1)) / canvas.height
+    });
+  }
+  return orgMergeOcrLines(out);
+}
+// Tesseract often reports the same printed line two or three times (stacked
+// boxes, e.g. a title plus its own words again). Merge vertical duplicates
+// into one clean selectable line; genuinely separate lines never overlap
+// each other this much, so they survive untouched.
+function orgMergeOcrLines(lines) {
+  const sorted = lines.slice().sort((a, b) => a.y0 - b.y0 || a.x0 - b.x0);
+  const groups = [];
+  for (const line of sorted) {
+    let best = null, bestScore = 0;
+    for (const g of groups) {
+      const overlap = Math.max(0, Math.min(g.y1, line.y1) - Math.max(g.y0, line.y0));
+      const score = overlap / Math.max(1e-6, Math.min(g.y1 - g.y0, line.y1 - line.y0));
+      if (score > bestScore) { bestScore = score; best = g; }
+    }
+    if (best && bestScore > 0.5) {
+      best.x0 = Math.min(best.x0, line.x0); best.y0 = Math.min(best.y0, line.y0);
+      best.x1 = Math.max(best.x1, line.x1); best.y1 = Math.max(best.y1, line.y1);
+      best.parts.push(line);
+    } else groups.push({ x0: line.x0, y0: line.y0, x1: line.x1, y1: line.y1, parts: [line] });
+  }
+  return groups.map(g => {
+    g.parts.sort((a, b) => a.x0 - b.x0);
+    // Same words detected twice: keep each word once, in reading order.
+    const words = [];
+    for (const p of g.parts) for (const wd of String(p.text).split(/\s+/)) {
+      if (wd && !words.some(o => o.toLowerCase() === wd.toLowerCase())) words.push(wd);
+    }
+    return { text: words.join(' '), x0: g.x0, y0: g.y0, x1: g.x1, y1: g.y1 };
+  }).filter(l => l.text);
+}
+window.orgEditTextOcr = async () => {
+  try {
+    if (files.length === 0) throw new Error('Upload a PDF first');
+    const codes = organizeOrder.filter(code => typeof code === 'number' && organizeSelected.has(code));
+    if (!codes.length) throw new Error('Tick pages first');
+    if (codes.length > 30) throw new Error('Select at most 30 pages at a time (OCR takes a few seconds per page).');
+    const prog = $('#progress');
+    const say = text => { if (prog) { prog.classList.remove('hidden'); prog.textContent = text; } };
+    say('Loading OCR engine…');
+    const worker = await orgOcrEngine(m => { if (m.status === 'recognizing text') say('Reading text… ' + Math.round((m.progress || 0) * 100) + '%'); });
+    const done = [];
+    for (let i = 0; i < codes.length; i++) {
+      const code = codes[i];
+      say(`Reading text on page ${i + 1} / ${codes.length}…`);
+      log('Org OCR page ' + orgName(code));
+      const canvas = await orgRenderOcrCanvas(code, 1400);
+      let data = {};
+      try { data = (await worker.recognize(canvas)).data || {}; }
+      catch (e) { log('Org OCR fail ' + orgName(code) + ': ' + (e && e.message || e)); }
+      const lines = orgOcrLines(data, canvas);
+      canvas.width = canvas.height = 0;
+      if (lines.length) { orgOcr[code] = lines; done.push(code); }
+      else log('Org OCR page ' + orgName(code) + ': no readable text');
+    }
+    if (prog) prog.classList.add('hidden');
+    if (!done.length) throw new Error('No readable text found on the selected pages.');
+    orgTextModalOpen(done, 0);
+  } catch (e) { const prog = $('#progress'); if (prog) prog.classList.add('hidden'); showError(e.message); }
+};
+let orgTextList = [], orgTextIdx = 0;
+function orgTextStatus(text) { const el = document.getElementById('orgTextStatus'); if (el) el.textContent = text || ''; }
+function orgTextModalShell() {
+  let back = document.getElementById('orgTextModal');
+  if (back) return back;
+  back = document.createElement('div');
+  back.id = 'orgTextModal';
+  back.className = 'org-textmodal is-hidden';
+  const card = document.createElement('div');
+  card.className = 'org-textcard';
+  const head = document.createElement('div');
+  head.className = 'org-texthead';
+  const title = document.createElement('strong');
+  title.id = 'orgTextTitle';
+  const counter = document.createElement('span');
+  counter.id = 'orgTextCount';
+  const close = document.createElement('button');
+  close.type = 'button'; close.textContent = '×'; close.setAttribute('aria-label', 'Close');
+  close.onclick = () => orgTextModalClose();
+  head.append(title, counter, close);
+  const stage = document.createElement('div');
+  stage.className = 'org-textstage';
+  const img = document.createElement('img');
+  img.id = 'orgTextImg'; img.alt = '';
+  const boxes = document.createElement('div');
+  boxes.id = 'orgTextBoxes';
+  stage.append(img, boxes);
+  const hint = document.createElement('p');
+  hint.className = 'org-texthint';
+  hint.textContent = 'Click a box to edit its text. × removes the line (covered white). Saved changes go into Organize / Extract downloads.';
+  const foot = document.createElement('div');
+  foot.className = 'org-textfoot';
+  const prev = document.createElement('button'); prev.type = 'button'; prev.textContent = '← Prev';
+  prev.onclick = () => orgTextModalNav(-1);
+  const next = document.createElement('button'); next.type = 'button'; next.textContent = 'Next →';
+  next.onclick = () => orgTextModalNav(1);
+  const save = document.createElement('button'); save.type = 'button'; save.textContent = 'Save page'; save.className = 'primary';
+  save.onclick = () => orgTextModalSave(false);
+  const dl = document.createElement('button'); dl.type = 'button'; dl.textContent = 'Save & download book';
+  dl.onclick = () => orgTextModalSave(true);
+  const status = document.createElement('p'); status.id = 'orgTextStatus'; status.className = 'org-textstatus';
+  foot.append(prev, next, save, dl);
+  card.append(head, stage, hint, foot, status);
+  back.append(card);
+  back.addEventListener('mousedown', event => { if (event.target === back) orgTextModalClose(); });
+  document.body.append(back);
+  window.addEventListener('resize', () => {
+    const open = document.getElementById('orgTextModal');
+    if (open && !open.classList.contains('is-hidden')) orgTextModalLayout();
+  });
+  return back;
+}
+async function orgTextModalOpen(list, idx) {
+  orgTextList = list.slice();
+  orgTextIdx = Math.max(0, Math.min(list.length - 1, idx));
+  orgTextModalShow();
+}
+async function orgTextModalShow() {
+  const back = orgTextModalShell();
+  const code = orgTextList[orgTextIdx];
+  back.classList.remove('is-hidden');
+  document.getElementById('orgTextTitle').textContent = 'Edit text — page ' + orgName(code);
+  document.getElementById('orgTextCount').textContent = (orgTextIdx + 1) + ' / ' + orgTextList.length;
+  orgTextStatus('');
+  const img = document.getElementById('orgTextImg');
+  document.getElementById('orgTextBoxes').replaceChildren();
+  let url = orgOcrImg.get(code);
+  if (!url) {
+    const canvas = await orgRenderOcrCanvas(code, 1100);
+    url = canvas.toDataURL('image/jpeg', 0.85);
+    canvas.width = canvas.height = 0;
+    if (orgOcrImg.size > 40) orgOcrImg.clear();
+    orgOcrImg.set(code, url);
+  }
+  img.onload = () => orgTextModalLayout();
+  img.src = url;
+  if (img.complete && img.naturalWidth) orgTextModalLayout();
+}
+function orgTextModalLayout() {
+  const stage = document.querySelector('#orgTextModal .org-textstage');
+  const boxes = document.getElementById('orgTextBoxes');
+  if (!stage || !boxes || !orgTextList.length) return;
+  const code = orgTextList[orgTextIdx];
+  const lines = orgOcr[code] || [];
+  const H = stage.clientHeight;
+  if (!H) return;
+  boxes.replaceChildren();
+  lines.forEach((line, i) => {
+    const wrap = document.createElement('div');
+    wrap.className = 'org-tbox';
+    wrap.style.left = (line.x0 * 100) + '%';
+    wrap.style.top = (line.y0 * 100) + '%';
+    wrap.style.width = (Math.max(0.02, line.x1 - line.x0) * 100) + '%';
+    wrap.style.height = (Math.max(0.008, line.y1 - line.y0) * 100) + '%';
+    const ta = document.createElement('textarea');
+    ta.value = line.text;
+    ta.dataset.idx = String(i);
+    ta.style.fontSize = Math.max(8, (line.y1 - line.y0) * H * 0.85) + 'px';
+    ta.setAttribute('aria-label', 'Line ' + (i + 1));
+    const del = document.createElement('button');
+    del.type = 'button'; del.className = 'org-tdel'; del.textContent = '×';
+    del.title = 'Remove this line';
+    del.onclick = () => { ta.disabled = wrap.classList.toggle('is-gone'); };
+    wrap.append(ta, del);
+    boxes.append(wrap);
+  });
+}
+function orgTextCollect() {
+  const code = orgTextList[orgTextIdx];
+  const lines = orgOcr[code] || [];
+  const changed = [];
+  document.querySelectorAll('#orgTextBoxes .org-tbox').forEach(box => {
+    const ta = box.querySelector('textarea');
+    const line = lines[Number(ta.dataset.idx)];
+    if (!line) return;
+    if (box.classList.contains('is-gone')) {
+      changed.push({ x0: line.x0, y0: line.y0, x1: line.x1, y1: line.y1, newText: null });
+      return;
+    }
+    const value = ta.value.replace(/\s+/g, ' ').trim();
+    if (value !== line.text) changed.push({ x0: line.x0, y0: line.y0, x1: line.x1, y1: line.y1, newText: value });
+  });
+  return { code, changed };
+}
+async function orgTextModalSave(download) {
+  const { code, changed } = orgTextCollect();
+  if (changed.length) orgTextEdits[code] = changed;
+  else delete orgTextEdits[code];
+  await orgRedrawPreview(code);
+  renderOrganizeGrid();
+  if (download) {
+    document.getElementById('orgTextModal').classList.add('is-hidden');
+    try { await organizePdf(); }
+    catch (e) { showError(e.message); }
+  } else orgTextStatus(`Saved ✓ ${changed.length} line${changed.length === 1 ? '' : 's'} changed on this page.`);
+}
+async function orgTextModalNav(step) {
+  const next = orgTextIdx + step;
+  if (next < 0 || next >= orgTextList.length) return;
+  const { code, changed } = orgTextCollect();
+  if (changed.length) orgTextEdits[code] = changed;
+  else delete orgTextEdits[code];
+  await orgRedrawPreview(code);
+  orgTextIdx = next;
+  orgTextModalShow();
+  renderOrganizeGrid();
+}
+async function orgTextModalClose() {
+  if (orgTextList.length) {
+    const { code, changed } = orgTextCollect();
+    if (changed.length) orgTextEdits[code] = changed;
+    else delete orgTextEdits[code];
+    await orgRedrawPreview(code);
+    renderOrganizeGrid();
+  }
+  document.getElementById('orgTextModal').classList.add('is-hidden');
+}
+// Fresh preview picture with the edits painted on (preview only — the real
+// burn happens at export, with real PDF text).
+async function orgRedrawPreview(code) {
+  try {
+    const canvas = await orgRenderOcrCanvas(code, 560);
+    const ctx = canvas.getContext('2d');
+    for (const e of (orgTextEdits[code] || [])) {
+      const x = e.x0 * canvas.width, y = e.y0 * canvas.height;
+      const w = (e.x1 - e.x0) * canvas.width, h = (e.y1 - e.y0) * canvas.height;
+      ctx.fillStyle = '#fff';
+      ctx.fillRect(x - 2, y - 2, w + 4, h + 4);
+      const text = (e.newText || '').trim();
+      if (!text) continue;
+      ctx.fillStyle = '#111';
+      ctx.font = Math.max(6, h * 0.8) + 'px Helvetica, Arial, sans-serif';
+      try { ctx.fillText(text, x, y + h * 0.85, w); }
+      catch (_) { ctx.fillText(text, x, y + h * 0.85); }
+    }
+    orgPrevCache.set(orgPrevKey(code), canvas.toDataURL('image/jpeg', 0.82));
+    orgThumbCache.delete(code);
+    canvas.width = canvas.height = 0;
+  } catch (e) { /* preview only — exports still carry the edits */ }
+}
+// Burn changed lines into a real PDF page (white cover + Helvetica words,
+// sized to the original box). Runs in unrotated space, before setRotation.
+let orgEditFont = null;
+async function orgBurnEdits(out, page, code) {
+  const edits = orgTextEdits[code];
+  if (!edits || !edits.length) return 0;
+  if (!orgEditFont) orgEditFont = await out.embedFont(PDFLib.StandardFonts.Helvetica);
+  const font = orgEditFont;
+  const { width: W, height: H } = page.getSize();
+  const { rgb } = PDFLib;
+  let n = 0;
+  for (const e of edits) {
+    const x = e.x0 * W, w = (e.x1 - e.x0) * W;
+    const yTop = H - e.y0 * H, h = (e.y1 - e.y0) * H;
+    if (w < 2 || h < 2) continue;
+    page.drawRectangle({ x: x - 1, y: yTop - h - 1, width: w + 2, height: h + 2, color: rgb(1, 1, 1), opacity: 1 });
+    const text = window.PDFOcrLayer ? PDFOcrLayer.encodable(font, e.newText || '') : String(e.newText || '');
+    if (!text.trim()) { n++; continue; }
+    let size = h * 0.8;
+    try {
+      const natural = font.widthOfTextAtSize(text, size);
+      if (natural > w) size = size * w / natural;
+    } catch (_) {}
+    if (!(size >= 3)) size = 3;
+    page.drawText(text, { x, y: yTop - h + (h - size) * 0.25, size, font, color: rgb(0, 0, 0) });
+    n++;
+  }
+  return n;
+}
 let orgBlankSeq = 0;
 let orgBlankImg = {}; // blank id -> JPEG dataURL filling it
 let orgBlankTarget = null;
@@ -470,6 +1014,8 @@ function setTool(id){
   files=[]; organizeOrder=[]; organizeSelected.clear(); organizeRotations={};
   for(const d of orgPdfDocs){ try{ const r=d&&d.destroy(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
   orgPdfDocs=[]; orgThumbCache=new Map(); orgBlankSeq=0; orgBlankImg={}; orgBlankTarget=null;
+  orgOcr={}; orgTextEdits={}; orgOcrImg.clear();
+  document.getElementById('orgTextModal')?.classList.add('is-hidden');
   updateFileUI(); $('#result').classList.add('hidden'); $('#error').classList.add('hidden'); $('#progress').classList.add('hidden');
   renderToolList(); renderHeader(); log('Switch tool: '+id);
 }
@@ -718,7 +1264,8 @@ function paintOrgFiles(){
       const x=document.createElement('button'); x.className='org-chip-x'; x.textContent='✕';
       x.title=L('Remove this file','Buang file ini'); x.onclick=()=>orgRemoveFile(fi); row.append(x);
     }
-    box.append(row);
+  box.append(row);
+  row.style.zoom = orgZoom;
   });
 }
 window.orgRemoveFile=(fi)=>{
@@ -753,7 +1300,7 @@ function renderOrganizeGrid(){
   paintOrgFiles();
   const nSel=organizeSelected.size;
   const box=$('#orgSelBox');
-  if(box) box.classList.toggle('is-hidden',nSel===0);
+  if(box) box.classList.toggle('is-hidden',nSel===0||(orgMode!=='split'&&orgMode!=='edit'));
   const cnt=$('#orgSelCount');
   if(cnt) cnt.textContent=nSel;
   grid.innerHTML=organizeOrder.map((origIdx,pos)=>{
@@ -784,7 +1331,7 @@ function renderOrganizeGrid(){
     </div>`;
   }).join('');
   orgObserveThumbs();
-  const sig=organizeOrder.join('|')+'#'+Object.keys(organizeRotations).sort().join(',')+'#'+Object.keys(orgBlankImg).sort().join(',');
+  const sig=organizeOrder.join('|')+'#'+Object.keys(organizeRotations).sort().join(',')+'#'+Object.keys(orgBlankImg).sort().join(',')+'#'+Object.keys(orgTextEdits).sort().map(k=>k+':'+orgTextEdits[k].length).join(',');
   if(orgStatic){ orgStaticRender(); return; }
   if(sig!==orgReaderSig||!orgBook){ orgReaderSig=sig; orgReaderBuild(); }
 }
@@ -1061,6 +1608,8 @@ async function orgReaderBuild(){
   const wrap=document.getElementById('orgReader');
   if(!wrap) return;
   wrap.classList.remove('is-hidden');
+  wrap.classList.toggle('org-zoomed', orgZoom > 1);
+  wrap.classList.toggle('org-hand', orgHand);
   if(!organizeOrder.length){
     orgReaderClose();
     const b0=document.getElementById('orgBook');
@@ -1082,7 +1631,9 @@ async function orgReaderBuild(){
   }catch(e){}
   const avail=Math.max(280,(wrap.clientWidth||600)-24);
   const single=avail<520;
-  const PW=Math.round(single?avail:Math.min(avail,640)/2), PH=Math.round(PW/Math.max(0.4,Math.min(2.5,ratio)));
+  // Edit-toolbar zoom: rebuild the book bigger/smaller (clamped to the
+  // engine limits); the wrap scrolls once it overflows (org-zoomed).
+  const PW=Math.round(Math.min(700,Math.max(140,(single?avail:Math.min(avail,640)/2)*orgZoom))), PH=Math.round(PW/Math.max(0.4,Math.min(2.5,ratio)));
   try{ await orgBookEngine(); }catch(e){
     const b0=document.getElementById('orgBook');
     if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau tidak tersedia')+'</p>';
@@ -1103,7 +1654,7 @@ async function orgReaderBuild(){
   box.innerHTML='';
   orgReaderFaces().forEach(f=>box.append(f));
   try{
-    orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'stretch',minWidth:200,maxWidth:700,minHeight:140,maxHeight:560,autoSize:true,usePortrait:true,showCover:false,useMouseEvents:true,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
+    orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'stretch',minWidth:200,maxWidth:700,minHeight:140,maxHeight:560,autoSize:true,usePortrait:true,showCover:false,useMouseEvents:!orgHand,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
     orgBook.loadFromHTML(Array.from(box.children));
   }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau tidak tersedia')+'</p>'; return; }
   orgBook.on('flip',()=>{ orgPaintReaderLabel(); try{ log('Org at '+orgBook.getCurrentPageIndex()); }catch(e){} orgRenderVisible(); });
@@ -1156,7 +1707,7 @@ const orgPruneFills=()=>{ const alive=new Set(organizeOrder); Object.keys(orgBla
 window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(pos,1); if(!organizeOrder.includes(idx)) organizeSelected.delete(idx); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); };
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(at<0?organizeOrder.length:at+1,0,fresh); renderOrganizeGrid(); };
 window.orgInsertBlankAt=(at)=>{ at=Math.max(0,Math.min(organizeOrder.length,at)); organizeOrder.splice(at,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(at+1)); };
-window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(Date.now()-orgDragEnd<350) return; if(e.target.closest('button,input')) return; orgFlipTo(organizeOrder.indexOf(idx)); };
+window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(Date.now()-orgDragEnd<350) return; if(e.target.closest('button,input')) return; if(orgMode!=='merge'){ orgCheck(idx,!organizeSelected.has(idx)); } if(!orgHand) orgFlipTo(organizeOrder.indexOf(idx)); };
 window.orgCheck=(idx, on)=>{ if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
 window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
 window.orgDelete=()=>{ if(organizeSelected.size===0) return showError('Tick the pages to delete first'); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
@@ -1261,6 +1812,7 @@ window.orgFinishDrag=()=>{ orgDragged=false; orgDragEnd=Date.now(); dragPos=null
 
 function updateFileUI({preserveError=false}={}){
   document.getElementById('convGrid')?.classList.toggle('single', files.length===0);
+  document.getElementById('convGrid')?.classList.toggle('org-full', active==='organize-pdf');
   // Organize brings its own drop surface (the workspace); the main drop card stays out of the way.
   document.getElementById('drop')?.classList.toggle('is-hidden', active==='organize-pdf');
   if(active==='organize-pdf'){
@@ -1270,8 +1822,11 @@ function updateFileUI({preserveError=false}={}){
     document.getElementById('organizeGrid')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgSide')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgReader')?.classList.toggle('is-hidden',!loaded);
+    paintOrgMode();
     if(!loaded){
       organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map(); orgBlankSeq=0; orgBlankImg={}; orgBlankTarget=null;
+      orgOcr={}; orgTextEdits={}; orgOcrImg.clear();
+      document.getElementById('orgTextModal')?.classList.add('is-hidden');
       for(const d of orgPdfDocs){ try{ const r=d&&d.destroy(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
       orgPdfDocs=[];
       orgStatic=false;
@@ -1864,10 +2419,12 @@ async function buildOrganizePdf(order){
   if(srcs.has(0)) firstSize=srcs.get(0).getPage(0).getSize();
   else if(files.length){ const s0=await PDFLib.PDFDocument.load(await files[0].arrayBuffer(),{ignoreEncryption:true}); firstSize=s0.getPage(0).getSize(); }
   const used=new Map();
+  orgEditFont = null; // embedded fresh into each output document
   for(const idx of order){
     if(typeof idx==='number'){
       const f=Math.floor(idx/1000000), n=used.get(f)||0; used.set(f,n+1);
       const p=copied.get(f)[n];
+      if(orgTextEdits[idx]&&orgTextEdits[idx].length) await orgBurnEdits(out,p,idx);
       const rot=organizeRotations[idx]||0;
       if(rot) p.setRotation(PDFLib.degrees(rot%360));
       out.addPage(p);
@@ -1989,6 +2546,66 @@ window.orgAnnPicked = async (inp) => {
     await orgApplyAnnotate([{ kind: 'image', image: [...bytes], size: (Number.isFinite(sizeRaw) && sizeRaw > 0) ? sizeRaw : 40,
       range: 'all', position: 'center', margin: '10', dx: '0', dy: '0', rotation: '0', color: '#214d40', opacity: '100' }], positions);
   } catch (e) { showError(e.message); }
+};
+// Split mode: one PDF per selected page, packed as a ZIP.
+window.orgSplitZip=async ()=>{
+  try{
+    if(files.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
+    if(!window.JSZip) throw new Error(L('ZIP engine not loaded — reload the page','Mesin ZIP belum dimuat — muat ulang halaman'));
+    const codes=organizeOrder.filter(code=>organizeSelected.has(code));
+    if(!codes.length) throw new Error(L('Tick pages first','Centang halaman dulu'));
+    const zip=new JSZip();
+    let i=0;
+    for(let pos=0;pos<organizeOrder.length;pos++){
+      const code=organizeOrder[pos];
+      if(!organizeSelected.has(code)) continue;
+      $('#progress').textContent=L(`Splitting ${++i}…`,`Split ${i}…`);
+      // Slice (not a fresh literal) so the order keeps one realm for pdf-lib.
+      const bytes=await buildOrganizePdf(organizeOrder.slice(pos,pos+1));
+      zip.file(`page-${i}.pdf`, bytes);
+    }
+    const blob=await zip.generateAsync({type:'blob'});
+    downloadBlob(blob, orgBaseName()+'-split.zip');
+    orgNote(L(`<p class="text-center py-2">✅ Split ${codes.length} pages → ZIP</p>`,`<p class="text-center py-2">✅ Pisah ${codes.length} halaman → ZIP</p>`));
+    log('Org split zip '+codes.length+' pages');
+  }catch(e){ showError(e.message); }
+};
+// Split mode: the arranged pages in chunks of N per file, packed as a ZIP.
+window.orgSplitEvery=async ()=>{
+  try{
+    if(files.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
+    if(!window.JSZip) throw new Error(L('ZIP engine not loaded — reload the page','Mesin ZIP belum dimuat — muat ulang halaman'));
+    const n=parseInt((($('#orgSplitN')||{}).value||'2'),10);
+    if(!(n>=1)) throw new Error(L('N must be 1 or more','N harus >=1'));
+    if(!organizeOrder.length) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
+    const zip=new JSZip();
+    const chunks=Math.ceil(organizeOrder.length/n);
+    for(let c=0;c<chunks;c++){
+      $('#progress').textContent=`Chunk ${c+1}/${chunks}...`;
+      const slice=organizeOrder.slice(c*n,(c+1)*n);
+      const bytes=await buildOrganizePdf(slice);
+      zip.file(`part-${c+1}-p${c*n+1}-${Math.min((c+1)*n,organizeOrder.length)}.pdf`, bytes);
+    }
+    const blob=await zip.generateAsync({type:'blob'});
+    downloadBlob(blob, orgBaseName()+`-split-every-${n}.zip`);
+    orgNote(L(`<p class="text-center py-2">✅ Split every ${n} pages → <b>${chunks} files</b> in a ZIP</p>`,`<p class="text-center py-2">✅ Pisah per ${n} halaman → <b>${chunks} file</b> nang ZIP</p>`));
+    log('Org split every '+n+' -> '+chunks+' files');
+  }catch(e){ showError(e.message); }
+};
+// Compress mode: shrink the arranged pages (photos/scans re-encoded, text stays sharp).
+window.orgCompress=async ()=>{
+  try{
+    if(!window.PDFLib||!window.PDFCompress) throw new Error(L('PDF engine not loaded — reload the page','Mesin PDF belum dimuat — muat ulang halaman'));
+    if(!organizeOrder.length) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
+    const level=($('#orgCompressLevel')||{}).value||'medium';
+    log('Org compress level='+level);
+    const bytes=await buildOrganizePdf(organizeOrder);
+    const {bytes:out, stats}=await PDFCompress.compress(bytes, level, {onProgress:(message)=>{ $('#progress').textContent=message; }});
+    downloadBlob(new Blob([out],{type:'application/pdf'}), orgBaseName()+`-compressed-${level}.pdf`);
+    const saved=stats.before?((1-stats.after/stats.before)*100):0;
+    orgNote(L(`<p class="text-center py-2">✅ Compressed: <b>${saved.toFixed(0)}% smaller</b> (${level})</p>`,`<p class="text-center py-2">✅ Dikompres: <b>${saved.toFixed(0)}% lebih kecil</b> (${level})</p>`));
+    log(`Org compress ${stats.before} -> ${stats.after}`);
+  }catch(e){ showError(e.message); }
 };
 // Text watermark centred on the selected pages.
 window.orgWatermark=async ()=>{

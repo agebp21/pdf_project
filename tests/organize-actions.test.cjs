@@ -5,7 +5,9 @@ const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
 global.PDFLib = require('../.build/qa-runtime/node_modules/pdf-lib');
+global.JSZip = require('../.build/qa-runtime/node_modules/jszip');
 require('../assets/pdf-edit.js');
+global.PDFCompress = require('../assets/pdf-compress.js').PDFCompress || globalThis.PDFCompress;
 const { JSDOM } = require('../.build/qa-runtime/node_modules/jsdom');
 const pdfjs = require('../assets/vendor/pdf.min.js');
 pdfjs.GlobalWorkerOptions.workerSrc = path.resolve('assets/vendor/pdf.worker.min.js');
@@ -37,6 +39,8 @@ async function main() {
   w.console.log = () => {}; w.scrollTo = () => {};
   w.PDFLib = global.PDFLib;
   w.PDFEdit = globalThis.PDFEdit;
+  w.PDFCompress = global.PDFCompress;
+  w.JSZip = global.JSZip;
   const script = [...w.document.scripts].find(s => s.textContent.includes('const TOOLS')).textContent;
   w.eval(script + `
     window.qaSavedData = [];
@@ -58,14 +62,14 @@ async function main() {
   `);
   w.qaBuf = async () => { const b = Buffer.from(pdfBytes); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
   const bufOf = async (file) => Buffer.from(await file.blob.arrayBuffer());
-  // The selection panel is parked for now: no box in the UI, but the
-  // actions stay tested through injected inputs (ready when it returns).
-  assert.equal(w.document.querySelector('#orgSelBox'), null, 'selection panel removed');
+  // The selection panel lives for split/edit modes (merge keeps it hidden).
+  assert.ok(w.document.querySelector('#orgSelBox'), 'selection panel present');
   w.qaInputs();
   w.qaFiles();
   // Extract keeps grid order and content: pages 2 and 4 only.
   w.qaSetup([0, 1, 2, 3], [1, 3]);
   await w.orgExtract();
+  assert.ok(!w.qaError(), 'no error: ' + w.qaError());
   let [file] = w.qaSaved().slice(-1);
   assert.ok(file.name.endsWith('-extract.pdf'), file.name);
   let   out = await global.PDFLib.PDFDocument.load(await bufOf(file));
@@ -126,6 +130,60 @@ async function main() {
   w.qaSetup([0, 1, 2, 3], []);
   await w.orgExtract();
   assert.match(w.qaError(), /Tick pages|Centang/, 'empty selection warns');
+  // Modes share one shell: merge flips, split/edit select, tools per mode.
+  const tabs = JSON.stringify([...w.document.querySelectorAll('.org-tabs button')].map(b => b.dataset.mode));
+  assert.equal(tabs, JSON.stringify(['merge', 'split', 'edit', 'compress']), 'four mode tabs');
+  const tabActive = () => w.document.querySelector('.org-tabs button.active').dataset.mode;
+  assert.equal(tabActive(), 'merge', 'merge by default');
+  w.qaSetup([0, 1, 2, 3], []);
+  w.renderOrganizeGrid();
+  w.orgCardClick({ target: { closest: () => null } }, 2);
+  assert.ok(!w.document.querySelector('#organizeGrid').innerHTML.includes(' sel'), 'merge click does not select');
+  w.orgModeSet('split');
+  assert.equal(tabActive(), 'split', 'tab follows');
+  assert.ok(!w.document.querySelector('#orgSplitTools').classList.contains('is-hidden'), 'split tools show');
+  assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'no selection yet, box hidden');
+  w.orgCardClick({ target: { closest: () => null } }, 2);
+  assert.ok(w.document.querySelector('#organizeGrid').innerHTML.includes(' sel'), 'split click selects');
+  assert.ok(!w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'box opens on selection');
+  w.orgModeSet('merge');
+  w.renderOrganizeGrid();
+  assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'merge hides the box');
+  // Split ZIP: one PDF per selected page, in grid order.
+  w.orgModeSet('split');
+  w.qaSetup([0, 1, 2, 3], [3, 1]);
+  await w.orgSplitZip();
+  [file] = w.qaSaved().slice(-1);
+  assert.ok(file.name.endsWith('-split.zip'), file.name);
+  const JSZip = require('../.build/qa-runtime/node_modules/jszip');
+  let zip = await JSZip.loadAsync(await bufOf(file));
+  assert.deepEqual(Object.keys(zip.files).sort(), ['page-1.pdf', 'page-2.pdf']);
+  let first = await global.PDFLib.PDFDocument.load(await zip.file('page-1.pdf').async('uint8array'));
+  assert.equal(first.getPageCount(), 1);
+  assert.ok((await textOf(await zip.file('page-1.pdf').async('uint8array')))[0].includes('Bravo 2'), 'first selected page first');
+  // Split every N: chunks across the arranged order.
+  w.qaSetup([3, 2, 1, 0], []);
+  w.document.querySelector('#orgSplitN').value = '3';
+  await w.orgSplitEvery();
+  [file] = w.qaSaved().slice(-1);
+  assert.ok(file.name.endsWith('-split-every-3.zip'), file.name);
+  zip = await JSZip.loadAsync(await bufOf(file));
+  const names = Object.keys(zip.files).sort();
+  assert.equal(names.length, 2, '4 pages in threes');
+  first = await global.PDFLib.PDFDocument.load(await zip.file(names[0]).async('uint8array'));
+  assert.equal(first.getPageCount(), 3, 'first chunk holds three');
+  // Compress keeps every page in a valid PDF.
+  w.qaSetup([0, 1, 2, 3], []);
+  await w.orgCompress();
+  [file] = w.qaSaved().slice(-1);
+  assert.ok(file.name.endsWith('-compressed-medium.pdf'), file.name);
+  out = await global.PDFLib.PDFDocument.load(await bufOf(file));
+  assert.equal(out.getPageCount(), 4, 'compressed keeps every page');
+  // Edit mode brings the selection box back.
+  w.orgModeSet('edit');
+  w.qaSetup([0, 1, 2, 3], [0]);
+  w.renderOrganizeGrid();
+  assert.ok(!w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'edit shows the box');
   w.close();
   console.log('PASS organize actions: extract order+content, consecutive numbers, watermark, annotate text/rect/line+guards, empty guard');
 }
