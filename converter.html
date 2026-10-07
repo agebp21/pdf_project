@@ -777,7 +777,7 @@ window.orgOpenEditor = async () => {
     const ticked = organizeOrder.findIndex(code => organizeSelected.has(code));
     if (ticked >= 0) page = ticked + 1;
     const id = await FlipbookTransfer.save(new Blob([bytes], { type: 'application/pdf' }), orgBaseName() + '.pdf');
-    location.href = 'editor.html?source=' + encodeURIComponent(id) + '&page=' + page;
+    location.href = 'editor.html?source=' + encodeURIComponent(id) + '&page=' + page + '&from=organize';
   } catch (e) { showError(e.message || String(e)); }
 };
 window.orgEditTextOcr = async () => {

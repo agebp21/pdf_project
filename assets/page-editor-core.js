@@ -18,6 +18,16 @@
   // for a CSS line-height of lh (half-leading + ascent of the standard fonts).
   const baseline = lh => (lh - 1.12) / 2 + 0.9;
 
+  // Characters PDFs often carry that the standard fonts lack, as their plain equivalents.
+  function clean(text) {
+    return String(text || '')
+      .replace(/[\u2010-\u2012\u2212\u2043\uFE63\uFF0D]/g, '-')
+      .replace(/[\u00A0\u2000-\u200A\u202F\u205F\u3000]/g, ' ')
+      .replace(/[\u200B-\u200D\u2060\uFEFF\uFFFD\u0000-\u0008\u000B\u000C\u000E-\u001F]/g, '')
+      .replace(/\uFB01/g, 'fi').replace(/\uFB02/g, 'fl').replace(/\uFB00/g, 'ff').replace(/\uFB03/g, 'ffi').replace(/\uFB04/g, 'ffl')
+      .replace(/[\u2022\u25CF\u25AA\u2023]/g, '•');
+  }
+
   // Font family of a PDF font: sans / serif / mono.
   function family(name) {
     const n = String(name || '').toLowerCase();
@@ -29,6 +39,7 @@
   // Text runs -> lines. items: [{str, x, y (top), w, h (font size), bold, italic, family}] in pixels.
   function groupLines(items) {
     const lines = [];
+    items = items.map(it => ({ ...it, str: clean(it.str) }));
     const sorted = items.filter(it => it.str && it.str.trim() && it.w > 0 && it.h > 0).sort((a, b) => (a.y + a.h) - (b.y + b.h) || a.x - b.x);
     for (const it of sorted) {
       const base = it.y + it.h;
@@ -48,22 +59,32 @@
 
   // Lines -> paragraphs: consecutive lines of the same size, close together and
   // starting near the same left edge (a first-line indent is fine) become one
-  // block that rewraps when edited.
+  // block that rewraps when edited — but only for running text: the line before
+  // is a sentence-like line (5+ words) running (nearly) the full width of a column
+  // that holds more such lines. Labels, addresses, dates, amounts and table rows
+  // stay separate lines.
   function paragraphs(lines) {
     const blocks = [];
     const sorted = [...lines].sort((a, b) => a.y - b.y || a.x - b.x);
+    const words = l => l.text.trim().split(/\s+/).length;
+    const prose = l => {
+      const size = l.size || l.h;
+      const col = sorted.filter(o => Math.abs(o.x - l.x) < size * 2.2 && Math.abs((o.size || o.h) - size) <= size * 0.15);
+      const widest = Math.max(...col.map(o => o.w));
+      return words(l) >= 5 && l.w >= widest * 0.7 && col.filter(o => words(o) >= 5).length >= 2;
+    };
     for (const l of sorted) {
       const size = l.size || l.h;
-      const b = blocks.find(b => !b.closed && Math.abs(b.size - size) <= size * 0.15 && b.family === (l.family || 'sans') && !!b.bold === !!l.bold &&
+      const b = blocks.find(b => !b.closed && b.lastProse && Math.abs(b.size - size) <= size * 0.15 && b.family === (l.family || 'sans') && !!b.bold === !!l.bold &&
         l.y - (b.y + b.h) < size * 0.9 && l.y - (b.y + b.h) > -size * 0.5 &&
         (Math.abs(l.x - b.x) < size * 2.2 || Math.abs(l.x - b.lastX) < size * 2.2) &&
         Math.min(l.x + l.w, b.x + b.w) - Math.max(l.x, b.x) > Math.min(l.w, b.w) * 0.3);
-      if (!b) { blocks.push({ x: l.x, y: l.y, w: l.w, h: l.h, size, text: l.text, lines: 1, lastX: l.x, family: l.family || 'sans', bold: !!l.bold, italic: !!l.italic, color: l.color }); continue; }
+      if (!b) { blocks.push({ x: l.x, y: l.y, w: l.w, h: l.h, size, text: l.text, lines: 1, lastX: l.x, lastProse: prose(l), family: l.family || 'sans', bold: !!l.bold, italic: !!l.italic, color: l.color }); continue; }
       // Words split over two lines ("se-" + "hari") join again.
       if (/[\p{L}]-$/u.test(b.text) && /^\p{Ll}/u.test(l.text)) b.text = b.text.slice(0, -1) + l.text;
       else b.text += ' ' + l.text;
       const right = Math.max(b.x + b.w, l.x + l.w);
-      b.x = Math.min(b.x, l.x); b.w = right - b.x; b.h = l.y + l.h - b.y; b.lines++; b.lastX = l.x;
+      b.x = Math.min(b.x, l.x); b.w = right - b.x; b.h = l.y + l.h - b.y; b.lines++; b.lastX = l.x; b.lastProse = prose(l);
     }
     // Lines are spaced a little wider than the font: keep the paragraph's own rhythm.
     for (const b of blocks) b.lineHeight = b.lines > 1 ? Math.max(1, Math.min(2.2, b.h / b.lines / b.size)) : LINE;
@@ -156,7 +177,7 @@
         } else if (el.type === 'text') {
           const f = await font(el.family, el.bold, el.italic), size = el.fontSize * H;
           // Characters outside the standard fonts become "?" (reported to the user).
-          const text = Array.from(String(el.text || '')).map(ch => {
+          const text = Array.from(clean(el.text)).map(ch => {
             if (ch === '\n') return ch;
             try { f.widthOfTextAtSize(ch, size); return ch; } catch (e) { missing.add(ch); return '?'; }
           }).join('');
@@ -176,5 +197,5 @@
     return opts.report ? { bytes, missing: [...missing] } : bytes;
   }
 
-  globalThis.PageEditorCore = { FAMILIES, LINE, baseline, family, groupLines, paragraphs, wrap, exportPdf };
+  globalThis.PageEditorCore = { FAMILIES, LINE, baseline, clean, family, groupLines, paragraphs, wrap, exportPdf };
 })();

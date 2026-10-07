@@ -8,7 +8,8 @@
   const $ = s => document.querySelector(s);
   const L = (en, id) => (globalThis.I18N && I18N.pick ? I18N.pick(en, id) : id);
   const CSS_FONT = { sans: 'Arial, Helvetica, sans-serif', serif: '"Times New Roman", Times, serif', mono: '"Courier New", Courier, monospace' };
-  const st = { pdf: null, bytes: null, name: 'dokumen.pdf', pages: [], cur: -1, sel: null, zoom: 1, past: [], future: [] };
+  const st = { pdf: null, bytes: null, name: 'dokumen.pdf', pages: [], cur: -1, sel: null, zoom: 1, past: [], future: [],
+    from: new URLSearchParams(location.search).get('from') || '' };
   let uid = 1;
   const newId = () => 'e' + (uid++);
 
@@ -106,7 +107,7 @@
     if (!lines.length) {
       status(L('Scanned page: reading the text (OCR)…', 'Halaman hasil scan: membaca teks (OCR)…'));
       const found = await AnimationOCR.read(canvas, e => { if (e.status === 'recognizing text') status(L('OCR ', 'OCR ') + Math.round((e.progress || 0) * 100) + '%'); });
-      lines = found.map(l => ({ text: l.text, x: l.bbox.x0, y: l.bbox.y0, w: l.bbox.x1 - l.bbox.x0, h: l.bbox.y1 - l.bbox.y0, size: (l.bbox.y1 - l.bbox.y0) * 0.92, family: 'sans' }));
+      lines = found.map(l => ({ text: C.clean(l.text), x: l.bbox.x0, y: l.bbox.y0, w: l.bbox.x1 - l.bbox.x0, h: l.bbox.y1 - l.bbox.y0, size: (l.bbox.y1 - l.bbox.y0) * 0.92, family: 'sans' }));
     }
 
     // Pictures in the page become movable images (not full-page backgrounds).
@@ -144,7 +145,7 @@
     pg.original = original.toDataURL('image/jpeg', 0.9);
     canvas.width = original.width = 0;
     pg.elements = [...imgEls, ...textEls];
-    pg.initial = JSON.stringify(pg.elements);
+    pg.initial = JSON.stringify(pg.elements); pg.initialBg = pg.bg;
     pg.ready = true;
     p.cleanup();
   }
@@ -229,6 +230,7 @@
     toolbar();
   }
   function down(e, el, div) {
+    if (cutting) return;                                                  // the desk handles the cut
     const handle = e.target.closest('.pe-h');
     const onText = e.target.closest('.pe-txt');
     if (onText && !handle) { select(el.id); return; }                  // caret goes where you clicked
@@ -271,16 +273,22 @@
 
   // ---- history -----------------------------------------------------------------------------------
   let typingSnap = null;
-  function snapshot() { st.past.push(JSON.stringify(els())); if (st.past.length > 60) st.past.shift(); st.future = []; }
+  const state = () => JSON.stringify({ e: els(), bg: page().bg });
+  function snapshot() { st.past.push(state()); if (st.past.length > 60) st.past.shift(); st.future = []; }
   function touched(typing) {
     const pg = page(); if (!pg) return;
     if (typing) { if (!typingSnap) { typingSnap = true; snapshot(); } }
     if (!pg.edited) { pg.edited = true; renderThumbs(); }
   }
   function commitTyping() { typingSnap = null; }
-  function restore(json) { page().elements = JSON.parse(json); st.sel = null; page().edited = json !== page().initial; render(); renderThumbs(); }
-  function undo() { commitTyping(); if (!st.past.length) return; st.future.push(JSON.stringify(els())); restore(st.past.pop()); }
-  function redo() { if (!st.future.length) return; st.past.push(JSON.stringify(els())); restore(st.future.pop()); }
+  function restore(json) {
+    const s = JSON.parse(json), pg = page();
+    pg.elements = s.e; pg.bg = s.bg; st.sel = null;
+    pg.edited = JSON.stringify(s.e) !== pg.initial || s.bg !== pg.initialBg;
+    render(); renderThumbs();
+  }
+  function undo() { commitTyping(); if (!st.past.length) return; st.future.push(state()); restore(st.past.pop()); }
+  function redo() { if (!st.future.length) return; st.past.push(state()); restore(st.future.pop()); }
 
   // ---- toolbar -------------------------------------------------------------------------------------
   function toolbar() {
@@ -325,6 +333,46 @@
     return out;
   }
 
+  // ✂ Area → picture: logos and drawings made of vector paths are not pictures in
+  // the PDF; a box around them is cut from the original page and the background
+  // under it repaired.
+  let cutting = false;
+  const loadImg = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
+  function startCut(e) {
+    const stage = $('#pe-stage'), r = stage.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+    const box = document.createElement('div');
+    box.style.cssText = 'position:absolute;border:2px dashed #FF5C28;background:rgba(255,92,40,.08);z-index:9;pointer-events:none';
+    stage.append(box);
+    let b = null;
+    const move = ev => {
+      const x0 = Math.min(sx, ev.clientX) - r.left, y0 = Math.min(sy, ev.clientY) - r.top;
+      b = { x: Math.max(0, x0 / r.width), y: Math.max(0, y0 / r.height), w: Math.abs(ev.clientX - sx) / r.width, h: Math.abs(ev.clientY - sy) / r.height };
+      Object.assign(box.style, { left: b.x * 100 + '%', top: b.y * 100 + '%', width: b.w * 100 + '%', height: b.h * 100 + '%' });
+    };
+    const up = async () => {
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up); box.remove();
+      cutting = false; $('#pe-cut').classList.remove('on'); stage.style.cursor = '';
+      if (!b || b.w < 0.01 || b.h < 0.01) return;
+      try { await cutArea(b); } catch (err) { status(err.message || String(err)); }
+    };
+    addEventListener('pointermove', move); addEventListener('pointerup', up);
+  }
+  async function cutArea(b) {
+    const pg = page(), orig = await loadImg(pg.original), bg = await loadImg(pg.bg);
+    const W = orig.naturalWidth, H = orig.naturalHeight, px = { x0: b.x * W, y0: b.y * H, x1: (b.x + b.w) * W, y1: (b.y + b.h) * H };
+    const crop = Object.assign(document.createElement('canvas'), { width: Math.max(1, Math.round(px.x1 - px.x0)), height: Math.max(1, Math.round(px.y1 - px.y0)) });
+    crop.getContext('2d').drawImage(orig, px.x0, px.y0, crop.width, crop.height, 0, 0, crop.width, crop.height);
+    const src = crop.toDataURL('image/png'); crop.width = 0;
+    const canvas = Object.assign(document.createElement('canvas'), { width: W, height: H });
+    canvas.getContext('2d', { willReadFrequently: true }).drawImage(bg, 0, 0, W, H);
+    AnimationOCR.repair(canvas, [{ ...px, padding: 2 }]);
+    snapshot();
+    pg.bg = canvas.toDataURL('image/jpeg', 0.9); canvas.width = 0;
+    const el = { id: newId(), type: 'image', x: b.x, y: b.y, w: b.w, h: b.h, src, rotation: 0 };
+    els().push(el); touched(); st.sel = el.id; render();
+    status(L('Done: the area is now a picture — drag it, resize it or delete it.', 'Selesai: area itu sekarang gambar — seret, ubah ukuran, atau hapus.'));
+  }
+
   function wire() {
     $('#pe-file').onchange = e => { const f = e.target.files[0]; if (f) open(f, f.name).catch(err => status(err.message)); };
     $('#pe-undo').onclick = undo; $('#pe-redo').onclick = redo;
@@ -354,10 +402,16 @@
     $('#pe-delete').onclick = remove;
     $('#pe-zoom-in').onclick = () => { st.zoom = Math.min(3, st.zoom + 0.25); render(); };
     $('#pe-zoom-out').onclick = () => { st.zoom = Math.max(0.5, st.zoom - 0.25); render(); };
-    $('#pe-reset').onclick = () => { if (!page()) return; snapshot(); page().elements = JSON.parse(page().initial); page().edited = false; st.sel = null; render(); renderThumbs(); };
-    $('#pe-save').onclick = () => save(false);
-    $('#pe-flipbook').onclick = () => save(true);
-    $('#pe-desk').addEventListener('pointerdown', e => { if (!e.target.closest('.pe-el')) { commitTyping(); select(null); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } });
+    $('#pe-reset').onclick = () => { if (!page()) return; snapshot(); page().elements = JSON.parse(page().initial); page().bg = page().initialBg; page().edited = false; st.sel = null; render(); renderThumbs(); };
+    $('#pe-cut').onclick = () => { cutting = !cutting; $('#pe-cut').classList.toggle('on', cutting); $('#pe-stage').style.cursor = cutting ? 'crosshair' : '';
+      if (cutting) status(L('Drag a box around a logo, chart or drawing: it becomes a picture you can move.', 'Seret kotak di sekitar logo, grafik, atau gambar: area itu menjadi gambar yang bisa dipindah.')); };
+    $('#pe-save').onclick = () => save(st.from === 'organize' ? 'organize' : 'download');
+    $('#pe-download').onclick = () => save('download');
+    $('#pe-flipbook').onclick = () => save('flipbook');
+    if (st.from === 'organize') { $('#pe-save').textContent = L('💾 Save & back to Organize', '💾 Simpan & kembali ke Organize'); $('#pe-download').hidden = false; }
+    $('#pe-desk').addEventListener('pointerdown', e => {
+      if (cutting && e.target.closest('#pe-stage')) { e.preventDefault(); e.stopPropagation(); startCut(e); return; }
+      if (!e.target.closest('.pe-el')) { commitTyping(); select(null); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } });
     addEventListener('keydown', e => {
       const typing = document.activeElement && document.activeElement.isContentEditable;
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
@@ -366,29 +420,35 @@
     });
     addEventListener('resize', () => { if (page() && page().ready) render(); });
   }
+  // Leaving with unsaved changes asks first.
+  let dirtyLeave = true;
+  addEventListener('beforeunload', e => { if (dirtyLeave && st.pages.some(p => p.edited)) { e.preventDefault(); e.returnValue = ''; } });
   function remove() { const el = find(st.sel); if (!el) return; snapshot(); els().splice(els().indexOf(el), 1); st.sel = null; touched(); render(); }
 
   // ---- save ---------------------------------------------------------------------------------------------
-  async function save(toFlipbook) {
+  // where: 'download' | 'flipbook' | 'organize' (back to the Organize workspace with the edited PDF).
+  async function save(where) {
     commitTyping();
     if (window.MFAuth) {
       try {
         const data = await MFAuth.me();
         if (data.user && !data.offline && MFAuth.trialWall(data.user)) return;
-        if (!data.user && !data.offline) { MFAuth.loginPopup(() => save(toFlipbook)); return; }
+        if (!data.user && !data.offline) { MFAuth.loginPopup(() => save(where)); return; }
       } catch (e) {}
     }
     const edits = {};
     st.pages.forEach((pg, i) => { if (pg.edited && pg.ready) edits[i] = { size: pg.size, background: pg.bg, elements: pg.elements }; });
-    const btns = ['#pe-save', '#pe-flipbook'].map(s => $(s)); btns.forEach(b => b.disabled = true);
+    const btns = ['#pe-save', '#pe-download', '#pe-flipbook'].map(s => $(s)).filter(Boolean); btns.forEach(b => b.disabled = true);
     status(L('Building the PDF…', 'Menyusun PDF…'));
     try {
       const { bytes, missing } = await C.exportPdf(st.bytes, edits, { report: true });
       const blob = new Blob([bytes], { type: 'application/pdf' }), name = st.name.replace(/\.pdf$/i, '') + '-edit.pdf';
       const note = missing.length ? L(` Some characters are not in the PDF fonts and became "?": ${missing.join(' ')}`, ` Beberapa huruf tidak ada di font PDF dan menjadi "?": ${missing.join(' ')}`) : '';
-      if (toFlipbook && window.FlipbookTransfer) {
-        const id = await FlipbookTransfer.save(blob, name);
-        location.href = 'flipbook.html?source=' + encodeURIComponent(id);
+      if ((where === 'flipbook' || where === 'organize') && window.FlipbookTransfer) {
+        const id = await FlipbookTransfer.save(blob, where === 'organize' ? st.name : name);
+        dirtyLeave = false;
+        location.href = where === 'organize' ? 'converter.html?tool=organize-pdf&source=' + encodeURIComponent(id)
+          : 'flipbook.html?source=' + encodeURIComponent(id);
         return;
       }
       const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });

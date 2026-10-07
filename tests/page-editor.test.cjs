@@ -30,14 +30,22 @@ async function main() {
 
   // Runs of one line join (with a space where the gap is a word gap); a new baseline starts a line.
   const runs = [
-    { str: 'Sebagaimana', x: 10, y: 100, w: 90, h: 12 }, { str: 'pelayaran', x: 104, y: 100, w: 70, h: 12 },
-    { str: 'sebuah perahu', x: 10, y: 116, w: 100, h: 12 }, { str: 'Judul', x: 10, y: 40, w: 60, h: 24 },
+    { str: 'Sebagaimana pelayaran sebuah', x: 10, y: 100, w: 150, h: 12 }, { str: 'perahu dimungkinkan karena', x: 164, y: 100, w: 140, h: 12 },
+    { str: 'aneka faktor pendukung dan awak kapal', x: 10, y: 116, w: 290, h: 12 }, { str: 'Judul', x: 10, y: 40, w: 60, h: 24 },
   ];
   const lines = E.groupLines(runs);
-  assert.deepEqual(lines.map(l => l.text), ['Judul', 'Sebagaimana pelayaran', 'sebuah perahu']);
+  assert.deepEqual(lines.map(l => l.text), ['Judul', 'Sebagaimana pelayaran sebuah perahu dimungkinkan karena', 'aneka faktor pendukung dan awak kapal']);
   // Paragraphs: the two body lines merge, the big title stays alone; hyphenated words rejoin.
-  const blocks = E.paragraphs([...lines, { text: 'se-', x: 10, y: 160, w: 30, h: 12 }, { text: 'hari penuh', x: 10, y: 176, w: 80, h: 12 }]);
-  assert.deepEqual(blocks.map(b => b.text), ['Judul', 'Sebagaimana pelayaran sebuah perahu', 'sehari penuh']);
+  const blocks = E.paragraphs([...lines, { text: 'ini kalimat panjang yang berakhir se-', x: 10, y: 160, w: 280, h: 12 }, { text: 'hari penuh', x: 10, y: 176, w: 80, h: 12 }]);
+  assert.deepEqual(blocks.map(b => b.text), ['Judul', 'Sebagaimana pelayaran sebuah perahu dimungkinkan karena aneka faktor pendukung dan awak kapal',
+    'ini kalimat panjang yang berakhir sehari penuh']);
+  // Labels, addresses and table rows (short lines) stay separate lines.
+  const labels = E.paragraphs([{ text: 'Subtotal', x: 300, y: 400, w: 50, h: 10 }, { text: 'Total excluding tax', x: 300, y: 414, w: 100, h: 10 },
+    { text: 'VAT - Indonesia (11% incl. on Rp314,414.41)', x: 300, y: 428, w: 210, h: 10 }]);
+  assert.equal(labels.length, 3, 'short lines are not merged');
+  const amounts = E.paragraphs(['Rp349,000.00', 'Rp314,414.41', 'Rp34,585.59', 'Rp349,000.00'].map((t, i) => ({ text: t, x: 490, y: 400 + i * 16, w: 60, h: 10 })));
+  assert.equal(amounts.length, 4, 'a column of amounts stays one per line');
+  assert.equal(E.clean('71F029DE\u20110009 Aug 26\u2011Sep\u00a026 \ufb01le'), '71F029DE-0009 Aug 26-Sep 26 file');
   assert.equal(blocks[1].lines, 2); assert.ok(blocks[1].lineHeight > 1 && blocks[1].lineHeight < 1.6);
 
   // Wrap: by width, explicit newlines kept, an over-long word is cut.
