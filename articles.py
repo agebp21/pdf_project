@@ -423,3 +423,133 @@ article(
         ]),
         ('cta', 'pdf-ke-flipbook'),
     ], tool='pdf-ke-flipbook')
+
+article(
+    'cara-membuat-e-modul-flipbook-untuk-guru',
+    'Cara Membuat E-Modul Flipbook untuk Guru (Bisa Dibaca Offline)',
+    'Panduan untuk guru dan dosen: ubah modul ajar PDF menjadi e-modul flipbook yang bisa dibagikan ke siswa lewat '
+    'link, dibacakan dengan suara, dan dibuka tanpa internet.',
+    '2026-10-07',
+    [
+        ('p', 'E-modul flipbook membuat materi terasa seperti buku sungguhan: halaman bisa dibalik, gambar tampil penuh, dan '
+              'siswa betah membaca lebih lama dibanding PDF biasa. Banyak sekolah dan kampus kini meminta guru menyiapkan '
+              'bahan ajar digital seperti ini.'),
+        ('p', 'Kabar baiknya, Anda tidak perlu keahlian desain atau software berat. Siapkan modul dalam bentuk PDF, lalu '
+              'jadikan flipbook dengan [PDF ke Flipbook](/pdf-ke-flipbook) di MyFlipbook — antarmukanya berbahasa Indonesia.'),
+        ('h2', '1. Siapkan modul ajar'),
+        ('ul', ['Susun modul di Word, PowerPoint, atau Canva: sampul, capaian pembelajaran, materi, contoh soal, rangkuman, '
+                'dan evaluasi.',
+                'Simpan sebagai PDF. File Word dan PowerPoint juga bisa langsung dijadikan flipbook.',
+                'Gunakan huruf yang cukup besar (minimal 12 pt) agar nyaman dibaca di HP siswa.',
+                'Jika materinya berupa foto atau hasil scan, satukan dulu dengan [JPG ke PDF](/jpg-ke-pdf) atau '
+                '[Scan ke PDF](/scan-ke-pdf).']),
+        ('h2', '2. Jadikan e-modul flipbook'),
+        ('ol', ['Buka [PDF ke Flipbook](/flipbook.html) dan tambahkan file modul dari komputer, HP, atau Google Drive.',
+                'Isi judul, misalnya "E-Modul Biologi Kelas X — Sel".',
+                'Coba balik halamannya dan periksa tampilannya di layar penuh.',
+                'Tekan Save My Library agar e-modul tersimpan di akun Anda.']),
+        ('h2', '3. Bagikan ke siswa'),
+        ('ul', ['Share link — kirim lewat grup WhatsApp kelas atau tempel di Google Classroom/LMS. Siswa membuka di browser '
+                'tanpa login.',
+                'HTML offline — satu file yang bisa disalin ke flashdisk atau komputer lab dan dibuka tanpa internet (paket Pro).',
+                'Aplikasi Android (APK) — e-modul dipasang di HP siswa dan dibaca tanpa kuota (paket Pro). Lihat '
+                '[cara membuat aplikasi Android dari e-book](/artikel/cara-membuat-ebook-jadi-aplikasi-android).',
+                'Aplikasi Windows (EXE) — untuk komputer laboratorium sekolah (paket Business).']),
+        ('h2', 'Fitur yang membantu siswa belajar'),
+        ('ul', ['Audio book: halaman bisa dibacakan dengan suara — membantu siswa yang lebih mudah belajar dengan mendengar.',
+                'Stabilo dan catatan untuk menandai bagian penting.',
+                'Materi berbahasa Inggris bisa diterjemahkan ke Bahasa Indonesia dengan tombol Translate.',
+                'Halaman hasil scan tetap bisa distabilo dan dibacakan karena teksnya dikenali dengan OCR.']),
+        ('tip', 'Untuk satu sekolah atau satu jurusan, paket Business memungkinkan e-modul dijadikan aplikasi Windows untuk '
+                'komputer lab selain aplikasi Android.'),
+        ('faq', [
+            ('Apakah siswa perlu membuat akun?', 'Tidak. Siswa cukup membuka share link di browser, atau memasang aplikasi/membuka file offline yang Anda bagikan.'),
+            ('Apakah e-modul bisa dibuka tanpa internet?', 'Bisa, bila diekspor ke HTML offline atau aplikasi Android (paket Pro) maupun Windows (paket Business).'),
+            ('Berapa ukuran PDF yang ideal?', 'Usahakan di bawah 30–50 MB agar cepat dibuka di HP. File besar bisa dikecilkan dulu dengan Kompres PDF.'),
+        ]),
+        ('cta', 'pdf-ke-flipbook'),
+    ], tool='pdf-ke-flipbook')
+
+article(
+    'flipbook-untuk-pembelajaran',
+    'Flipbook untuk Pembelajaran: Ide dan Tips agar Siswa Betah Membaca',
+    'Ide memakai flipbook di kelas — e-modul, buku cerita, LKPD, portofolio, majalah sekolah — plus tips desain agar '
+    'materi enak dibaca di HP.',
+    '2026-10-07',
+    [
+        ('p', 'Flipbook bukan sekadar PDF yang bisa dibalik. Dengan tampilan seperti buku, materi terasa lebih menarik — '
+              'terutama untuk siswa yang terbiasa membaca di HP. Berikut ide pemakaian dan tips agar flipbook benar-benar '
+              'membantu pembelajaran.'),
+        ('h2', 'Ide flipbook di sekolah'),
+        ('ul', ['E-modul dan bahan ajar per bab — lihat [cara membuat e-modul flipbook](/artikel/cara-membuat-e-modul-flipbook-untuk-guru).',
+                'Buku cerita bergambar untuk literasi SD, lengkap dengan audio yang membacakan halaman.',
+                'LKPD (lembar kerja) yang dibaca di layar, dengan jawaban ditulis di buku tulis atau formulir terpisah.',
+                'Portofolio karya siswa atau laporan proyek P5.',
+                'Majalah atau buletin sekolah yang dibagikan ke orang tua lewat link.',
+                'Kumpulan soal latihan dan pembahasan menjelang ujian.']),
+        ('h2', 'Tips desain agar enak dibaca'),
+        ('ul', ['Satu halaman, satu gagasan. Pecah teks panjang menjadi poin-poin dan beri judul kecil.',
+                'Pakai ukuran halaman seragam (misalnya A4 tegak) agar buku terlihat rapi saat dibalik.',
+                'Beri banyak gambar, diagram, dan contoh — flipbook menampilkan gambar dengan jelas.',
+                'Letakkan sampul di halaman pertama dan usahakan jumlah halaman genap agar pasangan halaman kiri-kanan pas.',
+                'Cek tampilan di HP sebelum dibagikan; sebagian besar siswa membaca dari HP.']),
+        ('h2', 'Membuat siswa aktif, bukan sekadar membaca'),
+        ('ul', ['Minta siswa menstabilo kalimat kunci dan menulis catatan di flipbook.',
+                'Gunakan audio book untuk siswa yang kesulitan membaca atau untuk latihan menyimak.',
+                'Untuk materi berbahasa Inggris, siswa bisa membandingkan teks asli dengan terjemahan Bahasa Indonesia.',
+                'Akhiri tiap bab dengan pertanyaan refleksi atau tautan ke kuis.']),
+        ('h2', 'Cara cepat membuatnya'),
+        ('p', 'Siapkan materi sebagai PDF (atau Word/PowerPoint), lalu buka [PDF ke Flipbook](/pdf-ke-flipbook). Dalam '
+              'hitungan detik flipbook siap dibagikan lewat share link, atau diekspor menjadi file offline dan aplikasi.'),
+        ('faq', [
+            ('Apakah flipbook bisa dibuka di HP siswa yang sederhana?', 'Bisa dibuka di browser HP. Untuk HP dengan memori terbatas, kecilkan dulu ukuran PDF dengan Kompres PDF.'),
+            ('Apakah bisa dipakai di Google Classroom?', 'Bisa. Tempelkan share link flipbook sebagai materi atau tugas.'),
+        ]),
+        ('cta', 'pdf-ke-flipbook'),
+    ], tool='pdf-ke-flipbook')
+
+article(
+    'alternatif-heyzine-fliphtml5-bahasa-indonesia',
+    'Alternatif Heyzine dan FlipHTML5 Berbahasa Indonesia',
+    'Mencari pembuat flipbook selain Heyzine atau FlipHTML5? Ini kriteria memilih yang sesuai kebutuhan sekolah, UMKM, '
+    'dan kantor di Indonesia — dan apa yang ditawarkan MyFlipbook.',
+    '2026-10-07',
+    [
+        ('p', 'Heyzine, FlipHTML5, AnyFlip, Flipsnack, dan Issuu adalah nama-nama yang sering muncul saat mencari pembuat '
+              'flipbook. Semuanya layanan yang mapan. Namun kebutuhan tiap orang berbeda — guru di daerah dengan sinyal '
+              'terbatas, UMKM yang berjualan lewat WhatsApp, atau kantor yang dokumennya rahasia — sehingga wajar mencari '
+              'alternatif yang lebih pas.'),
+        ('h2', 'Kriteria memilih pembuat flipbook'),
+        ('ul', ['Bahasa antarmuka — apakah Anda dan pembaca nyaman memakai antarmuka berbahasa Inggris?',
+                'Bisa dibaca offline — penting untuk sekolah dan presentasi di lokasi tanpa sinyal.',
+                'Batas di paket gratis — jumlah flipbook, jumlah halaman, watermark, dan iklan.',
+                'Cara membagikan — link, file offline, atau aplikasi yang bisa dipasang.',
+                'Fitur membaca — stabilo, catatan, suara, terjemahan.',
+                'Privasi — di mana dokumen disimpan dan siapa yang bisa membukanya.',
+                'Harga dan cara bayar — mata uang dan metode pembayaran yang mudah di Indonesia.']),
+        ('p', 'Fitur dan harga setiap layanan bisa berubah, jadi selalu periksa halaman resmi masing-masing sebelum memutuskan.'),
+        ('h2', 'Yang ditawarkan MyFlipbook'),
+        ('ul', ['Antarmuka dan panduan berbahasa Indonesia.',
+                'PDF, Word, PowerPoint, dan gambar langsung jadi flipbook — dari komputer, HP, Google Drive, atau link.',
+                'Share link untuk dibaca di browser tanpa login (3 link gratis di akun Free).',
+                'Ekspor offline: HTML (paket Pro), aplikasi Android/APK (paket Pro), dan aplikasi Windows/EXE (paket Business).',
+                'Audio book, stabilo, catatan, dan spidol di dalam flipbook.',
+                'Terjemahan seluruh buku dari bahasa Inggris ke Bahasa Indonesia dengan tata letak tetap mengikuti kolom asli.',
+                'Alat PDF lengkap di satu tempat: kompres, gabung, pisah, tanda tangan, sensor, OCR, dan lainnya.',
+                'Proyek di My Library disimpan terenkripsi.']),
+        ('h2', 'Kapan MyFlipbook cocok?'),
+        ('ul', ['Guru yang membuat e-modul dan perlu versi offline untuk siswa — lihat '
+                '[cara membuat e-modul flipbook](/artikel/cara-membuat-e-modul-flipbook-untuk-guru).',
+                'UMKM yang membagikan katalog lewat WhatsApp — lihat '
+                '[cara membuat katalog produk digital](/artikel/cara-membuat-katalog-produk-digital).',
+                'Mahasiswa dan peneliti yang membaca jurnal berbahasa Inggris — lihat '
+                '[cara menerjemahkan jurnal](/artikel/cara-menerjemahkan-jurnal-bahasa-inggris).']),
+        ('h2', 'Coba sebelum memutuskan'),
+        ('p', 'Akun baru bisa mencoba semua fitur selama 7 hari. Ambil satu PDF yang biasa Anda pakai, jadikan flipbook di '
+              'beberapa layanan, lalu bandingkan sendiri hasil dan kemudahannya.'),
+        ('faq', [
+            ('Apakah flipbook dari layanan lain bisa dipindahkan ke MyFlipbook?', 'Cukup unggah ulang file PDF aslinya ke PDF ke Flipbook; flipbook baru siap dalam hitungan detik.'),
+            ('Apakah MyFlipbook gratis?', 'Membaca dan membuat flipbook bisa dicoba gratis; akun baru mendapat masa coba 7 hari untuk semua fitur. Ekspor offline dan aplikasi tersedia di paket berbayar.'),
+        ]),
+        ('cta', 'pdf-ke-flipbook'),
+    ], tool='pdf-ke-flipbook')
