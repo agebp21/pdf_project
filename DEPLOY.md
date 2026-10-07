@@ -151,3 +151,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-07 | `b2915f5` | Claude | 3 artikel SEO segmen mahasiswa (maca jurnal dadi buku, gabung jurnal dadi buku referensi, maca jurnal cepet), sitemap 52 URL. Backup `...-20261007c.tgz`. |
 | 2026-10-07 | `0c368ec` | Claude | Teks UI basa Jawa → Indonesia baku (popup login/trial, pesen Drive/share, draft, menu Organize). Aturan anyar nang AGENTS.md. Backup `...-20261007d.tgz`. |
 | 2026-10-07 | `88c614a` | Claude | Resik-resik live: tombol 🧪 test dummy + pesen developer (python server.py, localhost, F12, project server, local LibreOffice) dibusak saka tampilan; cathetan build APK/EXE saiki nyebut layanan build. Backup `...-20261007e.tgz`. |
+| 2026-10-07 | `c1b8f0c` | Claude | Kontak cs@myflipbookpro.com nang web: Privasi + Syarat (ganti Gmail), footer beranda + artikel/landing, popup trial, contactPoint Google. Backup `...-20261007f.tgz`. |
