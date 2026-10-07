@@ -21,6 +21,7 @@
 - Ekspor flipbook berbayar (keputusan user 25 Sep): Free = preview + simpan proyek; ekspor HTML/APK = Pro (Rp99.000/bln), EXE = Business. Jangan membuka template `assets/export/{index.html,viewer.js,viewer.css}` untuk publik.
 - Subscription sudah ada: `accounts.py` + `login.html`/`account.html`, Midtrans Snap. Harga di `PLANS` masih draf; jangan dianggap final. Mode hosting via `--public-host` (lihat README).
 - Notebook PDF dan Flipbook Animation juga "Coming soon" (keputusan user 25 Sep): `server.py` `SOON_PAGES` menampilkan `coming-soon.html` saat paywall aktif; `--no-paywall` membuka halaman aslinya untuk internal.
+- **Situs sudah live untuk publik (bukan trial):** jangan menampilkan alat tes / dummy, atau instruksi developer (python server.py, localhost, F12, "project server") di tampilan. Pesan error ditulis untuk pengguna umum.
 - **Teks tampilan (UI, pesan error, artikel, email) wajib Bahasa Indonesia baku + Inggris — BUKAN bahasa Jawa**, meskipun owner chat pakai Jawa campur. 7 Okt sudah ada teks Jawa yang lolos ke popup login ("nang endi wae", "Mengko") dan menu Organize; sudah diperbaiki.
 - Tool katalog yang belum dibuat tampil "Coming soon" (daftar `SOON` di `index.html`); hapus id dari daftar itu ketika tool-nya jadi.
 - Ekspor HTML offline, simpan/buka proyek, dan build APK/EXE lokal sudah memiliki implementasi; lihat handoff untuk bukti pengujian dan batas rilis.
