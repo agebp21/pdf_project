@@ -8,7 +8,7 @@
   const $ = s => document.querySelector(s);
   const L = (en, id) => (globalThis.I18N && I18N.pick ? I18N.pick(en, id) : id);
   const CSS_FONT = { sans: 'Arial, Helvetica, sans-serif', serif: '"Times New Roman", Times, serif', mono: '"Courier New", Courier, monospace' };
-  const st = { pdf: null, bytes: null, name: 'dokumen.pdf', pages: [], cur: -1, sel: null, zoom: 1, past: [], future: [],
+  const st = { pdf: null, bytes: null, name: 'dokumen.pdf', pages: [], cur: -1, sel: null, group: [], zoom: 1, past: [], future: [],
     from: new URLSearchParams(location.search).get('from') || '' };
   let uid = 1;
   const newId = () => 'e' + (uid++);
@@ -258,7 +258,7 @@
   async function go(i) {
     if (i < 0 || i >= st.pages.length) return;
     commitTyping();
-    st.cur = i; st.sel = null; st.past = []; st.future = [];
+    st.cur = i; st.sel = null; st.group = []; st.past = []; st.future = [];
     renderThumbs();
     const stage = $('#pe-stage');
     stage.innerHTML = '<div class="pe-busy">' + L('Preparing the page…', 'Menyiapkan halaman…') + '</div>';
@@ -313,7 +313,8 @@
   }
   function build(el) {
     const div = document.createElement('div');
-    div.className = 'pe-el pe-' + el.type + (el.under ? ' pe-under' : '') + (st.sel === el.id ? ' sel' : ''); div.dataset.id = el.id;
+    const many = st.group.includes(el.id);
+    div.className = 'pe-el pe-' + el.type + (el.under ? ' pe-under' : '') + (st.sel === el.id || many ? ' sel' : '') + (many ? ' multi' : ''); div.dataset.id = el.id;
     place(div, el);
     if (el.type === 'text') {
       const t = document.createElement('div'); t.className = 'pe-txt'; t.contentEditable = 'true'; t.spellcheck = false;
@@ -365,7 +366,18 @@
   }
 
   // ---- select / drag / resize / rotate -----------------------------------------------------------
+  // Several blocks at once (Ctrl+A, a box dragged over empty space, Shift+click):
+  // st.group holds them; st.sel is the one the toolbar shows.
+  const selected = () => st.group.length ? st.group.map(find).filter(Boolean) : [find(st.sel)].filter(Boolean);
+  function selectMany(ids) {
+    if (ids.length < 2) { st.group = []; select(ids[0] || null); render(); return; }
+    commitTyping(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+    st.group = ids; st.sel = ids[0]; render();
+    status(L(`${ids.length} blocks selected — change font, size or colour, drag, delete or copy (Ctrl+C) them together.`,
+      `${ids.length} blok dipilih — ubah font, ukuran, atau warna, geser, hapus, atau salin (Ctrl+C) sekaligus.`));
+  }
   function select(id, rerender = true) {
+    if (st.group.length) { st.group = []; st.sel = id; render(); return; }
     if (st.sel === id) return;
     const was = find(st.sel), now = find(id);
     st.sel = id;
@@ -377,16 +389,29 @@
     if (cutting) return;                                                  // the desk handles the cut
     const handle = e.target.closest('.pe-h');
     const onText = e.target.closest('.pe-txt');
-    if (onText && !handle) { select(el.id); return; }                  // caret goes where you clicked
-    e.preventDefault(); e.stopPropagation();
-    commitTyping(); select(el.id);
-    const stage = $('#pe-stage').getBoundingClientRect(), sx = e.clientX, sy = e.clientY, start = { ...el };
+    const field = document.activeElement;                                 // leave the toolbar's size box / menus
+    if (field && /input|select/i.test(field.tagName)) field.blur();
+    if (e.shiftKey) {                                                     // Shift+click adds / removes a block
+      e.preventDefault(); e.stopPropagation();
+      const ids = selected().map(o => o.id);
+      selectMany(ids.includes(el.id) ? ids.filter(i => i !== el.id) : [...ids, el.id]); return;
+    }
     const kind = handle ? handle.dataset.h : 'move';
+    const group = st.group.includes(el.id) && kind === 'move' ? selected() : null;
+    if (onText && !handle && !group) { select(el.id); return; }        // caret goes where you clicked
+    e.preventDefault(); e.stopPropagation();
+    commitTyping(); if (!group) select(el.id);
+    const stage = $('#pe-stage').getBoundingClientRect(), sx = e.clientX, sy = e.clientY, start = { ...el };
+    const starts = group ? group.map(o => ({ o, x: o.x, y: o.y })) : null;
     let moved = false;
     const move = ev => {
       const dx = (ev.clientX - sx) / stage.width, dy = (ev.clientY - sy) / stage.height;
       if (!moved && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) > 2) { moved = true; snapshot(); }
       if (!moved) return;
+      if (starts) {
+        for (const s of starts) { s.o.x = s.x + dx; s.o.y = s.y + dy; document.querySelectorAll(`#pe-stage [data-id="${s.o.id}"]`).forEach(n => place(n, s.o)); }
+        return;
+      }
       if (kind === 'move') { el.x = start.x + dx; el.y = start.y + dy; }
       else if (kind === 'rot') {
         const r = (document.querySelector(`#pe-stage [data-id="${el.id}"]`) || div).getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
@@ -410,6 +435,10 @@
     const up = () => {
       removeEventListener('pointermove', move); removeEventListener('pointerup', up);
       if (moved) { touched(); render(); }
+      else if (group) {                                                   // a plain click leaves the group
+        select(el.id);
+        const t = document.querySelector(`#pe-stage [data-id="${el.id}"] .pe-txt`); if (t) t.focus();
+      }
       else if (el.type === 'text') { const t = div.querySelector('.pe-txt'); t && t.focus(); }
     };
     addEventListener('pointermove', move); addEventListener('pointerup', up);
@@ -427,7 +456,7 @@
   function commitTyping() { typingSnap = null; }
   function restore(json) {
     const s = JSON.parse(json), pg = page();
-    pg.elements = s.e; pg.bg = s.bg; st.sel = null;
+    pg.elements = s.e; pg.bg = s.bg; st.sel = null; st.group = [];
     pg.edited = JSON.stringify(s.e) !== pg.initial || s.bg !== pg.initialBg;
     render(); renderThumbs();
   }
@@ -436,12 +465,13 @@
 
   // ---- toolbar -------------------------------------------------------------------------------------
   function toolbar() {
-    const el = find(st.sel), text = el && el.type === 'text', H = page() ? page().size[1] : 0;
+    const el = find(st.sel), H = page() ? page().size[1] : 0;
+    const text = el && (el.type === 'text' || selected().some(o => o.type === 'text'));
     for (const id of ['#pe-family', '#pe-size', '#pe-bold', '#pe-italic', '#pe-align-left', '#pe-align-center', '#pe-align-right']) { const b = $(id); if (b) b.disabled = !text; }
     for (const id of ['#pe-delete', '#pe-front', '#pe-back', '#pe-color']) { const b = $(id); if (b) b.disabled = !el; }
     const fill = $('#pe-fill'); if (fill) fill.disabled = !(el && (el.type === 'rect' || el.type === 'ellipse'));
     const rep = $('#pe-replace'); if (rep) rep.parentElement.style.display = el && el.type === 'image' ? '' : 'none';
-    if (text) {
+    if (text && el.type === 'text') {
       const fam = $('#pe-family'), own = el.font && st.fonts && st.fonts[el.font];
       let orig = fam.querySelector('option[value="orig"]');
       if (own) {
@@ -459,9 +489,9 @@
     $('#pe-reset').disabled = !(page() && page().edited);
   }
   function change(fn) {
-    const el = find(st.sel); if (!el) return;
-    commitTyping(); snapshot(); fn(el); touched(); render();
-    if (el.type === 'text') { const t = document.querySelector(`#pe-stage [data-id="${el.id}"] .pe-txt`); t && t.focus(); }
+    const all = selected(), el = all[0]; if (!el) return;
+    commitTyping(); snapshot(); for (const o of all) fn(o); touched(); render();
+    if (all.length === 1 && el.type === 'text') { const t = document.querySelector(`#pe-stage [data-id="${el.id}"] .pe-txt`); t && t.focus(); }
   }
   function add(el) {
     if (!page() || !page().ready) return;
@@ -540,12 +570,14 @@
       try { const { src, ratio } = await readImage(f); change(el => { if (el.type !== 'image') return; el.src = src; const [W, H] = page().size; el.h = el.w * ratio * W / H; }); }
       catch (err) { status(err.message); }
     };
-    $('#pe-family').onchange = e => change(el => { if (e.target.value === 'orig') return; el.family = e.target.value; delete el.font; });
-    $('#pe-size').onchange = e => change(el => { const v = Number(e.target.value); if (v > 0) el.fontSize = v / page().size[1]; });
+    const textOnly = fn => el => { if (el.type === 'text') fn(el); };
+    $('#pe-family').onchange = e => change(textOnly(el => { if (e.target.value === 'orig') return; el.family = e.target.value; delete el.font; }));
+    $('#pe-size').onchange = e => change(textOnly(el => { const v = Number(e.target.value); if (v > 0) el.fontSize = v / page().size[1]; }));
     // Bold/italic are standard-font styles: the text leaves the PDF's own font.
-    $('#pe-bold').onclick = () => change(el => { el.bold = !el.bold; delete el.font; });
-    $('#pe-italic').onclick = () => change(el => { el.italic = !el.italic; delete el.font; });
-    for (const a of ['left', 'center', 'right']) $('#pe-align-' + a).onclick = () => change(el => { el.align = a; });
+    // With several blocks, all follow the first one (all on, or all off).
+    $('#pe-bold').onclick = () => { const v = !(find(st.sel) || {}).bold; change(textOnly(el => { el.bold = v; delete el.font; })); };
+    $('#pe-italic').onclick = () => { const v = !(find(st.sel) || {}).italic; change(textOnly(el => { el.italic = v; delete el.font; })); };
+    for (const a of ['left', 'center', 'right']) $('#pe-align-' + a).onclick = () => change(textOnly(el => { el.align = a; }));
     $('#pe-color').oninput = e => change(el => { if (el.type === 'text') el.color = e.target.value; else el.stroke = e.target.value; });
     $('#pe-fill').oninput = e => change(el => { el.fill = e.target.value; });
     // Front: a picture under the design comes above it; Back: to the bottom of its layer, then under the design.
@@ -558,7 +590,7 @@
     $('#pe-delete').onclick = remove;
     $('#pe-zoom-in').onclick = () => { st.zoom = Math.min(3, st.zoom + 0.25); render(); };
     $('#pe-zoom-out').onclick = () => { st.zoom = Math.max(0.5, st.zoom - 0.25); render(); };
-    $('#pe-reset').onclick = () => { if (!page()) return; snapshot(); page().elements = JSON.parse(page().initial); page().bg = page().initialBg; page().edited = false; st.sel = null; render(); renderThumbs(); };
+    $('#pe-reset').onclick = () => { if (!page()) return; snapshot(); page().elements = JSON.parse(page().initial); page().bg = page().initialBg; page().edited = false; st.sel = null; st.group = []; render(); renderThumbs(); };
     $('#pe-cut').onclick = () => { cutting = !cutting; $('#pe-cut').classList.toggle('on', cutting); $('#pe-stage').style.cursor = cutting ? 'crosshair' : '';
       if (cutting) status(L('Drag a box around a logo, chart or drawing: it becomes a picture you can move.', 'Seret kotak di sekitar logo, grafik, atau gambar: area itu menjadi gambar yang bisa dipindah.')); };
     $('#pe-save').onclick = () => save(st.from === 'organize' ? 'organize' : 'download');
@@ -567,9 +599,20 @@
     if (st.from === 'organize') { $('#pe-save').textContent = L('💾 Save & back to Organize', '💾 Simpan & kembali ke Organize'); $('#pe-download').hidden = false; }
     $('#pe-desk').addEventListener('pointerdown', e => {
       if (cutting && e.target.closest('#pe-stage')) { e.preventDefault(); e.stopPropagation(); startCut(e); return; }
-      if (!e.target.closest('.pe-el')) { commitTyping(); select(null); if (document.activeElement && document.activeElement.blur) document.activeElement.blur(); } });
+      if (e.target.closest('.pe-el')) return;
+      commitTyping(); if (document.activeElement && document.activeElement.blur) document.activeElement.blur();
+      if (page() && page().ready) startBox(e); else select(null);
+    });
     addEventListener('keydown', e => {
       const typing = document.activeElement && document.activeElement.isContentEditable;
+      const ctrl = e.ctrlKey || e.metaKey, field = /input|select|textarea/i.test(document.activeElement.tagName);
+      // Ctrl+A: all the text on the page (inside a block: first its own text, again for all).
+      if (ctrl && e.key.toLowerCase() === 'a' && !field && page() && page().ready) {
+        const t = typing && document.activeElement, s = getSelection();
+        if (!t || s.toString().trim().length >= t.innerText.trim().length) { e.preventDefault(); selectMany(els().filter(o => o.type === 'text').map(o => o.id)); return; }
+      }
+      if (ctrl && e.key.toLowerCase() === 'c' && !typing && !field && st.group.length) { e.preventDefault(); copyText(); return; }
+      if (e.key === 'Escape' && st.group.length) { select(null); return; }
       if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !typing) { e.preventDefault(); e.shiftKey ? redo() : undo(); }
       else if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'y' && !typing) { e.preventDefault(); redo(); }
       else if ((e.key === 'Delete' || e.key === 'Backspace') && !typing && st.sel && !/input|select|textarea/i.test(document.activeElement.tagName)) { e.preventDefault(); remove(); }
@@ -579,7 +622,40 @@
   // Leaving with unsaved changes asks first.
   let dirtyLeave = true;
   addEventListener('beforeunload', e => { if (dirtyLeave && st.pages.some(p => p.edited)) { e.preventDefault(); e.returnValue = ''; } });
-  function remove() { const el = find(st.sel); if (!el) return; snapshot(); els().splice(els().indexOf(el), 1); st.sel = null; touched(); render(); }
+  function remove() {
+    const all = selected(); if (!all.length) return;
+    snapshot(); for (const el of all) els().splice(els().indexOf(el), 1); st.sel = null; st.group = []; touched(); render();
+  }
+  // The selected text, top to bottom, as plain text on the clipboard.
+  function copyText() {
+    const text = selected().filter(o => o.type === 'text').sort((a, b) => a.y - b.y || a.x - b.x).map(o => o.text).join('\n');
+    if (!text) return;
+    (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(
+      () => status(L('Copied the selected text.', 'Teks yang dipilih sudah disalin.')),
+      () => status(L('Could not copy: the browser blocked the clipboard.', 'Gagal menyalin: browser memblokir clipboard.')));
+  }
+  // A box dragged over empty space selects every block it touches (a click deselects).
+  function startBox(e) {
+    const stage = $('#pe-stage'), r = stage.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
+    let box = null, b = null;
+    const move = ev => {
+      if (!box && Math.abs(ev.clientX - sx) + Math.abs(ev.clientY - sy) < 4) return;
+      if (!box) { box = document.createElement('div'); box.style.cssText = 'position:absolute;border:1px solid #FF5C28;background:rgba(255,92,40,.08);z-index:9;pointer-events:none'; stage.append(box); }
+      const x0 = (Math.min(sx, ev.clientX) - r.left) / r.width, y0 = (Math.min(sy, ev.clientY) - r.top) / r.height;
+      b = { x0, y0, x1: x0 + Math.abs(ev.clientX - sx) / r.width, y1: y0 + Math.abs(ev.clientY - sy) / r.height };
+      Object.assign(box.style, { left: b.x0 * 100 + '%', top: b.y0 * 100 + '%', width: (b.x1 - b.x0) * 100 + '%', height: (b.y1 - b.y0) * 100 + '%' });
+    };
+    const up = () => {
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up);
+      if (!box) { select(null); return; }
+      box.remove();
+      // Pictures under the design only when wholly inside (they often fill the page).
+      selectMany(els().filter(o => o.under
+        ? o.x >= b.x0 && o.y >= b.y0 && o.x + o.w <= b.x1 && o.y + o.h <= b.y1
+        : o.x < b.x1 && o.x + o.w > b.x0 && o.y < b.y1 && o.y + o.h > b.y0).map(o => o.id));
+    };
+    addEventListener('pointermove', move); addEventListener('pointerup', up);
+  }
 
   // ---- save ---------------------------------------------------------------------------------------------
   // where: 'download' | 'flipbook' | 'organize' (back to the Organize workspace with the edited PDF).

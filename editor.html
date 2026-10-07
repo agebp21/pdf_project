@@ -50,6 +50,9 @@
   /* Text works like Word: no frame, no corner handles, just the caret. A small grip
      on the left (on hover / while editing) moves the block. */
   .pe-el.pe-text,.pe-el.pe-text:hover,.pe-el.pe-text.sel{outline:none}
+  /* Several blocks selected: text gets a highlight, like selected text in Word. */
+  .pe-el.pe-text.multi{background:rgba(255,92,40,.14);box-shadow:0 0 0 1px rgba(255,92,40,.25);border-radius:2px}
+  .pe-el.multi .pe-h{display:none!important}
   .pe-el.pe-text .pe-h:not([data-h=move]){display:none!important}
   .pe-el.pe-text .pe-h[data-h=move]{display:block;opacity:0;width:9px;height:9px;left:-15px;margin-top:-5px;border:0;border-radius:50%;background:#FF5C28;transition:opacity .15s}
   .pe-el.pe-text:hover .pe-h[data-h=move],.pe-el.pe-text.sel .pe-h[data-h=move]{opacity:.8}
