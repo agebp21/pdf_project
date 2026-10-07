@@ -58,8 +58,9 @@
   }
 
   // ---- turn a page into pieces ------------------------------------------------------------
-  function imageBoxes(ops, vpTransform) {
-    const U = pdfjsLib.Util, O = pdfjsLib.OPS, boxes = [], stack = [];
+  // Pictures painted on the page: the decoded picture (pdf.js objs) and where it lands.
+  function pictureOps(ops, vpTransform) {
+    const U = pdfjsLib.Util, O = pdfjsLib.OPS, out = [], stack = [];
     let ctm = [1, 0, 0, 1, 0, 0];
     for (let k = 0; k < ops.fnArray.length; k++) {
       const fn = ops.fnArray[k], a = ops.argsArray[k];
@@ -68,14 +69,61 @@
       else if (fn === O.transform) ctm = U.transform(ctm, a);
       else if (fn === O.paintFormXObjectBegin) { stack.push(ctm.slice()); if (a && a[0]) ctm = U.transform(ctm, a[0]); }
       else if (fn === O.paintFormXObjectEnd) ctm = stack.pop() || ctm;
-      else if (fn === O.paintImageXObject || fn === O.paintInlineImageXObject || fn === O.paintImageXObjectRepeat) {
+      else if (fn === O.paintImageXObject || fn === O.paintInlineImageXObject) {
         const m = U.transform(vpTransform, ctm);
         const pts = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([x, y]) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]);
-        const xs = pts.map(p => p[0]), ys = pts.map(p => p[1]);
-        boxes.push({ x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) });
+        const xs = pts.map(q => q[0]), ys = pts.map(q => q[1]);
+        out.push({ m, ref: fn === O.paintImageXObject ? a[0] : a[0], inline: fn === O.paintInlineImageXObject,
+          box: { x0: Math.min(...xs), y0: Math.min(...ys), x1: Math.max(...xs), y1: Math.max(...ys) } });
       }
     }
-    return boxes;
+    return out;
+  }
+  // The picture itself (no panels or text over it), drawn the way the page shows it.
+  function pictureSrc(p, op) {
+    let obj = op.inline ? op.ref : null;
+    if (!obj) try { obj = String(op.ref).startsWith('g_') ? p.commonObjs.get(op.ref) : p.objs.get(op.ref); } catch (e) { return null; }
+    if (!obj) return null;
+    let source = obj.bitmap || null;
+    const iw = obj.width || (source && source.width), ih = obj.height || (source && source.height);
+    if (!iw || !ih) return null;
+    if (!source && obj.data && (obj.kind === 2 || obj.kind === 3)) {
+      const c = Object.assign(document.createElement('canvas'), { width: iw, height: ih }), g = c.getContext('2d'), img = g.createImageData(iw, ih);
+      if (obj.kind === 3) img.data.set(obj.data.subarray(0, iw * ih * 4));
+      else for (let i = 0, j = 0; i < iw * ih; i++, j += 3) { img.data[i * 4] = obj.data[j]; img.data[i * 4 + 1] = obj.data[j + 1]; img.data[i * 4 + 2] = obj.data[j + 2]; img.data[i * 4 + 3] = 255; }
+      g.putImageData(img, 0, 0); source = c;
+    }
+    if (!source) return null;
+    const { box, m } = op, bw = box.x1 - box.x0, bh = box.y1 - box.y0;
+    const f = Math.max(1, Math.min(2.5, iw / Math.max(1, bw), 2400 / Math.max(bw, bh)));
+    const c = Object.assign(document.createElement('canvas'), { width: Math.max(1, Math.round(bw * f)), height: Math.max(1, Math.round(bh * f)) });
+    const g = c.getContext('2d');
+    g.setTransform(f, 0, 0, f, -box.x0 * f, -box.y0 * f);
+    g.transform(m[0] / iw, m[1] / iw, -m[2] / ih, -m[3] / ih, m[2] + m[4], m[3] + m[5]);
+    g.drawImage(source, 0, 0, iw, ih);
+    // Keep transparency only when the picture has any.
+    const px = g.getImageData(0, 0, c.width, c.height).data;
+    let clear = false; for (let i = 3; i < px.length; i += 4 * 97) if (px[i] < 245) { clear = true; break; }
+    const src = c.toDataURL(clear ? 'image/png' : 'image/jpeg', 0.9); c.width = 0;
+    return src;
+  }
+  // Two renders with the pictures replaced by key colours -> the page's design layer
+  // (panels, lines, logos), transparent where pictures show through.
+  async function keyedDocs() {
+    if (st.keyed) return st.keyed;
+    const png = rgb => { const k = Object.assign(document.createElement('canvas'), { width: 1, height: 1 }), g = k.getContext('2d');
+      g.fillStyle = `rgb(${rgb.join(',')})`; g.fillRect(0, 0, 1, 1); return Uint8Array.from(atob(k.toDataURL('image/png').split(',')[1]), ch => ch.charCodeAt(0)); };
+    const a = await C.keyPictures(st.bytes, png(C.KEY1)), b = await C.keyPictures(st.bytes, png(C.KEY2));
+    st.keyed = [await pdfjsLib.getDocument({ data: a.bytes }).promise, await pdfjsLib.getDocument({ data: b.bytes }).promise];
+    return st.keyed;
+  }
+  async function renderData(doc, index, vp) {
+    const pg = await doc.getPage(index + 1);
+    const c = Object.assign(document.createElement('canvas'), { width: Math.ceil(vp.width), height: Math.ceil(vp.height) });
+    const g = c.getContext('2d', { willReadFrequently: true });
+    await pg.render({ canvasContext: g, viewport: pg.getViewport({ scale: vp.scale }) }).promise;
+    const d = g.getImageData(0, 0, c.width, c.height); c.width = 0; pg.cleanup();
+    return d;
   }
 
   async function prepare(pg) {
@@ -87,8 +135,7 @@
     ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
     await p.render({ canvasContext: ctx, viewport: vp }).promise;
     const W = canvas.width, H = canvas.height;
-    const original = Object.assign(document.createElement('canvas'), { width: W, height: H });
-    original.getContext('2d').drawImage(canvas, 0, 0);
+    const original = ctx.getImageData(0, 0, W, H);
 
     // Text: the PDF's own text, or OCR for scanned pages.
     const content = await p.getTextContent();
@@ -104,29 +151,46 @@
         bold: /bold|black|heavy|semibold|demi/i.test(fname), italic: /italic|oblique/i.test(fname) });
     }
     let lines = C.groupLines(items);
-    if (!lines.length) {
+    const scanned = !lines.length;
+    if (scanned) {
       status(L('Scanned page: reading the text (OCR)…', 'Halaman hasil scan: membaca teks (OCR)…'));
       const found = await AnimationOCR.read(canvas, e => { if (e.status === 'recognizing text') status(L('OCR ', 'OCR ') + Math.round((e.progress || 0) * 100) + '%'); });
       lines = found.map(l => ({ text: C.clean(l.text), x: l.bbox.x0, y: l.bbox.y0, w: l.bbox.x1 - l.bbox.x0, h: l.bbox.y1 - l.bbox.y0, size: (l.bbox.y1 - l.bbox.y0) * 0.92, family: 'sans' }));
     }
 
-    // Pictures in the page become movable images (not full-page backgrounds).
-    let pictures = [];
-    try {
-      pictures = imageBoxes(await p.getOperatorList(), vp.transform).map(b => ({ x0: Math.max(0, b.x0), y0: Math.max(0, b.y0), x1: Math.min(W, b.x1), y1: Math.min(H, b.y1) }))
-        .filter(b => { const a = (b.x1 - b.x0) * (b.y1 - b.y0) / (W * H); return a > 0.004 && a < 0.8; });
-    } catch (e) {}
-    const imgEls = pictures.map(b => {
-      const c = Object.assign(document.createElement('canvas'), { width: Math.round(b.x1 - b.x0), height: Math.round(b.y1 - b.y0) });
-      c.getContext('2d').drawImage(original, b.x0, b.y0, c.width, c.height, 0, 0, c.width, c.height);
-      const src = c.toDataURL('image/jpeg', 0.92); c.width = 0;
-      return { id: newId(), type: 'image', x: b.x0 / W, y: b.y0 / H, w: (b.x1 - b.x0) / W, h: (b.y1 - b.y0) / H, src, rotation: 0 };
-    });
+    // Pictures become movable, replaceable images under the page's design.
+    // (A scanned page's full-page picture holds its text: it stays the background.)
+    let ops = [];
+    try { ops = pictureOps(await p.getOperatorList(), vp.transform).filter(o => {
+      const a = (o.box.x1 - o.box.x0) * (o.box.y1 - o.box.y0) / (W * H);
+      return a > 0.004 && !(scanned && a > 0.6);
+    }); } catch (e) {}
+    const imgEls = [];
+    for (const o of ops) {
+      const src = pictureSrc(p, o);
+      if (!src) continue;
+      const b = { x0: Math.max(0, o.box.x0), y0: Math.max(0, o.box.y0), x1: Math.min(W, o.box.x1), y1: Math.min(H, o.box.y1) };
+      imgEls.push({ id: newId(), type: 'image', under: true, x: o.box.x0 / W, y: o.box.y0 / H, w: (o.box.x1 - o.box.x0) / W, h: (o.box.y1 - o.box.y0) / H, src, rotation: 0, clip: b });
+    }
+    let layer = null;
+    if (imgEls.length) {
+      try {
+        status(L('Separating the pictures from the design…', 'Memisahkan gambar dari desain halaman…'));
+        const [ka, kb] = await keyedDocs();
+        const a = await renderData(ka, pg.index, vp), b = await renderData(kb, pg.index, vp);
+        if (a.width === W && b.width === W) layer = C.unkey(a.data, b.data);
+      } catch (e) { layer = null; }
+    }
+    if (!layer) imgEls.length = 0;                                       // could not separate: keep pictures in the background
 
-    // Clean the background under every line and picture (colours come back per line).
+    // Text colours from the page as printed; then the text leaves the design layer.
     const lineBoxes = lines.map(l => ({ x0: l.x, y0: l.y, x1: l.x + l.w, y1: l.y + l.h }));
-    const colors = AnimationOCR.repair(canvas, [...lineBoxes, ...pictures.map(b => ({ ...b, padding: 2 }))]);
+    const colors = C.textColors(original.data, W, H, lineBoxes);
     lines.forEach((l, i) => { l.color = colors[i]; });
+    const bgData = new ImageData(layer || new Uint8ClampedArray(original.data), W, H);
+    C.repair(bgData.data, W, H, lineBoxes);
+    ctx.clearRect(0, 0, W, H); ctx.putImageData(bgData, 0, 0);
+
     const blocks = C.paragraphs(lines);
     const measure = document.createElement('canvas').getContext('2d');
     const textEls = blocks.map(b => {
@@ -141,10 +205,12 @@
       return { id: newId(), type: 'text', x: b.x / W, y: Math.max(0, top) / H, w: Math.min(1 - b.x / W, (b.w + size * 0.6) / W), h: b.h / H, text: b.text,
         fontSize: size / H, family: b.family || 'sans', bold: !!b.bold, italic: !!b.italic, color: b.color || '#1c1917', align: 'left', lineHeight: b.lineHeight || C.LINE };
     });
-    pg.bg = canvas.toDataURL('image/jpeg', 0.9);
-    pg.original = original.toDataURL('image/jpeg', 0.9);
-    canvas.width = original.width = 0;
-    pg.elements = [...imgEls, ...textEls];
+    pg.layered = !!layer;
+    pg.bg = canvas.toDataURL(pg.layered ? 'image/png' : 'image/jpeg', 0.9);
+    const oc = Object.assign(document.createElement('canvas'), { width: W, height: H }); oc.getContext('2d').putImageData(original, 0, 0);
+    pg.original = oc.toDataURL('image/jpeg', 0.9); oc.width = 0;
+    canvas.width = 0;
+    pg.elements = [...imgEls.map(({ clip, ...e }) => e), ...textEls];
     pg.initial = JSON.stringify(pg.elements); pg.initialBg = pg.bg;
     pg.ready = true;
     p.cleanup();
@@ -178,8 +244,19 @@
     if (!pg || !pg.ready) return;
     sizeStage();
     stage.replaceChildren();
+    for (const el of pg.elements) if (el.under) stage.append(build(el));
     const bg = document.createElement('img'); bg.className = 'pe-bg'; bg.src = pg.bg; bg.alt = ''; stage.append(bg);
-    for (const el of pg.elements) stage.append(build(el));
+    for (const el of pg.elements) if (!el.under) stage.append(build(el));
+    // A selected picture under the design keeps its place in the layers; its frame
+    // and handles are drawn on top so it can still be resized and turned.
+    const sel = find(st.sel);
+    if (sel && sel.under) {
+      const ghost = document.createElement('div');
+      ghost.className = 'pe-el pe-ghost sel'; ghost.dataset.id = sel.id; place(ghost, sel);
+      for (const h of ['nw', 'ne', 'sw', 'se', 'rot']) { const hd = document.createElement('div'); hd.className = 'pe-h'; hd.dataset.h = h; ghost.append(hd); }
+      ghost.addEventListener('pointerdown', e => down(e, sel, ghost));
+      stage.append(ghost);
+    }
     toolbar();
   }
 
@@ -195,7 +272,7 @@
   }
   function build(el) {
     const div = document.createElement('div');
-    div.className = 'pe-el pe-' + el.type + (st.sel === el.id ? ' sel' : ''); div.dataset.id = el.id;
+    div.className = 'pe-el pe-' + el.type + (el.under ? ' pe-under' : '') + (st.sel === el.id ? ' sel' : ''); div.dataset.id = el.id;
     place(div, el);
     if (el.type === 'text') {
       const t = document.createElement('div'); t.className = 'pe-txt'; t.contentEditable = 'true'; t.spellcheck = false;
@@ -225,7 +302,9 @@
   // ---- select / drag / resize / rotate -----------------------------------------------------------
   function select(id, rerender = true) {
     if (st.sel === id) return;
+    const was = find(st.sel), now = find(id);
     st.sel = id;
+    if ((was && was.under) || (now && now.under)) { render(); return; }
     document.querySelectorAll('#pe-stage .pe-el').forEach(d => d.classList.toggle('sel', d.dataset.id === id));
     toolbar();
   }
@@ -245,7 +324,7 @@
       if (!moved) return;
       if (kind === 'move') { el.x = start.x + dx; el.y = start.y + dy; }
       else if (kind === 'rot') {
-        const r = div.getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
+        const r = (document.querySelector(`#pe-stage [data-id="${el.id}"]`) || div).getBoundingClientRect(), cx = r.left + r.width / 2, cy = r.top + r.height / 2;
         let deg = Math.atan2(ev.clientY - cy, ev.clientX - cx) * 180 / Math.PI + 90;
         if (!ev.shiftKey) deg = Math.round(deg / 5) * 5;
         el.rotation = ((Math.round(deg) % 360) + 360) % 360;
@@ -261,7 +340,7 @@
         }
         Object.assign(el, { x, y, w, h });
       }
-      place(div, el);
+      document.querySelectorAll(`#pe-stage [data-id="${el.id}"]`).forEach(n => place(n, el));
     };
     const up = () => {
       removeEventListener('pointermove', move); removeEventListener('pointerup', up);
@@ -364,10 +443,10 @@
     crop.getContext('2d').drawImage(orig, px.x0, px.y0, crop.width, crop.height, 0, 0, crop.width, crop.height);
     const src = crop.toDataURL('image/png'); crop.width = 0;
     const canvas = Object.assign(document.createElement('canvas'), { width: W, height: H });
-    canvas.getContext('2d', { willReadFrequently: true }).drawImage(bg, 0, 0, W, H);
-    AnimationOCR.repair(canvas, [{ ...px, padding: 2 }]);
+    const g = canvas.getContext('2d', { willReadFrequently: true }); g.drawImage(bg, 0, 0, W, H);
+    const d = g.getImageData(0, 0, W, H); C.repair(d.data, W, H, [{ ...px, padding: 2 }]); g.putImageData(d, 0, 0);
     snapshot();
-    pg.bg = canvas.toDataURL('image/jpeg', 0.9); canvas.width = 0;
+    pg.bg = canvas.toDataURL(pg.layered ? 'image/png' : 'image/jpeg', 0.9); canvas.width = 0;
     const el = { id: newId(), type: 'image', x: b.x, y: b.y, w: b.w, h: b.h, src, rotation: 0 };
     els().push(el); touched(); st.sel = el.id; render();
     status(L('Done: the area is now a picture — drag it, resize it or delete it.', 'Selesai: area itu sekarang gambar — seret, ubah ukuran, atau hapus.'));
@@ -397,8 +476,13 @@
     for (const a of ['left', 'center', 'right']) $('#pe-align-' + a).onclick = () => change(el => { el.align = a; });
     $('#pe-color').oninput = e => change(el => { if (el.type === 'text') el.color = e.target.value; else el.stroke = e.target.value; });
     $('#pe-fill').oninput = e => change(el => { el.fill = e.target.value; });
-    $('#pe-front').onclick = () => change(el => { const a = els(); a.splice(a.indexOf(el), 1); a.push(el); });
-    $('#pe-back').onclick = () => change(el => { const a = els(); a.splice(a.indexOf(el), 1); a.unshift(el); });
+    // Front: a picture under the design comes above it; Back: to the bottom of its layer, then under the design.
+    $('#pe-front').onclick = () => change(el => { const a = els(); a.splice(a.indexOf(el), 1); if (el.under) delete el.under; a.push(el); });
+    $('#pe-back').onclick = () => change(el => {
+      const a = els(), first = a.findIndex(e => !!e.under === !!el.under);
+      if (a[first] === el && !el.under && el.type !== 'text') el.under = true;
+      a.splice(a.indexOf(el), 1); a.unshift(el);
+    });
     $('#pe-delete').onclick = remove;
     $('#pe-zoom-in').onclick = () => { st.zoom = Math.min(3, st.zoom + 0.25); render(); };
     $('#pe-zoom-out').onclick = () => { st.zoom = Math.max(0.5, st.zoom - 0.25); render(); };

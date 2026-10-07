@@ -141,6 +141,100 @@
     return { x: ox, y: oy, rotate: globalThis.PDFLib.degrees(-deg) };
   }
 
+
+  // ---- layers: pictures under the page's design ----------------------------------------------
+  // keyPictures: a copy of the PDF where every picture (image XObject, not stencil
+  // masks) is one solid colour. Rendering it twice with two key colours tells,
+  // pixel by pixel, how much of the design (panels, lines, text) lies over the
+  // pictures — see unkey.
+  async function keyPictures(input, pngBytes) {
+    const lib = globalThis.PDFLib, N = n => lib.PDFName.of(n);
+    const doc = await lib.PDFDocument.load(input);
+    const key = await doc.embedPng(pngBytes), ctx = doc.context, seen = new Set();
+    let replaced = 0;
+    const walk = res => {
+      if (!(res instanceof lib.PDFDict)) return;
+      const xo = res.lookupMaybe(N('XObject'), lib.PDFDict);
+      if (!xo) return;
+      for (const [name, ref] of xo.entries()) {
+        const obj = ctx.lookup(ref);
+        if (!obj || !obj.dict) continue;
+        const sub = obj.dict.get(N('Subtype'));
+        if (sub === N('Image')) {
+          const mask = obj.dict.get(N('ImageMask'));
+          if (mask && typeof mask.asBoolean === 'function' && mask.asBoolean()) continue;
+          xo.set(name, key.ref); replaced++;
+        } else if (sub === N('Form') && !seen.has(ref)) { seen.add(ref); walk(obj.dict.lookup(N('Resources'))); }
+      }
+    };
+    for (const page of doc.getPages()) walk(page.node.Resources());
+    return { bytes: await doc.save(), replaced };
+  }
+  const KEY1 = [255, 0, 255], KEY2 = [0, 255, 0];
+  // unkey: two renders (pictures as KEY1 / KEY2) -> the design layer, transparent
+  // where pictures show through, partly transparent under see-through panels.
+  function unkey(a, b) {
+    const out = new Uint8ClampedArray(a.length);
+    for (let i = 0; i < a.length; i += 4) {
+      const t = Math.max(0, Math.min(1, ((a[i] - b[i]) + (b[i + 1] - a[i + 1]) + (a[i + 2] - b[i + 2])) / 765));
+      if (a[i + 3] < 250 || b[i + 3] < 250) {                       // not over a picture: keep as it is (fringes go)
+        if (t < 0.1) { out[i] = a[i]; out[i + 1] = a[i + 1]; out[i + 2] = a[i + 2]; out[i + 3] = a[i + 3]; }
+        continue;
+      }
+      const alpha = 1 - t;
+      if (alpha < 0.03) continue;
+      for (let c = 0; c < 3; c++) out[i + c] = (a[i + c] - t * KEY1[c]) / alpha;
+      out[i + 3] = alpha * 255;
+    }
+    return out;
+  }
+  // repair: fill boxes (text, cut areas) from their surroundings, transparency included.
+  function repair(data, w, h, boxes) {
+    const src = new Uint8ClampedArray(data), mask = new Uint8Array(w * h), span = new Uint32Array(w * h);
+    for (const b of boxes) {
+      const pad = b.padding ?? Math.max(2, Math.ceil((b.y1 - b.y0) * 0.15));
+      const x0 = Math.max(0, Math.floor(b.x0) - pad), y0 = Math.max(0, Math.floor(b.y0) - pad);
+      const x1 = Math.min(w - 1, Math.ceil(b.x1) + pad), y1 = Math.min(h - 1, Math.ceil(b.y1) + pad);
+      for (let y = y0; y <= y1; y++) mask.fill(1, y * w + x0, y * w + x1 + 1);
+    }
+    for (let y = 0; y < h; y++) for (let x = 0; x < w;) {
+      if (!mask[y * w + x]) { x++; continue; }
+      const start = x; while (x < w && mask[y * w + x]) x++;
+      const L0 = Math.max(0, start - 1), R0 = Math.min(w - 1, x);
+      for (let col = start; col < x; col++) {
+        const i = y * w + col, t = (col - L0) / Math.max(1, R0 - L0); span[i] = x - start;
+        for (let c = 0; c < 4; c++) data[i * 4 + c] = src[(y * w + L0) * 4 + c] * (1 - t) + src[(y * w + R0) * 4 + c] * t;
+      }
+    }
+    for (let x = 0; x < w; x++) for (let y = 0; y < h;) {
+      if (!mask[y * w + x]) { y++; continue; }
+      const start = y; while (y < h && mask[y * w + x]) y++;
+      const T0 = Math.max(0, start - 1), B0 = Math.min(h - 1, y);
+      for (let row = start; row < y; row++) {
+        const i = row * w + x, t = (row - T0) / Math.max(1, B0 - T0), wgt = span[i] / (span[i] + y - start);
+        for (let c = 0; c < 4; c++) data[i * 4 + c] = data[i * 4 + c] * (1 - wgt) + (src[(T0 * w + x) * 4 + c] * (1 - t) + src[(B0 * w + x) * 4 + c] * t) * wgt;
+      }
+    }
+    return data;
+  }
+  // Text colour of each box: the pixel inside that differs most from the box's rim.
+  function textColors(data, w, h, boxes) {
+    return boxes.map(b => {
+      const x0 = Math.max(0, Math.floor(b.x0) - 2), y0 = Math.max(0, Math.floor(b.y0) - 2), x1 = Math.min(w - 1, Math.ceil(b.x1) + 2), y1 = Math.min(h - 1, Math.ceil(b.y1) + 2);
+      const rim = [0, 0, 0]; let n = 0;
+      const add = i => { rim[0] += data[i]; rim[1] += data[i + 1]; rim[2] += data[i + 2]; n++; };
+      for (let x = x0; x <= x1; x++) { add((y0 * w + x) * 4); add((y1 * w + x) * 4); }
+      for (let y = y0; y <= y1; y++) { add((y * w + x0) * 4); add((y * w + x1) * 4); }
+      const bg = rim.map(v => v / Math.max(1, n));
+      let best = -1, color = [28, 25, 23];
+      for (let y = y0 + 2; y < y1 - 1; y++) for (let x = x0 + 2; x < x1 - 1; x++) {
+        const i = (y * w + x) * 4, d = Math.abs(data[i] - bg[0]) + Math.abs(data[i + 1] - bg[1]) + Math.abs(data[i + 2] - bg[2]);
+        if (d > best) { best = d; color = [data[i], data[i + 1], data[i + 2]]; }
+      }
+      return '#' + color.map(v => Math.round(v).toString(16).padStart(2, '0')).join('');
+    });
+  }
+
   // Build the edited PDF. edits: {pageIndex: {size: [W, H] points, background: JPEG bytes,
   // elements: [...]}}; pages without edits are copied untouched (still vector).
   async function exportPdf(input, edits, opts = {}) {
@@ -159,8 +253,16 @@
       if (!edit) { const [copy] = await out.copyPages(src, [index]); out.addPage(copy); continue; }
       const [W, H] = edit.size;
       const page = out.addPage([W, H]);
-      if (edit.background) page.drawImage(await out.embedJpg(bytesOf(edit.background)), { x: 0, y: 0, width: W, height: H });
-      for (const el of edit.elements || []) {
+      // Pictures that sit under the page's design go first, then the design layer, then the rest.
+      const all = edit.elements || [], under = all.filter(e => e.under), over = all.filter(e => !e.under);
+      const drawBackground = async () => {
+        if (!edit.background) return;
+        const bg = bytesOf(edit.background);
+        page.drawImage(bg[0] === 0x89 ? await out.embedPng(bg) : await out.embedJpg(bg), { x: 0, y: 0, width: W, height: H });
+      };
+      if (!under.length) await drawBackground();
+      for (const [n, el] of [...under, null, ...over].entries()) {
+        if (el === null) { if (under.length) await drawBackground(); continue; }
         const x = el.x * W, w = el.w * W, h = el.h * H, y = H - el.y * H - h;
         if (el.type === 'image') {
           const b = bytesOf(el.src);
@@ -197,5 +299,6 @@
     return opts.report ? { bytes, missing: [...missing] } : bytes;
   }
 
-  globalThis.PageEditorCore = { FAMILIES, LINE, baseline, clean, family, groupLines, paragraphs, wrap, exportPdf };
+  globalThis.PageEditorCore = { FAMILIES, LINE, baseline, clean, family, groupLines, paragraphs, wrap, exportPdf,
+    KEY1, KEY2, keyPictures, unkey, repair, textColors };
 })();

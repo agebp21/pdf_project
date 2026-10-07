@@ -55,7 +55,7 @@ async function main() {
   assert.deepEqual(E.wrap('panjaaaaaaang', m, 5), ['panja', 'aaaaa', 'ang']);
 
   // Export: page 1 edited (background + new text + image + rectangle), page 2 untouched.
-  const { PDFDocument, StandardFonts } = PDFLib;
+  const { PDFDocument, StandardFonts, rgb } = PDFLib;
   const src = await PDFDocument.create(), f = await src.embedFont(StandardFonts.Helvetica);
   src.addPage([400, 600]).drawText('Teks lama halaman satu', { x: 40, y: 500, size: 18, font: f });
   src.addPage([400, 600]).drawText('Halaman dua tetap asli', { x: 40, y: 500, size: 18, font: f });
@@ -80,6 +80,42 @@ async function main() {
   // Page order can be chosen (e.g. after reordering).
   const swapped = await E.exportPdf(bytes, {}, { order: [1, 0] });
   assert.match(await text(swapped, 1), /Halaman dua/);
+
+  // Layers: a full-page photo under a see-through white panel and text. The design
+  // layer comes out transparent over the photo, half-transparent under the panel.
+  {
+    const ad = await PDFDocument.create(), fo = await ad.embedFont(StandardFonts.HelveticaBold);
+    const photo = createCanvas(80, 120); const pc = photo.getContext('2d'); pc.fillStyle = '#3060c0'; pc.fillRect(0, 0, 80, 120);
+    const pg = ad.addPage([400, 600]);
+    pg.drawImage(await ad.embedPng(photo.toBuffer('image/png')), { x: 0, y: 0, width: 400, height: 600 });
+    pg.drawRectangle({ x: 200, y: 450, width: 180, height: 100, color: rgb(1, 1, 1), opacity: 0.5 });
+    pg.drawText('MARVEL', { x: 220, y: 490, size: 28, font: fo, color: rgb(0, 0, 0) });
+    const adBytes = await ad.save();
+    const keyPng = c => { const k = createCanvas(1, 1), g = k.getContext('2d'); g.fillStyle = `rgb(${c.join(',')})`; g.fillRect(0, 0, 1, 1); return k.toBuffer('image/png'); };
+    const k1 = await E.keyPictures(adBytes, keyPng(E.KEY1)), k2 = await E.keyPictures(adBytes, keyPng(E.KEY2));
+    assert.equal(k1.replaced, 1, 'one picture replaced');
+    const raster = async b => { const d = await open(b), pp = await d.getPage(1), vp = pp.getViewport({ scale: 0.5 });
+      const c = createCanvas(Math.ceil(vp.width), Math.ceil(vp.height)); await pp.render({ canvasContext: c.getContext('2d'), viewport: vp }).promise; await d.destroy();
+      return c.getContext('2d').getImageData(0, 0, c.width, c.height); };
+    const r1 = await raster(k1.bytes), r2 = await raster(k2.bytes);
+    const layer = E.unkey(r1.data, r2.data), at = (fx, fy) => { const i = (Math.floor(fy * r1.height) * r1.width + Math.floor(fx * r1.width)) * 4; return [...layer.slice(i, i + 4)]; };
+    assert.ok(at(0.2, 0.5)[3] < 10, 'photo area is transparent ' + at(0.2, 0.5));
+    const panel = at(0.9, 0.1);
+    assert.ok(panel[3] > 100 && panel[3] < 160 && panel[0] > 230, 'see-through white panel kept half transparent ' + panel);
+    // Text removal keeps transparency (no white/black box left behind).
+    const data = new Uint8ClampedArray(layer); E.repair(data, r1.width, r1.height, [{ x0: 0.1 * r1.width, y0: 0.4 * r1.height, x1: 0.3 * r1.width, y1: 0.45 * r1.height }]);
+    const i = (Math.floor(0.42 * r1.height) * r1.width + Math.floor(0.2 * r1.width)) * 4;
+    assert.ok(data[i + 3] < 10, 'repaired area over the photo stays transparent');
+    // Saving: a new picture under the design layer shows through the panel.
+    const layerCanvas = createCanvas(r1.width, r1.height), ld = layerCanvas.getContext('2d').createImageData(r1.width, r1.height);
+    ld.data.set(layer); layerCanvas.getContext('2d').putImageData(ld, 0, 0);
+    const green = createCanvas(40, 60); green.getContext('2d').fillStyle = '#00a000'; green.getContext('2d').fillRect(0, 0, 40, 60);
+    const saved = await E.exportPdf(adBytes, { 0: { size: [400, 600], background: layerCanvas.toBuffer('image/png'), elements: [
+      { type: 'image', under: true, x: 0, y: 0, w: 1, h: 1, src: 'data:image/png;base64,' + green.toBuffer('image/png').toString('base64') }] } });
+    const open1 = await pixel(saved, 1, 0.2, 0.6), under = await pixel(saved, 1, 0.9, 0.1);
+    assert.ok(open1[1] > 120 && open1[0] < 60, 'new picture visible ' + open1);
+    assert.ok(under[1] > under[0] + 40 && under[0] > 90, 'panel still lightens the picture under it ' + under);
+  }
   console.log('page-editor core tests passed');
 }
 main().catch(e => { console.error(e); process.exit(1); });

@@ -42,6 +42,9 @@
   .pe-el{position:absolute;box-sizing:border-box;outline:1px dashed transparent;outline-offset:1px}
   .pe-el:hover{outline-color:rgba(255,92,40,.55)}
   .pe-el.sel{outline:1.5px solid #FF5C28;z-index:5}
+  .pe-el.pe-under.sel{z-index:auto}
+  .pe-ghost{pointer-events:none;z-index:6}
+  .pe-ghost .pe-h{pointer-events:auto}
   .pe-text .pe-txt{outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;cursor:text}
   .pe-text{padding:0;cursor:move}
   .pe-image img{width:100%;height:100%;display:block;user-select:none;pointer-events:none}
