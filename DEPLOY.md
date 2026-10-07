@@ -155,3 +155,4 @@ Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifeti
 | 2026-10-07 | `c1b8f0c` | Claude | Kontak cs@myflipbookpro.com nang web: Privasi + Syarat (ganti Gmail), footer beranda + artikel/landing, popup trial, contactPoint Google. Backup `...-20261007f.tgz`. |
 | 2026-10-07 | (judul SEO) | Claude | Judul artikel flipbook + landing /pdf-ke-flipbook ngincer "membuat file PDF menjadi buku". Backup `...-20261007g.tgz`. |
 | 2026-10-07 | (reader+tombol) | Claude | Pembaca Organize: bentuk halaman saka median sampel (sampul landscape ora nyilikke halaman portrait); tombol Save & export flipbook putih, oranye mung pas hover. Backup `...-20261007h.tgz`. |
+| 2026-10-07 | (share sidebar) | Claude | Tombol Share link nang sidebar flipbook dibusak (share tetep nang tombol 🔗 Share ndhuwur). Backup `...-20261007i.tgz`. |
