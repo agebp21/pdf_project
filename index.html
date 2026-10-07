@@ -179,9 +179,7 @@
     {id:"notebook", title:"AI Summarizer", desc:"Upload a PDF → AI summary, page-by-page translation and a two-host podcast.", cat:["PDF Intelligence","Workflows"], color:"#4C1D95", icon:"✦", bg:"#E9E4FF", badge:"AI", href:"notebook.html", feat:true},
     {id:"flipbook-animation", title:"Flipbook Animation", desc:"Try moving charts, animated stats, and interactive flows inside a digital book.", cat:["Workflows"], color:"#1A3C34", icon:"▶", bg:"#FFE3D9", badge:"Demo", href:"animation.html", feat:true},
     {id:"workflow", title:"Create a workflow", desc:"Create custom workflows with your favorite tools, automate tasks, and reuse them anytime.", cat:["Workflows"], color:"#9A3412", icon:"↗", bg:"#FFE3D9", workflow:true, href:"workflow.html"},
-    {id:"merge-pdf", title:"Merge PDF", desc:"Combine PDFs in the order you want with the easiest PDF merger available.", cat:["Organize PDF"], color:"#9A3412", icon:"↘↖", bg:"#FFE3D9"},
-    {id:"split-pdf", title:"Split PDF", desc:"Separate one page or a whole set for easy conversion into independent PDF files.", cat:["Organize PDF"], color:"#9A3412", icon:"↗↙", bg:"#FFE3D9"},
-    {id:"compress-pdf", title:"Compress PDF", desc:"Reduce file size while optimizing for maximal PDF quality.", cat:["Optimize PDF"], color:"#1A3C34", icon:"⇲", bg:"#E4F3C2"},
+    {id:"organize-pdf", title:"Organize PDF", desc:"Merge files, split out pages, reorder, rotate, number and watermark — all in one workspace.", cat:["Organize PDF"], color:"#9A3412", icon:"A↕B", bg:"#FFEDD5"},
     {id:"pdf-to-word", title:"PDF to Word", desc:"Word that looks like your PDF, with text you can edit right on the page.", cat:["Convert PDF"], color:"#1D4ED8", icon:"W", bg:"#DBEAFE"},
     {id:"pdf-to-ppt", title:"PDF to PowerPoint", desc:"Slides that keep the PDF design, every text line an editable text box.", cat:["Convert PDF"], color:"#9A3412", icon:"P", bg:"#FFEDD5"},
     {id:"pdf-to-excel", title:"PDF to Excel", desc:"Pull tables into Excel: real cells, real numbers, pages kept as images.", cat:["Convert PDF"], color:"#15803D", icon:"X", bg:"#DCFCE7"},
@@ -196,7 +194,6 @@
     {id:"rotate-pdf", title:"Rotate PDF", desc:"Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!", cat:["Organize PDF"], color:"#7E22CE", icon:"↻", bg:"#FAE8FF"},
     {id:"html-to-pdf", title:"HTML to PDF", desc:"Convert webpages in HTML to PDF. Paste the URL and convert with a click.", cat:["Convert PDF"], color:"#92400E", icon:"HTML", bg:"#FEF9C3"},
     {id:"protect-pdf", title:"Protect PDF", desc:"Protect PDF files with a password. Encrypt PDF documents.", cat:["PDF Security"], color:"#1E5A8A", icon:"🛡", bg:"#DBEAFE"},
-    {id:"organize-pdf", title:"Organize PDF", desc:"Sort pages however you like. Delete or add pages at your convenience.", cat:["Organize PDF"], color:"#9A3412", icon:"A↕B", bg:"#FFEDD5"},
     {id:"pdf-to-pdfa", title:"PDF to PDF/A", desc:"Transform your PDF to PDF/A, the ISO-standardized version for archiving.", cat:["Convert PDF"], color:"#57534E", icon:"/A", bg:"#E7E5E4"},
     {id:"repair-pdf", title:"Repair PDF", desc:"Repair a damaged PDF and recover data from corrupt PDF.", cat:["Optimize PDF"], color:"#15803D", icon:"🛠", bg:"#DCFCE7"},
     {id:"page-numbers", title:"Page numbers", desc:"Add page numbers into PDFs with ease.", cat:["Edit PDF","Organize PDF"], color:"#7E22CE", icon:"1 2", bg:"#FAE8FF"},
@@ -221,9 +218,9 @@
   const filterWrap = document.getElementById('filters');
   const hordeEl = document.getElementById('horde');
   const HORDE_ROWS = [
-    {ids:["pdf-to-flipbook","journal-search","notebook","merge-pdf","split-pdf","pdf-to-word","pdf-to-excel","ocr-pdf"]},
-    {ids:["flipbook-animation","compress-pdf","word-to-pdf","jpg-to-pdf","sign-pdf","watermark","translate-pdf","pdf-to-md","edit-pdf","rotate-pdf"]},
-    {ids:["protect-pdf","pdf-to-jpg","html-to-pdf","organize-pdf","pdf-to-ppt","ppt-to-pdf","excel-to-pdf","compare-pdf","redact-pdf","crop-pdf","page-numbers","scan-to-pdf"]}
+    {ids:["pdf-to-flipbook","journal-search","notebook","organize-pdf","pdf-to-word","pdf-to-excel","ocr-pdf","sign-pdf"]},
+    {ids:["flipbook-animation","word-to-pdf","jpg-to-pdf","pdf-forms","watermark","translate-pdf","pdf-to-md","edit-pdf","rotate-pdf"]},
+    {ids:["protect-pdf","pdf-to-jpg","html-to-pdf","pdf-to-ppt","ppt-to-pdf","excel-to-pdf","compare-pdf","redact-pdf","crop-pdf","page-numbers","scan-to-pdf"]}
   ];
 
   function toolHref(t){

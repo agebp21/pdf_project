@@ -312,7 +312,7 @@
       'tool.rotate-pdf': 'Putar PDF sesukamu. Bisa banyak file sekaligus!',
       'tool.html-to-pdf': 'Ubah halaman web HTML jadi PDF. Tempel URL lalu klik.',
       'tool.protect-pdf': 'Lindungi file PDF dengan password. Enkripsi dokumenmu.',
-      'tool.organize-pdf': 'Susun halaman PDF sesukamu. Hapus atau tambah halaman dengan mudah.',
+      'tool.organize-pdf': 'Gabung file, pisahkan halaman, urutkan, putar, beri nomor, dan watermark — semua di satu tempat.',
       'tool.pdf-to-pdfa': 'Ubah PDF ke PDF/A, standar ISO untuk arsip jangka panjang.',
       'tool.repair-pdf': 'Perbaiki PDF rusak dan selamatkan datanya.',
       'tool.page-numbers': 'Tambah nomor halaman ke PDF dengan mudah.',
