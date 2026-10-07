@@ -59,13 +59,13 @@
   .org-empty-status{min-height:1.2em;font-size:11.5px;color:#9ca3af}
   @media(min-width:1024px){.org-ws{grid-template-columns:minmax(0,1fr) 300px}}
   .org-main{position:relative;padding:1.25rem;min-width:0}
-  .org-main #organizeGrid{padding-right:3rem}
   .org-side{background:#fff;border-top:1px solid #eee;display:flex;flex-direction:column;min-width:0}
   @media(min-width:1024px){.org-side{border-top:0;border-left:1px solid #eee;align-self:start}}
   .org-side-title{position:relative;margin:0;padding:.75rem 1.25rem .6rem;font-size:18px;font-weight:800;text-align:center}
   .org-side-title::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#ef2d2d}
   .org-files-head{display:flex;justify-content:space-between;align-items:center;padding:.25rem 1.25rem;font-size:13px;font-weight:700}
   .org-reset{color:#ef2d2d;font-weight:800;font-size:12px;text-decoration:underline;background:none;border:0;cursor:pointer}
+  .org-sort{color:#6b7280;font-weight:800;font-size:12px;text-decoration:underline;background:none;border:0;cursor:pointer}
   .org-chip{margin:0;display:flex;align-items:center;gap:.5rem;background:#fde8e8;border-radius:8px;padding:.6rem .75rem;font-size:12px;min-width:0}
   #orgFiles{display:grid;gap:.4rem;margin:.25rem 1.25rem 0}
   .org-chip-badge{background:#1f2937;color:#fff;font-size:10px;font-weight:800;border-radius:6px;min-width:20px;height:20px;display:grid;place-items:center;flex-shrink:0}
@@ -109,11 +109,6 @@
   .org-tools .org-ic{width:13px;height:13px}
   .org-hover button{width:24px;height:24px;border-radius:999px;background:rgba(255,255,255,.96);border:1px solid #e5e7eb;box-shadow:0 2px 6px rgba(0,0,0,.12);cursor:pointer;display:grid;place-items:center;color:#374151}
   .org-ic{width:13px;height:13px;display:block}
-  .org-fab{position:absolute;right:12px;top:96px;display:flex;flex-direction:column;align-items:center;gap:10px;z-index:5}
-  .org-fab-add{position:relative;width:44px;height:44px;border-radius:999px;background:#ef2d2d;color:#fff;font-size:26px;line-height:1;border:0;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.4);display:grid;place-items:center}
-  .org-fab-add .org-ic{width:22px;height:22px}
-  .org-fab-badge{position:absolute;top:-6px;left:-8px;background:#1f2937;color:#fff;font-size:10px;font-weight:800;min-width:18px;height:18px;border-radius:999px;display:grid;place-items:center;padding:0 4px}
-  .org-fab-sort{width:36px;height:36px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;cursor:pointer;font-size:16px;box-shadow:0 2px 6px rgba(0,0,0,.1)}
   /* Organize owns its files UI in the workspace sidebar: hide the
      duplicated list in the main column, keep progress/error visible. */
   #fileList.org-mode .hide-org{display:none}
@@ -400,56 +395,14 @@ function renderHeader(){
           <p id="orgEmptyStatus" class="org-empty-status"></p>
         </div>
         <div id="organizeGrid" ondrop="orgGridDrop(event)" ondragover="event.preventDefault()" class="is-hidden grid grid-cols-2 sm:grid-cols-3 xl:grid-cols-4 gap-x-5 gap-y-3 max-h-[62vh] overflow-auto p-2 pb-4"></div>
-        <div class="org-fab is-hidden" id="orgFab">
-          <button onclick="orgDuplicate()" id="orgFabAdd" title="${L('Duplicate selected','Duplikat yang dipilih')}" class="org-fab-add">${ORG_ICONS.plus}<span id="orgFabBadge" class="org-fab-badge is-hidden"></span></button>
-          <button onclick="orgSortToggle()" title="${L('Sort by page number','Urutkan nomor halaman')}" class="org-fab-sort">⇅</button>
-        </div>
       </div>
       <aside class="org-side is-hidden" id="orgSide">
         <h3 class="org-side-title">Organize pdf</h3>
-        <div class="org-files-head"><span>${L('Files:','File:')}</span><button onclick="orgReset()" class="org-reset">Reset all</button></div>
+        <div class="org-files-head"><span>${L('Files:','File:')}</span><span><button onclick="orgSortToggle()" class="org-sort" title="${L('Sort by page number','Urutkan nomor halaman')}">⇅ ${L('Sort','Urut')}</button> <button onclick="orgReset()" class="org-reset">Reset all</button></span></div>
         <div id="orgFiles"></div>
         <button class="org-addfile" onclick="addMoreFiles()">＋ ${L('Add file','Tambah file')}</button>
         <input id="blankInput" type="file" accept="image/*" hidden onchange="orgBlankPicked(this)">
-        <div id="orgSelBox" class="org-sel is-hidden">
-          <p class="org-sel-count"><b id="orgSelCount">0</b> ${L('selected','dipilih')}</p>
-          <div class="org-sel-row">
-            <button onclick="toggleAllOrg(true)">Select all</button>
-            <button onclick="toggleAllOrg(false)">Clear</button>
-          </div>
-          <div class="org-sel-row">
-            <button onclick="orgRotate(90)">↻ 90°</button>
-            <button onclick="orgRotate(180)">↻ 180°</button>
-            <button onclick="orgDuplicate()">${L('⎘ Duplicate','⎘ Duplikat')}</button>
-          </div>
-          <button onclick="orgDelete()" class="org-sel-del">🗑️ ${L('Delete selected','Hapus yang dipilih')}</button>
-          <div class="org-sel-row">
-            <button onclick="orgExtract()">${L('⎘ Extract selected','⎘ Ambil halaman terpilih')}</button>
-          </div>
-          <div class="org-sel-row">
-            <input id="orgNumStart" type="number" value="1" min="0" step="1" aria-label="${L('Starting number','Nomor awal')}">
-            <button onclick="orgNumber()">${L('Number pages','Beri nomor halaman')}</button>
-          </div>
-          <div class="org-sel-row">
-            <input id="orgWmText" type="text" maxlength="60" placeholder="${L('Watermark text…','Teks watermark…')}" aria-label="${L('Watermark text','Teks watermark')}">
-            <button onclick="orgWatermark()">${L('Watermark','Watermark')}</button>
-          </div>
-          <div class="org-sel-row">
-            <select id="orgAnnKind" aria-label="${L('Annotation kind','Jenis anotasi')}">
-              <option value="text">${L('Text','Teks')}</option>
-              <option value="rect">${L('Rectangle','Kotak')}</option>
-              <option value="ellipse">${L('Ellipse','Elips')}</option>
-              <option value="line">${L('Line','Garis')}</option>
-              <option value="image">${L('Image','Gambar')}</option>
-            </select>
-            <button onclick="orgAnnotate()">✎ ${L('Add','Tambah')}</button>
-          </div>
-          <div class="org-sel-row">
-            <input id="orgAnnText" type="text" maxlength="60" placeholder="${L('Text or W×H…','Teks atau P×L…')}" aria-label="${L('Text or size','Teks atau ukuran')}">
-            <input id="orgAnnSize" type="number" value="14" min="0.1" step="0.5" aria-label="${L('Size','Ukuran')}">
-          </div>
-          <input id="orgAnnImage" type="file" accept=".png,.jpg,.jpeg" hidden onchange="orgAnnPicked(this)">
-        </div>
+        <input id="orgAnnImage" type="file" accept=".png,.jpg,.jpeg" hidden onchange="orgAnnPicked(this)">
         <div class="org-foot"><div id="orgFootExtra"></div><button onclick="document.getElementById('convertBtn').click()" class="org-go">Organize <span aria-hidden="true">→</span></button></div>
       </aside>
     </div>`;
@@ -693,7 +646,7 @@ async function buildOrganizePreview(){
       const buf=await files[fi].arrayBuffer();
       const doc=await PDFLib.PDFDocument.load(buf.slice(0), {ignoreEncryption:true});
       const n=doc.getPageCount();
-      for(let p=0;p<n;p++){ organizeOrder.push(fi*1000000+p); organizeSelected.add(fi*1000000+p); }
+      for(let p=0;p<n;p++){ organizeOrder.push(fi*1000000+p); }
       try{ orgPdfDocs.push(await pdfjsLib.getDocument({data:new Uint8Array(buf), disableWorker: location.protocol==='file:'}).promise); }
       catch(e){ orgPdfDocs.push(null); log('Org thumbs off file '+(fi+1)+': '+e.message); }
     }
@@ -794,13 +747,10 @@ function renderOrganizeGrid(){
   const hasPages=organizeOrder.length>0;
   document.getElementById('orgEmpty')?.classList.toggle('is-hidden',hasPages);
   grid.classList.toggle('is-hidden',!hasPages);
-  document.getElementById('orgFab')?.classList.toggle('is-hidden',!hasPages);
   document.getElementById('orgSide')?.classList.toggle('is-hidden',!hasPages);
   if(!hasPages) return;
   paintOrgFiles();
   const nSel=organizeSelected.size;
-  const badge=$('#orgFabBadge');
-  if(badge){ badge.classList.toggle('is-hidden',nSel===0); badge.textContent=nSel; }
   const box=$('#orgSelBox');
   if(box) box.classList.toggle('is-hidden',nSel===0);
   const cnt=$('#orgSelCount');
@@ -1206,7 +1156,7 @@ const orgPruneFills=()=>{ const alive=new Set(organizeOrder); Object.keys(orgBla
 window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(pos,1); if(!organizeOrder.includes(idx)) organizeSelected.delete(idx); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); };
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(at<0?organizeOrder.length:at+1,0,fresh); renderOrganizeGrid(); };
 window.orgInsertBlankAt=(at)=>{ at=Math.max(0,Math.min(organizeOrder.length,at)); organizeOrder.splice(at,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(at+1)); };
-window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(Date.now()-orgDragEnd<350) return; if(e.target.closest('button,input')) return; orgCheck(idx,!organizeSelected.has(idx)); orgFlipTo(organizeOrder.indexOf(idx)); };
+window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(Date.now()-orgDragEnd<350) return; if(e.target.closest('button,input')) return; orgFlipTo(organizeOrder.indexOf(idx)); };
 window.orgCheck=(idx, on)=>{ if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
 window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
 window.orgDelete=()=>{ if(organizeSelected.size===0) return showError('Tick the pages to delete first'); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
@@ -1318,7 +1268,6 @@ function updateFileUI({preserveError=false}={}){
     const loaded=files.length>0;
     document.getElementById('orgEmpty')?.classList.toggle('is-hidden',loaded);
     document.getElementById('organizeGrid')?.classList.toggle('is-hidden',!loaded);
-    document.getElementById('orgFab')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgSide')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgReader')?.classList.toggle('is-hidden',!loaded);
     if(!loaded){

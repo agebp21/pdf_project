@@ -45,21 +45,24 @@ async function main() {
     window.qaSetup=(order,selected)=>{organizeOrder=order.slice();organizeSelected=new Set(selected);};
     downloadBlob=(blob,name)=>{window.qaSavedData.push({blob,name});};
     window.qaSaved=()=>window.qaSavedData;
-    window.qaNumStart=v=>{document.querySelector('#orgNumStart').value=v;};
-    window.qaWmText=v=>{document.querySelector('#orgWmText').value=v;};
+    window.qaInputs=()=>{
+      const mk=(tag,id,type,value)=>{let el=document.querySelector('#'+id);
+        if(!el){el=document.createElement(tag);el.id=id;if(type)el.type=type;document.body.append(el);}
+        if(value!==undefined)el.value=value;return el;};
+      mk('input','orgNumStart','number','1');mk('input','orgWmText','text','');
+      const sel=mk('select','orgAnnKind');
+      sel.innerHTML='<option value="text">Text</option><option value="rect">Rectangle</option><option value="ellipse">Ellipse</option><option value="line">Line</option><option value="image">Image</option>';
+      mk('input','orgAnnText','text','');mk('input','orgAnnSize','number','14');
+    };
     window.qaError=()=>document.querySelector('#error').textContent;
   `);
   w.qaBuf = async () => { const b = Buffer.from(pdfBytes); return b.buffer.slice(b.byteOffset, b.byteOffset + b.byteLength); };
   const bufOf = async (file) => Buffer.from(await file.blob.arrayBuffer());
-  // The sidebar selection tools render with the new actions.
-  w.setTool('organize-pdf');
+  // The selection panel is parked for now: no box in the UI, but the
+  // actions stay tested through injected inputs (ready when it returns).
+  assert.equal(w.document.querySelector('#orgSelBox'), null, 'selection panel removed');
+  w.qaInputs();
   w.qaFiles();
-  w.qaSetup([0, 1, 2, 3], [0, 1, 2, 3]);
-  const side = w.document.querySelector('#orgSelBox').innerHTML;
-  assert.ok(side.includes('orgExtract()'), 'extract action renders');
-  assert.ok(side.includes('orgNumber()'), 'number action renders');
-  assert.ok(side.includes('orgWatermark()'), 'watermark action renders');
-  assert.ok(side.includes('orgAnnotate()'), 'annotate action renders');
   // Extract keeps grid order and content: pages 2 and 4 only.
   w.qaSetup([0, 1, 2, 3], [1, 3]);
   await w.orgExtract();
@@ -71,7 +74,7 @@ async function main() {
   assert.ok(extracted[0].includes('Bravo 2') && extracted[1].includes('Delta 4'), 'extract keeps content in grid order');
   // Page numbers run consecutively from the starting number, only selected.
   w.qaSetup([0, 1, 2, 3], [0, 2]);
-  w.qaNumStart('7');
+  w.document.querySelector('#orgNumStart').value = '7';
   await w.orgNumber();
   [file] = w.qaSaved().slice(-1);
   assert.ok(file.name.endsWith('-numbered.pdf'), file.name);
@@ -83,7 +86,7 @@ async function main() {
   assert.ok(!/\b7\b|\b8\b/.test(numbered[1]) || numbered[1].includes('Bravo 2'), 'unselected page untouched');
   // Watermark text lands on the selected pages only.
   w.qaSetup([0, 1, 2, 3], [3]);
-  w.qaWmText('RAHASIA');
+  w.document.querySelector('#orgWmText').value = 'RAHASIA';
   await w.orgWatermark();
   [file] = w.qaSaved().slice(-1);
   assert.ok(file.name.endsWith('-watermarked.pdf'), file.name);

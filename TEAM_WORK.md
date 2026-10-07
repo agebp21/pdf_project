@@ -1322,6 +1322,17 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Tes: suite organize ijo (markup order-agnostic); sintaks + diff bersih.
 - Durung commit/push/deploy.
 
+### 2026-10-07 — Kolom FAB abang takeout (request owner + screenshot)
+- Abang numpuk nang mburi = kolom floating (duplicate + sort) sing nimpa grid. Dibusak total (markup + CSS + JS + padding cadangan grid); sort pindah nang files-head (⇅ Urut, abu, ora ngrusak); duplicate tetep nang baris seleksi. Tes orgFab → sort-header.
+- Tes: suite organize ijo; sintaks + diff bersih.
+- Durung commit/push/deploy.
+
+### 2026-10-07 — Panel seleksi organize dicopot total saiki (request owner)
+- "Takeout semua sik": `#orgSelBox` dibusak (select-all/clear, rotate/duplikat, delete, extract, nomor, watermark, anotasi — kabeh tombol + input). Hover per-kartu (putar/hapus), + blank, drag Trello, reader, zoom, tombol Organize gede TETEP jalan. Klik kartu = flip tok (ora centang abang meneh); ora auto-select pas load.
+- Fungsi-fungsi dipertahanke (ora dibusak) kanggo balike sesuk + tes-e ijo terus: organize-actions nganggo input injeksi; guard `#orgSelBox/#orgSelCount` sing wes ono nutupi render.
+- Tes: suite organize ijo; sintaks + diff bersih.
+- Durung commit/push/deploy.
+
 ### 2026-10-06 — Edit PDF tool tenanan (request owner, kartu SOON → live)
 - Kartu "Edit PDF" urip: tambah teks, stempel gambar, kotak, elips, garis nang posisi bebas (preset + geser mm + rotasi), warna/opacity, rentang halaman — ditumpuk pirang-pirang nang sedino jalan (daftar draft + busak per item). Mesin `PDFEdit` anyar reuse geometri matriks/rotasi sing wes kebukti (watermark/nomer); jujur nang watesan: font Helvetica tok (script liyo → dikandhani nganggo gambar), font system liyo ora di-embed, freehand durung (butuh canvas gambar).
 - File: `assets/pdf-edit.js` (annotate + validasi + form + draft list), `converter.html` (TOOLS + wiring + toggleKind hook), `index.html` (metu seko SOON).

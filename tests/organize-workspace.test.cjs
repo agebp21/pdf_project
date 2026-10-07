@@ -82,7 +82,7 @@ async function main(){
   assert.ok(w.document.getElementById('options').classList.contains('org-full'),'workspace uses full width');
   assert.equal(vis('orgSide'),false,'sidebar hidden without file');
   assert.equal(vis('organizeGrid'),false,'grid hidden without file');
-  assert.equal(vis('orgFab'),false,'fab hidden without file');
+  assert.equal(w.document.getElementById('orgFab'),null,'floating buttons removed');
   // Empty state offers direct Upload + Google Drive shortcuts.
   const emptyHTML=w.document.getElementById('orgEmpty').innerHTML;
   assert.ok(emptyHTML.includes('orgUploadDirect'),'upload shortcut present');
@@ -92,7 +92,8 @@ async function main(){
   assert.equal(vis('orgEmpty'),false,'prompt hides with file');
   assert.equal(vis('orgSide'),true,'sidebar shows with file');
   assert.equal(vis('organizeGrid'),true,'grid shows with file');
-  assert.equal(vis('orgFab'),true,'fab shows with file');
+  assert.ok(w.document.querySelector('.org-sort'),'sort lives in the files header now');
+  assert.ok(w.document.querySelector('.org-sort').getAttribute('onclick').includes('orgSortToggle'),'sort button wired');
   assert.equal(vis('orgReader'),true,'reader opens by default');
   assert.ok(w.document.getElementById('fileList').classList.contains('hidden'),'no duplicate file panel');
   // Removing the file restores the prompt and clears the grid.
