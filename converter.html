@@ -428,7 +428,7 @@ function renderHeader(){
         <div class="org-tabs" id="orgTabs" role="tablist" aria-label="Organize modes">
           <button data-mode="merge" onclick="orgModeSet('merge')"><span class="ot-ic" style="background:#FFE3D9;color:#9A3412">↘↖</span><span class="ot-tx"><span class="ot-t">Merge</span><span class="ot-d">${L('Combine & reorder','Gabung & atur urutan')}</span></span></button>
           <button data-mode="split" onclick="orgModeSet('split')"><span class="ot-ic" style="background:#FFE3D9;color:#9A3412">↗↙</span><span class="ot-tx"><span class="ot-t">Split</span><span class="ot-d">${L('Take out pages','Pisahkan halaman')}</span></span></button>
-          <button data-mode="edit" onclick="orgModeSet('edit')"><span class="ot-ic" style="background:#FAE8FF;color:#7E22CE">✎</span><span class="ot-tx"><span class="ot-t">Edit</span><span class="ot-d">${L('Text, pictures, numbers','Teks, gambar, nomor')}</span></span></button>
+          <button data-mode="edit" onclick="orgModeSet('edit'); if(files.length) orgOpenEditor()"><span class="ot-ic" style="background:#FAE8FF;color:#7E22CE">✎</span><span class="ot-tx"><span class="ot-t">Edit</span><span class="ot-d">${L('Text, pictures, numbers','Teks, gambar, nomor')}</span></span></button>
           <button data-mode="compress" onclick="orgModeSet('compress')"><span class="ot-ic" style="background:#E4F3C2;color:#1A3C34">⇲</span><span class="ot-tx"><span class="ot-t">Compress</span><span class="ot-d">${L('Make the file smaller','Perkecil ukuran file')}</span></span></button>
         </div>
         <div id="orgEditTools" class="org-edittools is-hidden">
