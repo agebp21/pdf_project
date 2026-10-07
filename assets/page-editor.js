@@ -328,6 +328,7 @@
       });
       t.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); document.execCommand('insertLineBreak'); } if (e.key === 'Escape') t.blur(); });
       t.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData || window.clipboardData).getData('text/plain')); });
+      t.addEventListener('dragstart', e => e.preventDefault());           // a drag from selected text selects on (no drag-and-drop)
     } else if (el.type === 'image') {
       const img = document.createElement('img'); img.src = el.src; img.alt = ''; img.draggable = false; div.append(img);
       div.style.opacity = el.opacity ?? 1;
@@ -398,7 +399,7 @@
     }
     const kind = handle ? handle.dataset.h : 'move';
     const group = st.group.includes(el.id) && kind === 'move' ? selected() : null;
-    if (onText && !handle && !group) { select(el.id); return; }        // caret goes where you clicked
+    if (onText && !handle && !group) { select(el.id); dragAcross(e, div); return; }   // caret goes where you clicked
     e.preventDefault(); e.stopPropagation();
     commitTyping(); if (!group) select(el.id);
     const stage = $('#pe-stage').getBoundingClientRect(), sx = e.clientX, sy = e.clientY, start = { ...el };
@@ -633,6 +634,28 @@
     (navigator.clipboard ? navigator.clipboard.writeText(text) : Promise.reject()).then(
       () => status(L('Copied the selected text.', 'Teks yang dipilih sudah disalin.')),
       () => status(L('Could not copy: the browser blocked the clipboard.', 'Gagal menyalin: browser memblokir clipboard.')));
+  }
+  // Like Word: a text selection dragged out of its paragraph (up or down) becomes a
+  // selection of every paragraph from where it started to the pointer.
+  function dragAcross(e, home) {
+    const sy = e.clientY, box = home.getBoundingClientRect();
+    let ids = null;
+    const move = ev => {
+      if (!ids && ev.clientY <= box.bottom + 4 && ev.clientY >= box.top - 4) return;
+      const top = Math.min(sy, ev.clientY), bottom = Math.max(sy, ev.clientY);
+      ids = els().filter(o => {
+        if (o.type !== 'text') return false;
+        const n = document.querySelector(`#pe-stage [data-id="${o.id}"]`), r = n && n.getBoundingClientRect();
+        return r && r.top < bottom && r.bottom > top;
+      }).map(o => o.id);
+      getSelection().removeAllRanges();
+      document.querySelectorAll('#pe-stage .pe-text').forEach(n => n.classList.toggle('multi', ids.includes(n.dataset.id)));
+    };
+    const up = () => {
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up);
+      if (ids) selectMany(ids);
+    };
+    addEventListener('pointermove', move); addEventListener('pointerup', up);
   }
   // A box dragged over empty space selects every block it touches (a click deselects).
   function startBox(e) {
