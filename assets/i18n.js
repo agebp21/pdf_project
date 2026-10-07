@@ -304,7 +304,7 @@
       'tool.word-to-pdf': 'Bikin file DOC/DOCX gampang dibaca dengan mengubah ke PDF.',
       'tool.ppt-to-pdf': 'Bikin slideshow PPT/PPTX gampang dilihat dengan mengubah ke PDF.',
       'tool.excel-to-pdf': 'Bikin spreadsheet EXCEL gampang dibaca dengan mengubah ke PDF.',
-      'tool.edit-pdf': 'Tambah teks, gambar, dan anotasi ke dokumen PDF.',
+      'tool.edit-pdf': 'Edit teks seperti di Word dan pindahkan gambar seperti di PowerPoint — langsung di halaman.',
       'tool.pdf-to-jpg': 'Ubah tiap halaman PDF jadi JPG atau ambil semua gambarnya.',
       'tool.jpg-to-pdf': 'Gambar apa pun jadi PDF: JPG, PNG, WebP, GIF, BMP, SVG, AVIF, TIFF, bahkan HEIC iPhone.',
       'tool.sign-pdf': 'Gambar, ketik, atau upload tanda tangan lalu taruh di mana saja di halaman.',

@@ -423,7 +423,7 @@ function renderHeader(){
           <span id="orgZoomLabel">100%</span>
           <button onclick="orgZoomStep(0.25)" title="Zoom in">+</button>
           <button id="orgHandBtn" onclick="orgHandToggle()" title="Drag to pan">✋ Hand</button>
-          <button onclick="orgEditTextOcr()" title="Read text with OCR, then edit it directly">🔤 Edit text</button>
+          <button onclick="orgOpenEditor()" title="${L('Open the editor: edit text like Word, pictures like PowerPoint','Buka editor: edit teks seperti Word, gambar seperti PowerPoint')}">✏️ ${L('Edit text & pictures','Edit teks & gambar')}</button>
           <button onclick="orgEditTextToggle()" title="Add text">T Text</button>
           <button onclick="orgEditShape('rect')" title="Add rectangle">▢</button>
           <button onclick="orgEditShape('ellipse')" title="Add ellipse">⬯</button>
@@ -765,6 +765,21 @@ function orgMergeOcrLines(lines) {
     return { text: words.join(' '), x0: g.x0, y0: g.y0, x1: g.x1, y1: g.y1 };
   }).filter(l => l.text);
 }
+// The full page editor (editor.html): the organized PDF goes over as it is now,
+// opening on the first ticked page (or the page shown in the reader).
+window.orgOpenEditor = async () => {
+  try {
+    if (files.length === 0) throw new Error(L('Upload a PDF first', 'Upload PDF dulu'));
+    const prog = $('#progress'); if (prog) { prog.classList.remove('hidden'); prog.textContent = L('Opening the editor…', 'Membuka editor…'); }
+    const bytes = await buildOrganizePdf(organizeOrder);
+    let page = 1;
+    try { if (orgBook) page = orgBook.getCurrentPageIndex() + 1; } catch (e) {}
+    const ticked = organizeOrder.findIndex(code => organizeSelected.has(code));
+    if (ticked >= 0) page = ticked + 1;
+    const id = await FlipbookTransfer.save(new Blob([bytes], { type: 'application/pdf' }), orgBaseName() + '.pdf');
+    location.href = 'editor.html?source=' + encodeURIComponent(id) + '&page=' + page;
+  } catch (e) { showError(e.message || String(e)); }
+};
 window.orgEditTextOcr = async () => {
   try {
     if (files.length === 0) throw new Error('Upload a PDF first');

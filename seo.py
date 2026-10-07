@@ -29,6 +29,7 @@ APP_TITLES = {
     'journals.html': 'Cari Jurnal Ilmiah & Ebook Open Access | MyFlipbook',
     'notebook.html': 'AI Summarizer — Ringkas PDF & Jurnal dengan AI | MyFlipbook',
     'workflow.html': 'Buat Alur Kerja PDF Otomatis | MyFlipbook',
+    'editor.html': 'Edit PDF Online seperti Word — Ubah Teks & Gambar Langsung di Halaman | MyFlipbook',
 }
 UPDATED = '2026-10-06'
 
@@ -580,10 +581,12 @@ APP_META = {
     'journals.html': (LANDING['cari-jurnal-ebook']['description'], '/journals.html'),
     'notebook.html': (LANDING['ringkas-pdf-ai']['description'], '/notebook.html'),
     'workflow.html': ('Buat alur kerja PDF sendiri: gabungkan beberapa alat menjadi satu langkah otomatis.', '/workflow.html'),
+    'editor.html': ('Edit PDF langsung di halaman: klik teks lalu ketik seperti di Word, pindahkan dan ganti gambar seperti di PowerPoint. '
+                    'Bisa untuk PDF hasil scan (OCR).', '/editor.html'),
     'privacy.html': (None, '/privacy.html'),
     'terms.html': (None, '/terms.html'),
 }
-NOINDEX = {'login.html', 'account.html', 'library.html', 'coming-soon.html', 'animation.html', 'editor.html'}
+NOINDEX = {'login.html', 'account.html', 'library.html', 'coming-soon.html', 'animation.html'}
 
 
 def verification():
@@ -651,7 +654,7 @@ def robots():
 
 def sitemap():
     urls = [('/', '1.0')] + [('/' + s, '0.9') for s in LANDING] + [
-        (APP_META[p][1], '0.7') for p in ('converter.html', 'flipbook.html', 'journals.html', 'notebook.html', 'workflow.html')] + [
+        (APP_META[p][1], '0.7') for p in ('converter.html', 'flipbook.html', 'editor.html', 'journals.html', 'notebook.html', 'workflow.html')] + [
         ('/privacy.html', '0.2'), ('/terms.html', '0.2'), ('/artikel', '0.8')]
     rows = ''.join(f'<url><loc>{esc(SITE + u)}</loc><lastmod>{UPDATED}</lastmod><priority>{pr}</priority></url>' for u, pr in urls)
     rows += ''.join(f'<url><loc>{SITE}/artikel/{a["slug"]}</loc><lastmod>{a["published"]}</lastmod><priority>0.8</priority></url>'
