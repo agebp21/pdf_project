@@ -1338,3 +1338,13 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - File: `assets/pdf-edit.js` (annotate + validasi + form + draft list), `converter.html` (TOOLS + wiring + toggleKind hook), `index.html` (metu seko SOON).
 - Tes: `tests/pdf-annotate.test.cjs` anyar (teks/gambar/kotak/elips/garis kepasang tenan dicek raster + teks PDF.js, validasi jujur, DOM draft, wiring); suite pdf-edit/ui/limits/converter/organize/office-export ijo (renderDrafts ketinggalan nang ekspor → konangan + didandani); sintaks + diff bersih; HTTP 200 `?tool=edit-pdf`.
 - Durung commit/push/deploy.
+
+### 2026-10-07 — Tombol + sela kartu dibusak (request owner)
+- Abang bunder terselip = tombol `+` (org-plus) nang slot antar kartu. Dibusak (markup + CSS + flex slot); fungsi `orgInsertBlankAt` ngaso (tes qaBlank tetep nganggo). Grid: kartu full jembar, gap resik. (Catetan: panel-seleksi note nang nduwur nyebut "+ blank jalan" — saiki wis ora.)
+- Tes: suite organize ijo; sintaks + diff bersih.
+- Durung commit/push/deploy.
+
+### 2026-10-07 — Seleksi biru mini-reader dipateni (request owner + screenshot)
+- Drag nang mini-reader organize ngeblok biru (seleksi teks browser) nutupi kaca. Saiki `user-select:none` + `::selection` transparan + gambar ora iso di-drag, podo perlakuane reader ekspor wingi. Swipe/drag flip ora keganggu (ora utak-atik touch-action).
+- Tes: suite organize ijo; sintaks + diff bersih.
+- Durung commit/push/deploy.

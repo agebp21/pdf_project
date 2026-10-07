@@ -85,11 +85,7 @@
   .org-sel-row select{flex:0 0 auto;max-width:45%;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px;font-weight:700;cursor:pointer}
   .org-foot{margin-top:.75rem;background:#fdf0f0;padding:.75rem 1.25rem;border-radius:0 0 15px 0}
   .org-go{width:100%;background:#ef2d2d;color:#fff;border:0;border-radius:12px;padding:.75rem;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.35)}
-  .org-cell{position:relative;min-width:0;display:flex;align-items:center}
-  .org-cell .org-card{flex:1;min-width:0}
-  .org-pslot{flex:0 0 30px;display:grid;place-items:center}
-  .org-plus{width:24px;height:24px;border-radius:999px;background:#fff;border:1px solid #e5e7eb;color:#ef2d2d;cursor:pointer;box-shadow:0 2px 6px rgba(0,0,0,.1);display:grid;place-items:center}
-  .org-plus:hover{border-color:#ef2d2d}
+  .org-cell{position:relative;min-width:0}
   .org-card{background:#fff;border:1.5px solid #f3c4c4;border-radius:12px;padding:10px;display:flex;flex-direction:column;align-items:stretch;gap:6px;cursor:move;position:relative;box-shadow:0 2px 8px rgba(0,0,0,.04);height:100%}
   .org-card.sel{border-color:#ef2d2d;background:#fff5f5}
   .org-card.drag-src{opacity:.35}
@@ -128,6 +124,11 @@
   .opf-blank{background:#fff;width:100%;height:100%}
   .opf-ph{color:#9ca3af;font-size:12px}
   .org-reader-empty{text-align:center;color:#9ca3af;font-size:12px;padding:1rem}
+  /* No blue text selection over the mini reader (dragging is for turning
+     pages, like the export reader): pages, images and labels stay clean. */
+  #orgReader,#orgReader .opf-page{-webkit-user-select:none;user-select:none;-webkit-touch-callout:none}
+  #orgReader ::selection{background:transparent}
+  #orgReader img{-webkit-user-drag:none;user-drag:none;-webkit-tap-highlight-color:transparent}
   .btn-tang{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35),inset 0 1px 0 rgba(255,255,255,.45),inset 0 -2px 5px rgba(0,0,0,.12)}
   .btn-tang:hover{transform:translateY(-2px);box-shadow:0 16px 30px rgba(255,92,40,.42),inset 0 1px 0 rgba(255,255,255,.45)}
   ::-webkit-scrollbar{height:6px}
@@ -780,7 +781,6 @@ function renderOrganizeGrid(){
         </div>
         <span class="org-num">${pos+1}${rot?` · ${rot}°`:''}</span>
       </div>
-      <span class="org-pslot"><button onclick="orgInsertBlankAt(${pos+1})" title="${L('Insert a blank page after this','Sisipkan halaman kosong setelah ini')}" class="org-plus">${ORG_ICONS.plus}</button></span>
     </div>`;
   }).join('');
   orgObserveThumbs();
