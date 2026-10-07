@@ -392,8 +392,8 @@ function renderHeader(){
         </div>
         <div id="orgEmpty" class="org-empty">
           <p style="font-size:28px">📄</p>
-          <p><b>${L('Pick a PDF to start organizing','Pilih PDF kanggo mulai ngatur')}</b></p>
-          <p>${L('Page thumbnails will appear here — drag to reorder.','Thumbnail halaman bakal muncul nang kene — drag kanggo ngurutke.')}</p>
+          <p><b>${L('Pick a PDF to start organizing','Pilih PDF untuk mulai mengatur')}</b></p>
+          <p>${L('Page thumbnails will appear here — drag to reorder.','Thumbnail halaman akan muncul di sini — seret untuk mengurutkan.')}</p>
           <div class="org-empty-btns">
             <button class="clay-btn clay-btn-dark" onclick="orgUploadDirect()">⬆ ${L('Upload','Unggah')}</button>
             <button class="clay-btn clay-btn-ghost" onclick="orgDriveDirect()"><span class="as-drive" aria-hidden="true"></span> Google Drive</button>
@@ -425,11 +425,11 @@ function renderHeader(){
           </div>
           <button onclick="orgDelete()" class="org-sel-del">🗑️ ${L('Delete selected','Hapus yang dipilih')}</button>
           <div class="org-sel-row">
-            <button onclick="orgExtract()">${L('⎘ Extract selected','⎘ Extract sing dipilih')}</button>
+            <button onclick="orgExtract()">${L('⎘ Extract selected','⎘ Ambil halaman terpilih')}</button>
           </div>
           <div class="org-sel-row">
             <input id="orgNumStart" type="number" value="1" min="0" step="1" aria-label="${L('Starting number','Nomor awal')}">
-            <button onclick="orgNumber()">${L('Number pages','Nomeri halaman')}</button>
+            <button onclick="orgNumber()">${L('Number pages','Beri nomor halaman')}</button>
           </div>
           <div class="org-sel-row">
             <input id="orgWmText" type="text" maxlength="60" placeholder="${L('Watermark text…','Teks watermark…')}" aria-label="${L('Watermark text','Teks watermark')}">
@@ -443,7 +443,7 @@ function renderHeader(){
               <option value="line">${L('Line','Garis')}</option>
               <option value="image">${L('Image','Gambar')}</option>
             </select>
-            <input id="orgAnnText" type="text" maxlength="60" placeholder="${L('Text or W×H…','Teks atawa P×L…')}" aria-label="${L('Text or size','Teks atawa ukuran')}">
+            <input id="orgAnnText" type="text" maxlength="60" placeholder="${L('Text or W×H…','Teks atau P×L…')}" aria-label="${L('Text or size','Teks atau ukuran')}">
             <input id="orgAnnSize" type="number" value="14" min="0.1" step="0.5" aria-label="${L('Size','Ukuran')}">
             <button onclick="orgAnnotate()">✎ ${L('Add','Tambah')}</button>
           </div>
@@ -822,7 +822,7 @@ function renderOrganizeGrid(){
     <div class="org-cell">
       <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgFinishDrag()" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${orgArg(origIdx)})"
         class="org-card group${sel?' sel':''}">
-        <div class="org-thumb" data-thumb="${origIdx}" onclick="${isBlank&&!goZoom?`event.stopPropagation();orgBlankAsk(${orgArg(origIdx)})`:''}" ondblclick="event.stopPropagation();openOrgViewer(${pos})" title="${isBlank&&!goZoom?L('Add an image to this blank page','Tambah gambar nang halaman kosong iki'):L('Click to flip here, double-click to zoom','Klik untuk flip ke sini, double-click untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){orgCardClick(event,${orgArg(origIdx)})}">${thumb}</div>
+        <div class="org-thumb" data-thumb="${origIdx}" onclick="${isBlank&&!goZoom?`event.stopPropagation();orgBlankAsk(${orgArg(origIdx)})`:''}" ondblclick="event.stopPropagation();openOrgViewer(${pos})" title="${isBlank&&!goZoom?L('Add an image to this blank page','Tambah gambar di halaman kosong ini'):L('Click to flip here, double-click to zoom','Klik untuk flip ke sini, double-click untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){orgCardClick(event,${orgArg(origIdx)})}">${thumb}</div>
         <div class="org-hover">
           ${isBlank?'':`<button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}">${ORG_ICONS.rotate}</button>`}
           <button onclick="event.stopPropagation();orgDeleteOne(${pos})" title="${L('Delete this page','Hapus halaman ini')}">${ORG_ICONS.x}</button>
@@ -1113,7 +1113,7 @@ async function orgReaderBuild(){
   if(!organizeOrder.length){
     orgReaderClose();
     const b0=document.getElementById('orgBook');
-    if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('No pages','Ora ono halaman')+'</p>';
+    if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('No pages','Tidak ada halaman')+'</p>';
     return;
   }
   let ratio=0.72;
@@ -1126,7 +1126,7 @@ async function orgReaderBuild(){
   const PW=Math.round(single?avail:Math.min(avail,640)/2), PH=Math.round(PW/Math.max(0.4,Math.min(2.5,ratio)));
   try{ await orgBookEngine(); }catch(e){
     const b0=document.getElementById('orgBook');
-    if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau ora tersedia')+'</p>';
+    if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau tidak tersedia')+'</p>';
     return;
   }
   if(myBuild!==orgBuildSeq) return;
@@ -1146,7 +1146,7 @@ async function orgReaderBuild(){
   try{
     orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'stretch',minWidth:200,maxWidth:700,minHeight:140,maxHeight:560,autoSize:true,usePortrait:true,showCover:false,useMouseEvents:true,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
     orgBook.loadFromHTML(Array.from(box.children));
-  }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau ora tersedia')+'</p>'; return; }
+  }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau tidak tersedia')+'</p>'; return; }
   orgBook.on('flip',()=>{ orgPaintReaderLabel(); try{ log('Org at '+orgBook.getCurrentPageIndex()); }catch(e){} orgRenderVisible(); });
   orgPaintReaderLabel(); orgRenderVisible();
   setTimeout(()=>{ try{
@@ -1993,7 +1993,7 @@ window.orgNumber=async ()=>{
     const bytes=await buildOrganizePdf(organizeOrder);
     const stamped=await PDFEdit.apply(bytes,{tool:'page-numbers',range:positions.map(p=>p+1).join(','),position:'bottom-center',margin:'10',size:'12',color:'#214d40',start:String(start)});
     downloadBlob(new Blob([stamped],{type:'application/pdf'}), orgBaseName()+'-numbered.pdf');
-    orgNote(L(`<p class="text-center py-2">✅ Numbers ${start}–${start+positions.length-1} on ${positions.length} selected pages</p>`,`<p class="text-center py-2">✅ Nomor ${start}–${start+positions.length-1} nang ${positions.length} halaman dipilih</p>`));
+    orgNote(L(`<p class="text-center py-2">✅ Numbers ${start}–${start+positions.length-1} on ${positions.length} selected pages</p>`,`<p class="text-center py-2">✅ Nomor ${start}–${start+positions.length-1} di ${positions.length} halaman terpilih</p>`));
     log('Org numbers '+positions.length+' pages from '+start);
   }catch(e){ showError(e.message); }
 };
@@ -2012,12 +2012,12 @@ function orgAnnElement(kind) {
     base.size = (Number.isFinite(sizeRaw) && sizeRaw > 0) ? sizeRaw : 14;
   } else if (kind === 'rect' || kind === 'ellipse') {
     const match = text.match(/^\s*(\d+(?:\.\d+)?)\s*(?:x\s*(\d+(?:\.\d+)?))?\s*$/i);
-    if (!match) throw Error(L('Size like 40x20 (or one number for square).', 'Ukuran kaya 40x20 (utawa siji angka kanggo persegi).'));
+    if (!match) throw Error(L('Size like 40x20 (or one number for square).', 'Ukuran seperti 40x20 (atau satu angka untuk persegi).'));
     base.width = Number(match[1]); base.height = Number(match[2] || match[1]);
     base.border = 0;
   } else if (kind === 'line') {
     const len = Number(text);
-    if (!Number.isFinite(len) || len <= 0) throw Error(L('Line length must be a number above 0.', 'Dawa garis kudu angka di atas 0.'));
+    if (!Number.isFinite(len) || len <= 0) throw Error(L('Line length must be a number above 0.', 'Panjang garis harus angka di atas 0.'));
     base.length = len;
     base.thickness = (Number.isFinite(sizeRaw) && sizeRaw > 0) ? sizeRaw : 1;
   } else if (kind === 'image') {
@@ -2030,7 +2030,7 @@ async function orgApplyAnnotate(elements, positions) {
   const range = positions.map(p => p + 1).join(',');
   const stamped = await PDFEdit.apply(bytes, { tool: 'edit-pdf', elements: elements.map(el => Object.assign({}, el, { range })) });
   downloadBlob(new Blob([stamped], { type: 'application/pdf' }), orgBaseName() + '-annotated.pdf');
-  orgNote(L(`<p class="text-center py-2">✅ Annotation on ${positions.length} selected pages</p>`, `<p class="text-center py-2">✅ Anotasi nang ${positions.length} halaman dipilih</p>`));
+  orgNote(L(`<p class="text-center py-2">✅ Annotation on ${positions.length} selected pages</p>`, `<p class="text-center py-2">✅ Anotasi di ${positions.length} halaman terpilih</p>`));
   log('Org annotate ' + positions.length + ' pages');
 }
 window.orgAnnotate = async () => {
@@ -2068,7 +2068,7 @@ window.orgWatermark=async ()=>{
     const bytes=await buildOrganizePdf(organizeOrder);
     const stamped=await PDFEdit.apply(bytes,{tool:'watermark',mode:'text',text,range:positions.map(p=>p+1).join(','),position:'center',margin:'10',size:'36',opacity:'25',color:'#214d40'});
     downloadBlob(new Blob([stamped],{type:'application/pdf'}), orgBaseName()+'-watermarked.pdf');
-    orgNote(L(`<p class="text-center py-2">✅ Watermark on ${positions.length} selected pages</p>`,`<p class="text-center py-2">✅ Watermark nang ${positions.length} halaman dipilih</p>`));
+    orgNote(L(`<p class="text-center py-2">✅ Watermark on ${positions.length} selected pages</p>`,`<p class="text-center py-2">✅ Watermark di ${positions.length} halaman terpilih</p>`));
     log('Org watermark '+positions.length+' pages');
   }catch(e){ showError(e.message); }
 };

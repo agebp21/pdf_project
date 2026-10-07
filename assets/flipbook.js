@@ -1038,7 +1038,7 @@
       FlipbookExport.download(new Blob([FlipbookExport.shareLauncher(title, url)], {type: 'text/html'}),
         'Open-' + FlipbookExport.titleFile(title) + '.html');
       $('#share-popup-status').textContent = L('Launcher downloaded — upload it to Google Drive and share that file. Phones open this one; Windows members can use the .url shortcut below.',
-        'Launcher ke-download — upload nang Google Drive terus bagi file kui. HP mbukak iki; member Windows iso nganggo shortcut .url ngisore.');
+        'Launcher terunduh — upload ke Google Drive lalu bagikan file itu. HP membuka file ini; member Windows bisa memakai shortcut .url di bawah.');
     } catch (cause) { $('#share-popup-status').textContent = cause.message; }
   };
   $('#share-popup-shortcut').onclick=()=>{
@@ -1048,7 +1048,7 @@
       FlipbookExport.download(new Blob([FlipbookExport.shareShortcut(url)], {type: 'application/internet-shortcut'}),
         'Open-' + FlipbookExport.titleFile(title) + '.url');
       $('#share-popup-status').textContent = L('Shortcut downloaded — upload it to Google Drive. On Windows a double-click always opens the browser (never Notepad).',
-        'Shortcut ke-download — upload nang Google Drive. Nang Windows double-click mesthi mbukak browser (ora Notepad).');
+        'Shortcut terunduh — upload ke Google Drive. Di Windows, klik dua kali selalu membuka browser (bukan Notepad).');
     } catch (cause) { $('#share-popup-status').textContent = cause.message; }
   };
   // Google Doc straight into the reader's Drive (title = book title, the
@@ -1065,7 +1065,7 @@
     try {
       if (!driveConfig) await loadDriveConfig();
       if (!driveConfig || !window.DrivePicker) throw Error(L('Google Drive is not set up on this server (GOOGLE_CLIENT_ID + GOOGLE_API_KEY). Copy the link or grab a file above instead.',
-        'Google Drive durung disetel nang server iki (GOOGLE_CLIENT_ID + GOOGLE_API_KEY). Salin link-e utowo download file nang nduwur wae.'));
+        'Google Drive belum disetel di server ini (GOOGLE_CLIENT_ID + GOOGLE_API_KEY). Salin link-nya atau unduh file di atas saja.'));
       const title = ($('#export-title') && $('#export-title').value) || 'book';
       const doc = await DrivePicker.createDoc(driveConfig, title, url, message => { statusEl.textContent = message; });
       if (!doc) { statusEl.textContent = L('Cancelled.', 'Batal.'); return; }
@@ -1074,9 +1074,9 @@
       const folderUrl = !doc.parentId || doc.parentId === 'root'
         ? 'https://drive.google.com/drive/my-drive'
         : 'https://drive.google.com/drive/folders/' + encodeURIComponent(doc.parentId);
-      statusEl.replaceChildren(L('Document created: ', 'Dokumen dadi: '), link(doc.name, doc.url),
-        L(' — saved in ', ' — kesimpen nang '), link(L('My Drive', 'Drive-ku'), folderUrl),
-        L('. Open it there to move or share it with members.', '. Bukaken nang kono kanggo mindah / bagi ke member.'));
+      statusEl.replaceChildren(L('Document created: ', 'Dokumen dibuat: '), link(doc.name, doc.url),
+        L(' — saved in ', ' — tersimpan di '), link(L('My Drive', 'Drive Saya'), folderUrl),
+        L('. Open it there to move or share it with members.', '. Buka di sana untuk memindahkan atau membagikannya ke member.'));
     } catch (cause) { statusEl.textContent = cause.message; }
   };
   $('#share-popup-close').onclick=closeSharePopup;
@@ -1140,8 +1140,8 @@
       const box = $('#draft-box'); if (!box) return;
       const when = draft.savedAt ? new Date(draft.savedAt).toLocaleString() : '';
       $('#draft-text').textContent = L(`Continue with “${draft.name}”${when ? ' (' + when + ')' : ''}? Unsaved edits other than notes are lost otherwise.`,
-        `Teruske “${draft.name}”${when ? ' (' + when + ')' : ''}? Edit-an sing durung kesimpen (saliyane catatan) bakal ilang.`);
-      $('#draft-resume').textContent = L('Continue', 'Teruske');
+        `Lanjutkan “${draft.name}”${when ? ' (' + when + ')' : ''}? Kalau tidak, editan yang belum tersimpan (selain catatan) akan hilang.`);
+      $('#draft-resume').textContent = L('Continue', 'Lanjutkan');
       $('#draft-discard').textContent = L('Discard', 'Buang');
       box.hidden = false;
       $('#draft-resume').onclick = async () => {
