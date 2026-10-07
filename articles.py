@@ -17,12 +17,13 @@ def article(slug, title, description, published, blocks, tool=None):
 
 article(
     'cara-membuat-flipbook-dari-pdf',
-    'Cara Membuat Flipbook dari PDF Gratis, Tanpa Install Aplikasi',
-    'Panduan langkah demi langkah mengubah PDF menjadi flipbook yang bisa dibalik seperti buku asli, lalu membagikannya '
-    'lewat link atau menjadikannya aplikasi.',
+    'Cara Membuat File PDF Menjadi Buku Digital (Flipbook) Gratis',
+    'Panduan langkah demi langkah membuat file PDF menjadi buku digital (flipbook) yang bisa dibalik seperti buku asli, '
+    'lalu membagikannya lewat link atau menjadikannya aplikasi — gratis, tanpa install.',
     '2026-10-06',
     [
-        ('p', 'Flipbook adalah dokumen digital yang halamannya bisa dibalik seperti buku atau majalah cetak. Dibanding PDF '
+        ('p', 'Ingin membuat file PDF menjadi buku yang halamannya bisa dibalik? Caranya adalah menjadikannya flipbook. '
+              'Flipbook adalah dokumen digital yang halamannya bisa dibalik seperti buku atau majalah cetak. Dibanding PDF '
               'biasa, flipbook terasa lebih hidup saat dibaca, sehingga cocok untuk majalah sekolah, katalog produk, '
               'laporan tahunan, modul ajar, portofolio, hingga undangan digital.'),
         ('p', 'Kabar baiknya, Anda tidak perlu memasang software apa pun. Dengan [PDF ke Flipbook](/pdf-ke-flipbook) di '

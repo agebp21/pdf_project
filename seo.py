@@ -49,10 +49,10 @@ SERVER = ('File dikirim lewat koneksi terenkripsi (HTTPS) ke server MyFlipbook u
 TRIAL = 'Daftar gratis dan coba semua fitur selama 7 hari — tanpa kartu kredit.'
 
 page('pdf-ke-flipbook', 'flipbook.html', 'PDF ke Flipbook',
-     'Buat Flipbook dari PDF Gratis — Majalah & E-book Digital | MyFlipbook',
+     'Ubah File PDF Menjadi Buku Digital (Flipbook) Gratis | MyFlipbook',
      'Ubah PDF menjadi flipbook interaktif dengan efek bolak-balik halaman seperti buku asli. Bisa dibagikan lewat link, '
      'dibaca dengan suara, diterjemahkan, dan diekspor ke HTML, APK, atau EXE.',
-     'Ubah PDF Menjadi Flipbook yang Bisa Dibalik Seperti Buku Asli',
+     'Ubah File PDF Menjadi Buku Digital yang Bisa Dibalik',
      'Majalah, katalog produk, modul ajar, laporan tahunan, atau e-book — unggah PDF-nya dan dalam hitungan detik '
      'jadi flipbook dengan efek halaman yang realistis, siap dibagikan ke siapa pun.',
      ['Buka PDF to Flipbook, lalu pilih file PDF dari komputer, HP, atau Google Drive.',
