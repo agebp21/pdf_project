@@ -88,16 +88,18 @@
   .org-sel-row input[type=number]{flex:0 0 64px;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px}
   .org-sel-row select{flex:0 0 auto;max-width:45%;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px;font-weight:700;cursor:pointer}
   /* Mode tabs as mini feature cards (same look as the home tool cards, smaller). */
-  .org-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.6rem;margin-bottom:.85rem}
-  .org-tabs button{display:flex;align-items:center;gap:.6rem;text-align:left;min-width:0;cursor:pointer;color:#1C1917;padding:.6rem .7rem;border-radius:16px;border:1px solid #E9E2D4;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,0) 38%),linear-gradient(180deg,#FFFFFF,#F8F4EA);box-shadow:0 8px 20px rgba(28,25,23,.08),inset 0 1px 0 #fff,inset 0 -2px 6px rgba(28,25,23,.04);transition:all .2s ease}
+  .org-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin-bottom:1rem}
+  .org-tabs button{display:flex;align-items:center;gap:.8rem;text-align:left;min-width:0;cursor:pointer;color:#1C1917;padding:.9rem 1rem;border-radius:20px;border:1px solid #E9E2D4;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,0) 38%),linear-gradient(180deg,#FFFFFF,#F8F4EA);box-shadow:0 8px 20px rgba(28,25,23,.08),inset 0 1px 0 #fff,inset 0 -2px 6px rgba(28,25,23,.04);transition:all .2s ease}
   .org-tabs button:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(28,25,23,.12),inset 0 1px 0 #fff;border-color:#DCD3BE}
   .org-tabs button.active{border-color:#FF5C28;box-shadow:0 0 0 2px rgba(255,92,40,.25),0 12px 26px rgba(255,92,40,.16),inset 0 1px 0 #fff;background:linear-gradient(180deg,#FFFFFF,#FFF1EA)}
-  .org-tabs .ot-ic{width:32px;height:32px;border-radius:10px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:13px;font-weight:800;box-shadow:inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 6px rgba(28,25,23,.12),0 5px 10px rgba(28,25,23,.12)}
+  .org-tabs .ot-ic{width:42px;height:42px;border-radius:12px;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:16px;font-weight:800;box-shadow:inset 0 2px 2px rgba(255,255,255,.6),inset 0 -3px 6px rgba(28,25,23,.12),0 5px 10px rgba(28,25,23,.12)}
   .org-tabs .ot-tx{min-width:0;display:flex;flex-direction:column}
-  .org-tabs .ot-t{font-family:'Fraunces',Georgia,serif;font-size:13.5px;font-weight:800;line-height:1.15}
-  .org-tabs .ot-d{font-size:10.5px;font-weight:600;color:#78716C;line-height:1.25;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .org-tabs .ot-t{font-family:'Fraunces',Georgia,serif;font-size:16px;font-weight:800;line-height:1.15}
+  .org-tabs .ot-d{font-size:12px;font-weight:600;color:#78716C;line-height:1.3;margin-top:.1rem;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .org-tabs button.active .ot-t{color:#C2410C}
-  @media (max-width:640px){.org-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.org-tabs .ot-d{white-space:normal}}
+  .org-tabs button:focus{outline:none}
+  .org-tabs button:focus-visible{outline:2px solid #FF5C28;outline-offset:2px}
+  @media (max-width:640px){.org-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.org-tabs .ot-d{white-space:normal}.org-tabs button{padding:.75rem .7rem;gap:.55rem}.org-tabs .ot-ic{width:36px;height:36px;font-size:14px}.org-tabs .ot-t{font-size:15px}.org-tabs .ot-d{font-size:11.5px}}
   /* Edit-mode toolbar above the preview: zoom, hand, text, shapes. */
   .org-edittools{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin-bottom:.75rem}
   .org-edittools button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .7rem;font-size:12px;font-weight:800;cursor:pointer;color:#374151;white-space:nowrap}
