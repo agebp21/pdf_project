@@ -1134,9 +1134,20 @@
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveDraft(); });
   // No incoming document (converter handoff, library, link): offer the
   // autosaved draft back instead of a blank editor.
+  // A refresh brings the book straight back (no question); opening the
+  // editor fresh still asks, so starting a new document stays easy.
+  const reloaded = (() => { try { return performance.getEntriesByType('navigation')[0].type === 'reload'; } catch (e) { return false; } })();
+  async function resumeDraft(draft) {
+    hideDraft();
+    if (await openPdf(draft.blob, draft.name)) {
+      if (draft.title) $('#export-title').value = draft.title;
+      draftName = draft.name; saveDraft();
+    }
+  }
   if (!fromLibrary && !handedLink && !source) {
     FlipbookExport.draftLoad().then(draft => {
       if (!draft || !draft.blob || sourcePdf) return;
+      if (reloaded) { resumeDraft(draft); return; }
       const box = $('#draft-box'); if (!box) return;
       const when = draft.savedAt ? new Date(draft.savedAt).toLocaleString() : '';
       $('#draft-text').textContent = L(`Continue with “${draft.name}”${when ? ' (' + when + ')' : ''}? Unsaved edits other than notes are lost otherwise.`,
@@ -1144,13 +1155,7 @@
       $('#draft-resume').textContent = L('Continue', 'Lanjutkan');
       $('#draft-discard').textContent = L('Discard', 'Buang');
       box.hidden = false;
-      $('#draft-resume').onclick = async () => {
-        hideDraft();
-        if (await openPdf(draft.blob, draft.name)) {
-          if (draft.title) $('#export-title').value = draft.title;
-          draftName = draft.name; saveDraft();
-        }
-      };
+      $('#draft-resume').onclick = () => resumeDraft(draft);
       $('#draft-discard').onclick = async () => { hideDraft(); await FlipbookExport.draftClear(); };
     });
   }
