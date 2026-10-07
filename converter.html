@@ -222,7 +222,7 @@
       <div id="result" class="hidden card p-6">
         <h3 class="font-bold text-[13px] mb-3 serif text-[16px]">✅ Convert result — nice!</h3>
         <div id="resultPreview" class="rounded-2xl border border-[#E8E2D4] bg-white p-4 text-xs text-gray-600 overflow-auto max-h-[420px]"></div>
-        <div class="flex flex-wrap gap-2 mt-4">
+        <div id="resultActions" class="flex flex-wrap gap-2 mt-4">
           <a id="downloadBtn" href="#" download class="clay-btn clay-btn-dark">⬇ Download result</a>
           <button id="makeFlipbook" hidden class="clay-btn" style="background:linear-gradient(180deg,#2A5248,#1A3C34);color:#fff;border-color:#1A3C34">Turn into Flipbook →</button>
           <button onclick="resetAll()" class="clay-btn clay-btn-ghost">Convert again</button>
@@ -2042,6 +2042,8 @@ function downloadBlob(blob, filename, {flipbookSource=null}={}){
   _lastObjectUrl=url;
   const a=$('#downloadBtn'); a.href=url; a.download=filename;
   $('#result').classList.remove('hidden');
+  // Buttons back under the preview (Organize moves them up, see organizePdf).
+  $('#resultNote')?.remove(); $('#resultActions').className='flex flex-wrap gap-2 mt-4'; $('#resultPreview').after($('#resultActions'));
   $('#progress').textContent='✅ Done — grab your download below.';
   log('Download ready: '+filename+' '+(blob.size/1024).toFixed(1)+'KB type='+blob.type);
   if(blob.type.includes('pdf')){
@@ -2466,7 +2468,12 @@ async function organizePdf(){
   if(organizeOrder.length===0) throw new Error(L('No pages','Tidak ada halaman'));
   const bytes=await buildOrganizePdf(organizeOrder);
   downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'-organized.pdf'));
-  $('#resultPreview').innerHTML=L(`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} pages saved<br><span class="text-xs text-gray-500">Order: ${organizeOrder.map(orgName).join(' → ')}</span></p>`,`<p class="text-center py-2">✅ Organize: ${organizeOrder.length} hal tersimpan<br><span class="text-xs text-gray-500">Urutan: ${organizeOrder.map(orgName).join(' → ')}</span></p>`)+$('#resultPreview').innerHTML;
+  $('#resultPreview').innerHTML=L(`<p class="text-center py-2 text-xs text-gray-500">Order: ${organizeOrder.map(orgName).join(' → ')}</p>`,`<p class="text-center py-2 text-xs text-gray-500">Urutan: ${organizeOrder.map(orgName).join(' → ')}</p>`)+$('#resultPreview').innerHTML;
+  // The buttons go right under the "pages saved" line, above the long order + preview.
+  const note=document.createElement('p'); note.id='resultNote'; note.className='text-[13px] font-bold text-[#1A3C34]';
+  note.textContent=L(`✅ Organize: ${organizeOrder.length} pages saved`,`✅ Organize: ${organizeOrder.length} halaman tersimpan`);
+  $('#resultActions').className='flex flex-wrap gap-2 mt-3 mb-4';
+  $('#resultPreview').before(note,$('#resultActions'));
 }
 // Grid positions (0-based) of the selected pages, in grid order.
 function orgSelectedPositions(){
