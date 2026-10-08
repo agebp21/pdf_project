@@ -589,6 +589,7 @@ function renderHeader(){
   const flCard=document.getElementById('fileList');
   if(flCard&&progNode&&errNode) flCard.append(progNode,errNode);
   if($('#resultActions')?.closest('#options')) resultActionsHome();   // don't lose the buttons with the old sidebar
+  document.getElementById('cropUi')?.remove();                         // its listeners point at the old fields
   $('#options').innerHTML=html;
   if(t.id==='edit-pdf'&&window.PDFEdit){PDFEdit.toggleKind();PDFEdit.renderDrafts();}
   if(active==='organize-pdf'){
@@ -1251,7 +1252,7 @@ window.toggleSplitPage=(idx, event)=>{
 // are the margin fields (mm), so the crop itself is unchanged; typing a margin moves the box.
 let cropDoc=null, cropFile=null, cropPage=1;
 async function buildCropPreview(){
-  const opts=document.getElementById('options'); if(!opts||!files[0]) return;
+  const opts=document.getElementById('colLeft'); if(!opts||!files[0]) return;
   let ui=document.getElementById('cropUi');
   if(!ui){
     ui=document.createElement('div'); ui.id='cropUi'; ui.className='w-full';
@@ -1265,7 +1266,7 @@ async function buildCropPreview(){
         <button type="button" data-crop="all">${L('Select all','Pilih semua')}</button><button type="button" data-crop="none">${L('None','Kosongkan')}</button></div>
       <div id="cropThumbs" class="crop-thumbs"></div>
       <div id="cropDone" class="crop-actions" hidden><a id="cropDl" class="crop-ok" href="#" download>⬇ ${L('Download PDF','Unduh PDF')}</a><button type="button" data-crop="flip">📖 ${L('Turn into Flipbook','Jadikan Flipbook')}</button><button type="button" data-crop="again">↺ ${L('Crop again','Crop lagi')}</button></div>`;
-    opts.append(ui);
+    opts.prepend(ui);
     ui.querySelector('[data-crop=prev]').onclick=()=>{ if(cropPage>1){ cropPage--; drawCropPage(); } };
     ui.querySelector('[data-crop=next]').onclick=()=>{ const d=cropResult||cropDoc; if(d&&cropPage<d.numPages){ cropPage++; drawCropPage(); } };
     ui.querySelectorAll('[data-crop=reset]').forEach(b=>b.onclick=()=>{ for(const k of ['top','right','bottom','left']){ const i=document.getElementById('edit-'+k); if(i) i.value=0; } placeCropBox(); });
@@ -2100,6 +2101,9 @@ function updateFileUI({preserveError=false}={}){
   // Organize has its own files UI + big red button in the workspace sidebar.
   $('#convertBtn').classList.toggle('hidden', t.id==='organize-pdf' || t.id==='crop-pdf');
   $('#fileList').classList.toggle('org-mode', t.id==='organize-pdf');
+  // Crop: the sheet fills the left column, the files card goes next to it (above the drop zone).
+  if(t.id==='crop-pdf') $('#colRight').prepend($('#fileList'));
+  else if($('#fileList').parentElement.id!=='colLeft') $('#colLeft').prepend($('#fileList'));
   if(t.id==='merge-pdf') $('#btnText').textContent = L(`Merge ${files.length} PDF →`,`Gabung ${files.length} PDF →`);
   else if(t.id==='split-pdf'){ buildSplitPreview(); }
   else if(t.id==='rotate-pdf'){ buildRotatePreview(); $('#btnText').textContent=L('Rotate PDF →','Putar PDF →'); }
