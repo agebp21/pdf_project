@@ -367,7 +367,7 @@ function renderHeader(){
     html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">${L('Orientation:','Orientasi:')}
       <select id="opt-orient" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="auto">${L('Auto (follow each image)','Otomatis (ikuti tiap gambar)')}</option><option value="p">${L('Portrait','Tegak')}</option><option value="l">${L('Landscape','Mendatar')}</option></select></label>
       <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">${L('Size:','Ukuran:')}
-      <select id="opt-size" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="a4">A4</option><option value="letter">Letter</option><option value="fit">${L('Same as image (no margin)','Sama dengan gambar (tanpa margin)')}</option></select></label>
+      <select id="opt-size" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="fit" selected>${L('Same as image (no margin)','Sama dengan gambar (tanpa margin)')}</option><option value="a4">A4</option><option value="letter">Letter</option></select></label>
       <label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">${L('Margin:','Margin:')}
       <select id="opt-margin" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="10">Normal</option><option value="0">${L('None','Tanpa')}</option><option value="20">${L('Wide','Lebar')}</option></select></label>`;
   }else if(t.id==='html-to-pdf'){
