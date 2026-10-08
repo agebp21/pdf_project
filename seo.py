@@ -476,7 +476,7 @@ def landing_html(slug):
 </div></body></html>'''
 
 
-TOP = f'''<header><a href="/" aria-label="{BRAND}"><img src="/assets/img/logo.png?v=green" alt="{BRAND}" width="128" height="34"></a>
+TOP = f'''<header><a href="/" aria-label="{BRAND}"><img src="/assets/img/logo.png?v=pro" alt="{BRAND}" width="139" height="34"></a>
 <nav><a href="/pdf-ke-flipbook">PDF ke Flipbook</a><a href="/converter.html">Semua alat PDF</a><a href="/artikel">Artikel</a><a href="/login.html">Masuk</a></nav></header>'''
 FOOT = (f'<footer>© {time.strftime("%Y")} {BRAND} — dikelola oleh Sarvamaya. <a href="/artikel">Artikel</a> · '
         '<a href="/privacy.html">Kebijakan Privasi</a> · <a href="/terms.html">Syarat &amp; Ketentuan</a> · '
