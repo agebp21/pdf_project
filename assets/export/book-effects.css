@@ -143,6 +143,10 @@ body.is-erasing .page,body.is-erasing .pdf-page{cursor:crosshair;cursor:var(--hl
 .cover-curl-back{transform:rotateY(180deg)}
 .cover-curl-shade{position:absolute;top:0;right:0;bottom:0;left:0}
 .curl-hidden{visibility:hidden!important}
+/* The cover's inside while the cover turns: plain paper (see FlipbookCurl.plainInside) */
+.inside-cover>*{transition:opacity .2s ease-out}
+.inside-cover.inside-plain{background:#f7f3ea!important}
+.inside-cover.inside-plain>*{opacity:0!important;transition:none}
 
 
 /* Podcast player (FlipbookPodcast): transcript with the line being spoken. */

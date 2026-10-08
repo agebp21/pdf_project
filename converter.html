@@ -1728,7 +1728,7 @@ let orgBook=null, orgPrevCache=new Map(), orgReaderSig='', orgBuildSeq=0, orgEng
 function orgBookEngine(){
   if(window.St&&window.St.PageFlip) return Promise.resolve();
   if(!orgEngineLoading) orgEngineLoading=new Promise((res,rej)=>{
-    const s=document.createElement('script'); s.src='assets/vendor/page-flip.browser.js?v=soft';
+    const s=document.createElement('script'); s.src='assets/vendor/page-flip.browser.js?v=plain3';
     s.onload=()=>((window.St&&window.St.PageFlip)?res():rej(new Error('engine')));
     s.onerror=()=>rej(new Error('engine'));
     document.head.append(s);

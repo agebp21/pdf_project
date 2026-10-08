@@ -343,10 +343,47 @@
 // ES2018 for old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookCurl = {
   // Off: the cover turns with PageFlip's own soft page turn, like every other
-  // page (the strip curl read as stiff next to them). Kept for a later return.
+  // page (the strip curl read as stiff next to them); plainInside keeps the
+  // turn from showing two pages at once. Kept for a later return.
   ENABLED: false,
   STRIPS: 36,
   DURATION: 1600,
+  // A soft cover shares its sheet with page 2, so a turning cover showed the
+  // cover and page 2 at once. While the cover turns (open or close, spreads
+  // only), page 2 shows as plain paper, the cover's inside; its content fades
+  // back in once the book is still.
+  // The back cover the same way: the page sharing its sheet (the one before
+  // the last spread, index L-1) is plain while the book turns into or out of
+  // the ending (L = first index of the last spread, as in centerCover).
+  plainInside(book, pages) {
+    const none = { open: () => false, close: () => false, busy: () => false };
+    if (!pages[1] || pages.length < 3) return none;
+    const count = () => book.getPageCount();
+    const lastFirst = () => { const n = count(); return n < 4 ? -1 : (n % 2 === 0 ? n - 1 : n - 2); };
+    const direction = () => { try { return book.getRender().getDirection(); } catch (e) { return 0; } };
+    const front = pages[1], back = () => pages[lastFirst() - 1];
+    front.classList.add('inside-cover');
+    if (back()) back().classList.add('inside-cover');
+    // The content comes back while the sheet is still landing (70% of the
+    // turn), not after it, so the plain page never sits there looking empty.
+    let early = 0;
+    const reveal = () => { clearTimeout(early); pages.forEach(page => page.classList.remove('inside-plain')); };
+    book.on('changeState', event => {
+      if (event.data === 'read') { reveal(); return; }
+      // Only where the plain page lands face up: opening the cover, leaving the back cover.
+      if (event.data === 'flipping' && book.getOrientation() === 'landscape') {
+        const index = book.getCurrentPageIndex(), dir = direction();
+        clearTimeout(early);
+        if ((index === 0 && dir === 0) || (index === lastFirst() && dir === 1))
+          early = setTimeout(reveal, (book.getSettings().flippingTime || 1000) * 0.7);
+      }
+      if (book.getOrientation() !== 'landscape') return;
+      const index = book.getCurrentPageIndex(), dir = direction(), L = lastFirst();
+      if (index === 0 || (index === 1 && dir === 1)) front.classList.add('inside-plain');
+      if (L > 2 && back() && ((index === L - 2 && dir === 0) || (index === L && dir === 1))) back().classList.add('inside-plain');
+    });
+    return none;
+  },
   // Rotation of each strip (relative to the previous one, as the strips are
   // nested) for a cover turned `theta` (0..PI) about the spine. The spine
   // side turns rigidly with theta; the free edge trails by up to `bend`
@@ -366,6 +403,7 @@
   },
   bind(book, root, pages, options) {
     const self = this, opts = options || {};
+    if (!self.ENABLED) return self.plainInside(book, pages);
     let busy = false;
     // Gentle in and out (sine): a cubic curve crept, then snapped over the middle.
     const ease = t => (1 - Math.cos(Math.PI * t)) / 2;
