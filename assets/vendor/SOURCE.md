@@ -1,10 +1,14 @@
 # Flipbook engine
 
-`page-flip.browser.js` is copied unchanged from:
+`page-flip.browser.js` is copied from (one local change, below):
 https://github.com/agebp21/sarvamaya-flipbook-studio
 
 Commit: `dcc2b6fc6ca27a812e566858ff28d61332c642ec`
 Path: `flipbook_studio/templates/html/page-flip.browser.js`
+
+Local change: with `showCover` the engine forced the first page to `density="hard"`, so the
+cover swung as a stiff plate. That line is removed; the cover keeps the page's own density
+(`soft`, set in `assets/export/layout.js`) and bends like the other pages.
 
 The interactive infographic demo uses this engine to turn HTML pages. Animation, controls, and sample content are implemented separately in `assets/animation.js` and `assets/animation.css`.
 

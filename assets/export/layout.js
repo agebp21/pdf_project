@@ -342,6 +342,9 @@
 // Landscape only (portrait/reduced motion fall back to the normal flip).
 // ES2018 for old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookCurl = {
+  // Off: the cover turns with PageFlip's own soft page turn, like every other
+  // page (the strip curl read as stiff next to them). Kept for a later return.
+  ENABLED: false,
   STRIPS: 36,
   DURATION: 1600,
   // Rotation of each strip (relative to the previous one, as the strips are
@@ -368,7 +371,7 @@
     const ease = t => (1 - Math.cos(Math.PI * t)) / 2;
     const src = i => { const img = pages[i] && pages[i].querySelector('img'); return img ? (img.currentSrc || img.src) : ''; };
     function ready() {
-      return !opts.reduced && !busy && pages.length >= 3 && book.getOrientation() === 'landscape' &&
+      return self.ENABLED && !opts.reduced && !busy && pages.length >= 3 && book.getOrientation() === 'landscape' &&
         ['read', 'fold_corner'].indexOf(book.getState()) >= 0;
     }
     // Right-hand page slot relative to root (where the closed cover sits).
