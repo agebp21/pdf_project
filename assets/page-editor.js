@@ -13,6 +13,7 @@
   let uid = 1;
   const newId = () => 'e' + (uid++);
 
+  const NEW_NAME = () => L('new-document.pdf', 'dokumen-baru.pdf');
   function status(text) { const el = $('#pe-status'); if (el) el.textContent = text || ''; }
   const page = () => st.pages[st.cur];
   const els = () => (page() ? page().elements : []);
@@ -32,7 +33,7 @@
     await useBytes(bytes, null);
     if (!files.length) st.pages[0].blank = true;                         // a new document: its page waits for typing
     $('#pe-start').hidden = true; $('#pe-app').hidden = false;
-    document.title = st.name + ' — Editor PDF';
+    document.title = st.name + ' — ' + L('PDF Editor', 'Editor PDF');
     renderThumbs(); thumbsLazy();
     const want = Number(new URLSearchParams(location.search).get('page')) || 1;
     await go(Math.min(st.pages.length, Math.max(1, want)) - 1);
@@ -102,7 +103,7 @@
       d.draggable = true; d.dataset.i = i;
       const mini = pg.ready && pg.edited ? miniPage(pg) : null;
       d.innerHTML = (mini ? '' : pg.thumb ? `<img src="${pg.thumb}" alt="" draggable="false">` : '<div class="pe-thumb-wait"></div>')
-        + `<span>${i + 1}${pg.edited ? '<span class="dot" title="Diubah"></span>' : ''}</span>`
+        + `<span>${i + 1}${pg.edited ? `<span class="dot" title="${L('Changed', 'Diubah')}"></span>` : ''}</span>`
         + `<button class="pe-more" title="${L('Page menu', 'Menu halaman')}">⋯</button>`;
       if (mini) d.prepend(mini);
       d.onclick = e => pick(e, i);
@@ -264,16 +265,35 @@
 
   // ---- turn a page into pieces ------------------------------------------------------------
   // Pictures painted on the page: the decoded picture (pdf.js objs) and where it lands.
-  function pictureOps(ops, vpTransform) {
+  // Also gathers simple vector shapes (straight rules, plain boxes) into `shapes`, so table
+  // lines and separators can be moved. A picture under a soft mask (a drawn shadow) is not
+  // a picture you could move: it stays in the background.
+  function pictureOps(ops, vpTransform, shapes) {
     const U = pdfjsLib.Util, O = pdfjsLib.OPS, out = [], stack = [];
-    let ctm = [1, 0, 0, 1, 0, 0];
+    let ctm = [1, 0, 0, 1, 0, 0], gs = { lw: 1, fill: '#000000', stroke: '#000000', smask: false }, path = null;
+    const groups = []; let inMask = 0;                                    // drawing inside a soft-mask group is the mask, not the page
+    const hexOf = a => typeof a[0] === 'string' ? a[0] : '#' + [a[0], a[1], a[2]].map(v => Math.round(Math.max(0, Math.min(255, v))).toString(16).padStart(2, '0')).join('');
+    const PAINT = new Set([O.stroke, O.closeStroke, O.fill, O.eoFill, O.fillStroke, O.eoFillStroke, O.closeFillStroke, O.closeEOFillStroke]);
+    const STROKES = new Set([O.stroke, O.closeStroke, O.fillStroke, O.eoFillStroke, O.closeFillStroke, O.closeEOFillStroke]);
+    const FILLS = new Set([O.fill, O.eoFill, O.fillStroke, O.eoFillStroke, O.closeFillStroke, O.closeEOFillStroke]);
     for (let k = 0; k < ops.fnArray.length; k++) {
       const fn = ops.fnArray[k], a = ops.argsArray[k];
-      if (fn === O.save) stack.push(ctm.slice());
-      else if (fn === O.restore) ctm = stack.pop() || ctm;
+      if (fn === O.save) stack.push({ ctm: ctm.slice(), gs: { ...gs } });
+      else if (fn === O.restore) { const s = stack.pop(); if (s) { ctm = s.ctm; gs = s.gs; } }
       else if (fn === O.transform) ctm = U.transform(ctm, a);
-      else if (fn === O.paintFormXObjectBegin) { stack.push(ctm.slice()); if (a && a[0]) ctm = U.transform(ctm, a[0]); }
-      else if (fn === O.paintFormXObjectEnd) ctm = stack.pop() || ctm;
+      else if (fn === O.paintFormXObjectBegin) { stack.push({ ctm: ctm.slice(), gs: { ...gs } }); if (a && a[0]) ctm = U.transform(ctm, a[0]); }
+      else if (fn === O.paintFormXObjectEnd) { const s = stack.pop(); if (s) { ctm = s.ctm; gs = s.gs; } }
+      else if (fn === O.beginGroup) { const m = a && a[0] && a[0].smask ? 1 : 0; groups.push(m); inMask += m; }
+      else if (fn === O.endGroup) inMask -= groups.pop() || 0;
+      else if (inMask > 0) continue;
+      else if (fn === O.setLineWidth) gs.lw = a[0];
+      else if (fn === O.setFillRGBColor) gs.fill = hexOf(a);
+      else if (fn === O.setStrokeRGBColor) gs.stroke = hexOf(a);
+      else if (fn === O.setGState) { for (const [key, v] of a[0] || []) if (key === 'SMask') gs.smask = !!v; }
+      else if (fn === O.constructPath) path = { ops: a[0], coords: a[1], m: U.transform(vpTransform, ctm) };
+      else if (PAINT.has(fn) && path && shapes && !gs.smask) { shapeOf(path, STROKES.has(fn), FILLS.has(fn), gs, shapes); path = null; }
+      else if (fn === O.endPath) path = null;
+      else if ((fn === O.paintImageXObject || fn === O.paintInlineImageXObject) && gs.smask) continue;
       else if (fn === O.paintImageXObject || fn === O.paintInlineImageXObject) {
         const m = U.transform(vpTransform, ctm);
         const pts = [[0, 0], [1, 0], [0, 1], [1, 1]].map(([x, y]) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]]);
@@ -284,8 +304,35 @@
     }
     return out;
   }
+  // A path that is only straight axis-aligned lines, or only rectangles, becomes shapes
+  // (in page pixels): {box, fill, stroke, width}.
+  function shapeOf(path, stroked, filled, gs, shapes) {
+    const O = pdfjsLib.OPS, m = path.m, P = (x, y) => [m[0] * x + m[2] * y + m[4], m[1] * x + m[3] * y + m[5]];
+    const scale = Math.sqrt(Math.abs(m[0] * m[3] - m[1] * m[2])) || 1, t = Math.max(1, (gs.lw || 0) * scale);
+    const rects = [], segs = []; let c = 0, cur = null, other = false;
+    for (const op of path.ops) {
+      if (op === O.rectangle) { const [x, y, w, h] = path.coords.slice(c, c + 4); c += 4; const p = [P(x, y), P(x + w, y + h)]; rects.push({ x0: Math.min(p[0][0], p[1][0]), y0: Math.min(p[0][1], p[1][1]), x1: Math.max(p[0][0], p[1][0]), y1: Math.max(p[0][1], p[1][1]) }); }
+      else if (op === O.moveTo) { cur = P(path.coords[c], path.coords[c + 1]); c += 2; }
+      else if (op === O.lineTo) { const q = P(path.coords[c], path.coords[c + 1]); c += 2; if (cur) segs.push([cur, q]); cur = q; }
+      else if (op === O.closePath) { /* a closed polyline is a polygon, not rules */ other = true; }
+      else { other = true; c += op === O.curveTo ? 6 : 4; }
+    }
+    if (other || (rects.length && segs.length)) return;
+    for (const [p, q] of segs) {                                          // straight rules (separators, table lines)
+      if (!stroked) return;
+      const horiz = Math.abs(p[1] - q[1]) < 1.5, vert = Math.abs(p[0] - q[0]) < 1.5;
+      if (!horiz && !vert) return;
+      shapes.push({ box: { x0: Math.min(p[0], q[0]) - (vert ? t / 2 : 0), y0: Math.min(p[1], q[1]) - (horiz ? t / 2 : 0), x1: Math.max(p[0], q[0]) + (vert ? t / 2 : 0), y1: Math.max(p[1], q[1]) + (horiz ? t / 2 : 0) }, fill: gs.stroke });
+    }
+    for (const r of rects) {
+      const thin = Math.min(r.x1 - r.x0, r.y1 - r.y0) <= 3;
+      if (filled && thin) shapes.push({ box: r, fill: gs.fill });
+      else if (filled && !/^#f[a-f]f[a-f]f[a-f]$/i.test(gs.fill)) shapes.push({ box: r, fill: gs.fill, stroke: stroked ? gs.stroke : '', width: stroked ? t : 0 });
+      else if (stroked) shapes.push({ box: r, fill: '', stroke: gs.stroke, width: t });
+    }
+  }
   // The picture itself (no panels or text over it), drawn the way the page shows it.
-  function pictureSrc(p, op) {
+  function pictureSrc(p, op, page) {
     let obj = op.inline ? op.ref : null;
     if (!obj) try { obj = String(op.ref).startsWith('g_') ? p.commonObjs.get(op.ref) : p.objs.get(op.ref); } catch (e) { return null; }
     if (!obj) return null;
@@ -309,6 +356,21 @@
     // Keep transparency only when the picture has any.
     const px = g.getImageData(0, 0, c.width, c.height).data;
     let clear = false; for (let i = 3; i < px.length; i += 4 * 97) if (px[i] < 245) { clear = true; break; }
+    // Does it look like the page there? A picture painted through a mask the PDF applies
+    // elsewhere (a soft shadow) comes out as a dark slab: it stays in the background.
+    if (page) {
+      let diff = 0, n = 0;
+      const stepX = Math.max(1, Math.floor(c.width / 24)), stepY = Math.max(1, Math.floor(c.height / 24));
+      for (let y = Math.floor(stepY / 2); y < c.height; y += stepY) for (let x = Math.floor(stepX / 2); x < c.width; x += stepX) {
+        const gx = Math.floor(box.x0 + x / f), gy = Math.floor(box.y0 + y / f);
+        if (gx < 0 || gy < 0 || gx >= page.width || gy >= page.height) continue;
+        const i = (y * c.width + x) * 4, j = (gy * page.width + gx) * 4;
+        if (px[i + 3] < 250) continue;                                     // see-through parts show what is under them
+        for (let k = 0; k < 3; k++) diff += Math.abs(px[i + k] - page.data[j + k]);
+        n += 3;
+      }
+      if (n && diff / n > 70) { c.width = 0; return null; }
+    }
     const src = c.toDataURL(clear ? 'image/png' : 'image/jpeg', 0.9); c.width = 0;
     return src;
   }
@@ -377,7 +439,8 @@
     }
     let lines = C.groupLines(items);
     let ops = [];
-    try { ops = pictureOps(await p.getOperatorList(), vp.transform); } catch (e) {}
+    const shapes = [];
+    try { ops = pictureOps(await p.getOperatorList(), vp.transform, shapes); } catch (e) {}
     const area = o => (o.box.x1 - o.box.x0) * (o.box.y1 - o.box.y0) / (W * H);
     // OCR only for a scan (a picture over most of the page). A page without text that
     // is not a scan (a title drawn as artwork) stays design: OCR there reads nonsense.
@@ -399,7 +462,7 @@
     ops = ops.filter(o => area(o) > 0.004 && !(scanned && area(o) > 0.6));
     const imgEls = [];
     for (const o of ops) {
-      const src = pictureSrc(p, o);
+      const src = pictureSrc(p, o, original);
       if (!src) continue;
       const b = { x0: Math.max(0, o.box.x0), y0: Math.max(0, o.box.y0), x1: Math.min(W, o.box.x1), y1: Math.min(H, o.box.y1) };
       imgEls.push({ id: newId(), type: 'image', under: true, x: o.box.x0 / W, y: o.box.y0 / H, w: (o.box.x1 - o.box.x0) / W, h: (o.box.y1 - o.box.y0) / H, src, rotation: 0, clip: b });
@@ -443,12 +506,35 @@
       if (!im.under) holes.push({ x0: b.x0, y0: b.y0, x1: b.x1, y1: b.y1, padding: 2 });
     }
 
+    // Rules and plain boxes become shapes you can move (a busy drawing stays in the background).
+    const keepShapes = !pg.forceOcr && !scanned ? shapes.filter(sh => {
+      const w = sh.box.x1 - sh.box.x0, h = sh.box.y1 - sh.box.y0, a = w * h / (W * H);
+      return Math.max(w, h) >= W * 0.02 && a < 0.5;
+    }) : [];
+    const shapeEls = keepShapes.length > 150 ? [] : keepShapes.map(sh => ({ id: newId(), type: 'rect', x: sh.box.x0 / W, y: sh.box.y0 / H,
+      w: Math.max(1, sh.box.x1 - sh.box.x0) / W, h: Math.max(1, sh.box.y1 - sh.box.y0) / H, fill: sh.fill || '', stroke: sh.stroke || '', strokeWidth: (sh.width || 0) / H, rotation: 0 }));
+    const shapeBoxes = shapeEls.length ? keepShapes.map(sh => ({ ...sh.box, padding: 1 })) : [];
     // Text colours from the page as printed; then the text leaves the design layer.
     const lineBoxes = lines.map(l => ({ x0: l.x, y0: l.y, x1: l.x + l.w, y1: l.y + l.h }));
     const colors = C.textColors(original.data, W, H, lineBoxes);
     lines.forEach((l, i) => { l.color = colors[i]; });
+    // Words in a line that differ (another colour, weight or font) keep it, as styled words.
+    const partList = lines.flatMap((l, i) => (l.parts && l.parts.length > 1 ? l.parts : []).map(pt => ({ pt, i })));
+    if (partList.length) {
+      const pc = C.textColors(original.data, W, H, partList.map(({ pt }) => ({ x0: pt.x, y0: pt.y, x1: pt.x + pt.w, y1: pt.y + pt.h })));
+      partList.forEach(({ pt }, k) => { pt.color = pc[k]; });
+      const far = (c1, c2) => { const v = s => [1, 3, 5].map(j => parseInt(s.slice(j, j + 2), 16)); const a = v(c1), b = v(c2); return Math.abs(a[0] - b[0]) + Math.abs(a[1] - b[1]) + Math.abs(a[2] - b[2]) > 90; };
+      for (const l of lines) {
+        const ps = l.parts || []; if (ps.length < 2) continue;
+        const main = ps.reduce((m, pt) => pt.text.length > m.text.length ? pt : m, ps[0]);
+        l.color = main.color; l.font = main.font; l.bold = main.bold; l.italic = main.italic;
+        const runs = ps.map(pt => ({ text: pt.text, ...(pt.bold !== l.bold ? { b: pt.bold } : {}), ...(pt.italic !== l.italic ? { i: pt.italic } : {}),
+          ...(far(pt.color, l.color) ? { color: pt.color } : {}), ...(pt.font && pt.font !== l.font ? { face: `"${pt.font}"` } : {}) }));
+        if (runs.some(r => Object.keys(r).length > 1)) l.html = C.richHtml([runs]);
+      }
+    }
     const bgData = new ImageData(layer || new Uint8ClampedArray(original.data), W, H);
-    C.repair(bgData.data, W, H, [...lineBoxes, ...holes]);
+    C.repair(bgData.data, W, H, [...lineBoxes, ...holes, ...shapeBoxes]);
     ctx.clearRect(0, 0, W, H); ctx.putImageData(bgData, 0, 0);
 
     const blocks = C.paragraphs(lines);
@@ -467,14 +553,17 @@
       const lh = b.lineHeight || C.LINE, top = b.y + b.size * 0.82 - size * C.baseline(lh);
       return { id: newId(), type: 'text', x: b.x / W, y: Math.max(0, top) / H, w: Math.min(1 - b.x / W, (Math.max(b.w, fitted) + size * 0.6) / W), h: b.h / H, text: b.text,
         fontSize: size / H, family: b.family || 'sans', bold: !!b.bold, italic: !!b.italic, color: b.color || '#1c1917', align: 'left', lineHeight: b.lineHeight || C.LINE,
-        ...(b.font ? { font: b.font } : {}) };
+        ...(b.font ? { font: b.font } : {}), ...(b.html ? { html: C.tidyRich(b.html) } : {}),
+        // A one-line piece (a label, an amount, a table cell) never wraps by itself: typing
+        // more makes it longer, like a line in Word, and nothing below moves.
+        ...(b.lines === 1 ? { fit: true } : {}) };
     });
     pg.layered = !!layer;
     pg.bg = canvas.toDataURL(pg.layered ? 'image/png' : 'image/jpeg', 0.9);
     const oc = Object.assign(document.createElement('canvas'), { width: W, height: H }); oc.getContext('2d').putImageData(original, 0, 0);
     pg.original = oc.toDataURL('image/jpeg', 0.9); oc.width = 0;
     canvas.width = 0;
-    pg.elements = [...imgEls.map(({ clip, ...e }) => e), ...textEls];
+    pg.elements = [...imgEls.map(({ clip, ...e }) => e), ...shapeEls, ...textEls];
     // A blank page gets a body text block inside the margins (2.5 cm), like a new Word page.
     if (pg.blank && !pg.elements.length) {
       const [PW, PH] = pg.size, m = st.margin || 72;
@@ -591,7 +680,7 @@
     const own = el.font && st.fonts && st.fonts[el.font];
     Object.assign(node.style, { fontFamily: (own ? `"${el.font}", ` : '') + (CSS_FONT[el.family] || CSS_FONT.sans), fontSize: el.fontSize * H + 'px', lineHeight: String(el.lineHeight || C.LINE),
       fontWeight: !own && el.bold ? '700' : '400', fontStyle: !own && el.italic ? 'italic' : 'normal', color: el.color || '#1c1917', textAlign: el.align || 'left',
-      textDecoration: el.underline ? 'underline' : 'none' });
+      textDecoration: el.underline ? 'underline' : 'none', whiteSpace: el.fit ? 'pre' : 'pre-wrap' });
   }
   function build(el, sheetH) {
     const div = document.createElement('div');
@@ -605,6 +694,7 @@
     }
     const many = st.group.includes(el.id);
     div.className = 'pe-el pe-' + el.type + (el.under ? ' pe-under' : '') + (st.sel === el.id || many ? ' sel' : '') + (many ? ' multi' : ''); div.dataset.id = el.id;
+    if (el.type === 'rect' && page() && Math.min(el.w * page().size[0], el.h * page().size[1]) < 6) div.classList.add('pe-thin');
     place(div, el);
     if (el.type === 'text') {
       const t = document.createElement('div'); t.className = 'pe-txt'; t.contentEditable = 'true'; t.spellcheck = false;
@@ -1144,13 +1234,13 @@
     const name = prompt(L('Save as (file name):', 'Simpan sebagai (nama file):'), base);
     if (!name || !name.trim()) return;
     st.name = name.trim().replace(/\.pdf$/i, '') + '.pdf'; st.savedAs = true;
-    document.title = st.name + ' — Editor PDF';
+    document.title = st.name + ' — ' + L('PDF Editor', 'Editor PDF');
     return save('download');
   }
   function newDocument() {
     if (st.pages.some(p => p.edited) && !confirm(L('Start a new document? Changes not saved yet will be lost.', 'Mulai dokumen baru? Perubahan yang belum disimpan akan hilang.'))) return;
     st.savedAs = false;
-    return open([], 'dokumen-baru.pdf');
+    return open([], NEW_NAME());
   }
   function add(el) {
     if (!page() || !page().ready) return;
@@ -1252,18 +1342,18 @@
   }
 
   function wire() {
-    $('#pe-file').onchange = e => { const f = [...e.target.files]; if (f.length) open(f, f.length > 1 ? 'gabungan.pdf' : null).catch(err => status(err.message)); };
-    const blankDoc = $('#pe-blank'); if (blankDoc) blankDoc.onclick = () => open([], 'dokumen-baru.pdf').catch(err => status(err.message));
+    $('#pe-file').onchange = e => { const f = [...e.target.files]; if (f.length) open(f, f.length > 1 ? L('merged.pdf', 'gabungan.pdf') : null).catch(err => status(err.message)); };
+    const blankDoc = $('#pe-blank'); if (blankDoc) blankDoc.onclick = () => open([], NEW_NAME()).catch(err => status(err.message));
     const openBtn = $('#pe-open');
     if (openBtn) openBtn.onchange = e => {
       const f = [...e.target.files]; e.target.value = ''; if (!f.length) return;
       if (st.pages.some(p => p.edited) && !confirm(L('Open another file? Changes not saved yet will be lost.', 'Buka file lain? Perubahan yang belum disimpan akan hilang.'))) return;
-      open(f, f.length > 1 ? 'gabungan.pdf' : null).catch(err => status(err.message));
+      open(f, f.length > 1 ? L('merged.pdf', 'gabungan.pdf') : null).catch(err => status(err.message));
     };
     const start = $('#pe-start');
     start.addEventListener('dragover', e => { e.preventDefault(); start.classList.add('over'); });
     start.addEventListener('dragleave', () => start.classList.remove('over'));
-    start.addEventListener('drop', e => { e.preventDefault(); start.classList.remove('over'); const f = [...e.dataTransfer.files]; if (f.length) open(f, f.length > 1 ? 'gabungan.pdf' : null).catch(err => status(err.message)); });
+    start.addEventListener('drop', e => { e.preventDefault(); start.classList.remove('over'); const f = [...e.dataTransfer.files]; if (f.length) open(f, f.length > 1 ? L('merged.pdf', 'gabungan.pdf') : null).catch(err => status(err.message)); });
     const thumbs = $('#pe-thumbs');
     thumbs.addEventListener('dragover', e => { if (!dragPages && !(e.dataTransfer.types || []).includes('Files')) return; e.preventDefault(); dropMark(dropAt(e)); });
     thumbs.addEventListener('dragleave', e => { if (!thumbs.contains(e.relatedTarget)) dropMark(null); });
@@ -1290,6 +1380,7 @@
     $('#pe-shapes').onclick = e => { const r = e.currentTarget.getBoundingClientRect(); showMenu(r.left, r.bottom + 4, [
       ['▢ ' + L('Rectangle', 'Kotak'), shape.rect], ['◯ ' + L('Ellipse', 'Elips'), shape.ellipse], ['╲ ' + L('Line', 'Garis'), shape.line],
       ['➝ ' + L('Arrow', 'Panah'), shape.arrow], ['△ ' + L('Triangle', 'Segitiga'), shape.triangle]]); };
+    $('#pe-open-btn').onclick = () => $('#pe-open').click();
     $('#pe-file-menu').onclick = e => { const r = e.currentTarget.getBoundingClientRect(); showMenu(r.left, r.bottom + 4, [
       [L('New', 'Baru'), newDocument],
       [L('Open…', 'Buka…'), () => $('#pe-open').click(), '', 'Ctrl+O'],
@@ -1519,7 +1610,7 @@
     try {
       const { bytes, missing, edits } = await buildPdf({ order: opts.order, compress: true });
       const blob = new Blob([bytes], { type: 'application/pdf' });
-      const name = st.savedAs && !opts.order ? st.name : st.name.replace(/\.pdf$/i, '') + (opts.order ? '-halaman.pdf' : '-edit.pdf');
+      const name = st.savedAs && !opts.order ? st.name : st.name.replace(/\.pdf$/i, '') + (opts.order ? L('-pages.pdf', '-halaman.pdf') : '-edit.pdf');
       const note = missing.length ? L(` Some characters are not in the PDF fonts and became "?": ${missing.join(' ')}`, ` Beberapa huruf tidak ada di font PDF dan menjadi "?": ${missing.join(' ')}`) : '';
       if ((where === 'flipbook' || where === 'organize') && window.FlipbookTransfer) {
         const id = await FlipbookTransfer.save(blob, where === 'organize' ? st.name : name);
@@ -1564,6 +1655,12 @@
 
   async function boot() {
     wire();
+    // EN / ID switched: the editor's own texts follow (the page's HTML follows I18N itself).
+    document.addEventListener('langchange', () => {
+      fontsVer++; renderThumbs(); statusBar(); if (page() && page().ready) { toolbar(); render(); }
+      if (st.name && st.pages.length) document.title = st.name + ' — ' + L('PDF Editor', 'Editor PDF');
+      status('');
+    });
     // Arriving from Merge / Split / Compress: the same editor, set up for that job.
     const tool = new URLSearchParams(location.search).get('tool') || '';
     const hint = {
@@ -1581,7 +1678,7 @@
       } catch (e) { status(e.message || String(e)); }
     }
     // Like Word: Edit PDF opens on a blank page with the caret ready.
-    if (!tool) await open([], 'dokumen-baru.pdf');
+    if (!tool) await open([], NEW_NAME());
   }
   // On a blank page whose body is still empty, the caret waits in it.
   function caretOnBlank() {

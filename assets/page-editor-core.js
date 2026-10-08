@@ -49,15 +49,21 @@
       const line = lines.find(l => Math.abs((l.y + l.h) - base) < Math.max(l.h, it.h) * 0.35 &&
         it.x >= l.x + l.w - Math.max(l.h, it.h) * 0.6 &&
         it.x <= l.x + l.w + Math.min(Math.max(l.h, it.h) * 2.5, Math.min(l.em || l.h, it.em || it.h) * 1.6));
-      if (!line) { lines.push({ ...it, text: it.str }); continue; }
+      // Each line remembers its parts (font, weight, place): words styled apart keep their look.
+      const part = s => ({ text: s, font: it.font, bold: !!it.bold, italic: !!it.italic, x: it.x, y: it.y, w: it.w, h: it.h });
+      if (!line) { lines.push({ ...it, text: it.str, parts: [part(it.str)] }); continue; }
       const gap = it.x - (line.x + line.w);
       const space = gap > Math.min(line.h, it.h) * 0.18 && !/\s$/.test(line.text) && !/^\s/.test(it.str) ? ' ' : '';
-      line.text += space + it.str;
+      line.text += space + it.str; line.parts.push(part(space + it.str));
       const right = Math.max(line.x + line.w, it.x + it.w), top = Math.min(line.y, it.y);
       line.h = Math.max(line.y + line.h, it.y + it.h) - top; line.y = top; line.w = right - line.x;
       line.bold = line.bold && it.bold; line.italic = line.italic && it.italic;
     }
-    for (const l of lines) l.text = l.text.replace(/\s+/g, ' ').trim();
+    for (const l of lines) {
+      l.text = l.text.replace(/\s+/g, ' ').trim();
+      const ps = l.parts || []; ps.forEach(p => { p.text = p.text.replace(/\s+/g, ' '); });
+      if (ps.length) { ps[0].text = ps[0].text.replace(/^\s+/, ''); ps[ps.length - 1].text = ps[ps.length - 1].text.replace(/\s+$/, ''); }
+    }
     return lines.filter(l => l.text);
   }
 
@@ -88,9 +94,14 @@
         l.y - (b.y + b.h) < size * 0.9 && l.y - (b.y + b.h) > -size * 0.5 &&
         (Math.abs(l.x - b.x) < size * 2.2 || Math.abs(l.x - b.lastX) < size * 2.2) &&
         Math.min(l.x + l.w, b.x + b.w) - Math.max(l.x, b.x) > Math.min(l.w, b.w) * 0.3);
-      if (!b) { blocks.push({ x: l.x, y: l.y, w: l.w, h: l.h, size, text: l.text, lines: 1, lastX: l.x, lastProse: prose(l), family: l.family || 'sans', bold: !!l.bold, italic: !!l.italic, color: l.color, font: l.font }); continue; }
+      if (!b) { blocks.push({ x: l.x, y: l.y, w: l.w, h: l.h, size, text: l.text, lines: 1, lastX: l.x, lastProse: prose(l), family: l.family || 'sans', bold: !!l.bold, italic: !!l.italic, color: l.color, font: l.font, html: l.html }); continue; }
       // Words split over two lines ("se-" + "hari") join again.
-      if (/[\p{L}]-$/u.test(b.text) && /^\p{Ll}/u.test(l.text)) b.text = b.text.slice(0, -1) + l.text;
+      const joined = /[\p{L}]-$/u.test(b.text) && /^\p{Ll}/u.test(l.text);
+      if (b.html || l.html) {                                             // styled words go along
+        const bh = b.html ?? escapeHtml(b.text), lh = l.html ?? escapeHtml(l.text);
+        b.html = joined ? bh.replace(/-((?:<\/span>)?)$/, '$1') + lh : bh + ' ' + lh;
+      }
+      if (joined) b.text = b.text.slice(0, -1) + l.text;
       else b.text += ' ' + l.text;
       const right = Math.max(b.x + b.w, l.x + l.w);
       b.x = Math.min(b.x, l.x); b.w = right - b.x; b.h = l.y + l.h - b.y; b.lines++; b.lastX = l.x; b.lastProse = prose(l);
@@ -450,7 +461,7 @@
       const finish = last => { while (line.toks.length && line.toks[line.toks.length - 1].space) line.w -= line.toks.pop().w; line.last = last; lines.push(line); line = { toks: [], w: 0, size: 0 }; };
       for (const t of tokens) {
         if (t.end) { line.size = line.size || t.size; finish(true); continue; }
-        if (!t.space && line.toks.some(k => !k.space) && line.w + t.w > w) finish(false);
+        if (!el.fit && !t.space && line.toks.some(k => !k.space) && line.w + t.w > w) finish(false);
         if (t.space && !line.toks.length) continue;
         line.toks.push(t); line.w += t.w; line.size = Math.max(line.size, t.size);
       }
@@ -525,7 +536,7 @@
           const lh = size * (el.lineHeight || LINE);
           // Each paragraph wraps on its own: in justified text its last line stays left.
           const lines = String(text).split('\n').flatMap(para => {
-            const ls = wrap(para, width, Math.max(w, size));
+            const ls = el.fit ? [para] : wrap(para, width, Math.max(w, size));     // a one-line piece only breaks at Enter
             return ls.map((line, i) => ({ line, last: i === ls.length - 1 }));
           });
           let base = H - el.y * H - size * baseline(el.lineHeight || LINE);
