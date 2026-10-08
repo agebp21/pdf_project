@@ -46,7 +46,7 @@
       const shown = onScreen(), pages = visible(), cover = shown[0] === 0;
       $('#status').textContent = cover ? `Cover · 1 / ${data.pageCount}` : !pages.length ? 'Back cover' : `${pages.map(i=>i+1).join('–')} / ${data.pageCount}`;
       $('#prev').disabled = $('#home').disabled = cover;
-      $('#next').disabled = shown[shown.length-1] === sheets.length-1;
+      $('#next').disabled = $('#end').disabled = shown[shown.length-1] === sheets.length-1;
       $('#next').textContent = cover ? 'Open cover →' : '→';
       $('#next').setAttribute('aria-label', cover ? 'Open cover' : 'Next page');
       sheets.forEach((page,index) => { page.setAttribute('aria-hidden', String(!shown.includes(index))); });
@@ -84,7 +84,7 @@
     const turn = go => { const settings = book.getSettings(), was = settings.disableFlipByClick; settings.disableFlipByClick = false; try { go(); } finally { settings.disableFlipByClick = was; } };
     const goPage = target => { if (['read', 'fold_corner'].indexOf(book.getState()) >= 0 && visible().indexOf(target) < 0) { zoom.snap(); turn(() => book.flip(target, 'top')); } };
     Object.keys(data.links || {}).forEach(key => FlipbookLinks.mount(elements[Number(key)], data.links[key], goPage));
-    book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});$('#home').disabled=$('#prev').disabled=$('#next').disabled=true}});
+    book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});$('#home').disabled=$('#end').disabled=$('#prev').disabled=$('#next').disabled=true}});
     book.loadFromHTML(sheets);update();animate();
     // After loadFromHTML: PageFlip has no current page before that.
     const marks = FlipbookBookmarks.bind({key: FlipbookBookmarks.key(data.title, data.pageCount, data.ratio), pages: elements,
@@ -172,6 +172,7 @@
     const goPrev=()=>{zoom.snap();if(curl.busy())return;if(book.getCurrentPageIndex()===1&&curl.close())return;turn(()=>book.flipPrev())};
     const goNext=()=>{zoom.snap();if(curl.busy())return;if(!curl.open())turn(()=>book.flipNext())};
     $('#home').onclick=()=>{zoom.snap();if(curl.busy()||curl.close())return;if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
+    $('#end').onclick=()=>{zoom.snap();if(curl.busy()||book.getState()!=='read')return;book.turnToPage(sheets.length-1);update();animate()};
     $('#prev').onclick=goPrev;$('#next').onclick=goNext;$('#replay').onclick=()=>animate(false);
     document.addEventListener('keydown',event=>{if(FlipbookNotes.typing(event))return;if(event.key==='ArrowRight'&&!$('#next').disabled)goNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)goPrev()});
     document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});}else animate()});

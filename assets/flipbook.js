@@ -75,7 +75,7 @@
     $('#next').textContent = isCover ? 'Open cover →' : '→';
     $('#next').setAttribute('aria-label', isCover ? 'Open cover' : 'Next page');
     $('#prev').disabled = $('#home').disabled = isCover;
-    $('#next').disabled = shown.at(-1) === book.getPageCount() - 1;
+    $('#next').disabled = $('#end').disabled = shown.at(-1) === book.getPageCount() - 1;
   }
   function stopAnimation() { cancelAnimationFrame(frame); frame = 0; }
   function animate(automatic = false) {
@@ -120,7 +120,7 @@
   async function openPdfNow(blob, name, project = null, pictures = {}) {
     if (opening || exporting) return false;
     opening = true; $('#pdf-file').disabled = true; $('#add-file').disabled = true; $('#overlay-fields').disabled = true;
-    $('#home').disabled = $('#prev').disabled = $('#next').disabled = $('#replay').disabled = true;
+    $('#home').disabled = $('#end').disabled = $('#prev').disabled = $('#next').disabled = $('#replay').disabled = true;
     stopAnimation(); error('');
     exportState();
     const version = ++loadVersion;
@@ -201,7 +201,7 @@
       book.on('flip', updatePage); book.on('changeOrientation', () => { updatePage(); animate(true); });
       book.on('changeState', event => {
         if (event.data === 'read') { updatePage(); animate(true); }
-        else { stopAnimation(); $('#home').disabled = $('#prev').disabled = $('#next').disabled = true; }
+        else { stopAnimation(); $('#home').disabled = $('#end').disabled = $('#prev').disabled = $('#next').disabled = true; }
       });
       book.loadFromHTML(sheets);
       disposeLayout=FlipbookLayout.bind(book,$('#reader-stage'),ratio,{compact:true});
@@ -785,6 +785,12 @@
     if (curl?.close()) return;
     if (book.getState() !== 'read') return;
     book.turnToPage(0); updatePage(); animate(true);
+  });
+  // End: straight to the back cover (the last spread), like Home to the front.
+  $('#end').addEventListener('click', () => {
+    zoom?.reset();
+    if (!book || opening || curl?.busy() || book.getState() !== 'read') return;
+    book.turnToPage(book.getPageCount() - 1); updatePage(); animate(true);
   });
   FlipbookIdle.bind({
     host: $('.preview'),
