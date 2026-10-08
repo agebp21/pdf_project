@@ -121,6 +121,63 @@ async function main() {
     assert.ok(open1[1] > 120 && open1[0] < 60, 'new picture visible ' + open1);
     assert.ok(under[1] > under[0] + 40 && under[0] > 90, 'panel still lightens the picture under it ' + under);
   }
+  // Rich text: words with their own styles.
+  {
+    const paras = E.parseRich('Hai <span style="font-weight:bold;color:rgb(255,0,0)">tebal</span> biasa<br><i>miring</i> &amp; <span style="font-size:2em">besar</span>');
+    assert.equal(paras.length, 2);
+    assert.deepEqual(paras[0][1], { text: 'tebal', b: true, color: '#ff0000' });
+    assert.equal(E.plainRich('a<br>b <u>c</u>'), 'a\nb c');
+    assert.equal(E.tidyRich('<div>satu</div><div><b>dua</b></div>'), 'satu<br><span style="font-weight:bold">dua</span>');
+    assert.equal(E.isRich('satu<br>dua'), false); assert.equal(E.isRich('a <b>b</b>'), true);
+    const faced = E.parseRich('<span style="font-family: &quot;u:georgia.ttf&quot;, Arial; color: red">Kata</span>');
+    assert.equal(faced[0][0].face, '"u:georgia.ttf", Arial', 'a quoted font name survives');
+    assert.equal(E.parseRich(E.tidyRich('<span style="font-family: &quot;u:georgia.ttf&quot;">Kata</span>'))[0][0].face, '"u:georgia.ttf"', 'and the round trip');
+    const r0 = await PDFDocument.create(); r0.addPage([300, 200]); const rb = await r0.save();
+    const rich = await E.exportPdf(rb, { 0: { size: [300, 200], elements: [{ type: 'text', x: 0.05, y: 0.1, w: 0.9, h: 0.3, fontSize: 14 / 200, family: 'sans', color: '#000000',
+      text: 'Kata biasa tebal merah\nBESAR', html: 'Kata biasa <span style="font-weight:bold;color:#ff0000">tebal merah</span><br><span style="font-size:2em;text-decoration:underline">BESAR</span>' }] } });
+    const rd = await open(rich), rp = await rd.getPage(1), rc = await rp.getTextContent();
+    await rd.destroy();
+    assert.match(rc.items.map(i => i.str).join(' '), /Kata.*biasa.*tebal.*merah.*BESAR/);
+    const big = rc.items.find(i => i.str === 'BESAR'), small = rc.items.find(i => i.str === 'Kata');
+    assert.ok(Math.abs(big.transform[0] / small.transform[0] - 2) < 0.01, 'em size doubles the word');
+  }
+  // Flowing text: cut a block at a word, join it back, styles kept.
+  {
+    const paras = E.richOf('', 'Satu <b>dua tiga</b><br>empat lima');
+    assert.equal(E.plainOf(paras), 'Satu dua tiga\nempat lima');
+    const [a, b] = E.splitParas(paras, 9);
+    assert.deepEqual(E.blockOf(a), { text: 'Satu dua ', html: 'Satu <span style="font-weight:bold">dua </span>' });
+    assert.deepEqual(E.blockOf(b), { text: 'tiga\nempat lima', html: '<span style="font-weight:bold">tiga</span><br>empat lima' });
+    assert.deepEqual(E.blockOf(E.joinParas(a, b)), E.blockOf(paras), 'joined back as it was');
+    const [c, d] = E.splitParas(paras, 14);                                 // right after the line break
+    assert.equal(E.plainOf(c), 'Satu dua tiga\n'); assert.deepEqual(E.blockOf(d), { text: 'empat lima' });
+    assert.deepEqual(E.blockOf(E.joinParas(c, d)), E.blockOf(paras));
+    assert.deepEqual(E.breakPoints('ab cd\nef'), [3, 6]);
+    assert.deepEqual(E.blockOf(E.richOf('a\nb', null)), { text: 'a\nb' });
+  }
+  // Underline, triangle and arrow are drawn.
+  {
+    const s0 = await PDFDocument.create(); s0.addPage([200, 200]); const sb = await s0.save();
+    const sh = await E.exportPdf(sb, { 0: { size: [200, 200], elements: [
+      { type: 'text', x: 0.1, y: 0.05, w: 0.8, h: 0.1, text: 'garis bawah', fontSize: 0.08, family: 'sans', color: '#000000', underline: true },
+      { type: 'triangle', x: 0.1, y: 0.4, w: 0.3, h: 0.3, fill: '#00ff00', stroke: '#000000', strokeWidth: 0.005 },
+      { type: 'arrow', x: 0.5, y: 0.5, w: 0.4, h: 0.1, stroke: '#ff0000', strokeWidth: 0.01 }] } });
+    const tri = await pixel(sh, 1, 0.25, 0.62), arr = await pixel(sh, 1, 0.88, 0.55);
+    assert.ok(tri[1] > 200 && tri[0] < 80, 'triangle filled: ' + tri);
+    assert.ok(arr[0] > 200 && arr[1] < 80, 'arrow head drawn: ' + arr);
+    // the underline: a dark row just under the baseline, across the words' gap
+    const ul = await pixel(sh, 1, 0.33, 0.05 + 0.08 * (E.baseline(E.LINE)) + 0.012);
+    assert.ok(ul[0] < 120, 'underline drawn: ' + ul);
+  }
+  // clearPaper: plain paper around a cut-out becomes transparent; a busy rim is left alone.
+  {
+    const w = 20, h = 20, d = new Uint8ClampedArray(w * h * 4).fill(255);
+    for (let y = 8; y < 12; y++) for (let x = 8; x < 12; x++) { const i = (y * w + x) * 4; d[i] = 20; d[i + 1] = 20; d[i + 2] = 20; }
+    assert.equal(E.clearPaper(d, w, h), true);
+    assert.equal(d[3], 0, 'paper is transparent'); assert.equal(d[(10 * w + 10) * 4 + 3], 255, 'the logo stays');
+    const busy = new Uint8ClampedArray(w * h * 4).map((v, i) => i % 4 === 3 ? 255 : (i * 37) % 256);
+    assert.equal(E.clearPaper(busy, w, h), false, 'a photo-like rim is not cleared');
+  }
   // Justify: every line but a paragraph's last reaches the right edge.
   {
     const j0 = await PDFDocument.create(); j0.addPage([300, 200]);

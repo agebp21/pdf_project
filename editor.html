@@ -14,6 +14,7 @@
 <script defer src="assets/vendor/pdf-lib.min.js"></script>
 <script defer src="assets/flipbook-transfer.js"></script>
 <script defer src="assets/animation-ocr.js"></script>
+<script defer src="assets/pdf-compress.js"></script>
 <script defer src="assets/page-editor-core.js"></script>
 <script defer src="assets/page-editor.js"></script>
 <style>
@@ -25,19 +26,61 @@
   .pe-bar button.on{background:#1A3C34;border-color:#1A3C34;color:#fff}
   .pe-bar button:disabled{opacity:.4;cursor:default}
   .pe-bar input[type=file]{display:none!important}
+  .pe-bar [hidden]{display:none!important}
   .pe-bar input[type=number]{width:62px;padding:0 6px}
   .pe-bar input[type=color]{width:38px;padding:3px}
   .pe-sep{width:1px;height:24px;background:#E8E2D4;margin:0 2px}
   .pe-bar .pe-save{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border-color:#E04E1F;font-weight:800}
   .pe-bar .pe-save:hover:not(:disabled){color:#fff;filter:brightness(1.05)}
-  .pe-main{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;align-items:start}
-  .pe-thumbs{position:sticky;top:76px;max-height:calc(100vh - 96px);overflow:auto;display:grid;gap:10px;padding-right:4px}
-  .pe-thumb{border:2px solid transparent;border-radius:10px;background:#fff;padding:4px;cursor:pointer;text-align:center;font-size:11px;color:#78716C}
+  .pe-main{display:grid;grid-template-columns:150px minmax(0,1fr);gap:14px;align-items:start;padding-bottom:34px}
+  .pe-tabs{display:flex;flex-wrap:wrap;align-items:center;gap:4px;width:100%;border-bottom:1px solid #EFEAE0;padding-bottom:6px}
+  .pe-bar .pe-tab{border:0;background:none;border-radius:8px;font-weight:700;color:#57534e}
+  .pe-bar .pe-tab.on{background:#FFF1EA;color:#C2410C}
+  .pe-ribbon{display:flex;flex-wrap:wrap;align-items:center;gap:6px;width:100%;padding-top:2px}
+  .pe-sheet{position:relative;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.14);flex:none;cursor:pointer;overflow:hidden}
+  .pe-sheet>canvas.pe-bg{position:absolute;inset:0;width:100%;height:100%}
+  .pe-sheet .pe-el{pointer-events:none;outline:none!important}
+  .pe-sheet .pe-txt{white-space:pre-wrap;word-wrap:break-word}
+  .pe-statusbar{position:fixed;left:0;right:0;bottom:0;z-index:40;background:#1A3C34;color:#E7F0EC;font:600 12px 'Plus Jakarta Sans',sans-serif;padding:6px 18px}
+  .pe-thumbs{position:sticky;top:124px;max-height:calc(100vh - 170px);overflow:auto;display:grid;gap:10px;padding-right:4px}
+  .pe-thumb{position:relative;border:2px solid transparent;border-radius:10px;background:#fff;padding:4px;cursor:pointer;text-align:center;font-size:11px;color:#78716C;user-select:none}
+  .pe-thumb.picked{background:#FFF1EA;border-color:#FDBA9B}
   .pe-thumb.on{border-color:#FF5C28}
+  .pe-thumb.drop-before{box-shadow:0 -4px 0 #FF5C28}
+  .pe-thumb.drop-after{box-shadow:0 4px 0 #FF5C28}
+  .pe-thumb-wait{height:90px;border-radius:6px;background:#F1EDE4}
+  .pe-mini{position:relative;width:126px;margin:0 auto;overflow:hidden;background:#fff;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.12);pointer-events:none}
+  .pe-mini .pe-el{outline:none!important}.pe-mini .pe-txt{white-space:pre-wrap;word-wrap:break-word}
+  .pe-mini>.pe-bg{position:absolute;inset:0;width:100%;height:100%}
+  .pe-thumb .pe-more{position:absolute;top:6px;right:6px;width:24px;height:22px;border:1px solid #E4DED0;border-radius:7px;background:rgba(255,255,255,.92);font-weight:800;cursor:pointer;opacity:0;transition:opacity .15s}
+  .pe-thumb:hover .pe-more,.pe-thumb.on .pe-more{opacity:1}
+  .pe-thumb-tools{display:grid;gap:6px;padding-bottom:6px}
+  .pe-thumb-tools button{border:1px dashed #D6CFBF;background:#fff;border-radius:10px;padding:8px 6px;font:700 11.5px 'Plus Jakarta Sans',sans-serif;color:#57534e;cursor:pointer}
+  .pe-thumb-tools button:hover{border-color:#FF5C28;color:#FF5C28}
+  .pe-menu{position:fixed;z-index:100;background:#fff;border:1px solid #E8E2D4;border-radius:12px;box-shadow:0 14px 34px rgba(28,25,23,.18);padding:6px;min-width:240px}
+  .pe-menu button{display:block;width:100%;text-align:left;border:0;background:none;border-radius:8px;padding:9px 10px;font:600 13px 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer}
+  .pe-menu button:hover{background:#FFF1EA;color:#C2410C}
+  .pe-menu button.danger{color:#B91C1C}
+  .pe-menu button{display:flex;justify-content:space-between;gap:18px}
+  .pe-menu kbd{font:600 11px 'Plus Jakarta Sans',sans-serif;color:#A8A29E}
+  .pe-menu-sep{border:0;border-top:1px solid #EFEAE0;margin:4px 6px}
+  .pe-bar .pe-file{background:#1A3C34;border-color:#1A3C34;color:#fff;font-weight:800}
+  .pe-bar .pe-file:hover:not(:disabled){color:#fff;border-color:#1A3C34;filter:brightness(1.15)}
+  .pe-modal{position:fixed;inset:0;z-index:120;background:rgba(28,25,23,.35);display:grid;place-items:center;padding:16px}
+  .pe-dlg{background:#fff;border-radius:18px;padding:20px 22px;width:min(420px,100%);box-shadow:0 24px 60px rgba(0,0,0,.25);display:grid;gap:12px}
+  .pe-dlg h3{margin:0;font-family:'Fraunces',serif;font-size:20px}
+  .pe-dlg label{display:grid;gap:5px;font:700 12.5px 'Plus Jakarta Sans',sans-serif;color:#57534e}
+  .pe-dlg select,.pe-dlg input{height:36px;border:1px solid #E4DED0;border-radius:10px;padding:0 10px;font:600 13px 'Plus Jakarta Sans',sans-serif}
+  .pe-dlg-note{margin:0;font-size:11.5px;color:#78716C}
+  .pe-dlg-btns{display:flex;justify-content:flex-end;gap:8px}
+  .pe-dlg-btns button{height:36px;border:1px solid #E4DED0;background:#fff;border-radius:10px;padding:0 14px;font:700 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+  .pe-dlg-btns .pe-save{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border-color:#E04E1F}
+  .pe-empty.over{border-color:#FF5C28;background:#FFF7F2}
   .pe-thumb img{display:block;width:100%;border-radius:6px;box-shadow:0 1px 4px rgba(0,0,0,.12)}
   .pe-thumb .dot{display:inline-block;width:7px;height:7px;border-radius:50%;background:#FF5C28;margin-left:4px}
-  .pe-desk{background:#E9E5DC;border-radius:18px;padding:22px;min-height:70vh;display:flex;justify-content:center;align-items:flex-start;overflow:auto}
+  .pe-desk{background:#E9E5DC;border-radius:18px;padding:22px;min-height:70vh;display:flex;flex-direction:column;align-items:center;gap:18px;overflow:auto}
   #pe-stage{position:relative;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.18);flex:none;touch-action:none}
+  #pe-stage,.pe-sheet{scroll-margin-top:140px}
   #pe-stage>.pe-bg{position:absolute;inset:0;width:100%;height:100%;user-select:none;pointer-events:none}
   .pe-el{position:absolute;box-sizing:border-box;outline:1px dashed transparent;outline-offset:1px}
   .pe-el:hover{outline-color:rgba(255,92,40,.55)}
@@ -46,6 +89,8 @@
   .pe-ghost{pointer-events:none;z-index:6}
   .pe-ghost .pe-h{pointer-events:auto}
   .pe-text .pe-txt{outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;cursor:text}
+  .pe-text .pe-txt:empty::before{content:attr(data-ph);color:#A8A29E;pointer-events:none}
+  .pe-measure{position:fixed;left:-30000px;top:0;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;pointer-events:none}
   .pe-text{padding:0;cursor:text}
   /* Text works like Word: no frame, no corner handles, just the caret. A small grip
      on the left (on hover / while editing) moves the block. */
@@ -54,8 +99,8 @@
   .pe-el.pe-text.multi{background:rgba(255,92,40,.14);box-shadow:0 0 0 1px rgba(255,92,40,.25);border-radius:2px}
   .pe-el.multi .pe-h{display:none!important}
   .pe-el.pe-text .pe-h:not([data-h=move]){display:none!important}
-  .pe-el.pe-text .pe-h[data-h=move]{display:block;opacity:0;width:9px;height:9px;left:-15px;margin-top:-5px;border:0;border-radius:50%;background:#FF5C28;transition:opacity .15s}
-  .pe-el.pe-text:hover .pe-h[data-h=move],.pe-el.pe-text.sel .pe-h[data-h=move]{opacity:.8}
+  .pe-el.pe-text .pe-h{display:none!important}
+  .pe-el.pe-text.pe-alt,.pe-el.pe-text.pe-alt .pe-txt{cursor:move}
   .pe-image img{width:100%;height:100%;display:block;user-select:none;pointer-events:none}
   .pe-image,.pe-rect,.pe-ellipse,.pe-line{cursor:move}
   .pe-ellipse{border-radius:50%}
@@ -82,45 +127,80 @@
   </nav>
 
   <div id="pe-start" class="pe-empty">
-    <h2>Editor PDF</h2>
-    <p>Edit teks seperti di Word dan atur gambar seperti di PowerPoint — langsung di halaman.</p>
-    <label class="clay-btn clay-btn-dark" style="cursor:pointer">Pilih PDF<input id="pe-file" type="file" accept="application/pdf,.pdf" hidden></label>
-    <p class="pe-help" style="margin-top:14px">Diproses di browser Anda. Halaman yang Anda ubah dibangun ulang; halaman lain tetap seperti aslinya.</p>
+    <h2>Edit PDF</h2>
+    <p>Edit teks seperti di Word, atur gambar seperti di PowerPoint, gabung, pisah, dan kompres — semua di satu tempat. PDF hasil scan dan foto dokumen juga bisa diedit.</p>
+    <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
+      <label class="clay-btn clay-btn-dark" style="cursor:pointer">Pilih PDF / gambar<input id="pe-file" type="file" accept="application/pdf,.pdf,image/*" multiple hidden></label>
+      <button id="pe-blank" type="button" class="clay-btn clay-btn-ghost">＋ Dokumen kosong</button>
+    </div>
+    <p class="pe-help" id="pe-start-hint" style="margin-top:14px">Atau seret file ke sini. Bisa beberapa file sekaligus (digabung jadi satu).</p>
+    <p class="pe-help">Diproses di browser Anda. Halaman yang Anda ubah dibangun ulang; halaman lain tetap seperti aslinya.</p>
   </div>
 
   <div id="pe-app" hidden>
     <div class="pe-bar" id="pe-bar">
-      <button id="pe-undo" title="Batalkan (Ctrl+Z)">↶</button><button id="pe-redo" title="Ulangi (Ctrl+Y)">↷</button>
-      <span class="pe-sep"></span>
-      <button id="pe-add-text" title="Tambah teks">T Teks</button>
-      <label class="pe-btn" title="Tambah gambar">🖼 Gambar<input id="pe-add-image" type="file" accept="image/*" hidden></label>
-      <button id="pe-cut" title="Jadikan area (logo, grafik, gambar vektor) sebagai gambar yang bisa dipindah">✂ Area → gambar</button>
-      <button id="pe-add-rect" title="Kotak">▢</button><button id="pe-add-ellipse" title="Elips">◯</button><button id="pe-add-line" title="Garis">╲</button>
-      <span class="pe-sep"></span>
-      <select id="pe-family" title="Jenis huruf"><option value="sans">Sans (Arial)</option><option value="serif">Serif (Times)</option><option value="mono">Mono (Courier)</option></select>
-      <input id="pe-size" type="number" min="4" max="200" step="1" title="Ukuran huruf (pt)">
-      <button id="pe-bold" title="Tebal"><b>B</b></button><button id="pe-italic" title="Miring"><i>I</i></button>
-      <input id="pe-color" type="color" title="Warna teks / garis">
-      <input id="pe-fill" type="color" title="Warna isi bentuk" value="#ffffff">
-      <button id="pe-align-left" title="Rata kiri">⟸</button><button id="pe-align-center" title="Rata tengah">≡</button><button id="pe-align-right" title="Rata kanan">⟹</button><button id="pe-align-justify" title="Rata kiri-kanan">☰</button>
-      <span class="pe-sep"></span>
-      <label class="pe-btn" title="Ganti gambar">⇄ Ganti<input id="pe-replace" type="file" accept="image/*" hidden></label>
-      <button id="pe-front" title="Ke depan">⬆</button><button id="pe-back" title="Ke belakang">⬇</button>
-      <button id="pe-delete" title="Hapus (Delete)">🗑</button>
-      <span class="pe-sep"></span>
-      <button id="pe-zoom-out" title="Perkecil">−</button><span id="pe-zoom" style="font-size:12px;min-width:38px;text-align:center">100%</span><button id="pe-zoom-in" title="Perbesar">+</button>
-      <button id="pe-reset" title="Kembalikan halaman ini seperti asli">↺ Asli</button>
-      <span style="flex:1"></span>
-      <button id="pe-flipbook" title="Simpan lalu buka sebagai flipbook">📖 Flipbook</button>
-      <button id="pe-download" hidden>⬇ Unduh PDF</button>
-      <button id="pe-save" class="pe-save">💾 Simpan PDF</button>
+      <div class="pe-tabs">
+        <button id="pe-file-menu" class="pe-file" title="Baru, buka, impor, simpan, pengaturan halaman, cetak">File</button>
+        <input id="pe-open" type="file" accept="application/pdf,.pdf,image/*" multiple hidden>
+        <button class="pe-tab on" data-tab="home">Beranda</button>
+        <button class="pe-tab" data-tab="insert">Sisipkan</button>
+        <button class="pe-tab" data-tab="layout">Tata Letak</button>
+        <button class="pe-tab" data-tab="view">Tampilan</button>
+        <span style="flex:1"></span>
+        <select id="pe-quality" title="Kualitas / ukuran file saat menyimpan"><option value="orig">Kualitas asli</option><option value="medium">Seimbang (lebih kecil)</option><option value="high">Kecil (paling ringkas)</option></select>
+        <button id="pe-flipbook" title="Simpan lalu buka sebagai flipbook">📖 Flipbook</button>
+        <button id="pe-download" hidden>⬇ Unduh PDF</button>
+        <button id="pe-save" class="pe-save" title="Simpan (Ctrl+S)">💾 Simpan PDF</button>
+      </div>
+      <div class="pe-ribbon" data-panel="home">
+        <button id="pe-undo" title="Batalkan (Ctrl+Z)">↶</button><button id="pe-redo" title="Ulangi (Ctrl+Y)">↷</button>
+        <span class="pe-sep"></span>
+        <select id="pe-style" title="Gaya paragraf (Normal / Judul)"><option value="">Gaya paragraf</option><option value="normal">Normal</option><option value="h1">Judul 1</option><option value="h2">Judul 2</option><option value="h3">Judul 3</option></select>
+        <select id="pe-family" title="Jenis huruf"><option value="sans">Sans (Arial)</option></select>
+        <input id="pe-size" type="number" min="4" max="200" step="1" title="Ukuran huruf (pt)">
+        <button id="pe-bold" title="Tebal (Ctrl+B)"><b>B</b></button><button id="pe-italic" title="Miring (Ctrl+I)"><i>I</i></button><button id="pe-underline" title="Garis bawah (Ctrl+U)"><u>U</u></button>
+        <input id="pe-color" type="color" title="Warna teks / garis">
+        <input id="pe-fill" type="color" title="Warna isi bentuk" value="#ffffff">
+        <span class="pe-sep"></span>
+        <button id="pe-align-left" title="Rata kiri (Ctrl+L)">⟸</button><button id="pe-align-center" title="Rata tengah (Ctrl+E)">≡</button><button id="pe-align-right" title="Rata kanan (Ctrl+R)">⟹</button><button id="pe-align-justify" title="Rata kiri-kanan (Ctrl+J)">☰</button>
+        <button id="pe-list-bullet" title="Daftar berpoin">•≡</button><button id="pe-list-number" title="Daftar bernomor">1.≡</button>
+        <span class="pe-sep"></span>
+        <label class="pe-btn" title="Ganti gambar">⇄ Ganti<input id="pe-replace" type="file" accept="image/*" hidden></label>
+        <button id="pe-front" title="Ke depan">⬆</button><button id="pe-back" title="Ke belakang">⬇</button>
+        <button id="pe-delete" title="Hapus (Delete)">🗑</button>
+        <button id="pe-reset" title="Kembalikan halaman ini seperti asli">↺ Asli</button>
+      </div>
+      <div class="pe-ribbon" data-panel="insert" hidden>
+        <button id="pe-add-text" title="Kotak teks">T Kotak teks</button>
+        <label class="pe-btn" title="Gambar dari komputer">🖼 Gambar<input id="pe-add-image" type="file" accept="image/*" hidden></label>
+        <button id="pe-shapes" title="Bentuk: kotak, elips, garis, panah, segitiga">⬠ Bentuk ▾</button>
+        <button id="pe-cut" title="Jadikan area (logo, grafik, gambar vektor) sebagai gambar yang bisa dipindah">✂ Area → gambar</button>
+        <button id="pe-ocr-area" title="Baca tulisan pada gambar/foto di area yang dipilih menjadi teks yang bisa diedit">🔤 Area → teks (OCR)</button>
+        <span class="pe-sep"></span>
+        <button id="pe-ins-blank" title="Halaman kosong sesudah halaman ini">＋ Halaman kosong</button>
+        <button id="pe-ins-file" title="Sisipkan PDF atau gambar sesudah halaman ini">📄 PDF / gambar</button>
+      </div>
+      <div class="pe-ribbon" data-panel="layout" hidden>
+        <button id="pe-setup" title="Ukuran kertas, orientasi, margin">⚙ Pengaturan halaman</button>
+        <select id="pe-paper" title="Ukuran kertas (semua halaman)"><option value="">Ukuran kertas…</option><option value="A4">A4</option><option value="F4">F4 / Folio</option><option value="Letter">Letter</option><option value="Legal">Legal</option><option value="A5">A5</option></select>
+        <button id="pe-orient-p" title="Tegak (semua halaman)">▯ Tegak</button><button id="pe-orient-l" title="Mendatar (semua halaman)">▭ Mendatar</button>
+        <span class="pe-sep"></span>
+        <button id="pe-rot-page" title="Putar halaman ini 90°">↻ Putar halaman</button>
+        <button id="pe-print" title="Cetak (Ctrl+P)">🖨 Cetak</button>
+      </div>
+      <div class="pe-ribbon" data-panel="view" hidden>
+        <button id="pe-zoom-out" title="Perkecil">−</button><span id="pe-zoom" style="font-size:12px;min-width:38px;text-align:center">100%</span><button id="pe-zoom-in" title="Perbesar">+</button>
+        <button id="pe-zoom-fit" title="Ukuran normal">100%</button>
+      </div>
     </div>
     <div class="pe-status" id="pe-status"></div>
     <div class="pe-main">
       <div class="pe-thumbs" id="pe-thumbs"></div>
       <div class="pe-desk" id="pe-desk"><div id="pe-stage"></div></div>
     </div>
-    <p class="pe-help">Logo atau grafik belum bisa dipindah? Pakai ✂ Area → gambar lalu seret kotak di sekitarnya. Klik teks untuk langsung mengetik. Seret pinggiran kotak (atau titik oranye di kiri) untuk memindah, sudut untuk mengubah ukuran. Gambar & bentuk: seret untuk memindah, titik bulat di atas untuk memutar. Halaman yang diubah ditandai titik oranye.</p>
+    <div class="pe-statusbar" id="pe-sb"></div>
+    <p class="pe-help">Halaman: klik kanan (atau ⋯) untuk halaman kosong, duplikat, putar, hapus, simpan sebagian, atau baca teks (OCR); seret untuk mengubah urutan; jatuhkan PDF/gambar ke panel kiri untuk menyisipkan. Ctrl/Shift+klik memilih beberapa halaman.</p>
+    <p class="pe-help">Logo atau grafik belum bisa dipindah? Pakai ✂ Area → gambar lalu seret kotak di sekitarnya. Klik teks untuk langsung mengetik. Teks dipindah dengan Alt+seret (atau pilih dulu lalu seret), sudut untuk mengubah ukuran. Gambar & bentuk: seret untuk memindah, titik bulat di atas untuk memutar. Halaman yang diubah ditandai titik oranye.</p>
   </div>
 </div>
 </body>

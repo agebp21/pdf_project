@@ -129,6 +129,132 @@
     return out;
   }
 
+
+  // ---- rich text: words styled on their own (bold, italic, underline, colour, size, font) --------
+  // A text block may carry html (from the editor) next to its plain text. Only a small
+  // set of inline styles is read; everything else is dropped. Sizes are "em" of the
+  // block's own font size, fonts a CSS font-family (a FontFace key or a standard family).
+  const ENT = { amp: '&', lt: '<', gt: '>', quot: '"', apos: "'", nbsp: ' ', '#39': "'" };
+  const decode = t => t.replace(/&(#x?[0-9a-f]+|[a-z]+|#39);/gi, (m, e) => ENT[e.toLowerCase()] ?? (e[0] === '#' ? String.fromCodePoint(e[1].toLowerCase() === 'x' ? parseInt(e.slice(2), 16) : parseInt(e.slice(1), 10)) : m));
+  const escapeHtml = t => String(t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  function cssColor(v) {
+    v = String(v || '').trim();
+    let m = /^#([0-9a-f]{3})$/i.exec(v); if (m) return '#' + m[1].split('').map(c => c + c).join('').toLowerCase();
+    m = /^#([0-9a-f]{6})$/i.exec(v); if (m) return '#' + m[1].toLowerCase();
+    m = /^rgba?\(\s*(\d+)[,\s]+(\d+)[,\s]+(\d+)/i.exec(v); if (m) return '#' + [m[1], m[2], m[3]].map(n => Math.min(255, +n).toString(16).padStart(2, '0')).join('');
+    return null;
+  }
+  function styleOf(tag, attrs) {
+    const st = {};
+    if (tag === 'b' || tag === 'strong') st.b = true;
+    if (tag === 'i' || tag === 'em') st.i = true;
+    if (tag === 'u') st.u = true;
+    // Entities first: a quoted font name (&quot;) holds a ";" that is not a separator.
+    const css = decode((/style\s*=\s*"([^"]*)"/i.exec(attrs) || /style\s*=\s*'([^']*)'/i.exec(attrs) || [])[1] || '');
+    for (const decl of css.split(';')) {
+      const k = decl.slice(0, decl.indexOf(':')).trim().toLowerCase(), v = decl.slice(decl.indexOf(':') + 1).trim();
+      if (!k || decl.indexOf(':') < 0) continue;
+      if (k === 'font-weight') st.b = /bold|[6-9]00/.test(v);
+      else if (k === 'font-style') st.i = /italic|oblique/.test(v);
+      else if (k === 'text-decoration' || k === 'text-decoration-line') st.u = /underline/.test(v);
+      else if (k === 'color') { const c = cssColor(v); if (c) st.color = c; }
+      else if (k === 'font-size') { const m = /^([\d.]+)em$/.exec(v); if (m) st.scale = +m[1]; }
+      else if (k === 'font-family') st.face = v;
+    }
+    if (tag === 'font') {
+      const c = /color\s*=\s*"?([^"\s>]+)/i.exec(attrs); if (c && cssColor(c[1])) st.color = cssColor(c[1]);
+      const f = /face\s*=\s*"([^"]*)"/i.exec(attrs); if (f) st.face = f[1];
+    }
+    return st;
+  }
+  // html -> paragraphs of runs: [[{text, b, i, u, color, scale, face}, ...], ...]
+  function parseRich(html) {
+    const paras = [[]], stack = [];
+    const cur = () => Object.assign({}, ...stack.map(x => x.st));
+    const push = text => {
+      if (!text) return;
+      const s = cur(), para = paras[paras.length - 1], last = para[para.length - 1];
+      const same = last && ['b', 'i', 'u', 'color', 'scale', 'face'].every(k => last[k] === s[k]);
+      if (same) last.text += text; else para.push({ text, ...s });
+    };
+    const re = /<(\/?)([a-z][a-z0-9]*)([^>]*)>|([^<]+)/gi;
+    let m;
+    while ((m = re.exec(String(html || '')))) {
+      if (m[4] !== undefined) { push(decode(m[4]).replace(/\r?\n/g, ' ')); continue; }
+      const close = !!m[1], tag = m[2].toLowerCase(), attrs = m[3] || '';
+      if (tag === 'br') { paras.push([]); continue; }
+      if (tag === 'div' || tag === 'p') {                                  // a block starts or ends a paragraph
+        if (paras[paras.length - 1].length) paras.push([]);
+        continue;
+      }
+      if (close) { const k = stack.map(x => x.tag).lastIndexOf(tag); if (k >= 0) stack.splice(k); continue; }
+      if (/\/\s*$/.test(attrs)) continue;
+      stack.push({ tag, st: styleOf(tag, attrs) });
+    }
+    if (paras.length > 1 && !paras[paras.length - 1].length && /<\/(div|p)>\s*$/i.test(String(html))) paras.pop();
+    return paras;
+  }
+  const isRich = html => /<(b|strong|i|em|u|span|font)\b/i.test(String(html || ''));
+  const plainRich = html => parseRich(html).map(p => p.map(r => r.text).join('')).join('\n');
+  // Runs back to tidy html (one span per styled run, <br> between paragraphs).
+  function richHtml(paras) {
+    return paras.map(p => p.map(r => {
+      const css = [];
+      if (r.b !== undefined) css.push('font-weight:' + (r.b ? 'bold' : 'normal'));
+      if (r.i !== undefined) css.push('font-style:' + (r.i ? 'italic' : 'normal'));
+      if (r.u !== undefined) css.push('text-decoration:' + (r.u ? 'underline' : 'none'));
+      if (r.color) css.push('color:' + r.color);
+      if (r.scale) css.push('font-size:' + r.scale + 'em');
+      if (r.face) css.push('font-family:' + r.face.replace(/"/g, '&quot;'));
+      const t = escapeHtml(r.text);
+      return css.length ? `<span style="${css.join(';')}">${t}</span>` : t;
+    }).join('')).join('<br>');
+  }
+  const tidyRich = html => richHtml(parseRich(html));
+  // A block's words as paragraphs of runs, whether it is plain text or html.
+  const richOf = (text, html) => html ? parseRich(html) : String(text || '').split('\n').map(t => t ? [{ text: t }] : []);
+  const plainOf = paras => paras.map(p => p.map(r => r.text).join('')).join('\n');
+  // Cut paragraphs at character k of their plain text ("\n" between paragraphs counts 1).
+  function splitParas(paras, k) {
+    const a = [], b = [];
+    let left = k;
+    for (const para of paras) {
+      if (left === null) { b.push(para.map(r => ({ ...r }))); continue; }
+      const len = para.reduce((n, r) => n + r.text.length, 0);
+      if (left > len) { a.push(para.map(r => ({ ...r }))); left -= len + 1; continue; }
+      const pa = [], pb = [];
+      let l = left;
+      for (const r of para) {
+        if (l === null) { pb.push({ ...r }); continue; }
+        if (l >= r.text.length && l > 0) { pa.push({ ...r }); l -= r.text.length; continue; }
+        if (l > 0) pa.push({ ...r, text: r.text.slice(0, l) });
+        pb.push({ ...r, text: r.text.slice(l) }); l = null;
+      }
+      a.push(pa); b.push(pb); left = null;
+    }
+    if (!b.length) b.push([]);
+    return [a, b];
+  }
+  // Two blocks' paragraphs end to end: the last paragraph of a goes on with the first of b.
+  function joinParas(a, b) {
+    if (!a.length) return b.map(p => p.slice());
+    if (!b.length) return a.map(p => p.slice());
+    return [...a.slice(0, -1), [...a[a.length - 1], ...b[0]], ...b.slice(1)];
+  }
+  // Paragraphs back into a block: plain text when no word carries a style.
+  const sameStyle = (x, y) => ['b', 'i', 'u', 'color', 'scale', 'face'].every(k => x[k] === y[k]);
+  function blockOf(paras) {
+    paras = paras.map(p => p.reduce((out, r) => { const last = out[out.length - 1]; if (last && sameStyle(last, r)) last.text += r.text; else if (r.text) out.push({ ...r }); return out; }, []));
+    const html = richHtml(paras), text = plainOf(paras);
+    return isRich(html) ? { text, html } : { text };
+  }
+  // Where a block may be cut for the next page: after a space or a line break.
+  function breakPoints(text) {
+    const out = [];
+    for (let i = 0; i < text.length; i++) if (text[i] === ' ' || text[i] === '\n') out.push(i + 1);
+    return out;
+  }
+
   function hex(color) {
     const m = /^#?([0-9a-f]{6})$/i.exec(String(color || '').trim());
     const v = m ? m[1] : '1c1917';
@@ -244,6 +370,26 @@
     });
   }
 
+  // clearPaper: a cut-out (a logo on the page) loses its paper. When the rim of the
+  // box is one plain colour, that colour turns transparent (soft at the edges, the
+  // paper taken out of the edge pixels). Returns false when the rim is not plain.
+  function clearPaper(data, w, h) {
+    const rim = [];
+    for (let x = 0; x < w; x++) for (const y of [0, 1, h - 2, h - 1]) if (y >= 0 && y < h) rim.push((y * w + x) * 4);
+    for (let y = 2; y < h - 2; y++) for (const x of [0, 1, w - 2, w - 1]) if (x >= 0 && x < w) rim.push((y * w + x) * 4);
+    if (!rim.length) return false;
+    const m = [0, 1, 2].map(c => rim.reduce((a, i) => a + data[i + c], 0) / rim.length);
+    const spread = rim.reduce((a, i) => a + Math.max(...[0, 1, 2].map(c => Math.abs(data[i + c] - m[c]))), 0) / rim.length;
+    if (spread > 18) return false;
+    for (let i = 0; i < w * h * 4; i += 4) {
+      const d = Math.max(Math.abs(data[i] - m[0]), Math.abs(data[i + 1] - m[1]), Math.abs(data[i + 2] - m[2]));
+      const a = d <= 10 ? 0 : d >= 60 ? 1 : (d - 10) / 50;
+      if (a > 0 && a < 1) for (let c = 0; c < 3; c++) data[i + c] = (data[i + c] - (1 - a) * m[c]) / a;
+      data[i + 3] = Math.min(data[i + 3], Math.round(a * 255));
+    }
+    return true;
+  }
+
   // Build the edited PDF. edits: {pageIndex: {size: [W, H] points, background: JPEG bytes,
   // elements: [...]}}; pages without edits are copied untouched (still vector).
   async function exportPdf(input, edits, opts = {}) {
@@ -276,6 +422,54 @@
       return custom[key] && { font: custom[key], space: glyphs.hasGlyphForCodePoint(32) };
     };
     const missing = new Set();
+
+    // A block whose words carry their own styles: laid out word by word (sizes, fonts and
+    // colours mixed in a line), wrapped to the box, aligned like the editor shows it.
+    async function drawRich(page, el, x, w, H) {
+      const base = el.fontSize * H, lh = el.lineHeight || LINE, paras = parseRich(el.html);
+      const keys = Object.keys(opts.fonts || {});
+      const tokens = [];
+      for (const [pi, para] of paras.entries()) {
+        for (const run of para) {
+          const size = base * (run.scale || 1), b = run.b ?? !!el.bold, it = run.i ?? !!el.italic, u = run.u ?? !!el.underline;
+          const key = run.face ? keys.find(k => run.face.includes(k)) : el.font;
+          let text = clean(run.text), own = key ? await ownFont(key, text) : null;
+          const f = own ? own.font : await font(run.face ? family(run.face) : el.family, b, it);
+          if (!own) text = Array.from(text).map(ch => { try { f.widthOfTextAtSize(ch, size); return ch; } catch (e) { missing.add(ch); return '?'; } }).join('');
+          const gap = own && !own.space ? size * 0.25 : f.widthOfTextAtSize(' ', size);
+          for (const piece of text.split(/( +)/)) {
+            if (!piece) continue;
+            const space = piece[0] === ' ';
+            tokens.push({ para: pi, text: piece, space, f, size, u, color: run.color || el.color, w: space ? gap * piece.length : f.widthOfTextAtSize(piece, size) });
+          }
+        }
+        tokens.push({ para: pi, end: true, size: base });                 // paragraph end (keeps empty lines)
+      }
+      // Lines: greedy wrap; a word wider than the box stays alone on its line.
+      const lines = []; let line = { toks: [], w: 0, size: 0 };
+      const finish = last => { while (line.toks.length && line.toks[line.toks.length - 1].space) line.w -= line.toks.pop().w; line.last = last; lines.push(line); line = { toks: [], w: 0, size: 0 }; };
+      for (const t of tokens) {
+        if (t.end) { line.size = line.size || t.size; finish(true); continue; }
+        if (!t.space && line.toks.some(k => !k.space) && line.w + t.w > w) finish(false);
+        if (t.space && !line.toks.length) continue;
+        line.toks.push(t); line.w += t.w; line.size = Math.max(line.size, t.size);
+      }
+      let top = H - el.y * H;
+      for (const ln of lines) {
+        const size = ln.size || base, baseY = top - size * baseline(lh);
+        const spaces = ln.toks.filter(t => t.space);
+        const spread = el.align === 'justify' && !ln.last && spaces.length ? (w - ln.w) / spaces.length : 0;
+        let cx = x + (el.align === 'center' ? (w - ln.w) / 2 : el.align === 'right' ? w - ln.w : 0);
+        for (const [k, t] of ln.toks.entries()) {
+          const tw = t.w + (t.space ? spread : 0);
+          if (!t.space) page.drawText(t.text, { x: cx, y: baseY, size: t.size, font: t.f, color: hex(t.color) });
+          const next = ln.toks[k + 1];
+          if (t.u && (!t.space || (next && next.u))) page.drawLine({ start: { x: cx, y: baseY - t.size * 0.13 }, end: { x: cx + tw, y: baseY - t.size * 0.13 }, thickness: Math.max(0.5, t.size * 0.06), color: hex(t.color) });
+          cx += tw;
+        }
+        top -= size * lh;
+      }
+    }
     const order = opts.order || src.getPageIndices();
     for (const index of order) {
       const edit = edits[index];
@@ -305,6 +499,18 @@
           else page.drawEllipse({ x: x + w / 2, y: y + h / 2, xScale: w / 2, yScale: h / 2, ...style });
         } else if (el.type === 'line') {
           page.drawLine({ start: { x, y: y + h }, end: { x: x + w, y }, thickness: (el.strokeWidth || 0.003) * H, color: hex(el.stroke) });
+        } else if (el.type === 'triangle') {
+          // SVG paths start at the box's top-left corner, y pointing down.
+          const style = { x, y: y + h, borderWidth: (el.strokeWidth || 0) * H };
+          if (el.fill) style.color = hex(el.fill); else style.opacity = 0;
+          if (el.stroke && el.strokeWidth) style.borderColor = hex(el.stroke);
+          page.drawSvgPath(`M ${w / 2} 0 L ${w} ${h} L 0 ${h} Z`, style);
+        } else if (el.type === 'arrow') {
+          const head = Math.min(h, w * 0.3), t = (el.strokeWidth || 0.003) * H;
+          page.drawLine({ start: { x, y: y + h / 2 }, end: { x: x + w - head * 0.9, y: y + h / 2 }, thickness: t, color: hex(el.stroke) });
+          page.drawSvgPath(`M ${w - head} 0 L ${w} ${h / 2} L ${w - head} ${h} Z`, { x, y: y + h, color: hex(el.stroke) });
+        } else if (el.type === 'text' && el.html && isRich(el.html)) {
+          await drawRich(page, el, x, w, H);
         } else if (el.type === 'text') {
           const size = el.fontSize * H;
           const own = el.font ? await ownFont(el.font, clean(el.text)) : null;
@@ -329,10 +535,15 @@
             // Justify: the words spread to both edges, the space between them grows.
             const spread = el.align === 'justify' && !last && words.length > 1
               ? (w - words.reduce((a, word) => a + f.widthOfTextAtSize(word, size), 0)) / (words.length - 1) : 0;
+            const x0 = cx;
             if (!gap && !spread) { if (line) page.drawText(line, { x: cx, y: base, size, font: f, color: hex(el.color) }); }
             else for (const word of words) {
               page.drawText(word, { x: cx, y: base, size, font: f, color: hex(el.color) });
               cx += f.widthOfTextAtSize(word, size) + (spread || gap);
+            }
+            if (el.underline && line.trim()) {
+              const uy = base - size * 0.13;
+              page.drawLine({ start: { x: x0, y: uy }, end: { x: x0 + (spread ? w : lw), y: uy }, thickness: Math.max(0.5, size * 0.06), color: hex(el.color) });
             }
             base -= lh;
           }
@@ -344,5 +555,6 @@
   }
 
   globalThis.PageEditorCore = { FAMILIES, LINE, baseline, clean, family, groupLines, paragraphs, wrap, exportPdf,
-    KEY1, KEY2, keyPictures, unkey, repair, textColors };
+    KEY1, KEY2, keyPictures, unkey, repair, textColors, clearPaper, parseRich, isRich, plainRich, richHtml, tidyRich,
+    richOf, plainOf, splitParas, joinParas, blockOf, breakPoints };
 })();
