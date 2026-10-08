@@ -93,6 +93,11 @@
   .crop-bar .crop-tip{color:#78716C;font-weight:600}
   .crop-stage{position:relative;margin:0 auto;box-shadow:0 8px 24px rgba(0,0,0,.15);touch-action:none;user-select:none}
   .crop-stage canvas{display:block}
+  .crop-stage.done .crop-dim,.crop-stage.done .crop-box{display:none}
+  .crop-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:12px 0 4px}
+  .crop-actions[hidden]{display:none}
+  .crop-actions button,.crop-actions a{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:8px 16px;font:800 13px 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer;text-decoration:none}
+  .crop-actions .crop-ok{background:linear-gradient(180deg,#FF7A45,#FF5C28);border-color:#E04E1F;color:#fff}
   .crop-dim{position:absolute;background:rgba(28,25,23,.55);pointer-events:none}
   .crop-box{position:absolute;outline:2px solid #FF5C28;cursor:move;box-shadow:inset 0 0 0 1px rgba(255,255,255,.7)}
   .crop-box::before,.crop-box::after{content:'';position:absolute;inset:33.33% 0;border-top:1px dashed rgba(255,255,255,.6);border-bottom:1px dashed rgba(255,255,255,.6);pointer-events:none}
@@ -1244,30 +1249,51 @@ async function buildCropPreview(){
       <span class="crop-tip">${L('Drag the corners or edges; drag inside the box to move it.','Seret sudut atau tepinya; seret bagian dalam kotak untuk memindah.')}</span>
       <button type="button" data-crop="reset">${L('Reset','Atur ulang')}</button></div>
       <div id="cropStage" class="crop-stage"><canvas id="cropCanvas"></canvas><div class="crop-dim" data-d="t"></div><div class="crop-dim" data-d="r"></div><div class="crop-dim" data-d="b"></div><div class="crop-dim" data-d="l"></div>
-      <div id="cropBox" class="crop-box">${['nw','n','ne','e','se','s','sw','w'].map(h=>`<span class="crop-h" data-h="${h}"></span>`).join('')}</div></div>`;
+      <div id="cropBox" class="crop-box">${['nw','n','ne','e','se','s','sw','w'].map(h=>`<span class="crop-h" data-h="${h}"></span>`).join('')}</div></div>
+      <div id="cropActions" class="crop-actions"><button type="button" data-crop="apply" class="crop-ok">✓ ${L('Crop','Potong')}</button><button type="button" data-crop="reset">✕ ${L('Reset','Atur ulang')}</button></div>
+      <div id="cropDone" class="crop-actions" hidden><a id="cropDl" class="crop-ok" href="#" download>⬇ ${L('Download PDF','Unduh PDF')}</a><button type="button" data-crop="flip">📖 ${L('Turn into Flipbook','Jadikan Flipbook')}</button><button type="button" data-crop="again">↺ ${L('Crop again','Crop lagi')}</button></div>`;
     opts.append(ui);
     ui.querySelector('[data-crop=prev]').onclick=()=>{ if(cropPage>1){ cropPage--; drawCropPage(); } };
-    ui.querySelector('[data-crop=next]').onclick=()=>{ if(cropDoc&&cropPage<cropDoc.numPages){ cropPage++; drawCropPage(); } };
-    ui.querySelector('[data-crop=reset]').onclick=()=>{ for(const k of ['top','right','bottom','left']){ const i=document.getElementById('edit-'+k); if(i) i.value=0; } placeCropBox(); };
+    ui.querySelector('[data-crop=next]').onclick=()=>{ const d=cropResult||cropDoc; if(d&&cropPage<d.numPages){ cropPage++; drawCropPage(); } };
+    ui.querySelectorAll('[data-crop=reset]').forEach(b=>b.onclick=()=>{ for(const k of ['top','right','bottom','left']){ const i=document.getElementById('edit-'+k); if(i) i.value=0; } placeCropBox(); });
+    // ✓ runs the normal convert (login, trial and checks included); the result comes back here.
+    ui.querySelector('[data-crop=apply]').onclick=()=>{ $('#error').classList.add('hidden'); $('#convertBtn').click(); };
+    ui.querySelector('[data-crop=flip]').onclick=()=>$('#makeFlipbook').click();
+    ui.querySelector('[data-crop=again]').onclick=()=>{ cropResult=null; showCropMode(); drawCropPage(); };
     for(const k of ['top','right','bottom','left']) document.getElementById('edit-'+k)?.addEventListener('input', placeCropBox);
     document.getElementById('cropBox').addEventListener('pointerdown', cropDrag);
   }
-  if(cropFile!==files[0]){ cropFile=files[0]; cropPage=1; try{ if(cropDoc) cropDoc.destroy(); }catch(e){} cropDoc=await pdfjsLib.getDocument({data:new Uint8Array(await files[0].arrayBuffer()), isEvalSupported:false}).promise; }
+  if(cropFile!==files[0]){ cropFile=files[0]; cropPage=1; cropResult=null; showCropMode(); try{ if(cropDoc) cropDoc.destroy(); }catch(e){} cropDoc=await pdfjsLib.getDocument({data:new Uint8Array(await files[0].arrayBuffer()), isEvalSupported:false}).promise; }
   drawCropPage();
 }
-let cropMm={w:210,h:297};
+let cropMm={w:210,h:297}, cropResult=null;
+// After ✓: the same sheet shows the cropped pages and the download / flipbook buttons.
+async function cropShowResult(blob, url, filename){
+  try{ if(cropResult) cropResult.destroy(); }catch(e){}
+  cropResult=await pdfjsLib.getDocument({data:new Uint8Array(await blob.arrayBuffer()), isEvalSupported:false}).promise;
+  const dl=document.getElementById('cropDl'); if(dl){ dl.href=url; dl.download=filename; }
+  if(cropPage>cropResult.numPages) cropPage=1;
+  showCropMode(); drawCropPage();
+}
+function showCropMode(){
+  const done=!!cropResult;
+  document.getElementById('cropStage')?.classList.toggle('done', done);
+  document.getElementById('cropActions')?.toggleAttribute('hidden', done);
+  document.getElementById('cropDone')?.toggleAttribute('hidden', !done);
+}
 async function drawCropPage(){
   const c=document.getElementById('cropCanvas'); if(!c||!cropDoc) return;
-  const page=await cropDoc.getPage(cropPage), v=page.getViewport({scale:1});
-  cropMm={w:v.width*25.4/72, h:v.height*25.4/72};
+  const doc=cropResult||cropDoc;
+  const page=await doc.getPage(Math.min(cropPage, doc.numPages)), v=page.getViewport({scale:1});
+  if(!cropResult) cropMm={w:v.width*25.4/72, h:v.height*25.4/72};
   const stage=document.getElementById('cropStage'), maxW=Math.min(stage.parentElement.clientWidth||520, 560), maxH=Math.max(320, innerHeight*0.65);
   const scale=Math.min(maxW/v.width, maxH/v.height), vp=page.getViewport({scale:scale*Math.min(2, devicePixelRatio||1)});
   c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height); c.style.width=Math.round(v.width*scale)+'px'; c.style.height=Math.round(v.height*scale)+'px';
   stage.style.width=c.style.width; stage.style.height=c.style.height;
   const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height);
   await page.render({canvasContext:g, viewport:vp}).promise;
-  document.getElementById('cropPageNo').textContent=L(`Page ${cropPage} / ${cropDoc.numPages}`,`Halaman ${cropPage} / ${cropDoc.numPages}`);
-  placeCropBox();
+  document.getElementById('cropPageNo').textContent=L(`Page ${cropPage} / ${doc.numPages}`,`Halaman ${cropPage} / ${doc.numPages}`);
+  if(!cropResult) placeCropBox();
 }
 const cropVal=k=>Math.max(0, Number(document.getElementById('edit-'+k)?.value)||0);
 function placeCropBox(){
@@ -1994,7 +2020,7 @@ function updateFileUI({preserveError=false}={}){
   `).join('');
   const t=TOOLS.find(x=>x.id===active);
   // Organize has its own files UI + big red button in the workspace sidebar.
-  $('#convertBtn').classList.toggle('hidden', t.id==='organize-pdf');
+  $('#convertBtn').classList.toggle('hidden', t.id==='organize-pdf' || t.id==='crop-pdf');
   $('#fileList').classList.toggle('org-mode', t.id==='organize-pdf');
   if(t.id==='merge-pdf') $('#btnText').textContent = L(`Merge ${files.length} PDF →`,`Gabung ${files.length} PDF →`);
   else if(t.id==='split-pdf'){ buildSplitPreview(); }
@@ -2198,6 +2224,10 @@ function downloadBlob(blob, filename, {flipbookSource=null}={}){
   const a=$('#downloadBtn'); a.href=url; a.download=filename;
   $('#result').classList.remove('hidden');
   resultActionsHome();
+  if(active==='crop-pdf' && blob.type.includes('pdf') && document.getElementById('cropUi')){
+    $('#result').classList.add('hidden'); $('#progress').classList.add('hidden');
+    cropShowResult(blob, url, filename).catch(e=>log('Crop result fail '+(e&&e.message||e)));
+  }
   $('#progress').textContent=L('✅ Done — grab your download below.','✅ Selesai — ambil unduhannya di bawah.');
   log('Download ready: '+filename+' '+(blob.size/1024).toFixed(1)+'KB type='+blob.type);
   // A PDF result shows its pages whole (no viewer box to scroll inside).
