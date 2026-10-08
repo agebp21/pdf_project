@@ -211,32 +211,36 @@
     }
     return doc.save();
   }
+  // English or Indonesian, with the site language (assets/i18n.js); English outside a page.
+  const L = (en, id) => (globalThis.I18N ? globalThis.I18N.pick(en, id) : en);
+  const POS_ID = { top: 'atas', bottom: 'bawah', left: 'kiri', right: 'kanan', center: 'tengah' };
+  const posLabel = p => L(p.replaceAll('-', ' '), p.split('-').map(w => POS_ID[w] || w).join(' '));
   const field=(label,body)=>`<label class="flex flex-col gap-1 text-xs font-semibold">${label}${body}</label>`;
   const input=(id,value,type='number',extra='')=>`<input id="${id}" type="${type}" value="${value}" ${extra} class="w-full px-3 py-2 rounded-xl border bg-white text-xs">`;
   function editControls(pagesField) {
-    const kindField = field('Annotation',
+    const kindField = field(L('Annotation','Anotasi'),
       '<select id="edit-kind" onchange="PDFEdit.toggleKind()" class="px-3 py-2 rounded-xl border bg-white">'
-      + [['text', 'Text'], ['image', 'Image (PNG/JPEG)'], ['rect', 'Rectangle'], ['ellipse', 'Ellipse'], ['line', 'Line']]
+      + [['text', L('Text','Teks')], ['image', L('Image (PNG/JPEG)','Gambar (PNG/JPEG)')], ['rect', L('Rectangle','Persegi')], ['ellipse', L('Ellipse','Elips')], ['line', L('Line','Garis')]]
         .map(([v, label]) => `<option value="${v}">${label}</option>`).join('') + '</select>');
     const group = (kinds, inner) => `<div data-kind="${kinds}" style="display:contents">${inner}</div>`;
-    const sel = positions.map(p => `<option value="${p}">${p.replaceAll('-', ' ')}</option>`).join('');
+    const sel = positions.map(p => `<option value="${p}">${posLabel(p)}</option>`).join('');
     const fields = pagesField + kindField
-      + group('text', field('Text', input('edit-text', 'Approved', 'text')) + field('Size (pt)', input('edit-text-size', 14, 'number', 'min="0.1" step="0.5"')))
-      + group('image', field('Image file', '<input id="edit-image" type="file" accept=".png,.jpg,.jpeg" class="text-xs">') + field('Width (mm)', input('edit-image-size', 40, 'number', 'min="0.1" step="0.5"')))
-      + group('rect ellipse', field('Width (mm)', input('edit-shape-w', 40, 'number', 'min="0.1" step="0.5"')) + field('Height (mm)', input('edit-shape-h', 20, 'number', 'min="0.1" step="0.5"')) + field('Border (mm, 0 = none)', input('edit-shape-border', 0, 'number', 'min="0" step="0.5"')))
-      + group('line', field('Length (mm)', input('edit-line-len', 50, 'number', 'min="0.1" step="0.5"')) + field('Thickness (mm)', input('edit-line-thick', 1, 'number', 'min="0.1" step="0.5"')))
-      + field('Position', `<select id="edit-position" class="px-3 py-2 rounded-xl border bg-white">${sel}</select>`)
-      + field('Shift right (mm)', input('edit-dx', 0, 'number', 'step="0.5"'))
-      + field('Shift up (mm)', input('edit-dy', 0, 'number', 'step="0.5"'))
-      + field('Rotation (°)', input('edit-rotation', 0, 'number', 'step="1"'))
-      + field('Color', input('edit-color', '#214d40', 'color'))
-      + field('Opacity (%)', input('edit-opacity', 100, 'number', 'min="0" max="100"'))
+      + group('text', field(L('Text','Teks'), input('edit-text', L('Approved','Disetujui'), 'text')) + field(L('Size (pt)','Ukuran (pt)'), input('edit-text-size', 14, 'number', 'min="0.1" step="0.5"')))
+      + group('image', field(L('Image file','File gambar'), '<input id="edit-image" type="file" accept=".png,.jpg,.jpeg" class="text-xs">') + field(L('Width (mm)','Lebar (mm)'), input('edit-image-size', 40, 'number', 'min="0.1" step="0.5"')))
+      + group('rect ellipse', field(L('Width (mm)','Lebar (mm)'), input('edit-shape-w', 40, 'number', 'min="0.1" step="0.5"')) + field(L('Height (mm)','Tinggi (mm)'), input('edit-shape-h', 20, 'number', 'min="0.1" step="0.5"')) + field(L('Border (mm, 0 = none)','Garis tepi (mm, 0 = tanpa)'), input('edit-shape-border', 0, 'number', 'min="0" step="0.5"')))
+      + group('line', field(L('Length (mm)','Panjang (mm)'), input('edit-line-len', 50, 'number', 'min="0.1" step="0.5"')) + field(L('Thickness (mm)','Tebal (mm)'), input('edit-line-thick', 1, 'number', 'min="0.1" step="0.5"')))
+      + field(L('Position','Posisi'), `<select id="edit-position" class="px-3 py-2 rounded-xl border bg-white">${sel}</select>`)
+      + field(L('Shift right (mm)','Geser ke kanan (mm)'), input('edit-dx', 0, 'number', 'step="0.5"'))
+      + field(L('Shift up (mm)','Geser ke atas (mm)'), input('edit-dy', 0, 'number', 'step="0.5"'))
+      + field(L('Rotation (°)','Putaran (°)'), input('edit-rotation', 0, 'number', 'step="1"'))
+      + field(L('Color','Warna'), input('edit-color', '#214d40', 'color'))
+      + field(L('Opacity (%)','Kepekatan (%)'), input('edit-opacity', 100, 'number', 'min="0" max="100"'))
       + '<div class="col-span-full flex flex-wrap gap-2">'
-      + '<button type="button" onclick="PDFEdit.addDraft().catch(PDFEdit.showDraftError)" class="px-4 py-2 rounded-xl bg-[#1A3C34] text-white text-xs font-bold">＋ Add annotation</button>'
-      + '<button type="button" onclick="PDFEdit.clearDrafts()" class="px-4 py-2 rounded-xl border text-xs font-bold">Clear</button>'
+      + '<button type="button" onclick="PDFEdit.addDraft().catch(PDFEdit.showDraftError)" class="px-4 py-2 rounded-xl bg-[#1A3C34] text-white text-xs font-bold">＋ ' + L('Add annotation','Tambah anotasi') + '</button>'
+      + '<button type="button" onclick="PDFEdit.clearDrafts()" class="px-4 py-2 rounded-xl border text-xs font-bold">' + L('Clear','Kosongkan') + '</button>'
       + '</div>'
       + '<div id="edit-draft-list" class="col-span-full grid gap-1"></div>'
-      + '<p class="text-xs text-gray-500 col-span-full">Stacked annotations apply together when you press convert. Freehand drawing is not part of this form.</p>';
+      + '<p class="text-xs text-gray-500 col-span-full">' + L('Stacked annotations apply together when you press convert. Freehand drawing is not part of this form.', 'Anotasi yang ditumpuk diterapkan bersamaan saat Anda menekan konversi. Gambar tangan bebas tidak termasuk di formulir ini.') + '</p>';
     return `<div class="w-full bg-white rounded-xl border border-gray-200 p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">${fields}</div>`;
   }
   function anyDoc(doc) { return doc || (typeof document !== 'undefined' ? document : null); }
@@ -273,7 +277,7 @@
       label.style.cssText = 'flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap';
       label.textContent = `${i + 1}. ${el.kind} ${draftSummary(el)} · ${el.range}`;
       const remove = doc.createElement('button');
-      remove.type = 'button'; remove.textContent = '✕'; remove.title = 'Remove';
+      remove.type = 'button'; remove.textContent = '✕'; remove.title = L('Remove','Hapus');
       remove.style.cssText = 'border:0;background:none;color:#b3121a;font-weight:800;cursor:pointer';
       remove.onclick = () => removeDraft(i);
       row.append(label, remove);
@@ -298,35 +302,36 @@
     else if (kind === 'image') {
       el.size = value('image-size');
       const picked = doc.querySelector('#edit-image')?.files?.[0];
-      if (!picked) throw Error('Choose a PNG or JPEG image.');
+      if (!picked) throw Error(L('Choose a PNG or JPEG image.','Pilih gambar PNG atau JPEG.'));
       el.image = [...new Uint8Array(await picked.arrayBuffer())];
     }
     else if (kind === 'rect' || kind === 'ellipse') { el.width = value('shape-w'); el.height = value('shape-h'); el.border = value('shape-border'); }
     else if (kind === 'line') { el.length = value('line-len'); el.thickness = value('line-thick'); }
-    else throw Error('Pick an annotation kind first.');
+    else throw Error(L('Pick an annotation kind first.','Pilih jenis anotasi dulu.'));
     drafts.push(checkElement(el, drafts.length));
     renderDrafts(doc);
   }
   function removeDraft(index) { drafts.splice(index, 1); renderDrafts(); }
   function clearDrafts() { drafts.length = 0; renderDrafts(); }
   function controls(tool) {
-    let fields=field('Pages',input('edit-range','all','text','placeholder="all or 1-3,5"'));
+    let fields=field(L('Pages','Halaman'),input('edit-range','all','text',`placeholder="${L('all or 1-3,5','all atau 1-3,5')}"`));
     if(tool==='edit-pdf') return editControls(fields);
     if(tool==='crop-pdf') {
-      for(const side of ['top','right','bottom','left'])fields+=field(side[0].toUpperCase()+side.slice(1)+' margin (mm)',input('edit-'+side,10,'number','min="0" step="0.5"'));
-      fields+='<p class="text-xs text-gray-500 col-span-full">Margins follow the displayed page orientation. Crop hides edges; it does not permanently remove their contents.</p>';
+      const SIDE_ID={top:'atas',right:'kanan',bottom:'bawah',left:'kiri'};
+      for(const side of ['top','right','bottom','left'])fields+=field(L(side[0].toUpperCase()+side.slice(1)+' margin (mm)','Margin '+SIDE_ID[side]+' (mm)'),input('edit-'+side,10,'number','min="0" step="0.5"'));
+      fields+='<p class="text-xs text-gray-500 col-span-full">'+L('Margins follow the displayed page orientation. Crop hides edges; it does not permanently remove their contents.','Margin mengikuti orientasi halaman yang tampil. Crop menyembunyikan tepi; isinya tidak dihapus permanen.')+'</p>';
     } else {
       if(tool==='watermark') {
-        fields+=field('Watermark type','<select id="edit-mode" class="px-3 py-2 rounded-xl border bg-white"><option value="text">Text</option><option value="image">Image (PNG/JPEG)</option></select>');
-        fields+=field('Text',input('edit-text','CONFIDENTIAL','text'));
-        fields+=field('Image (used in Image mode)','<input id="edit-image" type="file" accept=".png,.jpg,.jpeg" class="text-xs">');
-        fields+=field('Opacity (%)',input('edit-opacity',25,'number','min="0" max="100"'));
-      } else fields+=field('Starting number',input('edit-start',1,'number','min="0" step="1"'));
-      fields+=field(tool==='watermark'?'Text size (pt) / image width (mm)':'Font size (pt)',input('edit-size',tool==='watermark'?36:12,'number','min="0.1" step="0.5"'));
-      fields+=field('Position',`<select id="edit-position" class="px-3 py-2 rounded-xl border bg-white">${positions.map(p=>`<option value="${p}" ${p===(tool==='watermark'?'center':'bottom-center')?'selected':''}>${p.replaceAll('-',' ')}</option>`).join('')}</select>`);
-      fields+=field('Edge margin (mm)',input('edit-margin',10,'number','min="0" step="0.5"'));
-      fields+=field('Text color',input('edit-color','#214d40','color'));
-      if(tool==='page-numbers')fields+='<p class="text-xs text-gray-500 col-span-full">Numbers run consecutively across the selected pages.</p>';
+        fields+=field(L('Watermark type','Jenis watermark'),`<select id="edit-mode" class="px-3 py-2 rounded-xl border bg-white"><option value="text">${L('Text','Teks')}</option><option value="image">${L('Image (PNG/JPEG)','Gambar (PNG/JPEG)')}</option></select>`);
+        fields+=field(L('Text','Teks'),input('edit-text',L('CONFIDENTIAL','RAHASIA'),'text'));
+        fields+=field(L('Image (used in Image mode)','Gambar (dipakai di mode Gambar)'),'<input id="edit-image" type="file" accept=".png,.jpg,.jpeg" class="text-xs">');
+        fields+=field(L('Opacity (%)','Kepekatan (%)'),input('edit-opacity',25,'number','min="0" max="100"'));
+      } else fields+=field(L('Starting number','Nomor awal'),input('edit-start',1,'number','min="0" step="1"'));
+      fields+=field(tool==='watermark'?L('Text size (pt) / image width (mm)','Ukuran teks (pt) / lebar gambar (mm)'):L('Font size (pt)','Ukuran huruf (pt)'),input('edit-size',tool==='watermark'?36:12,'number','min="0.1" step="0.5"'));
+      fields+=field(L('Position','Posisi'),`<select id="edit-position" class="px-3 py-2 rounded-xl border bg-white">${positions.map(p=>`<option value="${p}" ${p===(tool==='watermark'?'center':'bottom-center')?'selected':''}>${posLabel(p)}</option>`).join('')}</select>`);
+      fields+=field(L('Edge margin (mm)','Jarak dari tepi (mm)'),input('edit-margin',10,'number','min="0" step="0.5"'));
+      fields+=field(L('Text color','Warna teks'),input('edit-color','#214d40','color'));
+      if(tool==='page-numbers')fields+='<p class="text-xs text-gray-500 col-span-full">'+L('Numbers run consecutively across the selected pages.','Nomor berurutan di halaman yang dipilih.')+'</p>';
     }
     return `<div class="w-full bg-white rounded-xl border border-gray-200 p-4 shadow-sm grid grid-cols-1 sm:grid-cols-2 gap-3 text-left">${fields}</div>`;
   }

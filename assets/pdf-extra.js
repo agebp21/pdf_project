@@ -279,7 +279,7 @@
     state.tool = tool;
     if (tool === 'sign-pdf') return card(`
       <b class="text-sm">1. ${L('Make your signature', 'Buat tanda tangan')}</b>
-      <div class="flex flex-wrap gap-2">${btn(L('✍️ Draw', '✍️ Gambar'), "PDFExtra.sigMode('draw')")}${btn(L('🖼 Upload image', '🖼 Upload gambar'), "PDFExtra.sigMode('image')")}${btn(L('⌨️ Type name', '⌨️ Ketik nama'), "PDFExtra.sigMode('type')")}</div>
+      <div class="flex flex-wrap gap-2">${btn(L('✍️ Draw', '✍️ Gambar'), "PDFExtra.sigMode('draw')")}${btn(L('🖼 Upload image', '🖼 Unggah gambar'), "PDFExtra.sigMode('image')")}${btn(L('⌨️ Type name', '⌨️ Ketik nama'), "PDFExtra.sigMode('type')")}</div>
       <div id="xs-draw"><canvas id="xs-pad" width="600" height="200" class="w-full border-2 border-dashed rounded-xl bg-white" style="touch-action:none;cursor:crosshair" onpointerdown="PDFExtra.pad(event)" onpointermove="PDFExtra.pad(event)" onpointerup="PDFExtra.pad(event)" onpointercancel="PDFExtra.pad(event)"></canvas>
         <div class="flex gap-2 mt-2 items-center">${btn(L('Clear', 'Hapus'), 'PDFExtra.clearPad()')}<label class="flex items-center gap-1">${L('Ink', 'Tinta')} <select id="xs-color" class="border rounded-lg px-2 py-1"><option value="#111827">${L('Black', 'Hitam')}</option><option value="#1d3fb8">${L('Blue', 'Biru')}</option></select></label></div></div>
       <div id="xs-image" hidden><input id="xs-file" type="file" accept=".png,.jpg,.jpeg" onchange="PDFExtra.sigFromFile(this)"><p class="text-gray-500 mt-1">${L('A PNG with a transparent background looks best.', 'PNG berlatar transparan hasilnya paling rapi.')}</p></div>

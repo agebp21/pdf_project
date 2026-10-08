@@ -299,7 +299,7 @@
       'tool.split-pdf': 'Pisahkan satu halaman atau banyak halaman jadi file mandiri.',
       'tool.compress-pdf': 'Perkecil ukuran file dengan kualitas PDF tetap maksimal.',
       'tool.pdf-to-word': 'Word yang tampilannya sama dengan PDF, teksnya bisa diedit langsung di halaman.',
-      'tool.pdf-to-ppt': 'Slide tetap berdesain PDF, tiap baris teks jadi text box yang bisa diedit.',
+      'tool.pdf-to-ppt': 'Slide tetap berdesain PDF, tiap baris teks jadi kotak teks yang bisa diedit.',
       'tool.pdf-to-excel': 'Tarik tabel ke Excel: sel asli, angka asli, halaman tetap ada sebagai gambar.',
       'tool.word-to-pdf': 'Bikin file DOC/DOCX gampang dibaca dengan mengubah ke PDF.',
       'tool.ppt-to-pdf': 'Bikin slideshow PPT/PPTX gampang dilihat dengan mengubah ke PDF.',
@@ -323,7 +323,41 @@
       'tool.crop-pdf': 'Potong margin PDF atau area tertentu, per halaman atau semuanya.',
       'tool.pdf-forms': 'Isi formulir PDF yang bisa diisi lalu simpan — bisa dikunci.',
       'tool.translate-pdf': 'Terjemahkan PDF dengan AI. Font, layout, dan format tetap terjaga.',
-      'tool.pdf-to-md': 'Ubah PDF jadi Markdown. Pas untuk catatan, docs, dan LLM.'
+      'tool.pdf-to-md': 'Ubah PDF jadi Markdown. Pas untuk catatan, docs, dan LLM.',
+      'title.pdf-to-flipbook': 'PDF ke Flipbook',
+      'title.journal-search': 'Cari Jurnal & Ebook',
+      'title.notebook': 'Peringkas AI',
+      'title.flipbook-animation': 'Animasi Flipbook',
+      'title.workflow': 'Buat alur kerja',
+      'title.organize-pdf': 'Edit PDF',
+      'title.pdf-to-word': 'PDF ke Word',
+      'title.pdf-to-ppt': 'PDF ke PowerPoint',
+      'title.pdf-to-excel': 'PDF ke Excel',
+      'title.word-to-pdf': 'Word ke PDF',
+      'title.ppt-to-pdf': 'PowerPoint ke PDF',
+      'title.excel-to-pdf': 'Excel ke PDF',
+      'title.pdf-to-jpg': 'PDF ke JPG',
+      'title.jpg-to-pdf': 'Gambar ke PDF',
+      'title.sign-pdf': 'Tanda Tangan PDF',
+      'title.watermark': 'Watermark',
+      'title.rotate-pdf': 'Putar PDF',
+      'title.html-to-pdf': 'HTML ke PDF',
+      'title.protect-pdf': 'Lindungi PDF',
+      'title.pdf-to-pdfa': 'PDF ke PDF/A',
+      'title.repair-pdf': 'Perbaiki PDF',
+      'title.page-numbers': 'Nomor Halaman',
+      'title.scan-to-pdf': 'Scan ke PDF',
+      'title.ocr-pdf': 'OCR PDF',
+      'title.compare-pdf': 'Bandingkan PDF',
+      'title.redact-pdf': 'Sensor PDF',
+      'title.crop-pdf': 'Pangkas PDF',
+      'title.pdf-forms': 'Formulir PDF',
+      'title.translate-pdf': 'Terjemahkan PDF',
+      'title.pdf-to-md': 'PDF ke Markdown',
+      'title.merge-pdf': 'Gabung PDF',
+      'title.split-pdf': 'Pisah PDF',
+      'title.compress-pdf': 'Kompres PDF',
+      'title.edit-pdf': 'Edit PDF'
     }
   };
 
@@ -344,6 +378,12 @@
     var lang = get();
     var key = 'tool.' + id;
     if (lang === 'id' && dict.id[key] != null) return dict.id[key];
+    return fallback;
+  }
+  // A tool's name in the site language: I18N.title('merge-pdf', 'Merge PDF').
+  function title(id, fallback) {
+    var key = 'title.' + id;
+    if (get() === 'id' && dict.id[key] != null) return dict.id[key];
     return fallback;
   }
   // English or Indonesian text picked in JS: I18N.pick('Search', 'Cari').
@@ -415,5 +455,5 @@
   });
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', apply);
   else apply();
-  window.I18N = { get: get, set: set, t: t, tool: tool, apply: apply, pick: pick, both: both, KEY: KEY };
+  window.I18N = { get: get, set: set, t: t, tool: tool, title: title, apply: apply, pick: pick, both: both, KEY: KEY };
 })();

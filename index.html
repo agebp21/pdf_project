@@ -172,6 +172,9 @@
 
 <script>
   const categories = ["All","Workflows","Organize PDF","Optimize PDF","Convert PDF","Edit PDF","PDF Security","PDF Intelligence"];
+  // Category names in the site language (the filter keeps the English key).
+  const CAT_ID = {"All":"Semua","Workflows":"Alur kerja","Organize PDF":"Atur PDF","Optimize PDF":"Optimalkan PDF","Convert PDF":"Konversi PDF","Edit PDF":"Edit PDF","PDF Security":"Keamanan PDF","PDF Intelligence":"Kecerdasan PDF"};
+  const catLabel = c => (window.I18N && I18N.get() === 'id' && CAT_ID[c]) || c;
 
   const tools = [
     {id:"pdf-to-flipbook", title:"PDF to Flipbook", desc:"Open your PDF as a digital book and add animated number stats to any page.", cat:["Workflows","Convert PDF"], color:"#1A3C34", icon:"▤", bg:"#E4F3C2", badge:"New!", href:"flipbook.html", feat:true},
@@ -222,6 +225,8 @@
     {ids:["protect-pdf","pdf-to-jpg","html-to-pdf","pdf-to-ppt","ppt-to-pdf","excel-to-pdf","compare-pdf","redact-pdf","crop-pdf","page-numbers","scan-to-pdf"]}
   ];
 
+  // Tool names in the site language.
+  const T = t => (window.I18N && I18N.title ? I18N.title(t.id, t.title) : t.title);
   function toolHref(t){
     return t.href || (t.workflow ? `converter.html?tool=merge-pdf` : `converter.html?tool=${t.id || ''}`);
   }
@@ -230,15 +235,15 @@
     hordeEl.innerHTML = HORDE_ROWS.map(row => {
       const tiles = row.ids.map(id => tools.find(t => t.id === id)).filter(Boolean);
       return `<div class="horde-row">` + tiles.map(t => t.soon
-        ? `<span title="${t.title} — ${soonLabel()}" aria-label="${t.title} — ${soonLabel()}" class="horde-tile soon" style="width:56px;height:56px;font-size:21px;background:${t.bg};color:${t.color};"><span>${t.icon}</span></span>`
-        : `<a href="${toolHref(t)}" title="${t.title}" aria-label="${t.title}" class="horde-tile" style="width:56px;height:56px;font-size:21px;background:${t.bg};color:${t.color};"><span>${t.icon}</span></a>`
+        ? `<span title="${T(t)} — ${soonLabel()}" aria-label="${T(t)} — ${soonLabel()}" class="horde-tile soon" style="width:56px;height:56px;font-size:21px;background:${t.bg};color:${t.color};"><span>${t.icon}</span></span>`
+        : `<a href="${toolHref(t)}" title="${T(t)}" aria-label="${T(t)}" class="horde-tile" style="width:56px;height:56px;font-size:21px;background:${t.bg};color:${t.color};"><span>${t.icon}</span></a>`
       ).join('') + `</div>`;
     }).join('');
   }
 
   function renderFilters(){
     filterWrap.innerHTML = categories.map(c => `
-      <button onclick="setFilter('${c}')" class="filter-btn rounded-full px-3.5 py-1.5 text-xs font-extrabold ${active===c?'active':''}">${c}</button>
+      <button onclick="setFilter('${c}')" class="filter-btn rounded-full px-3.5 py-1.5 text-xs font-extrabold ${active===c?'active':''}">${catLabel(c)}</button>
     `).join('');
   }
 
@@ -253,7 +258,7 @@
         <span class="sticker bg-[#FF5C28] text-white">${soon ? soonLabel() : 'New!'}</span>
         <div class="flex items-center gap-3 relative z-10">
           <div class="icon-box" style="background:#FF5C28;color:#fff;border-color:rgba(0,0,0,.4)">↗</div>
-          <h3 class="text-[15px] font-extrabold serif relative z-10" style="color:#FFF7EA">${t.title}</h3>
+          <h3 class="text-[15px] font-extrabold serif relative z-10" style="color:#FFF7EA">${T(t)}</h3>
         </div>
         <p class="text-[12.5px] leading-relaxed text-white/70 mt-3 relative z-10">${D}</p>
       </${end}>`;
@@ -263,7 +268,7 @@
       <span class="sticker" style="background:#FF5C28;color:#fff">${soonLabel()}</span>
       <div class="flex items-center gap-3">
         <div class="icon-box" style="background:${t.bg};color:${t.color}"><span class="text-[16px] leading-none">${t.icon}</span></div>
-        <h3 class="text-[15px] font-extrabold leading-tight serif">${t.title}</h3>
+        <h3 class="text-[15px] font-extrabold leading-tight serif">${T(t)}</h3>
       </div>
       <p class="mt-3 text-[12.5px] leading-relaxed text-[#78716C]">${D}</p>
     </div>`;
@@ -274,7 +279,7 @@
       ${t.badge?`<span class="sticker" style="${bgBadge}">${t.badge}</span>`:''}
       <div class="flex items-center gap-3">
         <div class="icon-box" style="background:${t.bg};color:${t.color}"><span class="text-[16px] leading-none">${t.icon}</span></div>
-        <h3 class="text-[15px] font-extrabold leading-tight serif">${t.title}</h3>
+        <h3 class="text-[15px] font-extrabold leading-tight serif">${T(t)}</h3>
       </div>
       <p class="mt-3 text-[12.5px] leading-relaxed text-[#78716C]">${D}</p>
     </a>`;
@@ -299,7 +304,7 @@
   renderFilters();
   renderHorde();
   renderGrid();
-  document.addEventListener('langchange', renderGrid);
+  document.addEventListener('langchange', () => { renderFilters(); renderGrid(); renderHorde(); });
 </script>
 </body>
 </html>

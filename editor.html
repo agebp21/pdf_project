@@ -1,5 +1,5 @@
 <!DOCTYPE html>
-<html lang="id">
+<html lang="id" data-en-doc="PDF Editor — MyFlipbook">
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
@@ -66,6 +66,9 @@
   .pe-menu-sep{border:0;border-top:1px solid #EFEAE0;margin:4px 6px}
   .pe-bar .pe-file{background:#1A3C34;border-color:#1A3C34;color:#fff;font-weight:800}
   .pe-bar .pe-file:hover:not(:disabled){color:#fff;border-color:#1A3C34;filter:brightness(1.15)}
+  .pe-bar .pe-file-more{margin-left:-4px;border-radius:0 10px 10px 0;padding:0 8px;border-left:1px solid rgba(255,255,255,.25)}
+  .pe-bar #pe-open-btn{border-radius:10px 0 0 10px}
+  .pe-thin::after{content:'';position:absolute;inset:-6px}
   .pe-modal{position:fixed;inset:0;z-index:120;background:rgba(28,25,23,.35);display:grid;place-items:center;padding:16px}
   .pe-dlg{background:#fff;border-radius:18px;padding:20px 22px;width:min(420px,100%);box-shadow:0 24px 60px rgba(0,0,0,.25);display:grid;gap:12px}
   .pe-dlg h3{margin:0;font-family:'Fraunces',serif;font-size:20px}
@@ -113,6 +116,7 @@
   .pe-empty{max-width:560px;margin:40px auto;text-align:center;background:#fff;border:2px dashed #D6CFBF;border-radius:20px;padding:40px 24px}
   .pe-empty h2{font-family:'Fraunces',serif;font-size:26px;margin:0 0 8px}
   .pe-empty p{color:#78716C;margin:0 0 18px}
+  .pe-lang{border:1px solid #E8E2D4;background:#E9E4FF;border-radius:999px;padding:7px 12px;font:800 12px 'Plus Jakarta Sans',sans-serif;cursor:pointer;margin-right:8px}
   .pe-status{font-size:12.5px;color:#57534e;min-height:18px;margin:6px 2px}
   .pe-busy{position:absolute;inset:0;background:rgba(255,255,255,.75);display:grid;place-items:center;font-weight:700;color:#1A3C34;z-index:20}
   .pe-help{font-size:12px;color:#78716C;margin:8px 2px 0}
@@ -123,74 +127,76 @@
 <div class="pe-wrap">
   <nav class="clay-nav">
     <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=green" alt="MyFlipbook" width="128" height="34"></a>
-    <div class="nav-right"><span data-auth-slot></span><a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">← Semua alat</a></div>
+    <div class="nav-right"><span data-auth-slot></span>
+      <button type="button" data-lang-toggle title="Ganti bahasa / Switch language" class="pe-lang">EN</button>
+      <a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px" data-en="← All tools">← Semua alat</a></div>
   </nav>
 
   <div id="pe-start" class="pe-empty">
     <h2>Edit PDF</h2>
-    <p>Edit teks seperti di Word, atur gambar seperti di PowerPoint, gabung, pisah, dan kompres — semua di satu tempat. PDF hasil scan dan foto dokumen juga bisa diedit.</p>
+    <p data-en="Edit text like in Word, arrange pictures like in PowerPoint, merge, split and compress — all in one place. Scanned PDFs and photos of documents can be edited too.">Edit teks seperti di Word, atur gambar seperti di PowerPoint, gabung, pisah, dan kompres — semua di satu tempat. PDF hasil scan dan foto dokumen juga bisa diedit.</p>
     <div style="display:flex;gap:10px;justify-content:center;flex-wrap:wrap">
-      <label class="clay-btn clay-btn-dark" style="cursor:pointer">Pilih PDF / gambar<input id="pe-file" type="file" accept="application/pdf,.pdf,image/*" multiple hidden></label>
-      <button id="pe-blank" type="button" class="clay-btn clay-btn-ghost">＋ Dokumen kosong</button>
+      <label class="clay-btn clay-btn-dark" style="cursor:pointer"><span data-en="Choose PDF / pictures">Pilih PDF / gambar</span><input id="pe-file" type="file" accept="application/pdf,.pdf,image/*" multiple hidden></label>
+      <button id="pe-blank" type="button" class="clay-btn clay-btn-ghost" data-en="＋ Blank document">＋ Dokumen kosong</button>
     </div>
-    <p class="pe-help" id="pe-start-hint" style="margin-top:14px">Atau seret file ke sini. Bisa beberapa file sekaligus (digabung jadi satu).</p>
-    <p class="pe-help">Diproses di browser Anda. Halaman yang Anda ubah dibangun ulang; halaman lain tetap seperti aslinya.</p>
+    <p class="pe-help" id="pe-start-hint" style="margin-top:14px" data-en="Or drag files here. Several files at once are joined into one.">Atau seret file ke sini. Bisa beberapa file sekaligus (digabung jadi satu).</p>
+    <p class="pe-help" data-en="Processed in your browser. Pages you change are rebuilt; the other pages stay as they were.">Diproses di browser Anda. Halaman yang Anda ubah dibangun ulang; halaman lain tetap seperti aslinya.</p>
   </div>
 
   <div id="pe-app" hidden>
     <div class="pe-bar" id="pe-bar">
       <div class="pe-tabs">
-        <button id="pe-file-menu" class="pe-file" title="Baru, buka, impor, simpan, pengaturan halaman, cetak">File</button>
+        <button id="pe-open-btn" class="pe-file" title="Buka PDF atau gambar (Ctrl+O)" data-en-title="Open a PDF or pictures (Ctrl+O)" data-en="📂 Open file">📂 Buka file</button><button id="pe-file-menu" class="pe-file pe-file-more" title="Baru, impor, simpan sebagai, pengaturan halaman, cetak" data-en-title="New, import, save as, page setup, print">▾</button>
         <input id="pe-open" type="file" accept="application/pdf,.pdf,image/*" multiple hidden>
-        <button class="pe-tab on" data-tab="home">Beranda</button>
-        <button class="pe-tab" data-tab="insert">Sisipkan</button>
-        <button class="pe-tab" data-tab="layout">Tata Letak</button>
-        <button class="pe-tab" data-tab="view">Tampilan</button>
+        <button class="pe-tab on" data-tab="home" data-en="Home">Beranda</button>
+        <button class="pe-tab" data-tab="insert" data-en="Insert">Sisipkan</button>
+        <button class="pe-tab" data-tab="layout" data-en="Layout">Tata Letak</button>
+        <button class="pe-tab" data-tab="view" data-en="View">Tampilan</button>
         <span style="flex:1"></span>
-        <select id="pe-quality" title="Kualitas / ukuran file saat menyimpan"><option value="orig">Kualitas asli</option><option value="medium">Seimbang (lebih kecil)</option><option value="high">Kecil (paling ringkas)</option></select>
-        <button id="pe-flipbook" title="Simpan lalu buka sebagai flipbook">📖 Flipbook</button>
-        <button id="pe-download" hidden>⬇ Unduh PDF</button>
-        <button id="pe-save" class="pe-save" title="Simpan (Ctrl+S)">💾 Simpan PDF</button>
+        <select id="pe-quality" title="Kualitas / ukuran file saat menyimpan" data-en-title="Quality / file size when saving"><option value="orig" data-en="Original quality">Kualitas asli</option><option value="medium" data-en="Balanced (smaller)">Seimbang (lebih kecil)</option><option value="high" data-en="Small (most compact)">Kecil (paling ringkas)</option></select>
+        <button id="pe-flipbook" title="Simpan lalu buka sebagai flipbook" data-en-title="Save, then open as a flipbook">📖 Flipbook</button>
+        <button id="pe-download" hidden data-en="⬇ Download PDF">⬇ Unduh PDF</button>
+        <button id="pe-save" class="pe-save" title="Simpan (Ctrl+S)" data-en-title="Save (Ctrl+S)" data-en="💾 Save PDF">💾 Simpan PDF</button>
       </div>
       <div class="pe-ribbon" data-panel="home">
-        <button id="pe-undo" title="Batalkan (Ctrl+Z)">↶</button><button id="pe-redo" title="Ulangi (Ctrl+Y)">↷</button>
+        <button id="pe-undo" title="Batalkan (Ctrl+Z)" data-en-title="Undo (Ctrl+Z)">↶</button><button id="pe-redo" title="Ulangi (Ctrl+Y)" data-en-title="Redo (Ctrl+Y)">↷</button>
         <span class="pe-sep"></span>
-        <select id="pe-style" title="Gaya paragraf (Normal / Judul)"><option value="">Gaya paragraf</option><option value="normal">Normal</option><option value="h1">Judul 1</option><option value="h2">Judul 2</option><option value="h3">Judul 3</option></select>
-        <select id="pe-family" title="Jenis huruf"><option value="sans">Sans (Arial)</option></select>
-        <input id="pe-size" type="number" min="4" max="200" step="1" title="Ukuran huruf (pt)">
-        <button id="pe-bold" title="Tebal (Ctrl+B)"><b>B</b></button><button id="pe-italic" title="Miring (Ctrl+I)"><i>I</i></button><button id="pe-underline" title="Garis bawah (Ctrl+U)"><u>U</u></button>
-        <input id="pe-color" type="color" title="Warna teks / garis">
-        <input id="pe-fill" type="color" title="Warna isi bentuk" value="#ffffff">
+        <select id="pe-style" title="Gaya paragraf (Normal / Judul)" data-en-title="Paragraph style (Normal / Heading)"><option value="" data-en="Paragraph style">Gaya paragraf</option><option value="normal">Normal</option><option value="h1" data-en="Heading 1">Judul 1</option><option value="h2" data-en="Heading 2">Judul 2</option><option value="h3" data-en="Heading 3">Judul 3</option></select>
+        <select id="pe-family" title="Jenis huruf" data-en-title="Font"><option value="sans">Sans (Arial)</option></select>
+        <input id="pe-size" type="number" min="4" max="200" step="1" title="Ukuran huruf (pt)" data-en-title="Font size (pt)">
+        <button id="pe-bold" title="Tebal (Ctrl+B)" data-en-title="Bold (Ctrl+B)"><b>B</b></button><button id="pe-italic" title="Miring (Ctrl+I)" data-en-title="Italic (Ctrl+I)"><i>I</i></button><button id="pe-underline" title="Garis bawah (Ctrl+U)" data-en-title="Underline (Ctrl+U)"><u>U</u></button>
+        <input id="pe-color" type="color" title="Warna teks / garis" data-en-title="Text / line colour">
+        <input id="pe-fill" type="color" title="Warna isi bentuk" data-en-title="Shape fill colour" value="#ffffff">
         <span class="pe-sep"></span>
-        <button id="pe-align-left" title="Rata kiri (Ctrl+L)">⟸</button><button id="pe-align-center" title="Rata tengah (Ctrl+E)">≡</button><button id="pe-align-right" title="Rata kanan (Ctrl+R)">⟹</button><button id="pe-align-justify" title="Rata kiri-kanan (Ctrl+J)">☰</button>
-        <button id="pe-list-bullet" title="Daftar berpoin">•≡</button><button id="pe-list-number" title="Daftar bernomor">1.≡</button>
+        <button id="pe-align-left" title="Rata kiri (Ctrl+L)" data-en-title="Align left (Ctrl+L)">⟸</button><button id="pe-align-center" title="Rata tengah (Ctrl+E)" data-en-title="Center (Ctrl+E)">≡</button><button id="pe-align-right" title="Rata kanan (Ctrl+R)" data-en-title="Align right (Ctrl+R)">⟹</button><button id="pe-align-justify" title="Rata kiri-kanan (Ctrl+J)" data-en-title="Justify (Ctrl+J)">☰</button>
+        <button id="pe-list-bullet" title="Daftar berpoin" data-en-title="Bulleted list">•≡</button><button id="pe-list-number" title="Daftar bernomor" data-en-title="Numbered list">1.≡</button>
         <span class="pe-sep"></span>
-        <label class="pe-btn" title="Ganti gambar">⇄ Ganti<input id="pe-replace" type="file" accept="image/*" hidden></label>
-        <button id="pe-front" title="Ke depan">⬆</button><button id="pe-back" title="Ke belakang">⬇</button>
-        <button id="pe-delete" title="Hapus (Delete)">🗑</button>
-        <button id="pe-reset" title="Kembalikan halaman ini seperti asli">↺ Asli</button>
+        <label class="pe-btn" title="Ganti gambar" data-en-title="Replace picture"><span data-en="⇄ Replace">⇄ Ganti</span><input id="pe-replace" type="file" accept="image/*" hidden></label>
+        <button id="pe-front" title="Ke depan" data-en-title="Bring forward">⬆</button><button id="pe-back" title="Ke belakang" data-en-title="Send backward">⬇</button>
+        <button id="pe-delete" title="Hapus (Delete)" data-en-title="Delete (Delete)">🗑</button>
+        <button id="pe-reset" title="Kembalikan halaman ini seperti asli" data-en-title="Put this page back as it was" data-en="↺ Original">↺ Asli</button>
       </div>
       <div class="pe-ribbon" data-panel="insert" hidden>
-        <button id="pe-add-text" title="Kotak teks">T Kotak teks</button>
-        <label class="pe-btn" title="Gambar dari komputer">🖼 Gambar<input id="pe-add-image" type="file" accept="image/*" hidden></label>
-        <button id="pe-shapes" title="Bentuk: kotak, elips, garis, panah, segitiga">⬠ Bentuk ▾</button>
-        <button id="pe-cut" title="Jadikan area (logo, grafik, gambar vektor) sebagai gambar yang bisa dipindah">✂ Area → gambar</button>
-        <button id="pe-ocr-area" title="Baca tulisan pada gambar/foto di area yang dipilih menjadi teks yang bisa diedit">🔤 Area → teks (OCR)</button>
+        <button id="pe-add-text" title="Kotak teks" data-en-title="Text box" data-en="T Text box">T Kotak teks</button>
+        <label class="pe-btn" title="Gambar dari komputer" data-en-title="Picture from your computer"><span data-en="🖼 Picture">🖼 Gambar</span><input id="pe-add-image" type="file" accept="image/*" hidden></label>
+        <button id="pe-shapes" title="Bentuk: kotak, elips, garis, panah, segitiga" data-en-title="Shapes: rectangle, ellipse, line, arrow, triangle" data-en="⬠ Shapes ▾">⬠ Bentuk ▾</button>
+        <button id="pe-cut" title="Jadikan area (logo, grafik, gambar vektor) sebagai gambar yang bisa dipindah" data-en-title="Turn an area (logo, chart, vector drawing) into a picture you can move" data-en="✂ Area → picture">✂ Area → gambar</button>
+        <button id="pe-ocr-area" title="Baca tulisan pada gambar/foto di area yang dipilih menjadi teks yang bisa diedit" data-en-title="Read the words in a picture or photo inside the area as editable text" data-en="🔤 Area → text (OCR)">🔤 Area → teks (OCR)</button>
         <span class="pe-sep"></span>
-        <button id="pe-ins-blank" title="Halaman kosong sesudah halaman ini">＋ Halaman kosong</button>
-        <button id="pe-ins-file" title="Sisipkan PDF atau gambar sesudah halaman ini">📄 PDF / gambar</button>
+        <button id="pe-ins-blank" title="Halaman kosong sesudah halaman ini" data-en-title="Blank page after this page" data-en="＋ Blank page">＋ Halaman kosong</button>
+        <button id="pe-ins-file" title="Sisipkan PDF atau gambar sesudah halaman ini" data-en-title="Insert a PDF or pictures after this page" data-en="📄 PDF / pictures">📄 PDF / gambar</button>
       </div>
       <div class="pe-ribbon" data-panel="layout" hidden>
-        <button id="pe-setup" title="Ukuran kertas, orientasi, margin">⚙ Pengaturan halaman</button>
-        <select id="pe-paper" title="Ukuran kertas (semua halaman)"><option value="">Ukuran kertas…</option><option value="A4">A4</option><option value="F4">F4 / Folio</option><option value="Letter">Letter</option><option value="Legal">Legal</option><option value="A5">A5</option></select>
-        <button id="pe-orient-p" title="Tegak (semua halaman)">▯ Tegak</button><button id="pe-orient-l" title="Mendatar (semua halaman)">▭ Mendatar</button>
+        <button id="pe-setup" title="Ukuran kertas, orientasi, margin" data-en-title="Paper size, orientation, margins" data-en="⚙ Page setup">⚙ Pengaturan halaman</button>
+        <select id="pe-paper" title="Ukuran kertas (semua halaman)" data-en-title="Paper size (all pages)"><option value="" data-en="Paper size…">Ukuran kertas…</option><option value="A4">A4</option><option value="F4">F4 / Folio</option><option value="Letter">Letter</option><option value="Legal">Legal</option><option value="A5">A5</option></select>
+        <button id="pe-orient-p" title="Tegak (semua halaman)" data-en-title="Portrait (all pages)" data-en="▯ Portrait">▯ Tegak</button><button id="pe-orient-l" title="Mendatar (semua halaman)" data-en-title="Landscape (all pages)" data-en="▭ Landscape">▭ Mendatar</button>
         <span class="pe-sep"></span>
-        <button id="pe-rot-page" title="Putar halaman ini 90°">↻ Putar halaman</button>
-        <button id="pe-print" title="Cetak (Ctrl+P)">🖨 Cetak</button>
+        <button id="pe-rot-page" title="Putar halaman ini 90°" data-en-title="Rotate this page 90°" data-en="↻ Rotate page">↻ Putar halaman</button>
+        <button id="pe-print" title="Cetak (Ctrl+P)" data-en-title="Print (Ctrl+P)" data-en="🖨 Print">🖨 Cetak</button>
       </div>
       <div class="pe-ribbon" data-panel="view" hidden>
-        <button id="pe-zoom-out" title="Perkecil">−</button><span id="pe-zoom" style="font-size:12px;min-width:38px;text-align:center">100%</span><button id="pe-zoom-in" title="Perbesar">+</button>
-        <button id="pe-zoom-fit" title="Ukuran normal">100%</button>
+        <button id="pe-zoom-out" title="Perkecil" data-en-title="Zoom out">−</button><span id="pe-zoom" style="font-size:12px;min-width:38px;text-align:center">100%</span><button id="pe-zoom-in" title="Perbesar" data-en-title="Zoom in">+</button>
+        <button id="pe-zoom-fit" title="Ukuran normal" data-en-title="Normal size">100%</button>
       </div>
     </div>
     <div class="pe-status" id="pe-status"></div>
@@ -199,8 +205,8 @@
       <div class="pe-desk" id="pe-desk"><div id="pe-stage"></div></div>
     </div>
     <div class="pe-statusbar" id="pe-sb"></div>
-    <p class="pe-help">Halaman: klik kanan (atau ⋯) untuk halaman kosong, duplikat, putar, hapus, simpan sebagian, atau baca teks (OCR); seret untuk mengubah urutan; jatuhkan PDF/gambar ke panel kiri untuk menyisipkan. Ctrl/Shift+klik memilih beberapa halaman.</p>
-    <p class="pe-help">Logo atau grafik belum bisa dipindah? Pakai ✂ Area → gambar lalu seret kotak di sekitarnya. Klik teks untuk langsung mengetik. Teks dipindah dengan Alt+seret (atau pilih dulu lalu seret), sudut untuk mengubah ukuran. Gambar & bentuk: seret untuk memindah, titik bulat di atas untuk memutar. Halaman yang diubah ditandai titik oranye.</p>
+    <p class="pe-help" data-en="Pages: right-click (or ⋯) for a blank page, duplicate, rotate, delete, save some pages or read the text (OCR); drag to change the order; drop PDFs or pictures on the left panel to insert them. Ctrl/Shift+click picks several pages.">Halaman: klik kanan (atau ⋯) untuk halaman kosong, duplikat, putar, hapus, simpan sebagian, atau baca teks (OCR); seret untuk mengubah urutan; jatuhkan PDF/gambar ke panel kiri untuk menyisipkan. Ctrl/Shift+klik memilih beberapa halaman.</p>
+    <p class="pe-help" data-en="Logo or chart will not move? Use ✂ Area → picture and drag a box around it. Click text to type right away. Move text with Alt+drag (or select it first, then drag); corners resize. Pictures &amp; shapes: drag to move, the round dot on top turns them. Changed pages carry an orange dot.">Logo atau grafik belum bisa dipindah? Pakai ✂ Area → gambar lalu seret kotak di sekitarnya. Klik teks untuk langsung mengetik. Teks dipindah dengan Alt+seret (atau pilih dulu lalu seret), sudut untuk mengubah ukuran. Gambar &amp; bentuk: seret untuk memindah, titik bulat di atas untuk memutar. Halaman yang diubah ditandai titik oranye.</p>
   </div>
 </div>
 </body>
