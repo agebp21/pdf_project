@@ -324,6 +324,7 @@
       'tool.pdf-forms': 'Isi formulir PDF yang bisa diisi lalu simpan — bisa dikunci.',
       'tool.translate-pdf': 'Terjemahkan PDF dengan AI. Font, layout, dan format tetap terjaga.',
       'tool.pdf-to-md': 'Ubah PDF jadi Markdown. Pas untuk catatan, docs, dan LLM.',
+      'tool.utilities': 'Semua alat konversi dan alat PDF kecil di satu tempat: PDF ↔ Word, Excel, PowerPoint, JPG, HTML, Markdown, plus putar, pangkas, nomor halaman, watermark, tanda tangan, sensor, OCR, dan lainnya.',
       'title.pdf-to-flipbook': 'PDF ke Flipbook',
       'title.journal-search': 'Cari Jurnal & Ebook',
       'title.notebook': 'Peringkas AI',
@@ -357,7 +358,8 @@
       'title.merge-pdf': 'Gabung PDF',
       'title.split-pdf': 'Pisah PDF',
       'title.compress-pdf': 'Kompres PDF',
-      'title.edit-pdf': 'Edit PDF'
+      'title.edit-pdf': 'Edit PDF',
+      'title.utilities': 'Utilitas'
     }
   };
 
