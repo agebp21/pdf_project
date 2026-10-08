@@ -85,6 +85,7 @@
   .horde-tile.soon{opacity:.45;filter:grayscale(.6);cursor:not-allowed}
   .horde-tile.soon:hover{margin-top:0}
   @media (prefers-reduced-motion:reduce){.card:hover,.btn-tang:hover,.btn-ink:hover{transform:none}}
+  .numa-bumper img{min-height:118px;object-fit:cover;object-position:left center}
 </style>
 </head>
 <body class="relative">
@@ -155,17 +156,13 @@
 </main>
 
 <footer class="max-w-[1440px] mx-auto px-4 pb-10">
-  <div class="rounded-3xl border-[1.5px] border-[#1C1917] bg-[#1C1917] text-[#FFF7EA] p-6 md:p-8 flex flex-col md:flex-row md:items-center gap-4 justify-between shadow-[6px_6px_0_rgba(28,25,23,.2)]">
-    <div>
-      <p class="serif text-[20px] font-black" data-i18n="foot.t">Ready to go? No overthinking.</p>
-      <p class="text-[12px] text-white/70 mt-1" data-i18n="foot.s">Pick a tool above, drop your file, done. No install. Log in for Pro features.</p>
-    </div>
-    <div class="flex gap-2">
-      <a href="flipbook.html" class="btn-tang rounded-full px-5 py-2.5 text-[13px] font-extrabold" data-i18n="foot.c1">▤ Turn into flipbook</a>
-      <a href="converter.html?tool=compress-pdf" class="rounded-full px-5 py-2.5 text-[13px] font-extrabold bg-[#FFF7EA] text-[#1C1917] border-[1.5px] border-white" data-i18n="foot.c2">Compress PDF</a>
-      <a href="account.html" class="rounded-full px-5 py-2.5 text-[13px] font-extrabold bg-transparent text-[#FFF7EA] border-[1.5px] border-white/60" data-i18n="foot.c3">★ Pricing</a>
-    </div>
-  </div>
+  <!-- numa bumper (sister platform) -->
+  <a href="https://nusantaramahayatra.com" target="_blank" rel="noopener" class="numa-bumper block rounded-3xl overflow-hidden border-[1.5px] border-[#E8E2D4] shadow-[0_10px_28px_rgba(28,25,23,.10)] hover:-translate-y-0.5 transition">
+    <picture>
+      <source type="image/webp" srcset="assets/img/numa-bumper.webp?v=1">
+      <img src="assets/img/numa-bumper.jpg?v=1" width="1600" height="283" loading="lazy" decoding="async" alt="numa — Beda Kepala. Banyak Cerita. Ikut nimbrung di nusantaramahayatra.com" class="block w-full h-auto">
+    </picture>
+  </a>
   <p class="text-center text-[11px] text-[#A8A29E] mt-4 font-semibold" data-i18n="foot.note">MyFlipbook • Sarvamaya vibes • Made locally, for never-ending tasks ✳</p>
   <p class="text-center text-[11px] mt-2 font-bold"><a href="privacy.html" class="text-[#78716C] hover:text-[#1A3C34] underline" data-i18n="foot.privacy">Privacy Policy</a> <span class="text-[#D6CFBF]">·</span> <a href="terms.html" class="text-[#78716C] hover:text-[#1A3C34] underline" data-i18n="foot.terms">Terms of Service</a> <span class="text-[#D6CFBF]">·</span> <a href="mailto:cs@myflipbookpro.com" class="text-[#78716C] hover:text-[#1A3C34] underline">✉ cs@myflipbookpro.com</a></p>
 </footer>
