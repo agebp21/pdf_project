@@ -28,11 +28,20 @@
   <script defer src="assets/drive-picker.js"></script>
   <script defer src="assets/flipbook.js?v=end"></script>
   <script defer src="assets/auth.js"></script>
+  <style>
+    /* numa banner beside the page title (the empty right side of the heading) */
+    .heading{flex-wrap:wrap}
+    .heading>div:first-child{flex:1 1 420px;min-width:0}
+    .numa-side{flex:0 1 600px;min-width:300px;display:block;border-radius:16px;overflow:hidden;border:1px solid #E8E2D4;box-shadow:0 8px 22px rgba(28,25,23,.08);transition:transform .2s,box-shadow .2s}
+    .numa-side:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(28,25,23,.12)}
+    .numa-side img{display:block;width:100%;height:auto;min-height:72px;object-fit:cover;object-position:left center}
+    @media(max-width:720px){.numa-side{flex-basis:100%}}
+  </style>
 </head>
 <body class="clay">
   <header class="topbar"><a class="brand" href="index.html"><img src="assets/img/logo.png?v=pro" alt="MyFlipbook" width="139" height="34"></a><span style="display:flex;align-items:center;gap:10px"><span data-auth-slot></span><button id="share-link-top" class="back-link badge" type="button">🔗 Share</button><a class="back-link badge" href="converter.html?tool=jpg-to-pdf">Open converter →</a></span></header>
   <main>
-    <div class="heading"><div><p class="eyebrow">✦ PDF TO FLIPBOOK • INTERACTIVE</p><h1>Your doc, turned into a living book.</h1><p>Upload a PDF or continue straight from a convert result. Cover first, then the inside — just like a real book.</p></div></div>
+    <div class="heading"><div><p class="eyebrow">✦ PDF TO FLIPBOOK • INTERACTIVE</p><h1>Your doc, turned into a living book.</h1><p>Upload a PDF or continue straight from a convert result. Cover first, then the inside — just like a real book.</p></div><a class="numa-side" href="https://nusantaramahayatra.com" target="_blank" rel="noopener"><picture><source type="image/webp" srcset="assets/img/numa-banner-wide.webp?v=1"><img src="assets/img/numa-banner-wide.jpg?v=1" width="1400" height="202" decoding="async" alt="numa — Beda Kepala. Banyak Cerita. Ikut nimbrung di nusantaramahayatra.com"></picture></a></div>
     <div class="workspace">
       <aside>
         <div class="panel-heading"><span class="step">01</span><h2>Choose document</h2></div>
