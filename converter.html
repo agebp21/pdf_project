@@ -1276,7 +1276,11 @@ async function buildCropPreview(){
     ui.querySelector('[data-crop=all]').onclick=()=>{ cropPicked=null; syncCropRange(); };
     ui.querySelector('[data-crop=none]').onclick=()=>{ cropPicked=new Set(); syncCropRange(); };
     document.getElementById('edit-range')?.addEventListener('input', ()=>{ cropPicked=parseCropRange(); paintCropThumbs(); });
-    ui.querySelector('[data-crop=again]').onclick=()=>{ cropResult=null; showCropMode(); drawCropPage(); };
+    ui.querySelector('[data-crop=again]').onclick=()=>{
+      if(cropOut) files=[new File([cropOut.blob], cropOut.name, {type:'application/pdf'})];
+      for(const k of ['top','right','bottom','left']){ const i=document.getElementById('edit-'+k); if(i) i.value=0; }
+      cropResult=null; cropOut=null; showCropMode(); updateFileUI();
+    };
     for(const k of ['top','right','bottom','left']) document.getElementById('edit-'+k)?.addEventListener('input', placeCropBox);
     document.getElementById('cropBox').addEventListener('pointerdown', cropDrag);
   }
@@ -1346,10 +1350,12 @@ function paintCropThumb(d){
 }
 function paintCropThumbs(){ document.querySelectorAll('#cropThumbs .crop-thumb').forEach(paintCropThumb); }
 // After ✓: the same sheet shows the cropped pages and the download / flipbook buttons.
+let cropOut=null;                                                       // the last cropped file, for "Crop again"
 async function cropShowResult(blob, url, filename){
+  cropOut={blob, name:filename.replace(/(-crop-pdf)+\.pdf$/i,'-crop-pdf.pdf')};
   try{ if(cropResult) cropResult.destroy(); }catch(e){}
   cropResult=await pdfjsLib.getDocument({data:new Uint8Array(await blob.arrayBuffer()), isEvalSupported:false}).promise;
-  const dl=document.getElementById('cropDl'); if(dl){ dl.href=url; dl.download=filename; }
+  const dl=document.getElementById('cropDl'); if(dl){ dl.href=url; dl.download=cropOut.name; }
   if(cropPage>cropResult.numPages) cropPage=1;
   showCropMode(); drawCropPage();
 }
