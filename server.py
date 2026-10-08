@@ -2716,6 +2716,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.wfile.write(found[0])
             return
         relative = path.lstrip('/') or 'index.html'
+        if relative == 'favicon.ico':                     # browsers ask for it at the root
+            relative = 'assets/img/favicon.ico'; self.path = '/assets/img/favicon.ico'
         file = (ROOT / relative).resolve()
         allowed = relative in PAGES or (relative.startswith('assets/') and file.is_relative_to(ROOT / 'assets'))
         if not allowed or not file.is_relative_to(ROOT) or not file.is_file():

@@ -424,8 +424,8 @@ def head(title, description, path, extra=''):
 <meta property="og:title" content="{esc(title)}"><meta property="og:description" content="{esc(description)}">
 <meta property="og:url" content="{esc(url)}"><meta property="og:image" content="{OG_IMAGE}"><meta property="og:image:width" content="{OG_SIZE[0]}"><meta property="og:image:height" content="{OG_SIZE[1]}"><meta property="og:locale" content="id_ID">
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{esc(title)}"><meta name="twitter:description" content="{esc(description)}">
-<link rel="icon" type="image/png" href="/assets/img/favicon.png?v=green">
-<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=green">
+<link rel="icon" type="image/png" href="/assets/img/favicon.png?v=pro">
+<link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=pro">
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>{STYLE}</style>
