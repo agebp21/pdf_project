@@ -1262,10 +1262,10 @@ async function buildCropPreview(){
       <div id="cropStage" class="crop-stage"><canvas id="cropCanvas"></canvas><div class="crop-dim" data-d="t"></div><div class="crop-dim" data-d="r"></div><div class="crop-dim" data-d="b"></div><div class="crop-dim" data-d="l"></div>
       <div id="cropBox" class="crop-box">${['nw','n','ne','e','se','s','sw','w'].map(h=>`<span class="crop-h" data-h="${h}"></span>`).join('')}</div></div>
       <div id="cropActions" class="crop-actions"><button type="button" data-crop="apply" class="crop-ok">✓ ${L('Crop','Potong')}</button><button type="button" data-crop="reset">✕ ${L('Reset','Atur ulang')}</button></div>
+      <div id="cropDone" class="crop-actions" hidden><a id="cropDl" class="crop-ok" href="#" download>⬇ ${L('Download PDF','Unduh PDF')}</a><button type="button" data-crop="flip">📖 ${L('Turn into Flipbook','Jadikan Flipbook')}</button><button type="button" data-crop="again">↶ ${L('Undo crop','Urungkan crop')}</button></div>
       <div id="cropThumbsHead" class="crop-thumbs-head"><span>${L('All pages — tick the pages to crop, click one to see it large','Semua halaman — centang halaman yang dicrop, klik untuk melihat besar')}</span>
         <button type="button" data-crop="all">${L('Select all','Pilih semua')}</button><button type="button" data-crop="none">${L('None','Kosongkan')}</button></div>
-      <div id="cropThumbs" class="crop-thumbs"></div>
-      <div id="cropDone" class="crop-actions" hidden><a id="cropDl" class="crop-ok" href="#" download>⬇ ${L('Download PDF','Unduh PDF')}</a><button type="button" data-crop="flip">📖 ${L('Turn into Flipbook','Jadikan Flipbook')}</button><button type="button" data-crop="again">↺ ${L('Crop again','Crop lagi')}</button></div>`;
+      <div id="cropThumbs" class="crop-thumbs"></div>`;
     opts.prepend(ui);
     ui.querySelector('[data-crop=prev]').onclick=()=>{ if(cropPage>1){ cropPage--; drawCropPage(); } };
     ui.querySelector('[data-crop=next]').onclick=()=>{ const d=cropResult||cropDoc; if(d&&cropPage<d.numPages){ cropPage++; drawCropPage(); } };
@@ -1276,15 +1276,17 @@ async function buildCropPreview(){
     ui.querySelector('[data-crop=all]').onclick=()=>{ cropPicked=null; syncCropRange(); };
     ui.querySelector('[data-crop=none]').onclick=()=>{ cropPicked=new Set(); syncCropRange(); };
     document.getElementById('edit-range')?.addEventListener('input', ()=>{ cropPicked=parseCropRange(); paintCropThumbs(); });
+    // Undo: back to the file before the last crop
     ui.querySelector('[data-crop=again]').onclick=()=>{
-      if(cropOut) files=[new File([cropOut.blob], cropOut.name, {type:'application/pdf'})];
-      for(const k of ['top','right','bottom','left']){ const i=document.getElementById('edit-'+k); if(i) i.value=0; }
-      cropResult=null; cropOut=null; showCropMode(); updateFileUI();
+      const prev=cropHistory.pop(); if(!prev) return;
+      files=[prev]; if(!cropHistory.length) cropOut=null;
+      const dl=document.getElementById('cropDl'); if(dl&&prev._crop){ dl.href=URL.createObjectURL(prev); dl.download=prev.name; }
+      showCropMode(); updateFileUI();
     };
     for(const k of ['top','right','bottom','left']) document.getElementById('edit-'+k)?.addEventListener('input', placeCropBox);
     document.getElementById('cropBox').addEventListener('pointerdown', cropDrag);
   }
-  if(cropFile!==files[0]){ cropFile=files[0]; cropPage=1; cropResult=null; showCropMode(); try{ if(cropDoc) cropDoc.destroy(); }catch(e){} cropDoc=await pdfjsLib.getDocument({data:new Uint8Array(await files[0].arrayBuffer()), isEvalSupported:false}).promise; }
+  if(cropFile!==files[0]){ if(!files[0]._crop){ cropHistory=[]; cropOut=null; } cropFile=files[0]; cropPage=1; cropResult=null; showCropMode(); try{ if(cropDoc) cropDoc.destroy(); }catch(e){} cropDoc=await pdfjsLib.getDocument({data:new Uint8Array(await files[0].arrayBuffer()), isEvalSupported:false}).promise; }
   drawCropPage(); buildCropThumbs();
 }
 let cropMm={w:210,h:297}, cropResult=null;
@@ -1350,22 +1352,25 @@ function paintCropThumb(d){
 }
 function paintCropThumbs(){ document.querySelectorAll('#cropThumbs .crop-thumb').forEach(paintCropThumb); }
 // After ✓: the same sheet shows the cropped pages and the download / flipbook buttons.
-let cropOut=null;                                                       // the last cropped file, for "Crop again"
+// After ✓ the cropped PDF becomes the file being worked on (like Photoshop): the box comes
+// back at 0 so it can be cropped again right away; Download / Flipbook / Undo sit under it.
+let cropOut=null, cropHistory=[];
 async function cropShowResult(blob, url, filename){
-  cropOut={blob, name:filename.replace(/(-crop-pdf)+\.pdf$/i,'-crop-pdf.pdf')};
-  try{ if(cropResult) cropResult.destroy(); }catch(e){}
-  cropResult=await pdfjsLib.getDocument({data:new Uint8Array(await blob.arrayBuffer()), isEvalSupported:false}).promise;
-  const dl=document.getElementById('cropDl'); if(dl){ dl.href=url; dl.download=cropOut.name; }
-  if(cropPage>cropResult.numPages) cropPage=1;
-  showCropMode(); drawCropPage();
+  const name=filename.replace(/(-crop-pdf)+\.pdf$/i,'-crop-pdf.pdf');
+  cropOut={blob, name};
+  const dl=document.getElementById('cropDl'); if(dl){ dl.href=url; dl.download=name; }
+  const next=new File([new Uint8Array(await blob.arrayBuffer())], name, {type:'application/pdf'}); next._crop=true;
+  cropHistory.push(files[0]); files=[next];
+  for(const k of ['top','right','bottom','left']){ const i=document.getElementById('edit-'+k); if(i) i.value=0; }
+  showCropMode(); updateFileUI();
 }
 function showCropMode(){
-  const done=!!cropResult;
-  document.getElementById('cropStage')?.classList.toggle('done', done);
-  document.getElementById('cropActions')?.toggleAttribute('hidden', done);
-  document.getElementById('cropDone')?.toggleAttribute('hidden', !done);
+  document.getElementById('cropStage')?.classList.remove('done');
+  document.getElementById('cropActions')?.removeAttribute('hidden');
+  document.getElementById('cropDone')?.toggleAttribute('hidden', !cropOut);
 }
-async function drawCropPage(){
+function drawCropPage(){ return drawCropPageNow().catch(()=>{}); }      // a render cut short by a new file is fine
+async function drawCropPageNow(){
   const c=document.getElementById('cropCanvas'); if(!c||!cropDoc) return;
   const doc=cropResult||cropDoc;
   const page=await doc.getPage(Math.min(cropPage, doc.numPages)), v=page.getViewport({scale:1});
