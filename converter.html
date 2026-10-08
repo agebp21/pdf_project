@@ -94,6 +94,16 @@
   .crop-stage{position:relative;margin:0 auto;box-shadow:0 8px 24px rgba(0,0,0,.15);touch-action:none;user-select:none}
   .crop-stage canvas{display:block}
   .crop-stage.done .crop-dim,.crop-stage.done .crop-box{display:none}
+  .crop-thumbs-head{display:flex;flex-wrap:wrap;align-items:center;justify-content:center;gap:8px;margin:18px 0 8px;font-size:12px;font-weight:700;color:#57534e}
+  .crop-thumbs-head button{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:3px 10px;font-weight:800;cursor:pointer}
+  .crop-thumbs{display:grid;grid-template-columns:repeat(auto-fill,minmax(118px,1fr));gap:10px;max-height:70vh;overflow:auto;padding:4px}
+  .crop-thumb{background:#fff;border:2px solid #EFEAE0;border-radius:10px;padding:4px;text-align:center}
+  .crop-thumb.on{border-color:#FF5C28}
+  .crop-thumb.off .crop-thumb-pic{opacity:.45}
+  .crop-thumb-pic{position:relative;cursor:pointer;min-height:80px;background:#F7F4EE;border-radius:6px;overflow:hidden}
+  .crop-thumb-pic canvas{display:block;width:100%;height:auto}
+  .ct-dim{position:absolute;background:rgba(28,25,23,.55);pointer-events:none}
+  .crop-thumb-no{display:inline-flex;align-items:center;gap:4px;font-size:11px;font-weight:700;color:#57534e;margin-top:3px;cursor:pointer}
   .crop-actions{display:flex;flex-wrap:wrap;justify-content:center;gap:8px;margin:12px 0 4px}
   .crop-actions[hidden]{display:none}
   .crop-actions button,.crop-actions a{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:8px 16px;font:800 13px 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer;text-decoration:none}
@@ -1251,6 +1261,9 @@ async function buildCropPreview(){
       <div id="cropStage" class="crop-stage"><canvas id="cropCanvas"></canvas><div class="crop-dim" data-d="t"></div><div class="crop-dim" data-d="r"></div><div class="crop-dim" data-d="b"></div><div class="crop-dim" data-d="l"></div>
       <div id="cropBox" class="crop-box">${['nw','n','ne','e','se','s','sw','w'].map(h=>`<span class="crop-h" data-h="${h}"></span>`).join('')}</div></div>
       <div id="cropActions" class="crop-actions"><button type="button" data-crop="apply" class="crop-ok">✓ ${L('Crop','Potong')}</button><button type="button" data-crop="reset">✕ ${L('Reset','Atur ulang')}</button></div>
+      <div id="cropThumbsHead" class="crop-thumbs-head"><span>${L('All pages — tick the pages to crop, click one to see it large','Semua halaman — centang halaman yang dicrop, klik untuk melihat besar')}</span>
+        <button type="button" data-crop="all">${L('Select all','Pilih semua')}</button><button type="button" data-crop="none">${L('None','Kosongkan')}</button></div>
+      <div id="cropThumbs" class="crop-thumbs"></div>
       <div id="cropDone" class="crop-actions" hidden><a id="cropDl" class="crop-ok" href="#" download>⬇ ${L('Download PDF','Unduh PDF')}</a><button type="button" data-crop="flip">📖 ${L('Turn into Flipbook','Jadikan Flipbook')}</button><button type="button" data-crop="again">↺ ${L('Crop again','Crop lagi')}</button></div>`;
     opts.append(ui);
     ui.querySelector('[data-crop=prev]').onclick=()=>{ if(cropPage>1){ cropPage--; drawCropPage(); } };
@@ -1259,14 +1272,78 @@ async function buildCropPreview(){
     // ✓ runs the normal convert (login, trial and checks included); the result comes back here.
     ui.querySelector('[data-crop=apply]').onclick=()=>{ $('#error').classList.add('hidden'); $('#convertBtn').click(); };
     ui.querySelector('[data-crop=flip]').onclick=()=>$('#makeFlipbook').click();
+    ui.querySelector('[data-crop=all]').onclick=()=>{ cropPicked=null; syncCropRange(); };
+    ui.querySelector('[data-crop=none]').onclick=()=>{ cropPicked=new Set(); syncCropRange(); };
+    document.getElementById('edit-range')?.addEventListener('input', ()=>{ cropPicked=parseCropRange(); paintCropThumbs(); });
     ui.querySelector('[data-crop=again]').onclick=()=>{ cropResult=null; showCropMode(); drawCropPage(); };
     for(const k of ['top','right','bottom','left']) document.getElementById('edit-'+k)?.addEventListener('input', placeCropBox);
     document.getElementById('cropBox').addEventListener('pointerdown', cropDrag);
   }
   if(cropFile!==files[0]){ cropFile=files[0]; cropPage=1; cropResult=null; showCropMode(); try{ if(cropDoc) cropDoc.destroy(); }catch(e){} cropDoc=await pdfjsLib.getDocument({data:new Uint8Array(await files[0].arrayBuffer()), isEvalSupported:false}).promise; }
-  drawCropPage();
+  drawCropPage(); buildCropThumbs();
 }
 let cropMm={w:210,h:297}, cropResult=null;
+// ---- every page as a thumbnail (like the Organize grid): the crop shows on each ----
+let cropPicked=null, cropThumbSeen=null;                                // null = all pages
+const cropThumbSize=new Map();                                          // page -> {w, h} in mm
+function parseCropRange(){
+  const v=(document.getElementById('edit-range')?.value||'').trim();
+  if(!v || /^(all|semua)$/i.test(v) || !cropDoc) return null;
+  try{ return new Set(PDFEdit.selection(v, cropDoc.numPages).map(i=>i+1)); }catch(e){ return cropPicked; }
+}
+function rangeText(set){
+  const list=[...set].sort((a,b)=>a-b), out=[];
+  for(let i=0;i<list.length;i++){ let j=i; while(j+1<list.length && list[j+1]===list[j]+1) j++; out.push(i===j?`${list[i]}`:`${list[i]}-${list[j]}`); i=j; }
+  return out.join(',');
+}
+function syncCropRange(){
+  const field=document.getElementById('edit-range'); if(!field||!cropDoc) return;
+  field.value = !cropPicked || cropPicked.size===cropDoc.numPages ? 'all' : rangeText(cropPicked);
+  if(cropPicked && cropPicked.size===cropDoc.numPages) cropPicked=null;
+  paintCropThumbs();
+}
+function buildCropThumbs(){
+  const box=document.getElementById('cropThumbs'); if(!box||!cropDoc) return;
+  if(box.dataset.doc===String(cropDoc.fingerprints&&cropDoc.fingerprints[0])+cropDoc.numPages && !cropResult) { paintCropThumbs(); return; }
+  box.dataset.doc=String(cropDoc.fingerprints&&cropDoc.fingerprints[0])+cropDoc.numPages;
+  cropPicked=parseCropRange(); cropThumbSize.clear();
+  cropThumbSeen=cropThumbSeen||new IntersectionObserver(es=>{ for(const e of es) if(e.isIntersecting){ cropThumbSeen.unobserve(e.target); drawCropThumb(e.target); } },{rootMargin:'400px'});
+  const items=[];
+  for(let i=1;i<=cropDoc.numPages;i++){
+    const d=document.createElement('div'); d.className='crop-thumb'; d.dataset.page=i;
+    d.innerHTML=`<div class="crop-thumb-pic"><canvas></canvas><i class="ct-dim ct-t"></i><i class="ct-dim ct-r"></i><i class="ct-dim ct-b"></i><i class="ct-dim ct-l"></i></div>
+      <label class="crop-thumb-no"><input type="checkbox">${i}</label>`;
+    d.querySelector('.crop-thumb-pic').onclick=()=>{ cropPage=i; drawCropPage(); paintCropThumbs(); document.getElementById('cropStage').scrollIntoView({block:'center',behavior:'smooth'}); };
+    d.querySelector('input').onchange=e=>{ const all=cropPicked||new Set(Array.from({length:cropDoc.numPages},(_,k)=>k+1)); e.target.checked?all.add(i):all.delete(i); cropPicked=all; syncCropRange(); };
+    items.push(d);
+  }
+  box.replaceChildren(...items);
+  for(const d of items) cropThumbSeen.observe(d);
+  paintCropThumbs();
+}
+async function drawCropThumb(d){
+  const i=Number(d.dataset.page), doc=cropDoc; if(!doc) return;
+  try{
+    const page=await doc.getPage(i), v=page.getViewport({scale:1}), vp=page.getViewport({scale:(110*Math.min(2,devicePixelRatio||1))/v.width});
+    cropThumbSize.set(i,{w:v.width*25.4/72, h:v.height*25.4/72});
+    const c=d.querySelector('canvas'); c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height);
+    const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height);
+    await page.render({canvasContext:g, viewport:vp}).promise; page.cleanup();
+    paintCropThumb(d);
+  }catch(e){}
+}
+function paintCropThumb(d){
+  const i=Number(d.dataset.page), mm=cropThumbSize.get(i)||cropMm, on=!cropPicked||cropPicked.has(i);
+  d.classList.toggle('on', i===cropPage); d.classList.toggle('off', !on);
+  d.querySelector('input').checked=on;
+  const pct=(k,size)=>Math.min(100, cropVal(k)/size*100)+'%', show=on&&!cropResult;
+  const [t,r,b,l]=['t','r','b','l'].map(k=>d.querySelector('.ct-'+k));
+  t.style.cssText=`display:${show?'block':'none'};left:0;right:0;top:0;height:${pct('top',mm.h)}`;
+  b.style.cssText=`display:${show?'block':'none'};left:0;right:0;bottom:0;height:${pct('bottom',mm.h)}`;
+  l.style.cssText=`display:${show?'block':'none'};left:0;top:${pct('top',mm.h)};bottom:${pct('bottom',mm.h)};width:${pct('left',mm.w)}`;
+  r.style.cssText=`display:${show?'block':'none'};right:0;top:${pct('top',mm.h)};bottom:${pct('bottom',mm.h)};width:${pct('right',mm.w)}`;
+}
+function paintCropThumbs(){ document.querySelectorAll('#cropThumbs .crop-thumb').forEach(paintCropThumb); }
 // After ✓: the same sheet shows the cropped pages and the download / flipbook buttons.
 async function cropShowResult(blob, url, filename){
   try{ if(cropResult) cropResult.destroy(); }catch(e){}
@@ -1307,6 +1384,7 @@ function placeCropBox(){
   Object.assign(d('b').style,{left:0,top:b+'px',width:W+'px',height:(H-b)+'px'});
   Object.assign(d('l').style,{left:0,top:t+'px',width:l+'px',height:(b-t)+'px'});
   Object.assign(d('r').style,{left:r+'px',top:t+'px',width:(W-r)+'px',height:(b-t)+'px'});
+  paintCropThumbs();
 }
 function cropDrag(e){
   e.preventDefault();
