@@ -88,6 +88,19 @@
   .org-sel-row input[type=number]{flex:0 0 64px;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px}
   .org-sel-row select{flex:0 0 auto;max-width:45%;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.35rem .5rem;font-size:11px;font-weight:700;cursor:pointer}
   /* Mode tabs as mini feature cards (same look as the home tool cards, smaller). */
+  .crop-bar{display:flex;flex-wrap:wrap;align-items:center;gap:8px;justify-content:center;margin:10px 0 8px;font-size:12px;font-weight:700}
+  .crop-bar button{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:4px 12px;font-weight:800;cursor:pointer}
+  .crop-bar .crop-tip{color:#78716C;font-weight:600}
+  .crop-stage{position:relative;margin:0 auto;box-shadow:0 8px 24px rgba(0,0,0,.15);touch-action:none;user-select:none}
+  .crop-stage canvas{display:block}
+  .crop-dim{position:absolute;background:rgba(28,25,23,.55);pointer-events:none}
+  .crop-box{position:absolute;outline:2px solid #FF5C28;cursor:move;box-shadow:inset 0 0 0 1px rgba(255,255,255,.7)}
+  .crop-box::before,.crop-box::after{content:'';position:absolute;inset:33.33% 0;border-top:1px dashed rgba(255,255,255,.6);border-bottom:1px dashed rgba(255,255,255,.6);pointer-events:none}
+  .crop-box::after{inset:0 33.33%;border:0;border-left:1px dashed rgba(255,255,255,.6);border-right:1px dashed rgba(255,255,255,.6)}
+  .crop-h{position:absolute;width:12px;height:12px;background:#fff;border:2px solid #FF5C28;border-radius:3px;margin:-6px 0 0 -6px}
+  .crop-h[data-h=nw]{left:0;top:0;cursor:nwse-resize}.crop-h[data-h=n]{left:50%;top:0;cursor:ns-resize}.crop-h[data-h=ne]{left:100%;top:0;cursor:nesw-resize}
+  .crop-h[data-h=e]{left:100%;top:50%;cursor:ew-resize}.crop-h[data-h=se]{left:100%;top:100%;cursor:nwse-resize}.crop-h[data-h=s]{left:50%;top:100%;cursor:ns-resize}
+  .crop-h[data-h=sw]{left:0;top:100%;cursor:nesw-resize}.crop-h[data-h=w]{left:0;top:50%;cursor:ew-resize}
   .org-tabs{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:.75rem;margin-bottom:1rem}
   .org-tabs button{display:flex;align-items:center;gap:.8rem;text-align:left;min-width:0;cursor:pointer;color:#1C1917;padding:.9rem 1rem;border-radius:20px;border:1px solid #E9E2D4;background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,0) 38%),linear-gradient(180deg,#FFFFFF,#F8F4EA);box-shadow:0 8px 20px rgba(28,25,23,.08),inset 0 1px 0 #fff,inset 0 -2px 6px rgba(28,25,23,.04);transition:all .2s ease}
   .org-tabs button:hover{transform:translateY(-2px);box-shadow:0 14px 30px rgba(28,25,23,.12),inset 0 1px 0 #fff;border-color:#DCD3BE}
@@ -1219,6 +1232,79 @@ window.toggleSplitPage=(idx, event)=>{
   if(pick && !pick.checked){ pick.checked=true; pick.dispatchEvent(new Event('change')); }
   updateSplitBtn(); markSplitRange();
 };
+// Crop PDF, like cropping in Photoshop: a page preview with a box to drag. Its edges
+// are the margin fields (mm), so the crop itself is unchanged; typing a margin moves the box.
+let cropDoc=null, cropFile=null, cropPage=1;
+async function buildCropPreview(){
+  const opts=document.getElementById('options'); if(!opts||!files[0]) return;
+  let ui=document.getElementById('cropUi');
+  if(!ui){
+    ui=document.createElement('div'); ui.id='cropUi'; ui.className='w-full';
+    ui.innerHTML=`<div class="crop-bar"><button type="button" data-crop="prev">◀</button><span id="cropPageNo"></span><button type="button" data-crop="next">▶</button>
+      <span class="crop-tip">${L('Drag the corners or edges; drag inside the box to move it.','Seret sudut atau tepinya; seret bagian dalam kotak untuk memindah.')}</span>
+      <button type="button" data-crop="reset">${L('Reset','Atur ulang')}</button></div>
+      <div id="cropStage" class="crop-stage"><canvas id="cropCanvas"></canvas><div class="crop-dim" data-d="t"></div><div class="crop-dim" data-d="r"></div><div class="crop-dim" data-d="b"></div><div class="crop-dim" data-d="l"></div>
+      <div id="cropBox" class="crop-box">${['nw','n','ne','e','se','s','sw','w'].map(h=>`<span class="crop-h" data-h="${h}"></span>`).join('')}</div></div>`;
+    opts.append(ui);
+    ui.querySelector('[data-crop=prev]').onclick=()=>{ if(cropPage>1){ cropPage--; drawCropPage(); } };
+    ui.querySelector('[data-crop=next]').onclick=()=>{ if(cropDoc&&cropPage<cropDoc.numPages){ cropPage++; drawCropPage(); } };
+    ui.querySelector('[data-crop=reset]').onclick=()=>{ for(const k of ['top','right','bottom','left']){ const i=document.getElementById('edit-'+k); if(i) i.value=0; } placeCropBox(); };
+    for(const k of ['top','right','bottom','left']) document.getElementById('edit-'+k)?.addEventListener('input', placeCropBox);
+    document.getElementById('cropBox').addEventListener('pointerdown', cropDrag);
+  }
+  if(cropFile!==files[0]){ cropFile=files[0]; cropPage=1; try{ if(cropDoc) cropDoc.destroy(); }catch(e){} cropDoc=await pdfjsLib.getDocument({data:new Uint8Array(await files[0].arrayBuffer()), isEvalSupported:false}).promise; }
+  drawCropPage();
+}
+let cropMm={w:210,h:297};
+async function drawCropPage(){
+  const c=document.getElementById('cropCanvas'); if(!c||!cropDoc) return;
+  const page=await cropDoc.getPage(cropPage), v=page.getViewport({scale:1});
+  cropMm={w:v.width*25.4/72, h:v.height*25.4/72};
+  const stage=document.getElementById('cropStage'), maxW=Math.min(stage.parentElement.clientWidth||520, 560), maxH=Math.max(320, innerHeight*0.65);
+  const scale=Math.min(maxW/v.width, maxH/v.height), vp=page.getViewport({scale:scale*Math.min(2, devicePixelRatio||1)});
+  c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height); c.style.width=Math.round(v.width*scale)+'px'; c.style.height=Math.round(v.height*scale)+'px';
+  stage.style.width=c.style.width; stage.style.height=c.style.height;
+  const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height);
+  await page.render({canvasContext:g, viewport:vp}).promise;
+  document.getElementById('cropPageNo').textContent=L(`Page ${cropPage} / ${cropDoc.numPages}`,`Halaman ${cropPage} / ${cropDoc.numPages}`);
+  placeCropBox();
+}
+const cropVal=k=>Math.max(0, Number(document.getElementById('edit-'+k)?.value)||0);
+function placeCropBox(){
+  const stage=document.getElementById('cropStage'), box=document.getElementById('cropBox'); if(!stage||!box) return;
+  const W=stage.clientWidth, H=stage.clientHeight;
+  let l=cropVal('left')/cropMm.w*W, r=W-cropVal('right')/cropMm.w*W, t=cropVal('top')/cropMm.h*H, b=H-cropVal('bottom')/cropMm.h*H;
+  if(r-l<8) r=l+8; if(b-t<8) b=t+8;
+  Object.assign(box.style,{left:l+'px',top:t+'px',width:(r-l)+'px',height:(b-t)+'px'});
+  const d=k=>stage.querySelector(`.crop-dim[data-d="${k}"]`);
+  Object.assign(d('t').style,{left:0,top:0,width:W+'px',height:t+'px'});
+  Object.assign(d('b').style,{left:0,top:b+'px',width:W+'px',height:(H-b)+'px'});
+  Object.assign(d('l').style,{left:0,top:t+'px',width:l+'px',height:(b-t)+'px'});
+  Object.assign(d('r').style,{left:r+'px',top:t+'px',width:(W-r)+'px',height:(b-t)+'px'});
+}
+function cropDrag(e){
+  e.preventDefault();
+  const stage=document.getElementById('cropStage'), W=stage.clientWidth, H=stage.clientHeight, rect=stage.getBoundingClientRect();
+  const h=e.target.dataset.h||'move', sx=e.clientX, sy=e.clientY;
+  const s0={l:cropVal('left')/cropMm.w*W, r:W-cropVal('right')/cropMm.w*W, t:cropVal('top')/cropMm.h*H, b:H-cropVal('bottom')/cropMm.h*H};
+  const set=(k,px,size,mm)=>{ const i=document.getElementById('edit-'+k); if(i) i.value=Math.round(Math.max(0,px)/size*mm*2)/2; };
+  const move=ev=>{
+    const dx=ev.clientX-sx, dy=ev.clientY-sy, MIN=12;
+    let {l,r,t,b}=s0;
+    if(h==='move'){ const w=r-l, hh=b-t; l=Math.min(Math.max(0,l+dx),W-w); t=Math.min(Math.max(0,t+dy),H-hh); r=l+w; b=t+hh; }
+    else{
+      if(h.includes('w')) l=Math.min(Math.max(0,l+dx), r-MIN);
+      if(h.includes('e')) r=Math.max(Math.min(W,r+dx), l+MIN);
+      if(h.includes('n')) t=Math.min(Math.max(0,t+dy), b-MIN);
+      if(h.includes('s')) b=Math.max(Math.min(H,b+dy), t+MIN);
+    }
+    set('left',l,W,cropMm.w); set('right',W-r,W,cropMm.w); set('top',t,H,cropMm.h); set('bottom',H-b,H,cropMm.h);
+    placeCropBox();
+  };
+  const up=()=>{ removeEventListener('pointermove',move); removeEventListener('pointerup',up); };
+  addEventListener('pointermove',move); addEventListener('pointerup',up);
+  void rect;
+}
 async function buildRotatePreview(){
   if(active!=='rotate-pdf' || files.length===0) return;
   try{
@@ -1913,6 +1999,7 @@ function updateFileUI({preserveError=false}={}){
   if(t.id==='merge-pdf') $('#btnText').textContent = L(`Merge ${files.length} PDF →`,`Gabung ${files.length} PDF →`);
   else if(t.id==='split-pdf'){ buildSplitPreview(); }
   else if(t.id==='rotate-pdf'){ buildRotatePreview(); $('#btnText').textContent=L('Rotate PDF →','Putar PDF →'); }
+  else if(t.id==='crop-pdf'){ buildCropPreview().catch(e=>log('Crop preview fail '+(e&&e.message||e))); }
   else if(t.id==='compress-pdf'){ $('#btnText').textContent=L('Compress PDF →','Kompres PDF →'); }
   else if(t.id==='organize-pdf'){ buildOrganizePreview(); $('#btnText').textContent=L(`Save organized PDF (${organizeOrder.length||'?'} pages) →`,`Simpan Organize (${organizeOrder.length||'?'} hal) →`); }
   else if(window.PDFExtra&&PDFExtra.has(t.id)){ $('#btnText').textContent=PDFExtra.button(t.id); PDFExtra.onFiles(t.id, files).catch(e=>showError(e.message||String(e))); }
