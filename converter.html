@@ -188,7 +188,7 @@
   <!-- top bar -->
   <div class="sticky top-3 z-50 max-w-[1440px] mx-auto px-4 pt-3">
     <nav class="clay-nav">
-      <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=green" alt="MyFlipbook" width="128" height="34"></a>
+      <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=pro" alt="MyFlipbook" width="139" height="34"></a>
       <span style="display:flex;align-items:center;gap:8px"><span data-auth-slot></span><a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px" data-en="← All tools">← Semua alat</a></span>
     </nav>
   </div>
@@ -2057,6 +2057,27 @@ let _lastObjectUrl=null;
 window.addEventListener('pagehide', ()=>{ if(_lastObjectUrl) URL.revokeObjectURL(_lastObjectUrl); });
 // flipbookSource: for Word/Excel/PPT made FROM a PDF, the flipbook is built
 // from that source PDF (a flipbook always reads a PDF).
+// The result's pages drawn at the preview's width, one under another (first 10; the
+// note says how many more there are). Found by id each time: notes added above the
+// preview rebuild its html.
+async function showPdfPages(blob, url){
+  const MAX=10, box=()=>document.getElementById('resultPages');
+  try{
+    const pdf=await pdfjsLib.getDocument({data:new Uint8Array(await blob.arrayBuffer()), isEvalSupported:false}).promise;
+    const n=pdf.numPages, dpr=Math.min(2, window.devicePixelRatio||1);
+    for(let i=1;i<=Math.min(n,MAX);i++){
+      const b=box(); if(!b) break;
+      const width=b.clientWidth||600, pg=await pdf.getPage(i), v=pg.getViewport({scale:1}), vp=pg.getViewport({scale:width*dpr/v.width});
+      const c=document.createElement('canvas'); c.width=Math.ceil(vp.width); c.height=Math.ceil(vp.height);
+      c.style.cssText='width:100%;height:auto;display:block;border:1px solid #E8E2D4;border-radius:8px;background:#fff';
+      const g=c.getContext('2d'); g.fillStyle='#fff'; g.fillRect(0,0,c.width,c.height);
+      await pg.render({canvasContext:g, viewport:vp}).promise; pg.cleanup();
+      const now=box(); if(!now) break; now.append(c);
+    }
+    if(n>MAX && box()){ const p=document.createElement('p'); p.className='text-center text-xs text-gray-500'; p.textContent=L(`+ ${n-MAX} more page(s) — download the file to see them all`,`+ ${n-MAX} halaman lagi — unduh file untuk melihat semuanya`); box().append(p); }
+    pdf.destroy();
+  }catch(e){ const b=box(); if(b) b.innerHTML=`<iframe src="${url}" class="w-full h-[380px] rounded-lg border bg-white"></iframe>`; }
+}
 function downloadBlob(blob, filename, {flipbookSource=null}={}){
   const flipbookButton = $('#makeFlipbook');
   const bookPdf = blob.type.includes('pdf') ? {blob, name:filename} : (flipbookSource ? {blob:flipbookSource, name:flipbookSource.name||'document.pdf'} : null);
@@ -2092,14 +2113,18 @@ function downloadBlob(blob, filename, {flipbookSource=null}={}){
   resultActionsHome();
   $('#progress').textContent=L('✅ Done — grab your download below.','✅ Selesai — ambil unduhannya di bawah.');
   log('Download ready: '+filename+' '+(blob.size/1024).toFixed(1)+'KB type='+blob.type);
-  if(blob.type.includes('pdf')){
-    $('#resultPreview').innerHTML=`<iframe src="${url}" class="w-full h-[380px] rounded-lg border bg-white"></iframe><p class="mt-2 text-center text-gray-500 text-xs">${filename} • ${(blob.size/1024).toFixed(1)} KB</p>`;
+  // A PDF result shows its pages whole (no viewer box to scroll inside).
+  const preview=$('#resultPreview'), isPdf=blob.type.includes('pdf');
+  preview.style.maxHeight=isPdf?'none':''; preview.style.overflow=isPdf?'visible':'';
+  if(isPdf){
+    preview.innerHTML=`<div id="resultPages" style="display:grid;gap:12px"></div><p class="mt-2 text-center text-gray-500 text-xs">${filename} • ${(blob.size/1024).toFixed(1)} KB</p>`;
+    showPdfPages(blob, url);
   }else if(blob.type.includes('zip') || filename.endsWith('.zip')){
-    $('#resultPreview').innerHTML=`<div class="text-center py-8">📦 ZIP siap download<br><b>${filename}</b><br>${(blob.size/1024).toFixed(1)} KB</div>`;
+    preview.innerHTML=`<div class="text-center py-8">${L('📦 ZIP ready to download','📦 ZIP siap diunduh')}<br><b>${filename}</b><br>${(blob.size/1024).toFixed(1)} KB</div>`;
   }else if(blob.type.includes('sheet') || filename.endsWith('.xlsx')){
-    $('#resultPreview').innerHTML=`<div class="text-center py-8">📊 Excel siap<br><b>${filename}</b><br>${(blob.size/1024).toFixed(1)} KB</div>`;
+    preview.innerHTML=`<div class="text-center py-8">${L('📊 Excel ready','📊 Excel siap')}<br><b>${filename}</b><br>${(blob.size/1024).toFixed(1)} KB</div>`;
   }else if(filename.endsWith('.doc')){
-    $('#resultPreview').innerHTML=`<div class="text-center py-6">📄 Word (.doc) siap<br><span class="text-gray-500">Buka dengan MS Word / Google Docs</span></div>`;
+    preview.innerHTML=`<div class="text-center py-6">${L('📄 Word (.doc) ready','📄 Word (.doc) siap')}<br><span class="text-gray-500">${L('Open it with MS Word / Google Docs','Buka dengan MS Word / Google Docs')}</span></div>`;
   }else if(filename.endsWith('.docx')){
     const box=document.createElement('div'); box.className='text-center py-6';
     box.append('📝 Word (.docx) ready — open with MS Word / Google Docs');
