@@ -118,15 +118,36 @@
 <section class="showcase hero-image">
   <!-- The banner carries the headline visually; keep a real heading for search engines and screen readers. -->
   <h1 class="sr-only">Buat Flipbook dari PDF &amp; Alat PDF Gratis Berbahasa Indonesia — MyFlipbook Pro</h1>
-  <picture>
-    <!-- Phones: the left part of the banner (logo + headline) at a readable size. -->
-    <source media="(max-width: 640px)" type="image/webp" srcset="assets/img/hero-mobile.webp?v=pro">
-    <source media="(max-width: 640px)" srcset="assets/img/hero-mobile.jpg?v=pro">
-    <source type="image/webp" srcset="assets/img/hero-900.webp?v=pro 900w, assets/img/hero-1671.webp?v=pro 1671w" sizes="(max-width: 1440px) 100vw, 1440px">
-    <img class="hero-banner" src="assets/img/hero-1671.jpg?v=pro" srcset="assets/img/hero-900.jpg?v=pro 900w, assets/img/hero-1671.jpg?v=pro 1671w" sizes="(max-width: 1440px) 100vw, 1440px"
+  <picture id="heroPic">
+    <!-- Phones: the left part of the banner (logo + headline) at a readable size.
+         Indonesian banner by default; English mode swaps hero-id-* for hero-* (script below). -->
+    <source media="(max-width: 640px)" type="image/webp" srcset="assets/img/hero-id-mobile.webp?v=1">
+    <source media="(max-width: 640px)" srcset="assets/img/hero-id-mobile.jpg?v=1">
+    <source type="image/webp" srcset="assets/img/hero-id-900.webp?v=1 900w, assets/img/hero-id-1671.webp?v=1 1671w" sizes="(max-width: 1440px) 100vw, 1440px">
+    <img class="hero-banner" src="assets/img/hero-id-1671.jpg?v=1" srcset="assets/img/hero-id-900.jpg?v=1 900w, assets/img/hero-id-1671.jpg?v=1 1671w" sizes="(max-width: 1440px) 100vw, 1440px"
       width="1671" height="941" fetchpriority="high"
-      alt="MyFlipbook: turn your documents into interactive flipbooks. Convert PDF, images, PPT and more; merge, split and convert your files in one place.">
+      alt="MyFlipbook Pro: ubah dokumen jadi flipbook interaktif. Ubah PDF, gambar, PPT, dan lainnya; gabung, pisah, dan konversi file di satu tempat."
+      data-en-alt="MyFlipbook Pro: turn your documents into interactive flipbooks. Convert PDF, images, PPT and more; merge, split and convert your files in one place.">
   </picture>
+  <script>
+    // The banner's text is part of the picture: show the one in the site language.
+    (function () {
+      var pic = document.getElementById('heroPic'), img = pic.querySelector('img'), idAlt = img.alt;
+      function apply() {
+        var en = window.I18N && I18N.get() === 'en';
+        pic.querySelectorAll('source, img').forEach(function (el) {
+          ['srcset', 'src'].forEach(function (a) {
+            var v = el.getAttribute(a); if (!v) return;
+            var w = en ? v.replace(/hero-id-(1671|900|mobile)\.(webp|jpg)\?v=1/g, 'hero-$1.$2?v=pro')
+                       : v.replace(/hero-(1671|900|mobile)\.(webp|jpg)\?v=pro/g, 'hero-id-$1.$2?v=1');
+            if (w !== v) el.setAttribute(a, w);
+          });
+        });
+        img.alt = en ? img.getAttribute('data-en-alt') : idAlt;
+      }
+      apply(); document.addEventListener('langchange', apply);
+    })();
+  </script>
   <div class="horde-rows" id="horde" hidden></div>
   <div class="showcase-bar">
     <div id="filters"></div>
@@ -136,7 +157,6 @@
 <main class="relative z-10 max-w-[1440px] mx-auto px-4 py-8" id="tools">
   <div class="flex items-end justify-between mb-4">
     <h2 class="serif text-[22px] md:text-[26px] font-black tracking-tight"><span data-i18n="grid.title">Pick your weapon</span> <span class="text-[#FF5C28]">↓</span></h2>
-    <p class="text-[12px] text-[#78716C] font-semibold hidden sm:block" data-i18n="grid.sub">Click a card → jump straight into the tool. Workflows live at the top.</p>
   </div>
   <div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>
   <p id="empty" class="hidden text-center text-gray-400 mt-12" data-i18n="grid.empty"></p>

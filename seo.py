@@ -18,7 +18,7 @@ import articles
 SITE = 'https://myflipbookpro.com'
 BRAND = 'MyFlipbook Pro'
 CONTACT = 'cs@myflipbookpro.com'
-OG_IMAGE = SITE + '/assets/img/hero-1671.jpg'
+OG_IMAGE = SITE + '/assets/img/hero-id-1671.jpg'   # the Indonesian banner (main site language)
 OG_SIZE = (1671, 941)
 HOME_TITLE = 'Buat Flipbook dari PDF & Alat PDF Gratis | MyFlipbook Pro'
 # The titles search engines see on the app pages (their scripts may still switch the tab title).
