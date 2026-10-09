@@ -16,22 +16,22 @@ import time
 import articles
 
 SITE = 'https://myflipbookpro.com'
-BRAND = 'MyFlipbook'
+BRAND = 'MyFlipbook Pro'
 CONTACT = 'cs@myflipbookpro.com'
 OG_IMAGE = SITE + '/assets/img/hero-1671.jpg'
 OG_SIZE = (1671, 941)
-HOME_TITLE = 'MyFlipbook — Buat Flipbook dari PDF & Alat PDF Lengkap Berbahasa Indonesia'
+HOME_TITLE = 'Buat Flipbook dari PDF & Alat PDF Gratis | MyFlipbook Pro'
 # The titles search engines see on the app pages (their scripts may still switch the tab title).
 APP_TITLES = {
     'index.html': HOME_TITLE,
-    'converter.html': 'Alat PDF Online Lengkap — Kompres, Gabung, Pisah, PDF ke Word | MyFlipbook',
-    'flipbook.html': 'PDF ke Flipbook — Buat Majalah & E-book Digital Interaktif | MyFlipbook',
-    'journals.html': 'Cari Jurnal Ilmiah & Ebook Open Access | MyFlipbook',
-    'notebook.html': 'AI Summarizer — Ringkas PDF & Jurnal dengan AI | MyFlipbook',
-    'workflow.html': 'Buat Alur Kerja PDF Otomatis | MyFlipbook',
-    'editor.html': 'Edit PDF Online seperti Word — Ubah Teks & Gambar Langsung di Halaman | MyFlipbook',
+    'converter.html': 'Alat PDF Online Lengkap | MyFlipbook Pro',
+    'flipbook.html': 'PDF ke Flipbook Gratis, Bisa Offline | MyFlipbook Pro',
+    'journals.html': 'Cari Jurnal Ilmiah & Ebook Open Access | MyFlipbook Pro',
+    'notebook.html': 'AI Summarizer: Ringkas PDF & Jurnal | MyFlipbook Pro',
+    'workflow.html': 'Alur Kerja PDF Otomatis | MyFlipbook Pro',
+    'editor.html': 'Edit PDF Online seperti Word | MyFlipbook Pro',
 }
-UPDATED = '2026-10-06'
+UPDATED = '2026-10-09'
 
 # slug, link into the app, short name, <title>, meta description, h1, lead,
 # steps, why, faq, browser (file never leaves the device), related slugs.
@@ -48,9 +48,13 @@ PRIVATE = ('File diproses langsung di browser Anda — tidak diunggah ke server 
 SERVER = ('File dikirim lewat koneksi terenkripsi (HTTPS) ke server MyFlipbook untuk dikonversi, lalu langsung '
           'dihapus setelah hasilnya dikirim kembali ke Anda.')
 TRIAL = 'Daftar gratis dan coba semua fitur selama 7 hari — tanpa kartu kredit.'
+# PDF to flipbook stores nothing on its own, but My Library and share links do (share.py: public, not encrypted).
+FLIPBOOK_PRIVACY = ('Tidak, kecuali Anda memilihnya. Flipbook dibuat langsung di browser Anda. File baru tersimpan di server bila '
+                    'Anda menyimpannya ke My Library (tersimpan terenkripsi) atau membuat share link (bisa dibuka siapa pun yang '
+                    'memegang link-nya, jadi jangan bagikan dokumen rahasia).')
 
 page('pdf-ke-flipbook', 'flipbook.html', 'PDF ke Flipbook',
-     'Ubah File PDF Menjadi Buku Digital (Flipbook) Gratis | MyFlipbook',
+     'PDF ke Flipbook Gratis, Bisa Offline | MyFlipbook Pro',
      'Ubah PDF menjadi flipbook interaktif dengan efek bolak-balik halaman seperti buku asli. Bisa dibagikan lewat link, '
      'dibaca dengan suara, diterjemahkan, dan diekspor ke HTML, APK, atau EXE.',
      'Ubah File PDF Menjadi Buku Digital yang Bisa Dibalik',
@@ -66,11 +70,12 @@ page('pdf-ke-flipbook', 'flipbook.html', 'PDF ke Flipbook',
      [('Apakah membuat flipbook di MyFlipbook gratis?', 'Membaca dan membuat flipbook bisa dicoba gratis. Akun baru mendapat masa coba 7 hari untuk semua fitur. Ekspor HTML offline dan aplikasi APK tersedia di paket Pro, aplikasi Windows (EXE) di paket Business.'),
       ('PDF seperti apa yang bisa dijadikan flipbook?', 'Hampir semua PDF: majalah, katalog, buku, modul, jurnal, portofolio, hingga PDF hasil scan. Halaman bergambar tetap bisa distabilo dan dibacakan berkat OCR.'),
       ('Bagaimana cara membagikan flipbook?', 'Simpan ke My Library lalu buat share link. Siapa pun yang punya link bisa membacanya di browser tanpa perlu login.'),
-      ('Apakah bisa dibuka tanpa internet?', 'Bisa. Ekspor flipbook ke HTML offline atau jadikan aplikasi Android/Windows supaya bisa dibaca tanpa koneksi.')],
-     browser=True, related=['terjemahkan-pdf', 'pdf-jadi-audiobook', 'kompres-pdf', 'gabung-pdf'])
+      ('Apakah bisa dibuka tanpa internet?', 'Bisa. Ekspor flipbook ke HTML offline atau jadikan aplikasi Android/Windows supaya bisa dibaca tanpa koneksi.'),
+      ('Apakah PDF saya disimpan di server?', FLIPBOOK_PRIVACY)],
+     browser=False, related=['terjemahkan-pdf', 'pdf-jadi-audiobook', 'kompres-pdf', 'gabung-pdf'])
 
 page('terjemahkan-pdf', 'flipbook.html', 'Terjemahkan PDF',
-     'Terjemahkan PDF Inggris ke Bahasa Indonesia, Layout Tetap Rapi | MyFlipbook',
+     'Terjemahkan PDF ke Indonesia, Layout Tetap | MyFlipbook Pro',
      'Terjemahkan buku, jurnal, atau majalah PDF dari bahasa Inggris ke Bahasa Indonesia. Teks terjemahan ditempatkan '
      'mengikuti kolom aslinya, lengkap dengan stabilo dan audio book.',
      'Terjemahkan PDF Bahasa Inggris ke Bahasa Indonesia',
@@ -89,7 +94,7 @@ page('terjemahkan-pdf', 'flipbook.html', 'Terjemahkan PDF',
      browser=False, related=['pdf-ke-flipbook', 'ringkas-pdf-ai', 'cari-jurnal-ebook'])
 
 page('pdf-jadi-audiobook', 'flipbook.html', 'PDF jadi Audio Book',
-     'Ubah PDF Jadi Audio Book — Dengarkan Buku Dibacakan | MyFlipbook',
+     'PDF Jadi Audiobook, Buku Dibacakan | MyFlipbook Pro',
      'Dengarkan isi PDF dibacakan halaman demi halaman. Cocok untuk belajar sambil beraktivitas, membaca jurnal, '
      'atau membantu yang lebih nyaman mendengar daripada membaca.',
      'Dengarkan PDF Anda Dibacakan Seperti Audio Book',
@@ -105,7 +110,7 @@ page('pdf-jadi-audiobook', 'flipbook.html', 'PDF jadi Audio Book',
      browser=True, related=['pdf-ke-flipbook', 'terjemahkan-pdf', 'ocr-pdf'])
 
 page('ringkas-pdf-ai', 'notebook.html', 'AI Summarizer',
-     'Ringkas PDF dengan AI — Rangkuman Jurnal & Dokumen Otomatis | MyFlipbook',
+     'Ringkas PDF & Jurnal dengan AI | MyFlipbook Pro',
      'Buat ringkasan PDF otomatis dengan AI: rangkuman poin penting, terjemahan, hingga podcast dari dokumen Anda. '
      'Cocok untuk jurnal, skripsi, laporan, dan materi kuliah.',
      'Ringkas PDF dengan AI dalam Hitungan Detik',
@@ -120,7 +125,7 @@ page('ringkas-pdf-ai', 'notebook.html', 'AI Summarizer',
      browser=False, related=['cari-jurnal-ebook', 'terjemahkan-pdf', 'pdf-ke-word'])
 
 page('cari-jurnal-ebook', 'journals.html', 'Cari Jurnal & Ebook',
-     'Cari Jurnal Ilmiah & Ebook Gratis (Open Access) | MyFlipbook',
+     'Cari Jurnal & Ebook Gratis (Open Access) | MyFlipbook Pro',
      'Cari jurnal ilmiah (OpenAlex) dan ebook berlisensi terbuka (OAPEN, Internet Archive) dalam satu tempat, lalu '
      'langsung baca sebagai flipbook atau ringkas dengan AI.',
      'Cari Jurnal Ilmiah & Ebook Open Access dalam Satu Tempat',
@@ -140,7 +145,7 @@ def tool(slug, tool_id, name, title, description, h1, lead, steps, why, faq, bro
 
 
 tool('kompres-pdf', 'compress-pdf', 'Kompres PDF',
-     'Kompres PDF Online — Perkecil Ukuran File PDF Tanpa Upload | MyFlipbook',
+     'Kompres PDF Online Tanpa Upload | MyFlipbook Pro',
      'Perkecil ukuran file PDF agar mudah dikirim lewat email, WhatsApp, atau diunggah ke portal pendaftaran. Diproses '
      'di browser, file tidak diunggah.',
      'Kompres PDF — Perkecil Ukuran File dengan Mudah',
@@ -152,7 +157,7 @@ tool('kompres-pdf', 'compress-pdf', 'Kompres PDF',
       ('Apakah file saya diunggah?', 'Tidak. Kompresi berjalan di browser Anda.')],
      related=['gabung-pdf', 'pisah-pdf', 'jpg-ke-pdf', 'pdf-ke-flipbook'])
 tool('gabung-pdf', 'merge-pdf', 'Gabung PDF',
-     'Gabung PDF Online — Satukan Beberapa File PDF Jadi Satu | MyFlipbook',
+     'Gabung PDF Online Jadi Satu File | MyFlipbook Pro',
      'Gabungkan beberapa file PDF menjadi satu dokumen dengan urutan yang bisa diatur. Diproses di browser, file tidak diunggah.',
      'Gabung PDF — Satukan Banyak File Jadi Satu Dokumen',
      'Satukan KTP, ijazah, transkrip, dan dokumen lain menjadi satu PDF rapi — urutannya bisa diatur sebelum digabung.',
@@ -162,7 +167,7 @@ tool('gabung-pdf', 'merge-pdf', 'Gabung PDF',
       ('Apakah file saya diunggah?', 'Tidak. Penggabungan berjalan di browser Anda.')],
      related=['pisah-pdf', 'kompres-pdf', 'atur-halaman-pdf', 'jpg-ke-pdf'])
 tool('pisah-pdf', 'split-pdf', 'Pisah PDF',
-     'Pisah PDF Online — Ambil Halaman Tertentu dari PDF | MyFlipbook',
+     'Pisah PDF, Ambil Halaman Tertentu | MyFlipbook Pro',
      'Pisahkan PDF atau ambil halaman tertentu saja cukup dengan klik halamannya. Diproses di browser, file tidak diunggah.',
      'Pisah PDF — Ambil Halaman yang Anda Butuhkan',
      'Butuh hanya beberapa halaman dari PDF yang tebal? Klik halaman yang ingin diambil, lalu simpan sebagai PDF baru.',
@@ -172,7 +177,7 @@ tool('pisah-pdf', 'split-pdf', 'Pisah PDF',
       ('Apakah file saya diunggah?', 'Tidak. Pemisahan berjalan di browser Anda.')],
      related=['gabung-pdf', 'atur-halaman-pdf', 'kompres-pdf'])
 tool('pdf-ke-word', 'pdf-to-word', 'PDF ke Word',
-     'PDF ke Word Online — Ubah PDF Jadi Dokumen Word yang Bisa Diedit | MyFlipbook',
+     'PDF ke Word Online, Bisa Diedit | MyFlipbook Pro',
      'Ubah PDF menjadi file Word (.docx) yang bisa diedit. Diproses di browser, file tidak diunggah.',
      'Ubah PDF ke Word yang Bisa Diedit',
      'Perlu mengedit isi PDF? Ubah menjadi dokumen Word (.docx), lalu sunting di Microsoft Word atau Google Docs.',
@@ -182,7 +187,7 @@ tool('pdf-ke-word', 'pdf-to-word', 'PDF ke Word',
       ('Apakah PDF hasil scan bisa?', 'Gunakan OCR PDF dahulu agar teksnya terbaca.')],
      related=['word-ke-pdf', 'ocr-pdf', 'pdf-ke-excel', 'pdf-ke-ppt'])
 tool('word-ke-pdf', 'word-to-pdf', 'Word ke PDF',
-     'Word ke PDF Online — Ubah DOCX Jadi PDF | MyFlipbook',
+     'Word ke PDF Online — Ubah DOCX Jadi PDF | MyFlipbook Pro',
      'Ubah dokumen Word (.doc/.docx) menjadi PDF dengan format yang rapi dan konsisten di semua perangkat.',
      'Ubah Word ke PDF dengan Format Rapi',
      'Kirim CV, surat, atau tugas dalam format PDF supaya tampilannya sama di semua perangkat.',
@@ -192,7 +197,7 @@ tool('word-ke-pdf', 'word-to-pdf', 'Word ke PDF',
       ('Apakah file saya disimpan?', 'Tidak, file dihapus setelah hasilnya dikirim kembali.')],
      browser=False, related=['pdf-ke-word', 'excel-ke-pdf', 'ppt-ke-pdf', 'gabung-pdf'])
 tool('jpg-ke-pdf', 'jpg-to-pdf', 'JPG ke PDF',
-     'JPG ke PDF Online — Ubah Foto & Gambar Jadi PDF | MyFlipbook',
+     'JPG ke PDF Online, Foto Jadi PDF | MyFlipbook Pro',
      'Ubah foto JPG/PNG menjadi satu file PDF, misalnya foto dokumen, KTP, atau tugas tulisan tangan. Diproses di browser.',
      'Ubah Foto JPG ke PDF',
      'Foto dokumen, KTP, atau tugas tulisan tangan? Satukan beberapa gambar menjadi satu PDF yang rapi.',
@@ -201,7 +206,7 @@ tool('jpg-ke-pdf', 'jpg-to-pdf', 'JPG ke PDF',
      [('Bisa dari HP?', 'Bisa, langsung dari browser HP.'), ('Apakah gambar saya diunggah?', 'Tidak. Konversi berjalan di browser Anda.')],
      related=['pdf-ke-jpg', 'gabung-pdf', 'kompres-pdf'])
 tool('pdf-ke-jpg', 'pdf-to-jpg', 'PDF ke JPG',
-     'PDF ke JPG Online — Simpan Halaman PDF Jadi Gambar | MyFlipbook',
+     'PDF ke JPG Online, Halaman Jadi Gambar | MyFlipbook Pro',
      'Ubah setiap halaman PDF menjadi gambar JPG berkualitas tinggi. Diproses di browser, file tidak diunggah.',
      'Ubah Halaman PDF Menjadi Gambar JPG',
      'Ambil halaman PDF sebagai gambar untuk diunggah ke media sosial, presentasi, atau dikirim lewat chat.',
@@ -210,7 +215,7 @@ tool('pdf-ke-jpg', 'pdf-to-jpg', 'PDF ke JPG',
      [('Apakah semua halaman bisa diubah?', 'Bisa, semua atau sebagian halaman.')],
      related=['jpg-ke-pdf', 'pisah-pdf', 'kompres-pdf'])
 tool('pdf-ke-excel', 'pdf-to-excel', 'PDF ke Excel',
-     'PDF ke Excel Online — Ambil Tabel dari PDF | MyFlipbook',
+     'PDF ke Excel Online — Ambil Tabel dari PDF | MyFlipbook Pro',
      'Ambil tabel dari PDF dan ubah menjadi file Excel yang bisa diolah. Diproses di browser, file tidak diunggah.',
      'Ubah Tabel PDF ke Excel',
      'Laporan keuangan atau data tabel dalam PDF? Ubah ke Excel supaya bisa langsung dihitung dan diolah.',
@@ -219,7 +224,7 @@ tool('pdf-ke-excel', 'pdf-to-excel', 'PDF ke Excel',
      [('Bagaimana dengan PDF hasil scan?', 'Jalankan OCR PDF dahulu agar angka dan teksnya terbaca.')],
      related=['excel-ke-pdf', 'pdf-ke-word', 'ocr-pdf'])
 tool('excel-ke-pdf', 'excel-to-pdf', 'Excel ke PDF',
-     'Excel ke PDF Online — Ubah XLSX Jadi PDF | MyFlipbook',
+     'Excel ke PDF Online — Ubah XLSX Jadi PDF | MyFlipbook Pro',
      'Ubah spreadsheet Excel (.xls/.xlsx/.csv) menjadi PDF yang rapi untuk laporan dan lampiran.',
      'Ubah Excel ke PDF',
      'Kirim laporan, anggaran, atau rekap nilai dalam bentuk PDF yang rapi dan tidak bisa berubah tanpa sengaja.',
@@ -228,7 +233,7 @@ tool('excel-ke-pdf', 'excel-to-pdf', 'Excel ke PDF',
      [('Perlu login?', 'Ya, konversi dokumen Office memerlukan akun (daftar gratis).')],
      browser=False, related=['pdf-ke-excel', 'word-ke-pdf', 'ppt-ke-pdf'])
 tool('pdf-ke-ppt', 'pdf-to-ppt', 'PDF ke PowerPoint',
-     'PDF ke PPT Online — Ubah PDF Jadi Slide PowerPoint | MyFlipbook',
+     'PDF ke PPT Online, Jadi Slide PowerPoint | MyFlipbook Pro',
      'Ubah PDF menjadi slide PowerPoint (.pptx) untuk presentasi. Diproses di browser, file tidak diunggah.',
      'Ubah PDF ke Slide PowerPoint',
      'Punya materi dalam PDF dan perlu dipresentasikan? Ubah menjadi slide PowerPoint.',
@@ -237,7 +242,7 @@ tool('pdf-ke-ppt', 'pdf-to-ppt', 'PDF ke PowerPoint',
      [('Apakah bisa diedit di Google Slides?', 'Bisa, file .pptx bisa dibuka di PowerPoint maupun Google Slides.')],
      related=['ppt-ke-pdf', 'pdf-ke-word', 'pdf-ke-flipbook'])
 tool('ppt-ke-pdf', 'ppt-to-pdf', 'PowerPoint ke PDF',
-     'PPT ke PDF Online — Ubah Slide PowerPoint Jadi PDF | MyFlipbook',
+     'PPT ke PDF Online, Slide Jadi PDF | MyFlipbook Pro',
      'Ubah presentasi PowerPoint (.ppt/.pptx) menjadi PDF yang mudah dibagikan.',
      'Ubah PowerPoint ke PDF',
      'Bagikan materi presentasi sebagai PDF supaya tampil sama di semua perangkat — atau lanjutkan jadi flipbook.',
@@ -246,7 +251,7 @@ tool('ppt-ke-pdf', 'ppt-to-pdf', 'PowerPoint ke PDF',
      [('Perlu login?', 'Ya, konversi dokumen Office memerlukan akun (daftar gratis).')],
      browser=False, related=['pdf-ke-ppt', 'pdf-ke-flipbook', 'word-ke-pdf'])
 tool('ocr-pdf', 'ocr-pdf', 'OCR PDF',
-     'OCR PDF Online — Jadikan PDF Hasil Scan Bisa Dicari & Disalin | MyFlipbook',
+     'OCR PDF Online, Hasil Scan Bisa Dicari | MyFlipbook Pro',
      'Kenali teks pada PDF hasil scan atau foto agar bisa dicari, disalin, dan dikonversi. Mendukung Bahasa Indonesia. '
      'Diproses di browser.',
      'OCR PDF — Ubah Hasil Scan Jadi Teks',
@@ -257,35 +262,35 @@ tool('ocr-pdf', 'ocr-pdf', 'OCR PDF',
      [('Seberapa akurat?', 'Sangat bergantung pada kejelasan hasil scan. Scan yang tegak dan terang memberi hasil terbaik.')],
      related=['pdf-ke-word', 'pdf-ke-excel', 'terjemahkan-pdf'])
 tool('putar-pdf', 'rotate-pdf', 'Putar PDF',
-     'Putar PDF Online — Rotasi Halaman PDF | MyFlipbook',
+     'Putar PDF Online — Rotasi Halaman PDF | MyFlipbook Pro',
      'Putar halaman PDF yang miring atau terbalik, satu per satu atau sekaligus. Diproses di browser.',
      'Putar Halaman PDF', 'Halaman hasil scan terbalik atau miring? Putar halaman yang perlu saja, lalu simpan.',
      ['Buka alat Putar PDF dan pilih file.', 'Putar halaman yang diinginkan.', 'Unduh hasilnya.'], [PRIVATE],
      [('Bisa memutar satu halaman saja?', 'Bisa, per halaman atau semua halaman sekaligus.')],
      related=['atur-halaman-pdf', 'potong-pdf', 'pisah-pdf'])
 tool('potong-pdf', 'crop-pdf', 'Potong PDF',
-     'Crop PDF Online — Potong Margin Halaman PDF | MyFlipbook',
+     'Crop PDF Online — Potong Margin Halaman PDF | MyFlipbook Pro',
      'Potong (crop) margin atau area tertentu pada halaman PDF. Diproses di browser.',
      'Potong (Crop) Halaman PDF', 'Buang margin kosong atau ambil bagian tertentu dari halaman PDF.',
      ['Buka alat Crop PDF dan pilih file.', 'Atur area potong.', 'Unduh hasilnya.'], [PRIVATE],
      [('Apakah isi di luar area hilang?', 'Area di luar potongan disembunyikan dari tampilan halaman.')],
      related=['putar-pdf', 'atur-halaman-pdf', 'kompres-pdf'])
 tool('atur-halaman-pdf', 'organize-pdf', 'Atur Halaman PDF',
-     'Atur Halaman PDF — Urutkan, Hapus & Pindah Halaman | MyFlipbook',
+     'Atur Halaman PDF: Urutkan & Hapus | MyFlipbook Pro',
      'Urutkan ulang, hapus, atau pindahkan halaman PDF dengan seret-lepas. Diproses di browser.',
      'Atur Ulang Halaman PDF', 'Urutan halaman salah atau ada halaman yang tidak perlu? Atur dengan seret-lepas.',
      ['Buka alat Atur PDF dan pilih file.', 'Seret halaman ke urutan baru atau hapus yang tidak perlu.', 'Unduh hasilnya.'],
      [PRIVATE], [('Apakah file asli berubah?', 'Tidak, hasilnya disimpan sebagai file baru.')],
      related=['pisah-pdf', 'gabung-pdf', 'putar-pdf'])
 tool('nomor-halaman-pdf', 'page-numbers', 'Nomor Halaman PDF',
-     'Tambah Nomor Halaman PDF Online | MyFlipbook',
+     'Tambah Nomor Halaman PDF Online | MyFlipbook Pro',
      'Tambahkan nomor halaman ke PDF dengan posisi yang bisa diatur — cocok untuk skripsi, makalah, dan laporan.',
      'Tambahkan Nomor Halaman ke PDF', 'Skripsi, makalah, atau laporan perlu nomor halaman? Tambahkan dalam beberapa klik.',
      ['Buka alat Nomor Halaman dan pilih file.', 'Pilih posisi dan format nomor.', 'Unduh hasilnya.'], [PRIVATE],
      [('Posisinya bisa diatur?', 'Bisa, di pojok atas atau bawah, kiri atau kanan.')],
      related=['watermark-pdf', 'gabung-pdf', 'atur-halaman-pdf'])
 tool('watermark-pdf', 'watermark', 'Watermark PDF',
-     'Tambah Watermark ke PDF Online | MyFlipbook',
+     'Tambah Watermark ke PDF Online | MyFlipbook Pro',
      'Tambahkan watermark teks ke PDF untuk menandai dokumen sebagai rahasia, draf, atau milik Anda. Diproses di browser.',
      'Tambahkan Watermark ke PDF', 'Tandai dokumen dengan teks seperti "RAHASIA", "DRAF", atau nama Anda sebelum dibagikan.',
      ['Buka alat Watermark dan pilih file.', 'Tulis teks watermark dan atur tampilannya.', 'Unduh hasilnya.'], [PRIVATE],
@@ -293,7 +298,7 @@ tool('watermark-pdf', 'watermark', 'Watermark PDF',
      related=['nomor-halaman-pdf', 'kompres-pdf', 'pdf-ke-flipbook'])
 
 tool('tanda-tangan-pdf', 'sign-pdf', 'Tanda Tangan PDF',
-     'Tanda Tangan PDF Online Gratis — Tanpa Print & Scan | MyFlipbook',
+     'Tanda Tangan PDF Online Gratis | MyFlipbook Pro',
      'Tanda tangani PDF langsung di browser: gambar tanda tangan, ketik nama, atau upload gambar, lalu taruh di halaman. '
      'File tidak diunggah ke server.',
      'Tanda Tangan PDF Tanpa Print dan Scan',
@@ -309,7 +314,7 @@ tool('tanda-tangan-pdf', 'sign-pdf', 'Tanda Tangan PDF',
       ('Apakah file saya diunggah?', 'Tidak. Semua proses berjalan di browser Anda.')],
      related=['isi-formulir-pdf', 'gabung-pdf', 'kompres-pdf', 'scan-ke-pdf'])
 tool('scan-ke-pdf', 'scan-to-pdf', 'Scan ke PDF',
-     'Scan Dokumen ke PDF dengan Kamera HP — Tanpa Aplikasi | MyFlipbook',
+     'Scan Dokumen ke PDF dengan Kamera HP | MyFlipbook Pro',
      'Foto dokumen dengan kamera HP dan jadikan PDF yang bersih: latar kertas diputihkan, tulisan lebih tegas. Langsung di '
      'browser, tanpa memasang aplikasi.',
      'Scan Dokumen ke PDF Langsung dari Kamera HP',
@@ -323,7 +328,7 @@ tool('scan-ke-pdf', 'scan-to-pdf', 'Scan ke PDF',
       ('Bagaimana membuat PDF-nya bisa dicari teksnya?', 'Setelah jadi, jalankan OCR PDF agar teks di hasil scan bisa dicari dan disalin.')],
      related=['jpg-ke-pdf', 'ocr-pdf', 'kompres-pdf', 'gabung-pdf'])
 tool('isi-formulir-pdf', 'pdf-forms', 'Isi Formulir PDF',
-     'Isi Formulir PDF Online — Ketik Langsung di Kolom Isian | MyFlipbook',
+     'Isi Formulir PDF Online, Ketik Langsung | MyFlipbook Pro',
      'Isi kolom formulir PDF (teks, centang, pilihan) langsung di browser, lalu simpan. Bisa dikunci agar isian tidak '
      'bisa diubah lagi.',
      'Isi Formulir PDF Tanpa Mencetak',
@@ -336,7 +341,7 @@ tool('isi-formulir-pdf', 'pdf-forms', 'Isi Formulir PDF',
       ('Apakah semua formulir didukung?', 'Formulir PDF standar (AcroForm) didukung. Formulir XFA belum, dan kolom formulir hanya bisa diisi huruf Latin.')],
      related=['tanda-tangan-pdf', 'gabung-pdf', 'kompres-pdf'])
 tool('sensor-pdf', 'redact-pdf', 'Sensor PDF (Redact)',
-     'Sensor PDF Permanen (Redact) — Hitamkan NIK & Data Pribadi | MyFlipbook',
+     'Sensor PDF Permanen (Redact) Online | MyFlipbook Pro',
      'Hitamkan NIK, nomor rekening, atau data pribadi di PDF secara permanen — teks di bawah kotak benar-benar dihapus, '
      'bukan sekadar ditutupi.',
      'Sensor Data Pribadi di PDF Secara Permanen',
@@ -351,7 +356,7 @@ tool('sensor-pdf', 'redact-pdf', 'Sensor PDF (Redact)',
       ('Apakah teks lain di halaman itu masih bisa dipilih?', 'Tidak. Seluruh halaman yang diberi kotak menjadi gambar; halaman lain tetap seperti semula.')],
      related=['tanda-tangan-pdf', 'kompres-pdf', 'watermark-pdf'])
 tool('bandingkan-pdf', 'compare-pdf', 'Bandingkan PDF',
-     'Bandingkan Dua PDF — Temukan Perubahan Teks Antar Versi | MyFlipbook',
+     'Bandingkan Dua PDF, Temukan Perubahan | MyFlipbook Pro',
      'Bandingkan dua versi PDF dan lihat baris yang dihapus (merah) dan ditambah (hijau) lengkap dengan nomor halamannya. '
      'Cocok untuk kontrak dan revisi dokumen.',
      'Bandingkan Dua Versi PDF, Lihat Bedanya',
@@ -535,7 +540,8 @@ def article_html(slug):
     if faq:
         data.append({'@context': 'https://schema.org', '@type': 'FAQPage', 'mainEntity': [
             {'@type': 'Question', 'name': q, 'acceptedAnswer': {'@type': 'Answer', 'text': ans}} for q, ans in faq]})
-    page = head(a['title'] + ' | MyFlipbook', a['description'], path, ''.join(ld(d) for d in data)).replace(
+    title = a['title'] + ' | ' + BRAND
+    page = head(title if len(title) <= 60 else a['title'], a['description'], path, ''.join(ld(d) for d in data)).replace(
         '<meta property="og:type" content="website">', '<meta property="og:type" content="article">')
     return page + f'''
 <body><div class="wrap">
@@ -577,7 +583,7 @@ APP_META = {
                    'ubah PDF ke Word/Excel/PPT, OCR, terjemahkan, dan ringkas dengan AI.', '/'),
     'converter.html': ('Semua alat PDF dalam satu tempat: kompres, gabung, pisah, putar, OCR, PDF ke Word/Excel/PPT/JPG, '
                        'dan sebaliknya. Sebagian besar berjalan langsung di browser.', '/converter.html'),
-    'flipbook.html': (LANDING['pdf-ke-flipbook']['description'], '/flipbook.html'),
+    'flipbook.html': (LANDING['pdf-ke-flipbook']['description'], '/pdf-ke-flipbook'),   # canonical: the landing page
     'journals.html': (LANDING['cari-jurnal-ebook']['description'], '/journals.html'),
     'notebook.html': (LANDING['ringkas-pdf-ai']['description'], '/notebook.html'),
     'workflow.html': ('Buat alur kerja PDF sendiri: gabungkan beberapa alat menjadi satu langkah otomatis.', '/workflow.html'),
@@ -587,6 +593,9 @@ APP_META = {
     'terms.html': (None, '/terms.html'),
 }
 NOINDEX = {'login.html', 'account.html', 'library.html', 'coming-soon.html', 'animation.html'}
+# Working app pages: thin for search and competing with their Indonesian landing pages.
+# Kept out of the index (links still followed) and out of the sitemap.
+APP_NOINDEX = {'converter.html', 'editor.html', 'notebook.html', 'journals.html', 'workflow.html'}
 
 
 def verification():
@@ -603,6 +612,8 @@ def app_head(page_name):
     """Tags added to an app page's <head> (bytes), or b'' when it has none."""
     if page_name in NOINDEX:
         return b'<meta name="robots" content="noindex">'
+    if page_name in APP_NOINDEX:
+        return b'<meta name="robots" content="noindex, follow">'
     if page_name not in APP_META:
         return b''
     description, path = APP_META[page_name]
@@ -616,7 +627,8 @@ def app_head(page_name):
         tags.append(verification())
         tags.append(f'<meta property="og:title" content="{esc(HOME_TITLE)}">')
         tags.append(ld({'@context': 'https://schema.org', '@graph': [
-            {'@type': 'Organization', 'name': BRAND, 'url': SITE + '/', 'logo': SITE + '/assets/img/logo.png', 'email': CONTACT,
+            {'@type': 'Organization', 'name': BRAND, 'alternateName': 'MyFlipbookPro', 'url': SITE + '/',
+             'logo': SITE + '/assets/img/logo.png', 'email': CONTACT,
              'contactPoint': {'@type': 'ContactPoint', 'contactType': 'customer support', 'email': CONTACT, 'availableLanguage': ['id', 'en']}},
             {'@type': 'WebSite', 'name': BRAND, 'url': SITE + '/', 'inLanguage': ['id', 'en']}]}))
     return ''.join(tags).encode('utf-8')
@@ -630,6 +642,14 @@ def footer_links():
     return f'<nav aria-label="Alat PDF" style="text-align:center;font-size:11px;font-weight:600;margin-top:10px;line-height:2">{links}</nav>'.encode('utf-8')
 
 
+def static_grid():
+    """The home page's tool cards as plain HTML, so the page has its content without JavaScript
+    (the page script rebuilds the grid with filters and icons when it runs)."""
+    return ''.join(f'<a href="/{s}" class="card p-5 flex flex-col min-h-[170px]"><h3 class="text-[15px] font-extrabold leading-tight serif">'
+                   f'{esc(p["name"])}</h3><p class="mt-3 text-[12.5px] leading-relaxed text-[#78716C]">{esc(p["description"])}</p></a>'
+                   for s, p in LANDING.items()).encode('utf-8')
+
+
 def add_head(page_name, body):
     extra = app_head(page_name)
     if not extra:
@@ -641,6 +661,8 @@ def add_head(page_name, body):
         title = esc(APP_TITLES[page_name]).encode()
         body = re.sub(rb'(<title[^>]*>)[^<]*(</title>)', lambda m: m[1] + title + m[2], body, count=1)
     if page_name == 'index.html':
+        body = body.replace(b'<div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>',
+                            b'<div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">' + static_grid() + b'</div>', 1)
         i = body.rfind(b'</footer>')
         body = body[:i] + footer_links() + body[i:] if i >= 0 else body
     return body
@@ -654,7 +676,6 @@ def robots():
 
 def sitemap():
     urls = [('/', '1.0')] + [('/' + s, '0.9') for s in LANDING] + [
-        (APP_META[p][1], '0.7') for p in ('converter.html', 'flipbook.html', 'editor.html', 'journals.html', 'notebook.html', 'workflow.html')] + [
         ('/privacy.html', '0.2'), ('/terms.html', '0.2'), ('/artikel', '0.8')]
     rows = ''.join(f'<url><loc>{esc(SITE + u)}</loc><lastmod>{UPDATED}</lastmod><priority>{pr}</priority></url>' for u, pr in urls)
     rows += ''.join(f'<url><loc>{SITE}/artikel/{a["slug"]}</loc><lastmod>{a["published"]}</lastmod><priority>0.8</priority></url>'

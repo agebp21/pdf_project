@@ -74,7 +74,19 @@ class SeoPages(unittest.TestCase):
         self.assertIn('<meta name="description"', home); self.assertIn('rel="canonical" href="https://myflipbookpro.com/"', home)
         self.assertIn('href="/kompres-pdf"', home, 'crawlable links to the landing pages')
         self.assertEqual(home.count('</head>'), 1)
-        self.assertIn('<title data-i18n="meta.title">MyFlipbook — Buat Flipbook dari PDF', home)
+        self.assertIn('<title data-i18n="meta.title">Buat Flipbook dari PDF &amp; Alat PDF Gratis | MyFlipbook Pro</title>', home)
+        self.assertIn('class="card p-5', home, 'tool cards in the HTML, without JavaScript')
+        self.assertNotIn('No tools in this category', home)
+        # app pages: the Indonesian landing page ranks; the apps stay out of the index and the sitemap
+        _, _, flip = self.get('/flipbook.html')
+        self.assertIn('rel="canonical" href="https://myflipbookpro.com/pdf-ke-flipbook"', flip)
+        _, _, xml = self.get('/sitemap.xml')
+        for page in ('converter', 'editor', 'notebook', 'journals', 'workflow'):
+            self.assertIn('<meta name="robots" content="noindex, follow">', self.get(f'/{page}.html')[2], page)
+            self.assertNotIn(f'/{page}.html<', xml)
+        self.assertNotIn('/flipbook.html<', xml)
+        for slug, page in seo.LANDING.items():
+            self.assertLessEqual(len(page['title']), 60, slug)
         with mock.patch.dict(os.environ, {'GOOGLE_SITE_VERIFICATION': 'abc123'}):
             self.assertIn('<meta name="google-site-verification" content="abc123">', self.get('/')[2])
         _, _, login = self.get('/login.html')
