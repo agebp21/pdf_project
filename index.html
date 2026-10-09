@@ -168,19 +168,20 @@
 </footer>
 
 <script>
-  const categories = ["All","Utilities","Workflows","Organize PDF","Optimize PDF","Convert PDF","Edit PDF","PDF Security","PDF Intelligence"];
+  // One category per tool (the Utilities card still opens every small tool at once).
+  const categories = ["All","Flipbook & AI","Convert PDF","Edit & Organize","PDF Security"];
   // Category names in the site language (the filter keeps the English key).
-  const CAT_ID = {"All":"Semua","Utilities":"Utilitas","Workflows":"Alur kerja","Organize PDF":"Atur PDF","Optimize PDF":"Optimalkan PDF","Convert PDF":"Konversi PDF","Edit PDF":"Edit PDF","PDF Security":"Keamanan PDF","PDF Intelligence":"Kecerdasan PDF"};
+  const CAT_ID = {"All":"Semua","Utilities":"Utilitas","Flipbook & AI":"Flipbook & AI","Convert PDF":"Konversi PDF","Edit & Organize":"Edit & Atur PDF","PDF Security":"Keamanan PDF"};
   const catLabel = c => (window.I18N && I18N.get() === 'id' && CAT_ID[c]) || c;
 
   const tools = [
-    {id:"pdf-to-flipbook", title:"PDF to Flipbook", desc:"Open your PDF as a digital book and add animated number stats to any page.", cat:["Workflows","Convert PDF"], color:"#1A3C34", icon:"▤", bg:"#E4F3C2", badge:"New!", href:"flipbook.html", feat:true},
-    {id:"journal-search", title:"Find Journal & Ebook", desc:"Find free journals & ebooks (Indonesian & international, open access) and turn any of them into a flipbook in one click.", cat:["Workflows","PDF Intelligence"], color:"#1D4ED8", icon:"🔎", bg:"#DBEAFE", badge:"New!", href:"journals.html", feat:true},
-    {id:"notebook", title:"AI Summarizer", desc:"Upload a PDF → AI summary, page-by-page translation and a two-host podcast.", cat:["PDF Intelligence","Workflows"], color:"#4C1D95", icon:"✦", bg:"#E9E4FF", badge:"AI", href:"notebook.html", feat:true},
-    {id:"organize-pdf", title:"Edit PDF", desc:"Edit text like Word and pictures like PowerPoint, add blank pages, merge, split and compress — scans and photos of documents too.", cat:["Edit PDF","Organize PDF","Optimize PDF"], color:"#7E22CE", icon:"✎", bg:"#FAE8FF", href:"editor.html", badge:"New!", feat:true},
+    {id:"pdf-to-flipbook", title:"PDF to Flipbook", desc:"Open your PDF as a digital book and add animated number stats to any page.", cat:["Flipbook & AI"], color:"#1A3C34", icon:"▤", bg:"#E4F3C2", badge:"New!", href:"flipbook.html", feat:true},
+    {id:"journal-search", title:"Find Journal & Ebook", desc:"Find free journals & ebooks (Indonesian & international, open access) and turn any of them into a flipbook in one click.", cat:["Flipbook & AI"], color:"#1D4ED8", icon:"🔎", bg:"#DBEAFE", badge:"New!", href:"journals.html", feat:true},
+    {id:"notebook", title:"AI Summarizer", desc:"Upload a PDF → AI summary, page-by-page translation and a two-host podcast.", cat:["Flipbook & AI"], color:"#4C1D95", icon:"✦", bg:"#E9E4FF", badge:"AI", href:"notebook.html", feat:true},
+    {id:"organize-pdf", title:"Edit PDF", desc:"Edit text like Word and pictures like PowerPoint, add blank pages, merge, split and compress — scans and photos of documents too.", cat:["Edit & Organize"], color:"#7E22CE", icon:"✎", bg:"#FAE8FF", href:"editor.html", badge:"New!", feat:true},
     {id:"utilities", title:"Utilities", desc:"Every converter and small PDF tool in one place: PDF ↔ Word, Excel, PowerPoint, JPG, HTML, Markdown, plus rotate, crop, page numbers, watermark, sign, redact, OCR and more.", cat:[], color:"#0E7490", icon:"🧰", bg:"#CFFAFE", feat:true, utilities:true},
-    {id:"flipbook-animation", title:"Flipbook Animation", desc:"Try moving charts, animated stats, and interactive flows inside a digital book.", cat:["Workflows"], color:"#1A3C34", icon:"▶", bg:"#FFE3D9", badge:"Demo", href:"animation.html", feat:true},
-    {id:"workflow", title:"Create a workflow", desc:"Create custom workflows with your favorite tools, automate tasks, and reuse them anytime.", cat:["Workflows"], color:"#9A3412", icon:"↗", bg:"#FFE3D9", workflow:true, soonCard:true, href:"workflow.html"},
+    {id:"flipbook-animation", title:"Flipbook Animation", desc:"Try moving charts, animated stats, and interactive flows inside a digital book.", cat:["Flipbook & AI"], color:"#1A3C34", icon:"▶", bg:"#FFE3D9", badge:"Demo", href:"animation.html", feat:true},
+    {id:"workflow", title:"Create a workflow", desc:"Create custom workflows with your favorite tools, automate tasks, and reuse them anytime.", cat:["Flipbook & AI"], color:"#9A3412", icon:"↗", bg:"#FFE3D9", workflow:true, soonCard:true, href:"workflow.html"},
     {id:"pdf-to-word", title:"PDF to Word", desc:"Word that looks like your PDF, with text you can edit right on the page.", cat:["Convert PDF"], color:"#1D4ED8", icon:"W", bg:"#DBEAFE"},
     {id:"pdf-to-ppt", title:"PDF to PowerPoint", desc:"Slides that keep the PDF design, every text line an editable text box.", cat:["Convert PDF"], color:"#9A3412", icon:"P", bg:"#FFEDD5"},
     {id:"pdf-to-excel", title:"PDF to Excel", desc:"Pull tables into Excel: real cells, real numbers, pages kept as images.", cat:["Convert PDF"], color:"#15803D", icon:"X", bg:"#DCFCE7"},
@@ -189,22 +190,22 @@
     {id:"excel-to-pdf", title:"Excel to PDF", desc:"Make EXCEL spreadsheets easy to read by converting them to PDF.", cat:["Convert PDF"], color:"#15803D", icon:"X", bg:"#DCFCE7"},
     {id:"pdf-to-jpg", title:"PDF to JPG", desc:"Convert each PDF page into a JPG or extract all images contained in a PDF.", cat:["Convert PDF"], color:"#92400E", icon:"🖼", bg:"#FEF9C3"},
     {id:"jpg-to-pdf", title:"Image to PDF", desc:"Any image to PDF: JPG, PNG, WebP, GIF, BMP, SVG, AVIF, TIFF, even iPhone HEIC.", cat:["Convert PDF"], color:"#92400E", icon:"IMG", bg:"#FEF9C3"},
-    {id:"sign-pdf", title:"Sign PDF", desc:"Draw, type or upload your signature and place it anywhere on the pages.", cat:["PDF Security","Edit PDF"], color:"#1E5A8A", icon:"✒", bg:"#DBEAFE"},
-    {id:"watermark", title:"Watermark", desc:"Stamp an image or text over your PDF in seconds.", cat:["Edit PDF"], color:"#7E22CE", icon:"◍", bg:"#FAE8FF"},
-    {id:"rotate-pdf", title:"Rotate PDF", desc:"Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!", cat:["Organize PDF"], color:"#7E22CE", icon:"↻", bg:"#FAE8FF"},
+    {id:"sign-pdf", title:"Sign PDF", desc:"Draw, type or upload your signature and place it anywhere on the pages.", cat:["Edit & Organize"], color:"#1E5A8A", icon:"✒", bg:"#DBEAFE"},
+    {id:"watermark", title:"Watermark", desc:"Stamp an image or text over your PDF in seconds.", cat:["Edit & Organize"], color:"#7E22CE", icon:"◍", bg:"#FAE8FF"},
+    {id:"rotate-pdf", title:"Rotate PDF", desc:"Rotate your PDFs the way you need them. You can even rotate multiple PDFs at once!", cat:["Edit & Organize"], color:"#7E22CE", icon:"↻", bg:"#FAE8FF"},
     {id:"html-to-pdf", title:"HTML to PDF", desc:"Convert webpages in HTML to PDF. Paste the URL and convert with a click.", cat:["Convert PDF"], color:"#92400E", icon:"HTML", bg:"#FEF9C3"},
     {id:"protect-pdf", title:"Protect PDF", desc:"Protect PDF files with a password. Encrypt PDF documents.", cat:["PDF Security"], color:"#1E5A8A", icon:"🛡", bg:"#DBEAFE"},
     {id:"pdf-to-pdfa", title:"PDF to PDF/A", desc:"Transform your PDF to PDF/A, the ISO-standardized version for archiving.", cat:["Convert PDF"], color:"#57534E", icon:"/A", bg:"#E7E5E4"},
-    {id:"repair-pdf", title:"Repair PDF", desc:"Repair a damaged PDF and recover data from corrupt PDF.", cat:["Optimize PDF"], color:"#15803D", icon:"🛠", bg:"#DCFCE7"},
-    {id:"page-numbers", title:"Page numbers", desc:"Add page numbers into PDFs with ease.", cat:["Edit PDF","Organize PDF"], color:"#7E22CE", icon:"1 2", bg:"#FAE8FF"},
+    {id:"repair-pdf", title:"Repair PDF", desc:"Repair a damaged PDF and recover data from corrupt PDF.", cat:["Edit & Organize"], color:"#15803D", icon:"🛠", bg:"#DCFCE7"},
+    {id:"page-numbers", title:"Page numbers", desc:"Add page numbers into PDFs with ease.", cat:["Edit & Organize"], color:"#7E22CE", icon:"1 2", bg:"#FAE8FF"},
     {id:"scan-to-pdf", title:"Scan to PDF", desc:"Photograph documents with your phone camera and get a clean, readable PDF.", cat:["Convert PDF"], color:"#9A3412", icon:"⎙", bg:"#FFEDD5"},
-    {id:"ocr-pdf", title:"OCR PDF", desc:"Easily convert scanned PDF into searchable and selectable documents.", cat:["PDF Intelligence","Convert PDF"], color:"#15803D", icon:"OCR", bg:"#DCFCE7"},
-    {id:"compare-pdf", title:"Compare PDF", desc:"Find what changed between two versions of a PDF, line by line.", cat:["Organize PDF"], color:"#1E5A8A", icon:"◫", bg:"#DBEAFE"},
-    {id:"redact-pdf", title:"Redact PDF", desc:"Permanently remove sensitive information from a PDF.", cat:["PDF Security","Edit PDF"], color:"#1D4ED8", icon:"█", bg:"#DBEAFE"},
-    {id:"crop-pdf", title:"Crop PDF", desc:"Crop margins or select specific areas, apply to one page or all.", cat:["Edit PDF","Organize PDF"], color:"#7E22CE", icon:"◧", bg:"#FAE8FF"},
-    {id:"pdf-forms", title:"PDF Forms", desc:"Fill in a fillable PDF form and save it — optionally locked.", cat:["Edit PDF"], color:"#7E22CE", icon:"Ab", bg:"#FAE8FF", badge:"New!"},
-    {id:"translate-pdf", title:"Translate PDF", desc:"Translate PDF with AI. Keep fonts, layout, and formatting intact.", cat:["PDF Intelligence"], color:"#4C1D95", icon:"A", bg:"#E9E4FF", badge:"AI"},
-    {id:"pdf-to-md", title:"PDF to Markdown", desc:"Turn PDFs into Markdown. Perfect for notes, docs, and LLMs.", cat:["Convert PDF","PDF Intelligence"], color:"#4C1D95", icon:"{ }", bg:"#E9E4FF", badge:"New!"},
+    {id:"ocr-pdf", title:"OCR PDF", desc:"Easily convert scanned PDF into searchable and selectable documents.", cat:["Convert PDF"], color:"#15803D", icon:"OCR", bg:"#DCFCE7"},
+    {id:"compare-pdf", title:"Compare PDF", desc:"Find what changed between two versions of a PDF, line by line.", cat:["Edit & Organize"], color:"#1E5A8A", icon:"◫", bg:"#DBEAFE"},
+    {id:"redact-pdf", title:"Redact PDF", desc:"Permanently remove sensitive information from a PDF.", cat:["PDF Security"], color:"#1D4ED8", icon:"█", bg:"#DBEAFE"},
+    {id:"crop-pdf", title:"Crop PDF", desc:"Crop margins or select specific areas, apply to one page or all.", cat:["Edit & Organize"], color:"#7E22CE", icon:"◧", bg:"#FAE8FF"},
+    {id:"pdf-forms", title:"PDF Forms", desc:"Fill in a fillable PDF form and save it — optionally locked.", cat:["Edit & Organize"], color:"#7E22CE", icon:"Ab", bg:"#FAE8FF", badge:"New!"},
+    {id:"translate-pdf", title:"Translate PDF", desc:"Translate PDF with AI. Keep fonts, layout, and formatting intact.", cat:["Flipbook & AI"], color:"#4C1D95", icon:"A", bg:"#E9E4FF", badge:"AI"},
+    {id:"pdf-to-md", title:"PDF to Markdown", desc:"Turn PDFs into Markdown. Perfect for notes, docs, and LLMs.", cat:["Convert PDF"], color:"#4C1D95", icon:"{ }", bg:"#E9E4FF", badge:"New!"},
   ];
 
   // Catalog tools not built yet: shown as "Coming soon", not clickable.
