@@ -11,8 +11,10 @@ to the app (see seo.py's note) — these pages promise what the tools do.
 ARTICLES = []
 
 
-def article(slug, title, description, published, blocks, tool=None):
-    ARTICLES.append(dict(slug=slug, title=title, description=description, published=published, blocks=blocks, tool=tool))
+def article(slug, title, description, published, blocks, tool=None, updated=None):
+    # updated: the date the content last really changed (sitemap lastmod, dateModified)
+    ARTICLES.append(dict(slug=slug, title=title, description=description, published=published, blocks=blocks, tool=tool,
+                         updated=updated or published))
 
 
 article(
@@ -528,7 +530,29 @@ article(
                 'Fitur membaca — stabilo, catatan, suara, terjemahan.',
                 'Privasi — di mana dokumen disimpan dan siapa yang bisa membukanya.',
                 'Harga dan cara bayar — mata uang dan metode pembayaran yang mudah di Indonesia.']),
-        ('p', 'Fitur dan harga setiap layanan bisa berubah, jadi selalu periksa halaman resmi masing-masing sebelum memutuskan.'),
+        ('h2', 'Perbandingan singkat'),
+        ('table', {
+            'head': ['', 'MyFlipbook Pro', 'Heyzine', 'FlipHTML5', 'AnyFlip'],
+            'rows': [
+                ['Paket gratis', '3 share link, coba semua fitur 7 hari', '5 flipbook, halaman tanpa batas, tanpa iklan',
+                 '5 unggahan per hari, ada iklan dan watermark', '150 unggahan per bulan, ada iklan'],
+                ['Unduh untuk dibaca offline', 'HTML offline (paket Pro)', 'Mulai paket Standard',
+                 'Paket berbayar (Pro ke atas)', 'Paket Pro, 5 kali per bulan'],
+                ['Jadi aplikasi Android (APK)', 'Ya (paket Pro)', 'Tidak disebut', 'Ya (paket berbayar)', 'Tidak disebut'],
+                ['Jadi aplikasi Windows (EXE)', 'Ya (paket Business)', 'Tidak disebut', 'Ya (paket berbayar)', 'Tidak disebut'],
+                ['Terjemahkan seluruh buku di dalam flipbook', 'Ya, layout mengikuti kolom asli', 'Tidak disebut',
+                 'Tidak disebut', 'Tidak disebut'],
+                ['Audio book (halaman dibacakan)', 'Ya', 'Tidak disebut', 'Tidak disebut', 'Tidak disebut'],
+            ],
+            'note': ('Dicek 9 Oktober 2026 dari halaman harga resmi dan profil Capterra masing-masing layanan. "Tidak disebut" '
+                     'artinya fitur itu tidak tercantum di sumber yang kami cek, bukan pasti tidak ada. Fitur dan harga bisa '
+                     'berubah, jadi periksa halaman resminya sebelum memutuskan.'),
+            'sources': [('Heyzine', 'https://heyzine.com/'), ('FlipHTML5', 'https://fliphtml5.com/'),
+                        ('AnyFlip', 'https://anyflip.com/'),
+                        ('Capterra: Heyzine', 'https://www.capterra.co.uk/software/209819/heyzine'),
+                        ('Capterra: FlipHTML5', 'https://www.capterra.com/p/202617/FlipHTML5/pricing/'),
+                        ('Capterra: AnyFlip', 'https://www.capterra.com/p/210554/AnyFlip/pricing/')],
+        }),
         ('h2', 'Yang ditawarkan MyFlipbook'),
         ('ul', ['Antarmuka dan panduan berbahasa Indonesia.',
                 'PDF, Word, PowerPoint, dan gambar langsung jadi flipbook — dari komputer, HP, Google Drive, atau link.',
@@ -553,7 +577,7 @@ article(
             ('Apakah MyFlipbook gratis?', 'Membaca dan membuat flipbook bisa dicoba gratis; akun baru mendapat masa coba 7 hari untuk semua fitur. Ekspor offline dan aplikasi tersedia di paket berbayar.'),
         ]),
         ('cta', 'pdf-ke-flipbook'),
-    ], tool='pdf-ke-flipbook')
+    ], tool='pdf-ke-flipbook', updated='2026-10-09')
 
 article(
     'cara-membaca-jurnal-pdf-lebih-nyaman',

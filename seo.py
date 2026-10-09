@@ -402,6 +402,11 @@ summary{font-weight:700;cursor:pointer}details p{margin:8px 0 0;color:var(--mute
 article p,article li{font-size:17px}article h2{margin-top:30px}article ol,article ul{padding-left:22px;display:grid;gap:6px}
 .crumb{font-size:13.5px;color:var(--muted);margin-top:24px}.crumb a{color:var(--muted)}.date{color:var(--muted);font-size:14px;margin:0 0 18px}
 .tip{background:#F1F6EA;border:1px solid #D8E6C6;border-radius:14px;padding:14px 16px;margin:18px 0}
+.table{overflow-x:auto;margin:16px 0 6px;border:1px solid #E8E2D4;border-radius:14px;background:#fff}
+.table table{border-collapse:collapse;width:100%;min-width:640px;font-size:13px}
+.table th,.table td{padding:10px 12px;border-bottom:1px solid #EFEAE0;text-align:left;vertical-align:top}
+.table thead th{background:#F7F3EA;font-weight:700}.table tbody th{font-weight:700;width:22%}
+.table tr:last-child th,.table tr:last-child td{border-bottom:0}
 .box{background:var(--pine);color:#FFF7EA;border-radius:18px;padding:22px;margin:30px 0}.box h2{color:#FFF7EA;margin:0 0 8px}
 .box p{margin:0 0 14px;color:#E8EFE6}
 .grid a{display:block;background:var(--paper);border:1px solid var(--hair);border-radius:14px;padding:12px 14px;text-decoration:none;
@@ -518,6 +523,13 @@ def article_html(slug):
             body.append(f'<{kind}>' + ''.join(f'<li>{rich(i)}</li>' for i in value) + f'</{kind}>')
         elif kind == 'tip':
             body.append(f'<div class="tip"><b>Tips:</b> {rich(value)}</div>')
+        elif kind == 'table':
+            cols = ''.join(f'<th scope="col">{esc(c)}</th>' for c in value['head'])
+            rows = ''.join('<tr><th scope="row">' + esc(r[0]) + '</th>' + ''.join(f'<td>{esc(c)}</td>' for c in r[1:]) + '</tr>'
+                           for r in value['rows'])
+            sources = ' · '.join(f'<a href="{esc(u)}" rel="nofollow noopener" target="_blank">{esc(n)}</a>' for n, u in value.get('sources', []))
+            body.append(f'<div class="table"><table><thead><tr>{cols}</tr></thead><tbody>{rows}</tbody></table></div>'
+                        f'<p class="date">{esc(value.get("note", ""))}{"<br>Sumber: " + sources if sources else ""}</p>')
         elif kind == 'faq':
             body.append('<h2>Pertanyaan umum</h2><div class="card">' + ''.join(
                 f'<details><summary>{esc(q)}</summary><p>{rich(ans)}</p></details>' for q, ans in value) + '</div>')
@@ -528,7 +540,7 @@ def article_html(slug):
     others = [x for x in articles.ARTICLES if x['slug'] != slug][:5]
     data = [
         {'@context': 'https://schema.org', '@type': 'BlogPosting', 'headline': a['title'], 'description': a['description'],
-         'datePublished': a['published'], 'dateModified': a['published'], 'inLanguage': 'id', 'image': OG_IMAGE,
+         'datePublished': a['published'], 'dateModified': a['updated'], 'inLanguage': 'id', 'image': OG_IMAGE,
          'mainEntityOfPage': SITE + path, 'author': {'@type': 'Organization', 'name': BRAND, 'url': SITE + '/'},
          'publisher': {'@type': 'Organization', 'name': BRAND, 'logo': {'@type': 'ImageObject', 'url': SITE + '/assets/img/logo.png'}}},
         {'@context': 'https://schema.org', '@type': 'BreadcrumbList', 'itemListElement': [
@@ -549,7 +561,7 @@ def article_html(slug):
 <main><article>
 <p class="crumb"><a href="/">Beranda</a> › <a href="/artikel">Artikel</a></p>
 <div class="hero" style="padding:14px 0 6px"><h1>{esc(a['title'])}</h1></div>
-<p class="date">Diperbarui {tanggal(a['published'])} · Tim {BRAND}</p>
+<p class="date">Diperbarui {tanggal(a['updated'])} · Tim {BRAND}</p>
 {''.join(body)}
 </article>
 <section><h2>Artikel lainnya</h2><div class="list">{''.join(article_card(x) for x in others)}</div></section>
@@ -678,7 +690,7 @@ def sitemap():
     urls = [('/', '1.0')] + [('/' + s, '0.9') for s in LANDING] + [
         ('/privacy.html', '0.2'), ('/terms.html', '0.2'), ('/artikel', '0.8')]
     rows = ''.join(f'<url><loc>{esc(SITE + u)}</loc><lastmod>{UPDATED}</lastmod><priority>{pr}</priority></url>' for u, pr in urls)
-    rows += ''.join(f'<url><loc>{SITE}/artikel/{a["slug"]}</loc><lastmod>{a["published"]}</lastmod><priority>0.8</priority></url>'
+    rows += ''.join(f'<url><loc>{SITE}/artikel/{a["slug"]}</loc><lastmod>{a["updated"]}</lastmod><priority>0.8</priority></url>'
                     for a in articles.ARTICLES)
     return f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{rows}</urlset>\n'
 
