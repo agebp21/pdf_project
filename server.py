@@ -10,6 +10,8 @@ enforced (see accounts.py). Local mode keeps working without an account.
 import argparse
 import csv
 import hashlib
+import http.client
+from html import unescape
 import ipaddress
 import json
 import math
@@ -30,7 +32,7 @@ from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler, ThreadingHTTPServer
 import urllib.error
 import urllib.request
-from urllib.parse import parse_qs, quote, unquote, urlencode, urlsplit
+from urllib.parse import parse_qs, quote, unquote, urlencode, urljoin, urlsplit
 
 try:
     # Verify HTTPS like the browser does (the operating system's certificate
@@ -1245,6 +1247,168 @@ def journal_search(query, page=1, oa=True, year_from=None, year_to=None, lang=No
     return out
 
 
+# ---------- The PDF behind a journal search result (for "Make a flipbook").
+# OpenAlex often has only the article page (Indonesian OJS journals, DOAJ, PMC),
+# and a page link would turn the publisher's web page into the flipbook. So the
+# candidates are probed until one really is a PDF: the search hint, every
+# OpenAlex location, Unpaywall, Europe PMC, then PDF links found on the pages
+# (citation_pdf_url, OJS article/view -> article/download).
+CONTACT_EMAIL = 'cs@myflipbookpro.com'      # Unpaywall asks callers for a contact address
+WORK_ID = re.compile(r'W\d{1,12}')
+JOURNAL_PDF_CACHE = {}
+PDF_META = re.compile(r'<meta[^>]+name=["\']citation_pdf_url["\'][^>]*content=["\']([^"\']+)', re.I)
+PDF_META_REV = re.compile(r'<meta[^>]+content=["\']([^"\']+)["\'][^>]*name=["\']citation_pdf_url', re.I)
+OJS_VIEW = re.compile(r'(/article/)view(/\d+/\d+)')
+OJS_LINK = re.compile(r'href=["\']([^"\']*/article/(?:view|download)/\d+/\d+[^"\']*)["\']', re.I)
+
+
+def probe_pdf(url):
+    """(is_pdf, size, html, final_url) of a link; only public hosts, small reads."""
+    class Checked(urllib.request.HTTPRedirectHandler):
+        def redirect_request(self, req, fp, code, msg, headers, newurl):
+            nxt = urlsplit(newurl)
+            if nxt.scheme not in ('http', 'https'):
+                raise ValueError('bad redirect')
+            check_public_host(nxt.hostname or '')
+            return super().redirect_request(req, fp, code, msg, headers, newurl)
+    parts = urlsplit(url)
+    if parts.scheme not in ('http', 'https') or not parts.hostname or len(url) > 2000:
+        return False, 0, '', url
+    try:
+        check_public_host(parts.hostname)
+        request = urllib.request.Request(url, headers={'User-Agent': 'Mozilla/5.0 (MyFlipbook; journal PDF lookup)',
+                                                       'Accept': 'application/pdf,text/html;q=0.8,*/*;q=0.5'})
+        with urllib.request.build_opener(Checked).open(request, timeout=15) as response:
+            head = response.read(5)
+            final = response.geturl()
+            size = int(response.headers.get('Content-Length') or 0)
+            if head.startswith(b'%PDF-'):
+                return True, size, '', final
+            if response.headers.get_content_type() in ('text/html', 'application/xhtml+xml'):
+                return False, 0, (head + response.read(400_000)).decode('utf-8', 'replace'), final
+    except (ValueError, urllib.error.URLError, OSError, http.client.HTTPException):
+        pass
+    return False, 0, '', url
+
+
+def pdf_links_in(html, base):
+    """PDF candidates named on an article page."""
+    found = [m for m in PDF_META.findall(html) + PDF_META_REV.findall(html)]
+    found += [OJS_VIEW.sub(r'\1download\2', u) for u in found if OJS_VIEW.search(u)]
+    if OJS_VIEW.search(base):
+        found.append(OJS_VIEW.sub(r'\1download\2', base))
+    found += [OJS_VIEW.sub(r'\1download\2', u) for u in OJS_LINK.findall(html)][:4]
+    out = []
+    for u in found:
+        u = urljoin(base, unescape(u.strip()))
+        if u.startswith(('http://', 'https://')) and u not in out:
+            out.append(u)
+    return out[:6]
+
+
+def journal_candidates(work_id, hint=''):
+    pdfs, pages = ([hint] if hint else []), []
+    try:
+        params = {'select': 'doi,ids,best_oa_location,locations'}
+        if os.environ.get('OPENALEX_MAILTO'):
+            params['mailto'] = os.environ['OPENALEX_MAILTO'].strip()
+        work = ebook_get(f'https://api.openalex.org/works/{work_id}?' + urlencode(params), 'OpenAlex')
+    except RuntimeError:
+        work = {}
+    for loc in [work.get('best_oa_location') or {}] + list(work.get('locations') or []):
+        if loc.get('pdf_url'):
+            pdfs.append(loc['pdf_url'])
+        if loc.get('landing_page_url') and loc.get('is_oa', True):
+            pages.append(loc['landing_page_url'])
+    doi = str(work.get('doi') or '').replace('https://doi.org/', '')
+    if doi:
+        try:
+            oa = ebook_get(f'https://api.unpaywall.org/v2/{quote(doi)}?email={quote(CONTACT_EMAIL)}', 'Unpaywall')
+            for loc in oa.get('oa_locations') or []:
+                if loc.get('url_for_pdf'):
+                    pdfs.append(loc['url_for_pdf'])
+                if loc.get('url_for_landing_page'):
+                    pages.append(loc['url_for_landing_page'])
+        except RuntimeError:
+            pass
+        pages.append('https://doi.org/' + doi)
+    pmcid = str((work.get('ids') or {}).get('pmcid') or '').rsplit('/', 1)[-1]
+    if re.fullmatch(r'PMC\d+', pmcid):
+        pdfs.append(f'https://europepmc.org/articles/{pmcid}?pdf=render')
+    pdfs = [OJS_VIEW.sub(r'\1download\2', u) for u in pdfs]
+    seen, ordered = set(), []
+    for u in pdfs + pages:
+        if u and u not in seen:
+            seen.add(u)
+            ordered.append(u)
+    return ordered
+
+
+JOURNAL_FILE_HITS = {}          # ip -> recent download times (guests can use this; keep it modest)
+JOURNAL_FILE_PER_HOUR = 40
+
+
+def journal_file_allowed(ip, now=None):
+    now = now or time.time()
+    hits = [t for t in JOURNAL_FILE_HITS.get(ip, []) if now - t < 3600]
+    if len(hits) >= JOURNAL_FILE_PER_HOUR:
+        JOURNAL_FILE_HITS[ip] = hits
+        return False
+    JOURNAL_FILE_HITS[ip] = hits + [now]
+    if len(JOURNAL_FILE_HITS) > 5000:
+        JOURNAL_FILE_HITS.clear()
+    return True
+
+
+def journal_file(work_id, hint=''):
+    """(bytes, filename) of an open-access article's PDF, found by journal_pdf; only real PDFs."""
+    found = journal_pdf(work_id, hint)
+    if not found['pdf']:
+        raise LookupError('PDF artikel ini tidak tersedia untuk umum. Buka artikelnya di situs penerbit.')
+    data, name, ctype = fetch_source(found['pdf'], public_only=True)
+    if not data.startswith(b'%PDF-'):
+        raise LookupError('PDF artikel ini tidak tersedia untuk umum. Buka artikelnya di situs penerbit.')
+    return data, name if name.lower().endswith('.pdf') else work_id + '.pdf'
+
+
+def ebook_file(source, identifier):
+    """(bytes, filename) of a search result's book or magazine PDF (only real PDFs)."""
+    found = ebook_pdf(source, identifier)
+    if not found['pdf']:
+        raise LookupError('Buku ini tidak punya berkas PDF.')
+    data, name, ctype = fetch_source(found['pdf'], public_only=True)
+    if not data.startswith(b'%PDF-'):
+        raise LookupError('Buku ini tidak punya berkas PDF.')
+    return data, name if name.lower().endswith('.pdf') else re.sub(r'[^\w.-]+', '_', identifier)[-80:] + '.pdf'
+
+
+def journal_pdf(work_id, hint=''):
+    """{pdf, size} of an article's real PDF ('' when none is public)."""
+    if not WORK_ID.fullmatch(work_id or ''):
+        raise ValueError('Artikel tidak dikenal.')
+    hint = hint if hint.startswith(('http://', 'https://')) and len(hint) < 2000 else ''
+    hit = JOURNAL_PDF_CACHE.get(work_id)
+    if hit and time.time() - hit[0] < JOURNAL_CACHE_SECONDS:
+        return hit[1]
+    found, tried, deadline = dict(pdf='', size=0), set(), time.time() + 40
+    queue = journal_candidates(work_id, hint)
+    while queue and time.time() < deadline and len(tried) < 12:
+        url = queue.pop(0)
+        if url in tried:
+            continue
+        tried.add(url)
+        ok, size, html, final = probe_pdf(url)
+        if ok:
+            found = dict(pdf=final, size=size)
+            break
+        if html:
+            queue[0:0] = [u for u in pdf_links_in(html, final) if u not in tried]
+    if len(JOURNAL_PDF_CACHE) > 500:
+        JOURNAL_PDF_CACHE.clear()
+    JOURNAL_PDF_CACHE[work_id] = (time.time(), found)
+    return found
+
+
 # ---------- Ebook search: free, legal full books with a PDF.
 # OAPEN Library — peer-reviewed open-access books, licence checked by OAPEN.
 # Internet Archive — texts its uploader released under a licence (CC / public
@@ -1310,14 +1474,44 @@ def oapen_books(terms, page, lang):
     return books, len(items) >= EBOOK_PER_SOURCE
 
 
-def archive_books(terms, page, lang):
-    query = (f'({terms}) AND mediatype:texts AND licenseurl:* AND NOT access-restricted-item:true '
-             'AND format:("Text PDF" OR PDF OR "Additional Text PDF")')
+def archive_title_query(terms):
+    """Every word in the title (a plural counts: effect/effects), the exact phrase ranked first.
+    Matching any word anywhere (the old query) found unrelated texts that merely mention one word."""
+    words = terms.split()
+    each = []
+    for w in words:
+        forms = {w, w + 's'} if w.isalpha() and len(w) >= 3 and not w.lower().endswith('s') else {w}
+        each.append('(' + ' OR '.join(sorted(forms)) + ')')
+    phrase = terms.replace('"', ' ')
+    return f'title:("{phrase}")^5 OR title:({" AND ".join(each)})'
+
+
+def archive_rank(books, terms):
+    """Within a page: titles holding the whole phrase first, then the source's order."""
+    words = [w.lower() for w in terms.split()]
+    flat = lambda t: ' '.join(re.sub(r'[^\w\s]', ' ', t.lower()).split())
+    def score(i_book):
+        i, book = i_book
+        title = flat(book['title'])
+        return (0 if flat(terms) in title else 1 if all(w in title for w in words) else 2, i)
+    return [b for _, b in sorted(enumerate(books), key=score)]
+
+
+def archive_books(terms, page, lang, magazines=False):
+    # Books leave the magazine shelf to the Magazine tab; that tab searches only it.
+    shelf = 'collection:magazine_rack' if magazines else 'NOT collection:magazine_rack'
+    base = (f'mediatype:texts AND {shelf} AND licenseurl:* AND NOT access-restricted-item:true '
+            'AND format:("Text PDF" OR PDF OR "Additional Text PDF")')
     if lang in EBOOK_LANGS:
-        query += f' AND language:({EBOOK_LANGS[lang][1]} OR {EBOOK_LANGS[lang][0]})'
-    params = [('q', query), ('rows', EBOOK_PER_SOURCE), ('page', page), ('output', 'json')]
-    params += [('fl[]', f) for f in ('identifier', 'title', 'creator', 'year', 'date', 'language', 'licenseurl', 'description', 'publisher')]
-    data = ebook_get('https://archive.org/advancedsearch.php?' + urlencode(params), 'Internet Archive').get('response') or {}
+        base += f' AND language:({EBOOK_LANGS[lang][1]} OR {EBOOK_LANGS[lang][0]})'
+    fields = [('fl[]', f) for f in ('identifier', 'title', 'creator', 'year', 'date', 'language', 'licenseurl', 'description', 'publisher')]
+    ask = lambda q: ebook_get('https://archive.org/advancedsearch.php?' + urlencode(
+        [('q', f'({q}) AND {base}'), ('rows', EBOOK_PER_SOURCE), ('page', page), ('output', 'json')] + fields),
+        'Internet Archive').get('response') or {}
+    data = ask(archive_title_query(terms))
+    if not data.get('numFound'):
+        # Nothing by title: the description, still with every word.
+        data = ask('description:(' + ' AND '.join(terms.split()) + ')')
     listed = lambda v: v if isinstance(v, list) else [v] if v else []
     books = []
     for doc in data.get('docs') or []:
@@ -1334,7 +1528,11 @@ def archive_books(terms, page, lang):
             publisher=', '.join(map(str, listed(doc.get('publisher'))))[:120], license=str(doc.get('licenseurl') or ''),
             licenseByUploader=True, abstract=abstract_cut(description),
             link=f'https://archive.org/details/{identifier}', cover=f'https://archive.org/services/img/{identifier}', pages=''))
-    return books, page * EBOOK_PER_SOURCE < (data.get('numFound') or 0)
+    return archive_rank(books, terms), page * EBOOK_PER_SOURCE < (data.get('numFound') or 0)
+
+
+def archive_magazines(terms, page, lang):
+    return archive_books(terms, page, lang, magazines=True)
 
 
 def ebook_pdf(source, identifier):
@@ -1367,7 +1565,8 @@ def ebook_search(query, page=1, lang=None, source='all'):
     hit = JOURNAL_CACHE.get(key)
     if hit and time.time() - hit[0] < JOURNAL_CACHE_SECONDS:
         return hit[1]
-    wanted = [fn for name, fn in (('oapen', oapen_books), ('archive', archive_books)) if source in ('all', name)]
+    wanted = ([archive_magazines] if source == 'magazine' else
+              [fn for name, fn in (('oapen', oapen_books), ('archive', archive_books)) if source in ('all', name)])
     lists, more, errors = [], False, []
     with ThreadPoolExecutor(max_workers=2) as pool:
         for job in [pool.submit(fn, terms, page, lang) for fn in wanted]:
@@ -2441,7 +2640,7 @@ class Handler(SimpleHTTPRequestHandler):
         source = one('src', 'all')
         try:
             self.send_json(200, ebook_search(q, page, lang=one('lang') or None,
-                                             source=source if source in ('all', 'oapen', 'archive') else 'all'))
+                                             source=source if source in ('all', 'oapen', 'archive', 'magazine') else 'all'))
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
 
@@ -2635,6 +2834,53 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if path == '/api/ebooks':
             self.ebooks_route()
+            return
+        if path == '/api/journals/pdf':
+            query = parse_qs(urlsplit(self.path).query)
+            try:
+                found = journal_pdf((query.get('id') or [''])[0], (query.get('pdf') or [''])[0])
+            except ValueError as cause:
+                self.send_json(400, {'error': str(cause)})
+            else:
+                self.send_json(200 if found['pdf'] else 404, dict(found, maxBytes=FETCH_MAX_BYTES) if found['pdf'] else
+                               {'error': 'PDF artikel ini tidak tersedia untuk umum. Buka artikelnya di situs penerbit.'})
+            return
+        if path == '/api/ebooks/file':
+            query = parse_qs(urlsplit(self.path).query)
+            if not journal_file_allowed(self.client_address[0]):
+                self.send_json(429, {'error': 'Terlalu banyak artikel dalam satu jam. Coba lagi nanti.'})
+                return
+            try:
+                data, name = ebook_file((query.get('src') or [''])[0], (query.get('id') or [''])[0])
+            except (ValueError, LookupError) as cause:
+                self.send_json(404 if isinstance(cause, LookupError) else 400, {'error': str(cause)})
+                return
+            except RuntimeError as cause:
+                self.send_json(502, {'error': str(cause)})
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/pdf')
+            self.send_header('X-Filename', quote(name))
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
+            return
+        if path == '/api/journals/file':
+            query = parse_qs(urlsplit(self.path).query)
+            if not journal_file_allowed(self.client_address[0]):
+                self.send_json(429, {'error': 'Terlalu banyak artikel dalam satu jam. Coba lagi nanti.'})
+                return
+            try:
+                data, name = journal_file((query.get('id') or [''])[0], (query.get('pdf') or [''])[0])
+            except (ValueError, LookupError) as cause:
+                self.send_json(404 if isinstance(cause, LookupError) else 400, {'error': str(cause)})
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/pdf')
+            self.send_header('X-Filename', quote(name))
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
             return
         if path == '/api/ebooks/pdf':
             query = parse_qs(urlsplit(self.path).query)

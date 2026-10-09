@@ -844,7 +844,9 @@
       const button = $(id), plan = lockedFor(target, buildConfig);
       if (!button) continue;
       if (!button.dataset.label) button.dataset.label = button.textContent;
-      button.textContent = button.dataset.label + (plan ? ' · ' + plan.toUpperCase() : '');
+      // The plan as a red pill, like the PRO badge on the logo (Business in the same red).
+      const pill = plan ? Object.assign(document.createElement('span'), {className: 'plan-pill', textContent: plan.toUpperCase()}) : null;
+      button.replaceChildren(button.dataset.label, ...(pill ? [pill] : []));
     }
   }
   // Progress bar for every export: fraction 0..1, or null to hide.
@@ -1133,6 +1135,27 @@
     addStatus(L('Fetching the PDF…', 'Mengambil PDF artikel…'));
     $('#add-link').requestSubmit();
   }
+  // flipbook.html?journal=W…&pdf=…&title=… (journal search): the server hands over the
+  // article's checked open-access PDF, for visitors without an account too.
+  // ?book=oapen|archive&id=… (ebook / magazine search) the same way through /api/ebooks/file.
+  const handedJournal = new URLSearchParams(location.search).get('journal');
+  const handedBook = new URLSearchParams(location.search).get('book');
+  if ((handedJournal && /^W\d{1,12}$/.test(handedJournal)) || /^(oapen|archive)$/.test(handedBook || '')) {
+    const params = new URLSearchParams(location.search);
+    pendingTitle = (params.get('title') || '').slice(0, 200);
+    history.replaceState(null, '', location.pathname);
+    showAdd(true);
+    addStatus(handedJournal ? L('Fetching the article PDF…', 'Mengambil PDF artikel…') : L('Fetching the PDF…', 'Mengambil PDF…'));
+    (async () => {
+      try {
+        const response = await fetch(handedJournal ? '/api/journals/file?' + new URLSearchParams({id: handedJournal, pdf: params.get('pdf') || ''})
+                                                   : '/api/ebooks/file?' + new URLSearchParams({src: handedBook, id: params.get('id') || ''}));
+        if (!response.ok) { let m = L('The article PDF could not be fetched.', 'PDF artikel tidak bisa diambil.'); try { m = (await response.json()).error || m; } catch (e) {} throw Error(m); }
+        const blob = await response.blob(), name = decodeURIComponent(response.headers.get('X-Filename') || (handedJournal || 'document') + '.pdf');
+        await openSources([new File([blob], name, {type: 'application/pdf'})]);
+      } catch (cause) { addStatus(cause.message, true); }
+    })();
+  }
   const source = new URLSearchParams(location.search).get('source');
   // A new title is worth keeping too (debounced into the draft).
   const titleInput = $('#export-title');
@@ -1150,7 +1173,7 @@
       draftName = draft.name; saveDraft();
     }
   }
-  if (!fromLibrary && !handedLink && !source) {
+  if (!fromLibrary && !handedLink && !handedJournal && !handedBook && !source) {
     FlipbookExport.draftLoad().then(draft => {
       if (!draft || !draft.blob || sourcePdf) return;
       if (reloaded) { resumeDraft(draft); return; }

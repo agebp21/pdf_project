@@ -72,6 +72,27 @@ class JournalTests(unittest.TestCase):
         text = server.abstract_text(index, limit=50)
         self.assertTrue(text.endswith('…')); self.assertLessEqual(len(text), 51)
 
+    def test_pdf_links_on_an_article_page(self):
+        html = ('<meta name="citation_pdf_url" content="https://j.example/index.php/jp/article/view/12/34">'
+                '<a href="/index.php/jp/article/view/12/35">PDF</a>')
+        links = server.pdf_links_in(html, 'https://j.example/index.php/jp/article/view/12')
+        self.assertIn('https://j.example/index.php/jp/article/download/12/34', links, 'OJS viewer page -> download')
+        self.assertIn('https://j.example/index.php/jp/article/download/12/35', links)
+        self.assertLessEqual(len(links), 6)
+
+    def test_journal_pdf_follows_the_page_to_the_real_pdf(self):
+        server.JOURNAL_PDF_CACHE.clear()
+        page = '<meta content="https://j.example/article/view/1/2" name="citation_pdf_url">'
+        probes = {'https://doi.org/10.1/abc': (False, 0, page, 'https://j.example/article/view/1'),
+                  'https://j.example/article/download/1/2': (True, 4096, '', 'https://j.example/article/download/1/2')}
+        with mock.patch.object(server, 'journal_candidates', return_value=['https://doi.org/10.1/abc']),                 mock.patch.object(server, 'probe_pdf', side_effect=lambda u: probes.get(u, (False, 0, '', u))):
+            self.assertEqual(server.journal_pdf('W123'), {'pdf': 'https://j.example/article/download/1/2', 'size': 4096})
+        with self.assertRaises(ValueError):
+            server.journal_pdf('../etc')
+        server.JOURNAL_PDF_CACHE.clear()
+        with mock.patch.object(server, 'journal_candidates', return_value=['https://x.example/page']),                 mock.patch.object(server, 'probe_pdf', return_value=(False, 0, '', 'https://x.example/page')):
+            self.assertEqual(server.journal_pdf('W9'), {'pdf': '', 'size': 0}, 'a web page is never handed over as the PDF')
+
     def test_route(self):
         httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
         thread = threading.Thread(target=httpd.serve_forever, daemon=True); thread.start()

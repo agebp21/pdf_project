@@ -128,6 +128,22 @@ class EbookRouteTests(unittest.TestCase):
             with e:
                 return e.code, json.loads(e.read())
 
+    def test_archive_matches_titles_and_magazines_have_their_own_shelf(self):
+        q = server.archive_title_query('after effect')
+        self.assertIn('title:("after effect")^5', q)
+        self.assertIn('(after OR afters) AND (effect OR effects)', q)
+        books = [dict(title='Effect of rain after storms'), dict(title='Survey on the After Effects of Tsunami'), dict(title='Unrelated')]
+        self.assertEqual([b['title'] for b in server.archive_rank(books, 'after effects')][0], 'Survey on the After Effects of Tsunami')
+        asked = []
+        def fake(url, what):
+            asked.append(url)
+            return {'response': {'numFound': 0, 'docs': []}}
+        with mock.patch.object(server, 'ebook_get', side_effect=fake):
+            server.archive_books('radio', 1, None, magazines=True)
+            server.archive_books('radio', 1, None)
+        self.assertIn('collection%3Amagazine_rack', asked[0]); self.assertIn('description%3A', asked[1], 'falls back to the description')
+        self.assertIn('NOT+collection%3Amagazine_rack', asked[2])
+
     def test_routes(self):
         server.JOURNAL_CACHE.clear()
         self.assertEqual(self.get('/api/ebooks?q=a')[0], 400)

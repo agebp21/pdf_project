@@ -115,6 +115,9 @@ EXACT = {
     'Buku tidak dikenal.': 'Unknown book.',
     'Tulis kata kunci 2-200 karakter.': 'Type keywords of 2-200 characters.',
     'Buku ini tidak punya berkas PDF.': 'This book has no PDF file.',
+    'Artikel tidak dikenal.': 'Unknown article.',
+    'Terlalu banyak artikel dalam satu jam. Coba lagi nanti.': 'Too many articles in one hour. Please try again later.',
+    'PDF artikel ini tidak tersedia untuk umum. Buka artikelnya di situs penerbit.': "This article's PDF is not publicly available. Open the article on the publisher's site.",
     # --- requests
     'Permintaan harus JSON.': 'The request must be JSON.',
     'Permintaan terlalu besar.': 'The request is too large.',
