@@ -70,7 +70,7 @@
     if (root.DrivePicker) return Promise.resolve();
     return new Promise((resolve, reject) => {
       const s = document.createElement('script');
-      s.src = 'assets/drive-picker.js'; s.onload = resolve; s.onerror = () => reject(new Error('Google Drive could not be loaded.'));
+      s.src = 'assets/drive-picker.js?v=folder'; s.onload = resolve; s.onerror = () => reject(new Error('Google Drive could not be loaded.'));
       document.head.appendChild(s);
     });
   }

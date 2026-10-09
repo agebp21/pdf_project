@@ -2140,7 +2140,7 @@ window.orgDriveDirect=async ()=>{
     }
     if(!orgDriveCfg){ addMoreFiles(); return; } // dialog carries the share-link guide
     if(!window.DrivePicker) await new Promise((res,rej)=>{
-      const s=document.createElement('script'); s.src='assets/drive-picker.js';
+      const s=document.createElement('script'); s.src='assets/drive-picker.js?v=folder';
       s.onload=res; s.onerror=()=>rej(new Error('Google Drive could not be loaded.'));
       document.head.append(s);
     });

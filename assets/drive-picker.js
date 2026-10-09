@@ -79,7 +79,9 @@
     });
   }
 
-  function choose(config, oauth, mimeTypes) {
+  var FOLDER = 'application/vnd.google-apps.folder';
+  // folder (optional): {id, name} — open the picker inside that folder.
+  function choose(config, oauth, mimeTypes, folder) {
     var picker = root.google.picker;
     return new Promise(function (resolve) {
       // Tabs like Google Drive itself: My Drive (with its folders), Shared
@@ -91,11 +93,15 @@
       };
       var tab = function (label, setup) {
         var v = new picker.DocsView(picker.ViewId.DOCS);
-        call(v, 'setIncludeFolders', true); call(v, 'setSelectFolderEnabled', false); call(v, 'setMimeTypes', (mimeTypes && mimeTypes.length ? mimeTypes : MIME_TYPES).join(','));
+        // Selectable folders: with selection off the Picker draws every folder greyed out, as if
+        // disabled. Picking a folder opens it (see pick()), it is never downloaded.
+        call(v, 'setIncludeFolders', true); call(v, 'setSelectFolderEnabled', true); call(v, 'setMimeTypes', (mimeTypes && mimeTypes.length ? mimeTypes : MIME_TYPES).join(','));
         setup(v);
         return call(v, 'setLabel', label);
       };
-      var builder = new picker.PickerBuilder()
+      var builder = new picker.PickerBuilder();
+      if (folder) builder.addView(tab(folder.name || 'Folder', function (v) { call(v, 'setParent', folder.id); }));
+      builder
         .addView(tab('My Drive', function (v) { call(v, 'setParent', 'root'); }))
         .addView(tab('Shared with me', function (v) { call(v, 'setOwnedByMe', false); }))
         .addView(tab('Shared drives', function (v) { call(v, 'setEnableDrives', true); }))
@@ -196,7 +202,18 @@
     var oauth;
     return preload()
       .then(function () { status('Signing in to Google…'); return accessToken(config); })
-      .then(function (value) { oauth = value; status('Choose a file in Google Drive…'); return choose(config, oauth, only); })
+      .then(function (value) {
+        oauth = value; status('Choose a file in Google Drive…');
+        // A folder picked: open the picker inside it, until a file is picked or the reader cancels.
+        var open = function (folder) {
+          return choose(config, oauth, only, folder).then(function (doc) {
+            if (doc && doc[root.google.picker.Document.MIME_TYPE] === FOLDER)
+              return open({ id: doc[root.google.picker.Document.ID], name: doc[root.google.picker.Document.NAME] });
+            return doc;
+          });
+        };
+        return open(null);
+      })
       .then(function (doc) {
         if (!doc) { status(''); return null; }
         status('Downloading ' + (doc[root.google.picker.Document.NAME] || 'the file') + ' from Google Drive…');
