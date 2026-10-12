@@ -73,6 +73,7 @@
   .invoice-link:hover{background:#EFF6EC}
   .fine{font-size:11.5px;margin-top:8px}
   [hidden]{display:none!important}
+  .price s.was{font-size:.55em;font-weight:700;color:#A8A29E;margin-right:2px}
 </style>
 </head>
 <body>
@@ -191,7 +192,11 @@
       const card=el('div',{className:'clay-panel plan'+(current?' current':'')});
       const price=priceOf(plan,state.cycle);
       const per=state.cycle==='yearly'?t('acct.perYear','/year'):t('acct.perMonth','/month');
-      const priceNode=el('div',{className:'price'},money(price,state.currency));
+      const priceNode=el('div',{className:'price'});
+      // Launch price: the normal monthly price struck through (rupiah, monthly view only).
+      if(state.currency==='IDR'&&state.cycle==='monthly'&&plan.listMonthly>price&&price)
+        priceNode.append(el('s',{className:'was',textContent:money(plan.listMonthly,'IDR')}),' ');
+      priceNode.append(money(price,state.currency));
       priceNode.append(' ',el('small',{textContent:plan.id==='free'?t('acct.free','Free'):per}));
       const saving=state.cycle==='yearly'&&priceOf(plan,'monthly')?Math.round((1-priceOf(plan,'yearly')/(priceOf(plan,'monthly')*12))*100):0;
       const list=el('ul');(plan.features[lang()==='id-ID'?'id':'en']||[]).forEach(f=>list.append(el('li',{textContent:f})));

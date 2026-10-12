@@ -300,8 +300,9 @@ article(
         ('p', 'Cari jurnal dan ebook open access lewat [Cari Jurnal & Ebook](/cari-jurnal-ebook), lalu langsung '
               'ringkas atau baca sebagai flipbook. Untuk jurnal berbahasa Inggris, baca juga '
               '[cara menerjemahkannya tanpa merusak layout](/artikel/cara-menerjemahkan-jurnal-bahasa-inggris).'),
-        ('tip', 'Akun Free mendapat jatah pemakaian AI yang terisi ulang berkala. Jika jatah habis, halaman akan '
-                'memberi tahu kapan jatah terisi lagi.'),
+        ('tip', 'AI Summarizer termasuk paket Pro dan Business, dan bisa dicoba gratis selama 7 hari masa coba akun baru. '
+                'Setiap paket punya jatah pemakaian AI yang terisi ulang berkala; jika jatah habis, halaman akan memberi tahu '
+                'kapan jatah terisi lagi.'),
         ('faq', [
             ('Berapa lama membuat ringkasan?',
              'Biasanya 15–60 detik. Dokumen yang sangat panjang bisa memerlukan waktu lebih lama.'),

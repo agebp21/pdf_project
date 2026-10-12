@@ -195,6 +195,14 @@ class DuitkuStatusTests(AccountsBase):
         self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
 
 
+class DuitkuUnpaidInvoiceTests(unittest.TestCase):
+    def test_unpaid_invoice_is_pending_not_an_error(self):
+        # Seen in the sandbox: an invoice nobody has started paying answers "Transaction not found" as a bare string.
+        provider = server.accounts.DuitkuProvider('DS00001', 'k' * 32)
+        with mock.patch.object(provider, '_call', return_value='Transaction not found'):
+            self.assertIsNone(provider.status('ORDER-1'))
+
+
 class DuitkuSelectionTests(unittest.TestCase):
     def selected(self, env):
         with tempfile.TemporaryDirectory() as temporary, \

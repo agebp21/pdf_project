@@ -87,6 +87,19 @@ class SeoPages(unittest.TestCase):
         self.assertNotIn('/flipbook.html<', xml)
         for slug, page in seo.LANDING.items():
             self.assertLessEqual(len(page['title']), 60, slug)
+        # prices: on the home page and an indexable /harga, straight from accounts.PLANS
+        import accounts
+        status, _, harga = self.get('/harga')
+        self.assertEqual(status, 200); self.assertIn('/harga<', xml)
+        for page in (home, harga):
+            for key, plan in accounts.PLANS.items():
+                if plan['monthly']:
+                    self.assertIn(seo.rupiah(plan['monthly']), page, key)
+        self.assertEqual(seo.rupiah(1990000), 'Rp1.990.000')
+        self.assertIn('<s class="pw">Rp149.000</s>', home, 'launch price: the normal price struck through')
+        # business address and WhatsApp on the home page and the price page (payment providers check them)
+        for page in (home, harga):
+            self.assertIn('Jl. H. Khair No. 59', page); self.assertIn('https://wa.me/6285286312477', page)
         with mock.patch.dict(os.environ, {'GOOGLE_SITE_VERIFICATION': 'abc123'}):
             self.assertIn('<meta name="google-site-verification" content="abc123">', self.get('/')[2])
         _, _, login = self.get('/login.html')

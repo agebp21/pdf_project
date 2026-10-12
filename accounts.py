@@ -20,7 +20,10 @@ Payments go through a provider object:
   * MockProvider — local development only: an order can be marked paid from
     the account page. Never enabled on a public host unless explicitly asked.
 
-PLANS below are draft prices (IDR) — the owner hasn't finalised them.
+PLANS below are the starting prices (IDR) the owner set on 2026-10-12; to be raised as the site grows.
+The public price list (/harga and the home page) is built from PLANS, so a change here updates it too.
+list_monthly: the normal price, shown struck through next to the launch price (display only;
+checkout always charges monthly / yearly).
 Change them here; everything else (UI, checkout, entitlements) follows.
 """
 import base64
@@ -58,21 +61,22 @@ EMAIL_RE = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$')
 TRIAL_DAYS = 7
 SHARE_FREE = 3
 PLANS = {
-    'free': dict(name='Free', monthly=0, yearly=0, usd_monthly=0, usd_yearly=0, entitlements=['office', 'ai'],
+    # AI Summarizer is a Pro feature; new Free members still try it during the trial (public_user).
+    'free': dict(name='Free', monthly=0, yearly=0, usd_monthly=0, usd_yearly=0, entitlements=['office'],
                  features=dict(id=['Semua tool PDF di browser', 'PDF to Flipbook: baca & preview',
-                                   'Word/Excel/PPT ke PDF', 'AI Summarizer: ringkasan, terjemahan, podcast',
-                                   '3 share link flipbook gratis'],
+                                   'Word/Excel/PPT ke PDF', '3 share link flipbook gratis'],
                                en=['Every in-browser PDF tool', 'PDF to Flipbook: read & preview',
-                                   'Word/Excel/PPT to PDF', 'AI Summarizer: summary, translation, podcast',
-                                   '3 free flipbook share links'])),
-    'pro': dict(name='Pro', monthly=99_000, yearly=990_000, usd_monthly=999, usd_yearly=9_900,
+                                   'Word/Excel/PPT to PDF', '3 free flipbook share links'])),
+    'pro': dict(name='Pro', monthly=99_000, list_monthly=149_000, yearly=990_000, usd_monthly=999, usd_yearly=9_900,
                 entitlements=['office', 'ai', 'export', 'apk'],
-                features=dict(id=['Semua fitur Free', 'Ekspor flipbook: HTML offline', 'Share link tanpa batas', 'Build aplikasi Android (APK)'],
-                              en=['Everything in Free', 'Flipbook export: offline HTML', 'Unlimited share links', 'Build Android apps (APK)'])),
-    'business': dict(name='Business', monthly=199_000, yearly=1_990_000, usd_monthly=1_999, usd_yearly=19_900,
+                features=dict(id=['Semua fitur Free', 'AI Summarizer: ringkasan, terjemahan, podcast', 'Ekspor flipbook: HTML offline',
+                                  '20 share link flipbook', 'Build aplikasi Android (APK)'],
+                              en=['Everything in Free', 'AI Summarizer: summary, translation, podcast', 'Flipbook export: offline HTML',
+                                  '20 flipbook share links', 'Build Android apps (APK)'])),
+    'business': dict(name='Business', monthly=199_000, list_monthly=285_000, yearly=1_990_000, usd_monthly=1_999, usd_yearly=19_900,
                      entitlements=['office', 'ai', 'export', 'apk', 'exe'],
-                     features=dict(id=['Semua fitur Pro', 'Build aplikasi Windows (EXE)', 'Cocok untuk tim & instansi'],
-                                   en=['Everything in Pro', 'Build Windows apps (EXE)', 'Made for teams & institutions'])),
+                     features=dict(id=['Semua fitur Pro', 'Build aplikasi Windows (EXE)', '100 share link flipbook', 'Cocok untuk tim & instansi'],
+                                   en=['Everything in Pro', 'Build Windows apps (EXE)', '100 flipbook share links', 'Made for teams & institutions'])),
 }
 
 
@@ -288,7 +292,8 @@ class DuitkuProvider:
     def create(self, order, user, base_url, method=None):
         if method and method not in {m['code'] for m in self.methods()}:
             raise AccountError(400, 'Pilih metode pembayaran.')
-        item = f'MyFlipbook {PLANS[order["plan"]]["name"]} ({order["cycle"]})'
+        # What the buyer reads on Duitku's page and receipt, in Indonesian.
+        item = f'MyFlipbook Pro - paket {PLANS[order["plan"]]["name"]} ({"tahunan" if order["cycle"] == "yearly" else "bulanan"})'
         body = {
             'paymentAmount': order['amount'], 'merchantOrderId': order['id'], 'productDetails': item,
             'email': user['email'], 'customerVaName': (user['name'] or user['email'].split('@')[0])[:20],
@@ -326,6 +331,10 @@ class DuitkuProvider:
         signature = hashlib.md5((self.merchant_code + order_id + self.api_key).encode()).hexdigest()
         data = self._call('/api/merchant/transactionStatus',
                           {'merchantCode': self.merchant_code, 'merchantOrderId': order_id, 'signature': signature})
+        if not isinstance(data, dict):
+            # An invoice the buyer hasn't paid yet (no payment method chosen) answers with a
+            # bare string, "Transaction not found": still pending, not an error.
+            return None
         code = str(data.get('statusCode') or data.get('resultCode') or '')
         if code == '00':
             return 'paid', data.get('amount')
@@ -568,7 +577,8 @@ class Accounts:
                     verified=bool(row['verified']) if 'verified' in row.keys() else True,
                     google=bool(row['google_sub']) if 'google_sub' in row.keys() else False,
                     planName=PLANS[plan]['name'], planExpiresAt=expires if plan != 'free' else None,
-                    entitlements=PLANS[plan]['entitlements'],
+                    # the 7-day trial includes the AI Summarizer
+                    entitlements=PLANS[plan]['entitlements'] + (['ai'] if plan == 'free' and not trial_expired else []),
                     trialDaysLeft=trial_left if plan == 'free' else None, trialExpired=trial_expired)
 
     def register(self, email, password, name=''):
@@ -722,7 +732,7 @@ class Accounts:
         return self.usd_provider if currency == 'USD' else self.provider
 
     def plans(self):
-        return [dict(id=key, name=p['name'], monthly=p['monthly'], yearly=p['yearly'],
+        return [dict(id=key, name=p['name'], monthly=p['monthly'], yearly=p['yearly'], listMonthly=p.get('list_monthly') or 0,
                      usd=dict(monthly=p['usd_monthly'], yearly=p['usd_yearly']),
                      features=p['features'], entitlements=p['entitlements'])
                 for key, p in PLANS.items()]

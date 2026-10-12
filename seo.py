@@ -13,11 +13,19 @@ import os
 import re
 import time
 
+import accounts
 import articles
 
 SITE = 'https://myflipbookpro.com'
 BRAND = 'MyFlipbook Pro'
 CONTACT = 'cs@myflipbookpro.com'
+# The business behind the site (shown in every footer and in the Organization schema).
+ADDRESS = 'Sarvamaya — Jl. H. Khair No. 59, Ragunan, Ps. Minggu, Jakarta Selatan, DKI Jakarta 12550'
+PHONE = '+62 852-8631-2477'
+WA_LOCAL = '0852-8631-2477'   # WhatsApp
+WHATSAPP = 'https://wa.me/6285286312477'
+POSTAL = {'@type': 'PostalAddress', 'streetAddress': 'Jl. H. Khair No. 59, Ragunan', 'addressLocality': 'Pasar Minggu, Jakarta Selatan',
+          'addressRegion': 'DKI Jakarta', 'postalCode': '12550', 'addressCountry': 'ID'}
 OG_IMAGE = SITE + '/assets/img/hero-id-1671.jpg'   # the Indonesian banner (main site language)
 OG_SIZE = (1671, 941)
 HOME_TITLE = 'Buat Flipbook dari PDF & Alat PDF Gratis | MyFlipbook Pro'
@@ -121,7 +129,7 @@ page('ringkas-pdf-ai', 'notebook.html', 'AI Summarizer',
      ['Hemat waktu membaca jurnal dan laporan panjang.', 'Bisa menggabungkan beberapa sumber sekaligus.',
       'Ringkasan dalam Bahasa Indonesia.'],
      [('Apakah dokumen saya dipakai untuk melatih AI?', 'Teks dokumen dikirim ke penyedia AI hanya untuk diproses dan hasilnya dikembalikan kepada Anda. Hindari memakai fitur AI untuk dokumen yang sangat rahasia.'),
-      ('Apakah gratis?', 'Akun Free mendapat jatah pemakaian AI yang terisi ulang berkala; paket Pro dan Business memberi jatah lebih besar.')],
+      ('Apakah gratis?', 'AI Summarizer termasuk paket Pro dan Business. Akun baru bisa mencobanya gratis selama 7 hari masa coba.')],
      browser=False, related=['cari-jurnal-ebook', 'terjemahkan-pdf', 'pdf-ke-word'])
 
 page('cari-jurnal-ebook', 'journals.html', 'Cari Jurnal & Ebook',
@@ -490,7 +498,8 @@ TOP = f'''<header><a href="/" aria-label="{BRAND}"><img src="/assets/img/logo.pn
 <nav><a href="/pdf-ke-flipbook">PDF ke Flipbook</a><a href="/converter.html">Semua alat PDF</a><a href="/artikel">Artikel</a><a href="/login.html">Masuk</a></nav></header>'''
 FOOT = (f'<footer>© {time.strftime("%Y")} {BRAND} — dikelola oleh Sarvamaya. <a href="/artikel">Artikel</a> · '
         '<a href="/privacy.html">Kebijakan Privasi</a> · <a href="/terms.html">Syarat &amp; Ketentuan</a> · '
-        '<a href="mailto:cs@myflipbookpro.com">cs@myflipbookpro.com</a> · <a href="/">Beranda</a></footer>')
+        '<a href="mailto:cs@myflipbookpro.com">cs@myflipbookpro.com</a> · <a href="/">Beranda</a>'
+        f'<br>📍 {esc(ADDRESS)} · <a href="{WHATSAPP}" target="_blank" rel="noopener">WhatsApp {WA_LOCAL}</a></footer>')
 ARTICLES = {a['slug']: a for a in articles.ARTICLES}
 MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 LINK = re.compile(r'\[([^\]]+)\]\((/[^)\s]*)\)')
@@ -571,6 +580,29 @@ def article_html(slug):
 </div></body></html>'''
 
 
+def harga_html():
+    faq = [('Bagaimana cara membayar?', 'Masuk ke akun, pilih paket, lalu bayar lewat QRIS, transfer bank (virtual account), atau e-wallet. Paket aktif otomatis setelah pembayaran berhasil.'),
+           ('Apakah ada masa coba?', 'Ada. Akun baru bisa mencoba semua fitur selama 7 hari tanpa kartu kredit.'),
+           ('Apa bedanya Pro dan Business?', 'Pro membuka AI Summarizer (ringkasan, terjemahan, podcast), ekspor flipbook ke HTML offline, aplikasi Android (APK), dan 20 share link. Business menambah aplikasi Windows (EXE) dan 100 share link, cocok untuk tim dan instansi.')]
+    data = [{'@context': 'https://schema.org', '@type': 'Product', 'name': f'{BRAND} {p["name"]}', 'description': PLAN_DESC.get(k, ''),
+             'brand': BRAND, 'offers': {'@type': 'Offer', 'price': str(p['monthly']), 'priceCurrency': 'IDR', 'url': SITE + '/harga'}}
+            for k, p in accounts.PLANS.items() if p['monthly']]
+    data.append({'@context': 'https://schema.org', '@type': 'FAQPage', 'mainEntity': [
+        {'@type': 'Question', 'name': q, 'acceptedAnswer': {'@type': 'Answer', 'text': a}} for q, a in faq]})
+    return head(f'Harga Paket | {BRAND}', 'Harga paket MyFlipbook Pro dalam Rupiah: Free, Pro, dan Business. Ekspor flipbook offline, '
+                'aplikasi Android dan Windows, share link, dan semua alat PDF.', '/harga', ''.join(ld(d) for d in data)) + f'''
+<body><div class="wrap">
+{TOP}
+<main>
+<div class="hero"><h1>Paket &amp; Harga</h1><p>Mulai gratis. Semua harga dalam Rupiah.</p></div>
+<style>{PRICE_STYLE}</style>
+<div class="plans3">{plan_cards()}</div>
+<section><h2>Pertanyaan yang sering diajukan</h2><div class="card">{''.join(f'<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>' for q, a in faq)}</div></section>
+</main>
+{FOOT}
+</div></body></html>'''
+
+
 def articles_index():
     title = 'Artikel & Tutorial PDF, Flipbook, dan AI | MyFlipbook'
     description = ('Panduan praktis berbahasa Indonesia: membuat flipbook, kompres dan gabung PDF untuk pendaftaran, '
@@ -640,8 +672,8 @@ def app_head(page_name):
         tags.append(f'<meta property="og:title" content="{esc(HOME_TITLE)}">')
         tags.append(ld({'@context': 'https://schema.org', '@graph': [
             {'@type': 'Organization', 'name': BRAND, 'alternateName': 'MyFlipbookPro', 'url': SITE + '/',
-             'logo': SITE + '/assets/img/logo.png', 'email': CONTACT,
-             'contactPoint': {'@type': 'ContactPoint', 'contactType': 'customer support', 'email': CONTACT, 'availableLanguage': ['id', 'en']}},
+             'logo': SITE + '/assets/img/logo.png', 'email': CONTACT, 'telephone': PHONE, 'address': POSTAL,
+             'contactPoint': {'@type': 'ContactPoint', 'contactType': 'customer support', 'email': CONTACT, 'telephone': PHONE, 'availableLanguage': ['id', 'en']}},
             {'@type': 'WebSite', 'name': BRAND, 'url': SITE + '/', 'inLanguage': ['id', 'en']}]}))
     return ''.join(tags).encode('utf-8')
 
@@ -652,6 +684,56 @@ def footer_links():
         [f'<a href="/{s}" style="color:#78716C">{esc(p["name"])}</a>' for s, p in LANDING.items()]
         + ['<a href="/artikel" style="color:#78716C">Artikel &amp; tutorial</a>'])
     return f'<nav aria-label="Alat PDF" style="text-align:center;font-size:11px;font-weight:600;margin-top:10px;line-height:2">{links}</nav>'.encode('utf-8')
+
+
+# ---------- Prices: built from accounts.PLANS (the prices checkout charges), never typed twice.
+PLAN_DESC = {'free': 'Untuk mencoba dan kebutuhan PDF sehari-hari.',
+             'pro': 'Untuk guru, dosen, penulis, dan UMKM yang membagikan flipbook.',
+             'business': 'Untuk tim, sekolah, kampus, dan instansi.'}
+
+
+def rupiah(n):
+    return 'Rp' + f'{n:,}'.replace(',', '.')
+
+
+def plan_cards(compact=False):
+    """The three plans as HTML cards (home page: compact; /harga: with yearly prices)."""
+    out = []
+    for key, p in accounts.PLANS.items():
+        was = p.get('list_monthly')
+        price = ('Gratis' if not p['monthly'] else
+                 (f'<s class="pw">{rupiah(was)}</s> ' if was and was > p['monthly'] else '') + f'{rupiah(p["monthly"])}<small>/bulan</small>')
+        promo = ('<span class="promo">Promo peluncuran −' + str(round(100 - p['monthly'] * 100 / was)) + '%</span>'
+                 if was and was > p['monthly'] else '')
+        yearly = '' if not p['yearly'] else f'<p class="py">atau {rupiah(p["yearly"])}/tahun (hemat 2 bulan)</p>'
+        feats = ''.join(f'<li>{esc(f)}</li>' for f in p['features']['id'])
+        cta = ('Coba gratis' if key == 'free' else f'Pilih {p["name"]}')
+        out.append(f'<div class="plan{" hot" if key == "pro" else ""}"><h3>{esc(p["name"])}</h3><p class="pd">{esc(PLAN_DESC.get(key, ""))}</p>'
+                   f'{promo}<p class="pp">{price}</p>{yearly}<ul>{feats}</ul>'
+                   f'<a class="pc" href="/account.html#plans">{cta} →</a></div>')
+    return ''.join(out)
+
+
+PRICE_STYLE = '''.plans3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:14px 0}
+.plans3 .plan{background:#fff;border:1.5px solid #E8E2D4;border-radius:20px;padding:20px;display:flex;flex-direction:column}
+.plans3 .plan.hot{border-color:#DC0500;box-shadow:0 10px 26px rgba(220,5,0,.12)}
+.plans3 h3{margin:0;font-size:20px}.plans3 .pd{font-size:13px;color:#78716C;margin:6px 0 10px}
+.plans3 .pp{font-size:26px;font-weight:900;margin:0}.plans3 .pp small{font-size:13px;font-weight:600;color:#78716C}
+.plans3 .pp s.pw{font-size:15px;font-weight:700;color:#A8A29E;margin-right:4px}
+.plans3 .promo{align-self:flex-start;background:#FFE9E7;color:#DC0500;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;margin-bottom:6px}
+.plans3 .py{font-size:12px;color:#57534E;margin:4px 0 0}.plans3 ul{list-style:disc;padding-left:18px;font-size:13px;line-height:1.7;flex:1}
+.plans3 .pc{display:block;text-align:center;margin-top:10px;padding:10px;border-radius:999px;background:#1C1917;color:#fff;font-weight:800;text-decoration:none}
+.plans3 .plan.hot .pc{background:#DC0500}'''
+
+
+def home_pricing():
+    """Price section for the home page (products, descriptions and rupiah prices, as payment providers require)."""
+    return (f'<section id="harga" class="max-w-[1440px] mx-auto px-4 pb-6"><style>{PRICE_STYLE}</style>'
+            '<h2 class="serif text-[22px] md:text-[26px] font-black tracking-tight">Paket &amp; Harga</h2>'
+            '<p class="text-[13px] text-[#78716C] mt-1">Semua harga dalam Rupiah. Akun baru bisa mencoba semua fitur selama 7 hari.</p>'
+            f'<div class="plans3">{plan_cards()}</div>'
+            '<p class="text-[12px] text-[#78716C]"><a href="/harga" style="color:#1A3C34;font-weight:700">Lihat detail paket &amp; pertanyaan umum →</a></p>'
+            '</section>').encode('utf-8')
 
 
 def static_grid():
@@ -675,6 +757,8 @@ def add_head(page_name, body):
     if page_name == 'index.html':
         body = body.replace(b'<div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4"></div>',
                             b'<div id="grid" class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">' + static_grid() + b'</div>', 1)
+        i = body.find(b'<footer')
+        body = body[:i] + home_pricing() + body[i:] if i >= 0 else body
         i = body.rfind(b'</footer>')
         body = body[:i] + footer_links() + body[i:] if i >= 0 else body
     return body
@@ -688,7 +772,7 @@ def robots():
 
 def sitemap():
     urls = [('/', '1.0')] + [('/' + s, '0.9') for s in LANDING] + [
-        ('/privacy.html', '0.2'), ('/terms.html', '0.2'), ('/artikel', '0.8')]
+        ('/harga', '0.8'), ('/privacy.html', '0.2'), ('/terms.html', '0.2'), ('/artikel', '0.8')]
     rows = ''.join(f'<url><loc>{esc(SITE + u)}</loc><lastmod>{UPDATED}</lastmod><priority>{pr}</priority></url>' for u, pr in urls)
     rows += ''.join(f'<url><loc>{SITE}/artikel/{a["slug"]}</loc><lastmod>{a["updated"]}</lastmod><priority>0.8</priority></url>'
                     for a in articles.ARTICLES)
@@ -709,6 +793,10 @@ def respond(path):
         if slug not in CACHE:
             CACHE[slug] = landing_html(slug).encode('utf-8')
         return CACHE[slug], 'text/html; charset=utf-8'
+    if path == '/harga':
+        if 'harga' not in CACHE:
+            CACHE['harga'] = harga_html().encode('utf-8')
+        return CACHE['harga'], 'text/html; charset=utf-8'
     if path in ('/artikel', '/artikel/'):
         if 'artikel' not in CACHE:
             CACHE['artikel'] = articles_index().encode('utf-8')
