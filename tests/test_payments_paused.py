@@ -55,5 +55,23 @@ class PaymentsPaused(unittest.TestCase):
         self.assertEqual(status, 200, body)
 
 
+    def test_pause_lets_only_the_listed_tester_check_out(self):
+        env = {'PAYMENTS_PAUSED': '1', 'PAYMENTS_ALLOW_EMAILS': ' Tester@Example.com , other@x.y'}
+        self.call('POST', '/api/auth/register', {'email': 'visitor@example.com', 'password': 'secret-pass-1'})
+        with mock.patch.dict(os.environ, env):
+            self.assertTrue(self.call('GET', '/api/billing/plans')[1]['paymentsPaused'])
+            self.assertEqual(self.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[0], 503, 'a visitor stays paused')
+        self.cookie = ''
+        self.call('POST', '/api/auth/register', {'email': 'tester@example.com', 'password': 'secret-pass-1'})
+        with mock.patch.dict(os.environ, env):
+            _, plans = self.call('GET', '/api/billing/plans')
+            self.assertFalse(plans['paymentsPaused']); self.assertTrue(plans['paymentsEnabled']['IDR'])
+            status, body = self.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})
+            self.assertEqual(status, 200, body)
+        self.cookie = ''
+        with mock.patch.dict(os.environ, env):
+            self.assertTrue(self.call('GET', '/api/billing/plans')[1]['paymentsPaused'], 'signed out: paused')
+
+
 if __name__ == '__main__':
     unittest.main()

@@ -224,11 +224,16 @@ def share_filename(title):
     return safe + '.html'
 
 
-def payments_paused():
+def payments_paused(user=None):
     """PAYMENTS_PAUSED=1 in .env: no new checkouts (e.g. while the gateway is being
     set up), even with gateway keys filled in. Notifications for orders already
-    made still come in."""
-    return os.environ.get('PAYMENTS_PAUSED', '').strip().lower() in ('1', 'true', 'yes', 'on')
+    made still come in.
+    PAYMENTS_ALLOW_EMAILS=a@b.c,…: these signed-in accounts may still check out while
+    paused (e.g. the payment provider's reviewer testing the sandbox); nobody else."""
+    if os.environ.get('PAYMENTS_PAUSED', '').strip().lower() not in ('1', 'true', 'yes', 'on'):
+        return False
+    allowed = {e.strip().lower() for e in os.environ.get('PAYMENTS_ALLOW_EMAILS', '').split(',') if e.strip()}
+    return not (user and str(user.get('email', '')).lower() in allowed)
 
 
 # Usage quotas per rolling window (hosted): None = no limit. Change with .env,
@@ -2483,7 +2488,7 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(200, {'methods': store.payment_methods()})
         elif path == '/api/billing/plans':
             providers = {c: store.provider_for(c).name for c in accounts.CURRENCIES}
-            paused = payments_paused()
+            paused = payments_paused(self.current_user())
             self.send_json(200, {'plans': store.plans(), 'provider': store.provider.name, 'providers': providers,
                                  'paymentsEnabled': {c: name != 'none' and not paused for c, name in providers.items()},
                                  'paymentsPaused': paused})
@@ -2594,7 +2599,7 @@ class Handler(SimpleHTTPRequestHandler):
         if not user:
             raise accounts.AccountError(401, 'Silakan masuk dulu.')
         if path == '/api/billing/checkout':
-            if payments_paused():
+            if payments_paused(user):
                 raise accounts.AccountError(503, 'Pembayaran online sementara dinonaktifkan. Coba lagi nanti.')
             self.send_json(200, store.checkout(user, data.get('plan'), data.get('cycle'), self.base_url(),
                                                data.get('method'), str(data.get('currency') or 'IDR')))
