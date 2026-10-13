@@ -29,7 +29,8 @@ from accounts import AccountError
 
 MB = 1024 * 1024
 # plan -> (max books or None, max bytes)
-LIMITS = {'free': (3, 100 * MB), 'pro': (50, 5 * 1024 * MB), 'business': (None, 50 * 1024 * MB)}
+# (books, bytes) per plan; the price list (accounts.PLANS features) says the same — tests/test_ai_pro.py checks it.
+LIMITS = {'free': (3, 100 * MB), 'pro': (50, 1024 * MB), 'business': (None, 5 * 1024 * MB)}
 EXPORT_KINDS = ('html', 'apk', 'exe')
 MAX_PROJECT = 300 * MB
 MAX_COVER = 2 * MB

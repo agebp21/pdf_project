@@ -92,7 +92,8 @@
     const fraction = Math.max(u.maxBooks == null ? 0 : u.books / u.maxBooks, u.bytes / u.maxBytes);
     $('#meter').firstElementChild.style.width = Math.min(100, Math.round(fraction * 100)) + '%';
     $('#meter').classList.toggle('full', fraction >= 0.9);
-    $('#usage-bytes').textContent = L(`${size(u.bytes)} of ${size(u.maxBytes)} · ${u.plan} plan`, `${size(u.bytes)} dari ${size(u.maxBytes)} · paket ${u.plan}`);
+    const planName = {free: 'Free', pro: 'Pro', business: 'Business'}[u.plan] || u.plan;   // the plan's name, as on the price list
+    $('#usage-bytes').textContent = L(`${size(u.bytes)} of ${size(u.maxBytes)} · ${planName} plan`, `${size(u.bytes)} dari ${size(u.maxBytes)} · paket ${planName}`);
     $('#upgrade').hidden = u.plan === 'business';
   }
   async function cover(book, box) {

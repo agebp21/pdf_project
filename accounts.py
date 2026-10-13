@@ -64,19 +64,21 @@ PLANS = {
     # AI Summarizer is a Pro feature; new Free members still try it during the trial (public_user).
     'free': dict(name='Free', monthly=0, yearly=0, usd_monthly=0, usd_yearly=0, entitlements=['office'],
                  features=dict(id=['Semua tool PDF di browser', 'PDF to Flipbook: baca & preview',
-                                   'Word/Excel/PPT ke PDF', '3 share link flipbook gratis'],
+                                   'Word/Excel/PPT ke PDF', '3 share link flipbook gratis', 'My Library: 3 buku, 100 MB'],
                                en=['Every in-browser PDF tool', 'PDF to Flipbook: read & preview',
-                                   'Word/Excel/PPT to PDF', '3 free flipbook share links'])),
+                                   'Word/Excel/PPT to PDF', '3 free flipbook share links', 'My Library: 3 books, 100 MB'])),
     'pro': dict(name='Pro', monthly=99_000, list_monthly=149_000, yearly=990_000, usd_monthly=999, usd_yearly=9_900,
                 entitlements=['office', 'ai', 'export', 'apk'],
                 features=dict(id=['Semua fitur Free', 'AI Summarizer: ringkasan, terjemahan, podcast', 'Ekspor flipbook: HTML offline',
-                                  '20 share link flipbook', 'Build aplikasi Android (APK)'],
+                                  '20 share link flipbook', 'My Library: 50 buku, 1 GB', 'Build aplikasi Android (APK)'],
                               en=['Everything in Free', 'AI Summarizer: summary, translation, podcast', 'Flipbook export: offline HTML',
-                                  '20 flipbook share links', 'Build Android apps (APK)'])),
+                                  '20 flipbook share links', 'My Library: 50 books, 1 GB', 'Build Android apps (APK)'])),
     'business': dict(name='Business', monthly=199_000, list_monthly=285_000, yearly=1_990_000, usd_monthly=1_999, usd_yearly=19_900,
                      entitlements=['office', 'ai', 'export', 'apk', 'exe'],
-                     features=dict(id=['Semua fitur Pro', 'Build aplikasi Windows (EXE)', '100 share link flipbook', 'Cocok untuk tim & instansi'],
-                                   en=['Everything in Pro', 'Build Windows apps (EXE)', '100 flipbook share links', 'Made for teams & institutions'])),
+                     features=dict(id=['Semua fitur Pro', 'Build aplikasi Windows (EXE)', '100 share link flipbook', 'My Library: buku tanpa batas, 5 GB',
+                                       'Cocok untuk tim & instansi'],
+                                   en=['Everything in Pro', 'Build Windows apps (EXE)', '100 flipbook share links', 'My Library: unlimited books, 5 GB',
+                                       'Made for teams & institutions'])),
 }
 
 

@@ -29,6 +29,14 @@ class AiIsPro(unittest.TestCase):
         pro = ' '.join(accounts.PLANS['pro']['features']['id'])
         self.assertNotIn('AI Summarizer', free); self.assertIn('AI Summarizer', pro)
 
+    def test_library_storage_on_the_price_list_matches_the_limits(self):
+        import library, share
+        for plan, (books, size) in library.LIMITS.items():
+            text = ' '.join(accounts.PLANS[plan]['features']['id'])
+            amount = f'{size // (1024 * 1024 * 1024)} GB' if size >= 1024 ** 3 else f'{size // (1024 * 1024)} MB'
+            self.assertIn(amount, text, plan); self.assertIn('tanpa batas' if books is None else f'{books} buku', text, plan)
+            self.assertIn(f'{share.SHARE_LIMITS[plan][0]} share link', text, plan)
+
 
 if __name__ == '__main__':
     unittest.main()
