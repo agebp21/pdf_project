@@ -26,6 +26,7 @@ from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 import accounts
+import admin_report
 import geo
 import visits
 
@@ -388,9 +389,25 @@ def report_csv(days=30):
     return '\n'.join(rows) + '\n'
 
 
+def report_pdf(days=30, now=None):
+    """The audit report (admin_report.build) with the same numbers as the panel, plus the period's orders."""
+    now = int(now or time.time())
+    since = int(time.mktime(time.strptime(day_of(now - (days - 1) * 86400), '%Y-%m-%d')))
+    orders = []
+    db = read_only(db_path())
+    if db:
+        with db:
+            orders = [dict(r) for r in db.execute(
+                'SELECT o.id, u.email, o.plan, o.cycle, o.amount, o.currency, o.status, o.provider, o.created_at, o.paid_at '
+                'FROM orders o LEFT JOIN users u ON u.id = o.user_id WHERE COALESCE(o.paid_at, o.created_at) >= ? '
+                'ORDER BY COALESCE(o.paid_at, o.created_at) DESC LIMIT 500', (since,))]
+        db.close()
+    return admin_report.build(days, overview(now), visitor_stats(days), orders, server_status(), now)
+
+
 def server_status():
     """Which settings are filled in (never their values) and the disk."""
-    keys = ['GOOGLE_CLIENT_ID', 'GOOGLE_API_KEY', 'SMTP_HOST', 'SMTP_USER', 'SUMOPOD_API_KEY', 'MIDTRANS_SERVER_KEY',
+    keys = ['GOOGLE_CLIENT_ID', 'GOOGLE_API_KEY', 'SMTP_HOST', 'SMTP_USER', 'SUMOPOD_API_KEY', 'DUITKU_MERCHANT_CODE', 'DUITKU_API_KEY', 'MIDTRANS_SERVER_KEY',
             'TRIPAY_API_KEY', 'LEMONSQUEEZY_API_KEY', 'YOUTUBE_API_KEY']
     try:
         import shutil
@@ -502,6 +519,16 @@ class AdminHandler(BaseHTTPRequestHandler):
                 self.send_response(200)
                 self.send_header('Content-Type', 'text/csv; charset=utf-8')
                 self.send_header('Content-Disposition', f'attachment; filename="myflipbook-laporan-{days}-hari.csv"')
+                self.send_header('Content-Length', str(len(body)))
+                self.common_headers()
+                self.end_headers()
+                self.wfile.write(body)
+            elif url.path == '/api/report.pdf':
+                days = max(1, min(365, int(arg('days', '30') or 30)))
+                body = report_pdf(days)
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/pdf')
+                self.send_header('Content-Disposition', f'attachment; filename="myflipbook-laporan-{days}-hari-{time.strftime("%Y%m%d")}.pdf"')
                 self.send_header('Content-Length', str(len(body)))
                 self.common_headers()
                 self.end_headers()

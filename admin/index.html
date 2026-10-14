@@ -282,7 +282,8 @@ async function loadVisits(days) {
   const d = await api('/api/visits?days=' + days);
   const list = (rows, label) => `<table>${rows.map(r => `<tr><td>${esc(label(r.name))}</td><td style="text-align:right">${num(r.views)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada data.</td></tr>'}</table>`;
   const report = d.daily.slice().reverse().filter(r => r.visitors || r.views || r.members || r.office || r.ai || r.translate || r.books);
-  $('#visit-view').innerHTML = `<div class="row"><a class="ghost" href="api/report.csv?days=${days}" style="text-decoration:none">⬇ Unduh laporan (CSV, ${days} hari)</a>
+  $('#visit-view').innerHTML = `<div class="row"><a class="ghost" href="api/report.pdf?days=${days}" style="text-decoration:none">📄 Unduh laporan PDF (${days} hari)</a>
+    <a class="ghost" href="api/report.csv?days=${days}" style="text-decoration:none">⬇ Unduh laporan (CSV, ${days} hari)</a>
       <span class="muted">${d.teamExcluded ? 'Tim (' + d.teamExcluded + ' akun) tidak dihitung.' : 'Tim belum dikecualikan (STATS_EXCLUDE_EMAILS).'}${d.since ? ' Data mulai ' + esc(d.since) + '.' : ''}</span></div>
     <div class="grid">${card(num(d.average), 'Rata-rata pengunjung / hari')}${card(num(d.visitors), 'Total kunjungan (' + days + ' hari)')}
       ${card(num(d.views), 'Tampilan halaman')}${card(num((d.today || {}).visitors), 'Pengunjung hari ini')}

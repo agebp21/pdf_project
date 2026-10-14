@@ -16,6 +16,7 @@ from unittest import mock
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 import accounts
 import admin_server
+import admin_report
 import visits
 
 
@@ -133,6 +134,22 @@ class AdminTests(unittest.TestCase):
             ro.close()
         self.assertEqual(self.call('POST', '/api/logout', {})[0], 200)
         self.assertEqual(self.call('GET', '/api/overview')[0], 401)
+
+    def test_pdf_report(self):
+        self.assertEqual(self.call('GET', '/api/report.pdf?days=7')[0], 401, 'admin only')
+        self.login()
+        status, body, _ = self.call('GET', '/api/report.pdf?days=7')
+        self.assertEqual(status, 200)
+        self.assertTrue(body.startswith('%PDF-1.4'))
+        pdf = admin_server.report_pdf(7)
+        self.assertTrue(pdf.rstrip().endswith(b'%%EOF')); self.assertIn(b'/Type /Pages', pdf)
+        import zlib, re
+        text = b''.join(zlib.decompress(m) for m in re.findall(rb'stream\n(.*?)\nendstream', pdf, re.S)).decode('latin-1')
+        for expected in ('Laporan MyFlipbook Pro', 'Ringkasan', 'Rp 49.000', 'a***@example.com', 'Status server'):
+            self.assertIn(expected, text)
+        self.assertNotIn('alice@example.com', text, 'emails are masked in the report')
+        self.assertNotIn('sk-should-never-show', text, 'setting values never appear')
+        self.assertEqual(admin_report.mask_email('budi@gmail.com'), 'b***@gmail.com')
 
     def test_no_ip_stored(self):
         db = sqlite3.connect(Path(self.tmp.name) / 'visits.sqlite3')
