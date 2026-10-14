@@ -99,7 +99,7 @@
       const w=stage.clientWidth;
       if(compact) {
         const immersive=Boolean(document.fullscreenElement)||Boolean(stage.closest('.reading-fullscreen'));
-        if(immersive) stage.style.height='100%';
+        if(immersive) stage.style.height='';      // full screen: the stage fills the space between the title bar and the buttons (flipbook.css)
         else {
           const pages=book.getPageCount()===1||w<700||ratio>this.WIDE?1:2;
           stage.style.height=(w/(ratio*pages))+'px';

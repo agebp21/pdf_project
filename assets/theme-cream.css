@@ -27,6 +27,11 @@ button.primary.apply:hover,.primary:hover{transform:translate(-1px,-1px);box-sha
 .controls button:hover:not(:disabled){transform:translateY(-1px);box-shadow:3px 3px 0 var(--ink)}
 /* Bookmark / notes / highlighter buttons get their label when a book opens: hide the empty pills until then. */
 .controls button:empty{display:none}
+/* Reader buttons stay on one row and fit the screen (flipbook.js fitControls): first tighter, then scaled down */
+.controls .navigation{flex-wrap:nowrap;transform-origin:left center}
+.controls .navigation button{white-space:nowrap;flex-shrink:0}
+.controls .navigation.fit-tight{gap:3px}.controls .navigation.fit-tight button{padding-left:9px;padding-right:9px}
+.controls.fit-scroll{overflow-x:auto;justify-content:flex-start;scrollbar-width:thin;-webkit-overflow-scrolling:touch}.controls.fit-scroll .navigation{flex-shrink:0}
 #empty-book h2{font-family:'Fraunces',serif!important;color:var(--pine)!important}
 .feedback{background:#EFF6EC;border:1.5px dashed var(--pine);border-radius:12px;padding:10px}
 .export-progress{display:flex;align-items:center;gap:10px;margin:10px 0 6px}

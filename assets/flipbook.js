@@ -786,6 +786,34 @@
     if (book.getState() !== 'read') return;
     book.turnToPage(0); updatePage(); animate(true);
   });
+  // The reader buttons stay on one row and fit whatever screen the reader has: tighter
+  // spacing first, then the whole row scaled down (never cut off, never a second row).
+  // Measured again on resize, full screen, and when a button appears or hides.
+  function fitControls() {
+    const bar = document.querySelector('.controls'), row = bar && bar.querySelector('.navigation');
+    if (!row) return;
+    row.classList.remove('fit-tight'); bar.classList.remove('fit-scroll'); row.style.transform = ''; row.style.marginRight = '';
+    const room = () => bar.clientWidth - (parseFloat(getComputedStyle(bar).paddingLeft) || 0) - (parseFloat(getComputedStyle(bar).paddingRight) || 0);
+    if (row.scrollWidth <= room()) return;
+    row.classList.add('fit-tight');
+    const width = row.scrollWidth, space = room();
+    if (width <= space) return;
+    // Not below 70% (still readable and tappable); a phone narrower than that swipes the row sideways.
+    const scale = Math.max(0.7, space / width);
+    row.style.transform = `scale(${scale})`;
+    row.style.marginRight = `${-(width * (1 - scale))}px`;      // the row takes its scaled width
+    if (width * scale > space + 1) bar.classList.add('fit-scroll');
+  }
+  {
+    let frame = 0;
+    const later = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(fitControls); };
+    const bar = document.querySelector('.controls');
+    if (bar && window.ResizeObserver) new ResizeObserver(later).observe(bar);
+    const row = bar && bar.querySelector('.navigation');
+    if (row) new MutationObserver(later).observe(row, {subtree: true, childList: true, characterData: true, attributes: true, attributeFilter: ['hidden']});   // not style/class: fitControls sets those itself
+    addEventListener('resize', later); document.addEventListener('fullscreenchange', later);
+    later();
+  }
   // End: straight to the back cover (the last spread), like Home to the front.
   $('#end').addEventListener('click', () => {
     zoom?.reset();

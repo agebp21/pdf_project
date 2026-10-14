@@ -11,3 +11,9 @@ body:has(.preview.reading-fullscreen){overflow:hidden}
 body:has(.preview.reading-fullscreen) .topbar{display:none}
 /* Opening a PDF: red progress bar under the status text. */
 #load-status.is-loading{background-image:linear-gradient(#e03131,#e03131),linear-gradient(#fbd5d5,#fbd5d5);background-size:var(--load-progress,0%) 6px,100% 6px;background-position:left bottom,left bottom;background-repeat:no-repeat;padding-bottom:14px;transition:background-size .25s ease}
+/* Full screen like the normal reader: title bar, the book, then the buttons below it — the book is sized to the
+   space between them, so the buttons never cover the bottom of a page. */
+.preview:fullscreen,.preview.reading-fullscreen{display:flex;flex-direction:column}
+.preview:fullscreen .preview-top,.preview.reading-fullscreen .preview-top{display:flex;flex-shrink:0}
+.preview:fullscreen #reader-stage,.preview.reading-fullscreen #reader-stage{flex:1 1 auto;height:auto!important;min-height:0}
+.preview:fullscreen .controls,.preview.reading-fullscreen .controls{position:static;transform:none;width:auto;max-width:none;opacity:1;border-radius:0;padding:10px 12px;background:transparent;justify-content:center;flex-shrink:0}
