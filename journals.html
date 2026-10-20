@@ -471,7 +471,6 @@
       } catch (cause) { if (tab) tab.close(); status.textContent = cause.message; }
     };
     body.append(el('div', {className: 'actions'}, make, open, pageLink, status));
-    if (b.source === 'gutenberg') body.append(el('p', {className: 'hint', textContent: L('Project Gutenberg has the text of this book; MyFlipbook typesets it into a PDF (the first time takes a few seconds).', 'Project Gutenberg menyediakan teks buku ini; MyFlipbook menyusunnya menjadi PDF (pertama kali butuh beberapa detik).')}));
     return el('article', {className: 'clay-panel item book'}, cover, body);
   }
   // Shelf tiles: the cover, title and author; a click opens the details (or the series' issues).

@@ -1230,10 +1230,11 @@
   }
   // flipbook.html?journal=W…&pdf=…&title=… (journal search): the server hands over the
   // article's checked open-access PDF, for visitors without an account too.
-  // ?book=oapen|archive&id=… (ebook / magazine search) the same way through /api/ebooks/file.
+  // ?book=oapen|archive|openlibrary|gutenberg&id=… (ebook / magazine search) the same way through
+  // /api/ebooks/file (a Gutenberg book is typeset into a PDF there).
   const handedJournal = new URLSearchParams(location.search).get('journal');
   const handedBook = new URLSearchParams(location.search).get('book');
-  if ((handedJournal && /^(W\d{1,12}|S2[0-9a-f]{40}|doi)$/.test(handedJournal)) || /^(oapen|archive)$/.test(handedBook || '')) {
+  if ((handedJournal && /^(W\d{1,12}|S2[0-9a-f]{40}|doi)$/.test(handedJournal)) || /^(oapen|archive|openlibrary|gutenberg)$/.test(handedBook || '')) {
     const params = new URLSearchParams(location.search);
     pendingTitle = (params.get('title') || '').slice(0, 200);
     history.replaceState(null, '', location.pathname);
