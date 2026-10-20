@@ -693,7 +693,8 @@ def ask_document(title, text, question, history=(), work=''):
     question = ' '.join(str(question or '').split())[:1000]
     if len(question) < 2:
         raise ValueError('Tulis pertanyaan Anda dulu.')
-    model = os.environ.get('SUMMARY_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
+    model = (os.environ.get('ASK_MODEL', '').strip() or os.environ.get('SUMMARY_MODEL', '').strip()
+             or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip())
     turns = ''.join(f'{"Pembaca" if t.get("role") == "user" else "Asisten"}: {str(t.get("text") or "")[:2000]}\n'
                     for t in list(history)[-ASK_HISTORY:] if isinstance(t, dict))
     work = clean_work(work)
@@ -845,8 +846,40 @@ def summarize_highlight(text):
     return reply
 
 
+def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3):
+    """One reply from Google's Gemini API (GEMINI_API_KEY in .env, paid tier: prompts are not
+    used to train models). Thinking models spend part of the output budget on thinking, so
+    the budget is doubled (capped)."""
+    key = os.environ.get('GEMINI_API_KEY', '').strip()
+    if not key:
+        raise RuntimeError('AI belum diatur di server (GEMINI_API_KEY di .env).')
+    base = os.environ.get('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta').strip().rstrip('/')
+    body = json.dumps({'systemInstruction': {'parts': [{'text': system}]},
+                       'contents': [{'role': 'user', 'parts': [{'text': user}]}],
+                       'generationConfig': {'temperature': temperature, 'maxOutputTokens': min(65536, max_tokens * 2)}}).encode('utf-8')
+    request = urllib.request.Request(f'{base}/models/{quote(model, safe="-._")}:generateContent', data=body, method='POST',
+                                     headers={'x-goog-api-key': key, 'Content-Type': 'application/json'})
+    try:
+        with urllib.request.urlopen(request, timeout=300) as response:
+            data = json.loads(response.read().decode('utf-8'))
+    except urllib.error.HTTPError as cause:
+        detail = cause.read().decode('utf-8', 'replace')[:300]
+        raise RuntimeError(f'Layanan AI menolak permintaan ({cause.code}). {detail}') from cause
+    except (urllib.error.URLError, TimeoutError, OSError) as cause:
+        raise RuntimeError('Layanan AI tidak bisa dihubungi. Cek koneksi internet server.') from cause
+    candidates = data.get('candidates') or []
+    if not candidates:
+        reason = (data.get('promptFeedback') or {}).get('blockReason') or 'tanpa jawaban'
+        raise RuntimeError(f'AI tidak memproses dokumen ini ({reason}). Coba bagian lain atau ulangi.')
+    parts = ((candidates[0].get('content') or {}).get('parts')) or []
+    return ''.join(p.get('text', '') for p in parts if isinstance(p, dict) and not p.get('thought'))
+
+
 def ai_chat(system, user, model, max_tokens=8000, temperature=0.3):
-    """One chat completion through Sumopod; returns the reply text."""
+    """One chat completion; returns the reply text. A model named gemini-… goes straight to
+    Google's Gemini API; any other through Sumopod (Sumopod's own Gemini is gemini/…)."""
+    if re.match(r'gemini-[\w.-]+$', str(model).strip().lower()):
+        return gemini_chat(system, user, model, max_tokens, temperature)
     key = os.environ.get('SUMOPOD_API_KEY', '').strip()
     base = os.environ.get('SUMOPOD_BASE_URL', 'https://ai.sumopod.com/v1').strip().rstrip('/')
     if not key:

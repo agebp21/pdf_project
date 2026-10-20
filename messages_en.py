@@ -186,6 +186,7 @@ EXACT = {
     'Penulis tidak dikenal.': 'Unknown author.',
     'Tulis pertanyaan Anda dulu.': 'Write your question first.',
     'AI tidak menjawab. Coba lagi.': 'The AI did not answer. Try again.',
+    'AI belum diatur di server (GEMINI_API_KEY di .env).': 'The AI is not set up on the server yet.',
     'Link reset tidak valid.': 'That reset link is not valid.',
     'Link reset tidak valid atau sudah kedaluwarsa. Minta link baru dari halaman masuk.': 'That reset link is invalid or has expired. Ask for a new one from the log-in page.',
     'Bagian jurnal tidak dikenal.': 'Unknown journal section.',
@@ -230,6 +231,7 @@ PATTERNS = [
     (r'Kuota ringkasan bulan ini sudah habis — terisi lagi (\d+) (\w+) (\d{4})\.( Upgrade ke Pro untuk kuota yang lebih besar\.)?',
      lambda m: f'This month\'s summary allowance is used up — it refills on {MONTHS_EN.get(m[2], m[2])} {m[1]}, {m[3]}.'
                + (' Upgrade to Pro for a bigger allowance.' if m[4] else '')),
+    (r'AI tidak memproses dokumen ini \(([^)]*)\)\. Coba bagian lain atau ulangi\.', r'The AI did not process this document (\1). Try another part or again.'),
     (r'Layanan AI menolak permintaan \((\d+)\)\. ?(.*)', r'The AI service refused the request (\1). \2'),
     (r'Gambar halaman (\d+) bukan JPEG\.', r'Page image \1 is not a JPEG.'),
     (r'Layanan pencarian menolak permintaan \((\d+)\)\.', r'The search service refused the request (\1).'),
