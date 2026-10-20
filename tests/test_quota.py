@@ -22,8 +22,8 @@ HOST = 'quota.myflipbook.local'
 class Quota(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
-        self.env = mock.patch.dict(os.environ, {'MYFLIPBOOK_DB': str(Path(self.tmp.name) / 'a.sqlite3'), 'QUOTA_FREE_OFFICE': '2',
-                                                'QUOTA_FREE_TRANSLATE': '50', 'FREE_TRANSLATE_LOCAL': '0', 'BUILD_WORKER_KEY': 'k'})
+        self.env = mock.patch.dict(os.environ, {'MYFLIPBOOK_DB': str(Path(self.tmp.name) / 'a.sqlite3'), 'QUOTA_BASIC_OFFICE': '2',
+                                                'QUOTA_BASIC_TRANSLATE': '50', 'FREE_TRANSLATE_LOCAL': '0', 'BUILD_WORKER_KEY': 'k'})
         self.env.start()
         self.config = mock.patch.dict(server.CONFIG, {'public_hosts': {HOST}, 'secure': False, 'verify_email': False, 'paywall': True})
         self.config.start()
@@ -72,12 +72,22 @@ class Quota(unittest.TestCase):
         self.assertEqual((usage['quotas']['office']['used'], usage['quotas']['office']['limit']), (2, 2))
         self.assertEqual(usage['quotas']['translate']['used'], 30)
         self.assertAlmostEqual(usage['quotas']['office']['resetAt'], time.time() + 5 * 3600, delta=60)
-        # Pro: no office limit.
+        # Medium: no office limit.
         with server.get_accounts().connect() as db:
-            db.execute("UPDATE users SET plan='pro', plan_expires_at=? WHERE email='q@example.com'", (int(time.time()) + 86400,))
+            db.execute("UPDATE users SET plan='medium', plan_expires_at=? WHERE email='q@example.com'", (int(time.time()) + 86400,))
         self.assertNotEqual(convert()[0], 429)
         self.assertIsNone(self.call('GET', '/api/auth/usage')[1]['quotas']['office']['limit'])
 
+    def test_ai_tools_share_one_allowance(self):
+        # Summary and Ask the document spend the same AI allowance; the podcast was taken out (402, even for Pro).
+        self.assertEqual(self.call('POST', '/api/auth/register', {'email': 'p@example.com', 'password': 'secret-pass-1'})[0], 201)
+        server.get_accounts().grant_plan('p@example.com', 'pro', 30)
+        token = self.call('GET', '/api/capabilities')[1]['token']
+        with mock.patch.dict(os.environ, {'QUOTA_PRO_AI': '2'}), mock.patch.object(server, 'payments_live', return_value=True):
+            summary = lambda: self.call('POST', '/api/summary', {'text': {}}, {'X-Build-Token': token})[0]
+            self.assertNotEqual(summary(), 429); self.assertNotEqual(summary(), 429)
+            self.assertEqual(self.call('POST', '/api/ask', {'text': {}, 'question': 'apa?'}, {'X-Build-Token': token})[0], 429, 'shared with the other AI tools')
+            self.assertEqual(self.call('POST', '/api/podcast/script', {'text': {}}, {'X-Build-Token': token})[0], 402, 'no plan has the podcast')
 
 if __name__ == '__main__':
     unittest.main()

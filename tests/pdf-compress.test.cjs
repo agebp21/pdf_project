@@ -62,5 +62,22 @@ const imagesOf = async bytes => {
   const width = 3, height = 2, c = 1, rows = [[1, 10, 20, 30], [2, 5, 5, 5]];
   const out = C.unpredict(new Uint8Array(rows.flat()), width, height, c);
   assert.deepEqual([...out], [10, 30, 60, 15, 35, 65]);
-  console.log('PASS pdf-compress: JPEG + Flate photos re-encoded, masks kept, never bigger, text-only honest, predictors');
+
+  // compressTo: the best-quality step that fits the target, in a few passes; else the smallest, flagged.
+  const sized = level => ({bytes: new Uint8Array(Math.round(level.maxSide * level.quality * 20)), width: 64, height: 48});
+  const fake = {recode: async (image, level) => sized(level)};
+  const sizes = [];
+  for (const step of C.LADDER) sizes.push((await C.compress(input, '', Object.assign({level: step}, fake))).bytes.byteLength);
+  for (let i = 1; i < sizes.length; i++) assert.ok(sizes[i] < sizes[i - 1], 'each step is smaller than the one before');
+  let passes = 0;
+  const counted = {recode: async (image, level) => { if (image.kind === 'jpeg') passes++; return sized(level); }};
+  const fit = await C.compressTo(input, sizes[3] + 1, counted);
+  assert.equal(fit.step, 3, 'the best quality under the target');
+  assert.ok(fit.reached && fit.bytes.byteLength <= sizes[3] + 1);
+  assert.ok(passes <= 4, 'binary search, not every step: ' + passes);
+  const tooSmall = await C.compressTo(input, 100, fake);
+  assert.equal(tooSmall.reached, false); assert.equal(tooSmall.step, C.LADDER.length - 1);
+  const already = await C.compressTo(input, input.byteLength + 1, fake);
+  assert.equal(already.step, -1); assert.ok(already.reached);
+  console.log('PASS pdf-compress: JPEG + Flate photos re-encoded, masks kept, never bigger, text-only honest, predictors, target sizes');
 })().catch(error => { console.error(error); process.exitCode = 1; });

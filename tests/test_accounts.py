@@ -84,7 +84,7 @@ class LocalAccountTests(AccountsBase):
                                            {'email': 'Sari@Example.com', 'password': 'rahasia-123', 'name': 'Sari'})
         self.assertEqual(status, 201)
         self.assertEqual(body['user']['email'], 'sari@example.com')
-        self.assertEqual(body['user']['plan'], 'free')
+        self.assertEqual(body['user']['plan'], 'basic')
         self.assertIn('HttpOnly', cookie)
         self.assertIn('SameSite=Lax', cookie)
         self.assertNotIn('Secure', cookie, 'local HTTP must not set Secure cookies')
@@ -126,14 +126,14 @@ class LocalAccountTests(AccountsBase):
         client = Client(self.base)
         client.call('POST', '/api/auth/register', {'email': 'buyer@b.co', 'password': 'rahasia-123'})
         self.assertEqual(client.call('GET', '/api/billing/plans')[1]['provider'], 'mock')
-        self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'free', 'cycle': 'monthly'})[0], 400)
-        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'yearly'})
+        self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'basic', 'cycle': 'monthly'})[0], 400)
+        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'yearly'})
         self.assertEqual(status, 200)
-        self.assertEqual(order['amount'], accounts.PLANS['pro']['yearly'])
+        self.assertEqual(order['amount'], accounts.PLANS['medium']['yearly'])
         self.assertEqual(client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})[0], 200)
         user = client.call('GET', '/api/auth/me')[1]['user']
-        self.assertEqual(user['plan'], 'pro')
-        self.assertIn('apk', user['entitlements'])
+        self.assertEqual(user['plan'], 'medium')
+        self.assertIn('export', user['entitlements']); self.assertNotIn('apk', user['entitlements'])   # plans v2: apps are Pro
         first_expiry = user['planExpiresAt']
         client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})
         self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['planExpiresAt'], first_expiry, 'paying twice extends once')
@@ -148,7 +148,7 @@ class LocalAccountTests(AccountsBase):
     def test_invoice_pdf_for_own_paid_orders(self):
         client = Client(self.base)
         client.call('POST', '/api/auth/register', {'email': 'inv@b.co', 'password': 'rahasia-123', 'name': 'Budi'})
-        order = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'yearly'})[1]
+        order = client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'yearly'})[1]
         path = f"/api/billing/orders/{order['orderId']}/invoice.pdf"
         self.assertEqual(client.call('GET', path)[0], 404, 'no invoice before payment')
         client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})
@@ -165,7 +165,7 @@ class LocalAccountTests(AccountsBase):
             pymupdf = None
         if pymupdf:
             text = pymupdf.open(stream=pdf, filetype='pdf')[0].get_text()
-            for expected in ('INVOICE', 'INV-' + order['orderId'], 'Rp 990.000', 'Budi', 'inv@b.co', 'TEST'):
+            for expected in ('INVOICE', 'INV-' + order['orderId'], 'Rp 859.200', 'Budi', 'inv@b.co', 'TEST'):
                 self.assertIn(expected, text)
         other = Client(self.base)
         other.call('POST', '/api/auth/register', {'email': 'inv2@b.co', 'password': 'rahasia-123'})
@@ -175,7 +175,7 @@ class LocalAccountTests(AccountsBase):
 
     def test_requires_login_and_json(self):
         client = Client(self.base)
-        self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[0], 401)
+        self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly'})[0], 401)
         self.assertEqual(client.call('GET', '/api/billing/orders')[0], 401)
         request = urllib.request.Request(self.base + '/api/auth/login', data=b'email=x', method='POST',
                                          headers={'Content-Type': 'application/x-www-form-urlencoded'})
@@ -231,28 +231,28 @@ class MidtransTests(AccountsBase):
     def test_snap_checkout_and_signed_notification(self):
         client = Client(self.base)
         client.call('POST', '/api/auth/register', {'email': 'mid@b.co', 'password': 'rahasia-123', 'name': 'Mid'})
-        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'business', 'cycle': 'monthly'})
+        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})
         self.assertEqual(status, 200)
         self.assertTrue(order['redirectUrl'].startswith('https://app.sandbox.midtrans.com/'))
         request = self.captured[-1]
         self.assertTrue(request.full_url.endswith('/snap/v1/transactions'))
         payload = json.loads(request.data)
-        self.assertEqual(payload['transaction_details'], {'order_id': order['orderId'], 'gross_amount': 199000})
+        self.assertEqual(payload['transaction_details'], {'order_id': order['orderId'], 'gross_amount': 179000})
         self.assertTrue(request.get_header('Authorization').startswith('Basic '))
         # Mock payment is not available with a real gateway.
         self.assertEqual(client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})[0], 404)
         # Forged signature / wrong amount are rejected; plan unchanged.
-        self.assertEqual(self.notify(Client(self.base), order['orderId'], 199000, key='guess')[0], 403)
+        self.assertEqual(self.notify(Client(self.base), order['orderId'], 179000, key='guess')[0], 403)
         self.assertEqual(self.notify(Client(self.base), order['orderId'], 1000)[0], 400)
-        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'free')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'basic')
         # A genuine settlement upgrades the account.
-        status, body, _ = self.notify(Client(self.base), order['orderId'], 199000)
+        status, body, _ = self.notify(Client(self.base), order['orderId'], 179000)
         self.assertEqual((status, body['status']), (200, 'paid'))
         user = client.call('GET', '/api/auth/me')[1]['user']
-        self.assertEqual(user['plan'], 'business')
+        self.assertEqual(user['plan'], 'pro')
         self.assertIn('exe', user['entitlements'])
         # A later "expire" for the same order must not undo the payment.
-        self.notify(Client(self.base), order['orderId'], 199000, status='expire')
+        self.notify(Client(self.base), order['orderId'], 179000, status='expire')
         self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
 
 
@@ -278,24 +278,24 @@ class MidtransStatusTests(AccountsBase):
     def test_orders_list_settles_from_gateway_status(self):
         client = Client(self.base)
         client.call('POST', '/api/auth/register', {'email': 'poll@b.co', 'password': 'rahasia-123', 'name': 'Poll'})
-        order = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[1]
+        order = client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly'})[1]
         # Buyer hasn't paid yet: Midtrans knows no transaction -> still pending.
         self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'pending')
         # Paid on the Snap page (no notification arrives locally).
-        self.gateway[order['orderId']] = {'transaction_status': 'settlement', 'gross_amount': '99000.00'}
+        self.gateway[order['orderId']] = {'transaction_status': 'settlement', 'gross_amount': '89500.00'}
         self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
-        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'medium')
         # An expired order is marked as such; a wrong amount never activates a plan.
-        second = client.call('POST', '/api/billing/checkout', {'plan': 'business', 'cycle': 'monthly'})[1]
-        self.gateway[second['orderId']] = {'transaction_status': 'expire', 'gross_amount': '199000.00'}
+        second = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[1]
+        self.gateway[second['orderId']] = {'transaction_status': 'expire', 'gross_amount': '179000.00'}
         statuses = {o['id']: o['status'] for o in client.call('GET', '/api/billing/orders')[1]['orders']}
         self.assertEqual(statuses[second['orderId']], 'expired')
-        third = client.call('POST', '/api/billing/checkout', {'plan': 'business', 'cycle': 'monthly'})[1]
+        third = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[1]
         self.gateway[third['orderId']] = {'transaction_status': 'settlement', 'gross_amount': '1000.00'}
         status, body, _ = client.call('GET', '/api/billing/orders')
         self.assertEqual(status, 200, 'the order list keeps working')
         self.assertEqual({o['id']: o['status'] for o in body['orders']}[third['orderId']], 'failed', 'amount mismatch never activates')
-        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'medium')
 
 
 class EnvFileTests(unittest.TestCase):
@@ -357,16 +357,16 @@ class TripayTests(AccountsBase):
         client.call('POST', '/api/auth/register', {'email': 'tri@b.co', 'password': 'rahasia-123', 'name': 'Tri'})
         methods = client.call('GET', '/api/billing/methods')[1]['methods']
         self.assertEqual([m['code'] for m in methods], ['QRIS', 'BRIVA'], 'inactive channels hidden')
-        self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[0], 400,
+        self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly'})[0], 400,
                          'a payment method is required')
-        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly', 'method': 'QRIS'})
+        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly', 'method': 'QRIS'})
         self.assertEqual(status, 200)
         self.assertEqual(order['redirectUrl'], 'https://tripay.co.id/checkout/T0001TEST')
         create = self.requests[-1]
         self.assertTrue(create.full_url.startswith('https://tripay.co.id/api-sandbox/transaction/create'))
         self.assertEqual(create.get_header('Authorization'), 'Bearer DEV-api')
         form = {k: v[0] for k, v in parse_qs(create.data.decode()).items()}
-        price = str(accounts.PLANS['pro']['monthly'])
+        price = str(accounts.PLANS['medium']['monthly'])
         expected = hmac.new(b'priv-key', ('T0001' + order['orderId'] + price).encode(), hashlib.sha256).hexdigest()
         self.assertEqual(form['signature'], expected)
         self.assertEqual((form['method'], form['amount'], form['order_items[0][quantity]']), ('QRIS', price, '1'))
@@ -376,10 +376,10 @@ class TripayTests(AccountsBase):
         self.assertEqual(self.callback(body, key='guess')[0], 403)
         self.assertEqual(self.callback(body, event='other')[0], 400)
         self.assertEqual(self.callback(dict(body, reference='T0001OTHER'))[0], 400)
-        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'free')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'basic')
         status, reply = self.callback(body)
         self.assertEqual((status, reply['success']), (200, True))
-        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'medium')
         self.callback(dict(body, status='EXPIRED'))
         self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
 
@@ -398,8 +398,8 @@ class PaywallTests(AccountsBase):
         guest, free, pro = Client(self.base), Client(self.base), Client(self.base)
         free.call('POST', '/api/auth/register', {'email': 'free-pw@b.co', 'password': 'rahasia-123'})
         pro.call('POST', '/api/auth/register', {'email': 'pro-pw@b.co', 'password': 'rahasia-123'})
-        order = pro.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[1]
-        self.assertEqual(order['amount'], 99000)
+        order = pro.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly'})[1]
+        self.assertEqual(order['amount'], 89500)
         pro.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})
         for template in ('viewer.js', 'viewer.css', 'index.html'):
             path = '/assets/export/' + template
@@ -413,15 +413,28 @@ class PaywallTests(AccountsBase):
         self.assertTrue(caps['paywall'])
         self.assertNotIn('export', caps['entitlements'])
         self.assertIn('export', pro.call('GET', '/api/capabilities')[1]['entitlements'])
-        # Builds: free blocked, Pro may build APK but not EXE (Business).
+        # Builds (plans v2): Basic blocked, Medium too — Android and Windows apps are Pro.
         headers = {'X-Build-Token': server.TOKEN}
         self.assertEqual(free.call('POST', '/api/build/apk', {}, headers=headers)[0], 402)
-        self.assertEqual(pro.call('POST', '/api/build/apk', {}, headers=headers)[0], 400, 'passes the gate')
-        status, body, _ = pro.call('POST', '/api/build/exe', {}, headers=headers)
-        self.assertEqual(status, 402)
-        self.assertIn('Business', body['error'])
+        for kind in ('apk', 'exe'):
+            status, body, _ = pro.call('POST', f'/api/build/{kind}', {}, headers=headers)
+            self.assertEqual(status, 402, kind); self.assertIn('paket Pro', body['error'])
         # Office conversion stays free locally.
         self.assertEqual(guest.call('POST', '/api/convert/word-to-pdf', {}, headers=headers)[0], 400)
+
+    def test_ai_summarizer_open_for_free(self):
+        guest, free = Client(self.base), Client(self.base)
+        free.call('POST', '/api/auth/register', {'email': 'free-ai@b.co', 'password': 'rahasia-123'})
+        headers = {'X-Build-Token': server.TOKEN}
+        # Free passes the gate (never 401/402): bad bodies fail validation (400),
+        # translate-free answers 503 only when Argos is missing — all without spending AI credit.
+        for route in ('/api/summary', '/api/ask', '/api/highlight-summary', '/api/translate', '/api/translate-free'):
+            with self.subTest(route=route):
+                self.assertNotIn(free.call('POST', route, {}, headers=headers)[0], (401, 402))
+        self.assertIn('ai', free.call('GET', '/api/capabilities')[1]['entitlements'])
+        self.assertEqual(free.call('POST', '/api/podcast/script', {}, headers=headers)[0], 402, 'the podcast was taken out')
+        # Logged out still needs login.
+        self.assertEqual(guest.call('POST', '/api/summary', {}, headers=headers)[0], 401)
 
     def test_unreleased_pages_show_coming_soon(self):
         for page, name in (('animation.html', 'Flipbook Animation'),):
@@ -447,7 +460,7 @@ class LemonSqueezyTests(AccountsBase):
                                       'attributes': {'url': 'https://myflipbook.lemonsqueezy.com/checkout/custom/chk_1'}}})
 
     usd_provider = accounts.LemonSqueezyProvider(
-        'ls-api', '4242', 'whsec', {('pro', 'monthly'): '111', ('pro', 'yearly'): '112'}, opener=opener.__func__)
+        'ls-api', '4242', 'whsec', {('medium', 'monthly'): '111', ('medium', 'yearly'): '112'}, opener=opener.__func__)
 
     def webhook(self, event, body, secret='whsec'):
         raw = json.dumps(body).encode()
@@ -469,15 +482,15 @@ class LemonSqueezyTests(AccountsBase):
         client.call('POST', '/api/auth/register', {'email': 'usd@b.co', 'password': 'rahasia-123', 'name': 'Jane'})
         plans = client.call('GET', '/api/billing/plans')[1]
         self.assertEqual(plans['providers'], {'IDR': 'mock', 'USD': 'lemonsqueezy'})
-        self.assertEqual(plans['plans'][1]['usd'], {'monthly': 999, 'yearly': 9900})
+        self.assertEqual(plans['plans'][1]['usd'], {'monthly': 599, 'yearly': 5749})
         self.assertEqual(client.call('POST', '/api/billing/checkout',
-                                     {'plan': 'business', 'cycle': 'monthly', 'currency': 'USD'})[0], 503,
+                                     {'plan': 'pro', 'cycle': 'monthly', 'currency': 'USD'})[0], 503,
                          'variant not configured')
         self.assertEqual(client.call('POST', '/api/billing/checkout',
-                                     {'plan': 'pro', 'cycle': 'monthly', 'currency': 'EUR'})[0], 400)
-        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly', 'currency': 'USD'})
+                                     {'plan': 'medium', 'cycle': 'monthly', 'currency': 'EUR'})[0], 400)
+        status, order, _ = client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly', 'currency': 'USD'})
         self.assertEqual(status, 200)
-        self.assertEqual((order['amount'], order['currency']), (999, 'USD'))
+        self.assertEqual((order['amount'], order['currency']), (599, 'USD'))
         self.assertTrue(order['redirectUrl'].startswith('https://myflipbook.lemonsqueezy.com/checkout/'))
         request = self.requests[-1]
         self.assertEqual(request.full_url, 'https://api.lemonsqueezy.com/v1/checkouts')
@@ -495,13 +508,13 @@ class LemonSqueezyTests(AccountsBase):
         self.assertIsNone(self.expiry(client))
         self.assertEqual(self.webhook('subscription_created', created), (200, {'status': 'paid'}))
         first = self.expiry(client)
-        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'medium')
         self.webhook('subscription_created', created)  # retried delivery
         self.assertEqual(self.expiry(client), first)
         initial = {'meta': {'event_name': 'subscription_payment_success'},
                    'data': {'type': 'subscription-invoices', 'id': '7001',
                             'attributes': {'subscription_id': 9001, 'billing_reason': 'initial', 'status': 'paid',
-                                           'total': 999, 'currency': 'USD'}}}
+                                           'total': 599, 'currency': 'USD'}}}
         self.assertEqual(self.webhook('subscription_payment_success', initial), (200, {'status': 'ignored'}))
         self.assertEqual(self.expiry(client), first, 'initial invoice is not counted twice')
         renewal = json.loads(json.dumps(initial))
@@ -526,10 +539,10 @@ class LemonSqueezyTests(AccountsBase):
             client = Client(self.base)
             client.call('POST', '/api/auth/register', {'email': 'usdmock@b.co', 'password': 'rahasia-123'})
             order = client.call('POST', '/api/billing/checkout',
-                                {'plan': 'business', 'cycle': 'yearly', 'currency': 'USD'})[1]
-            self.assertEqual((order['amount'], order['currency']), (19900, 'USD'))
+                                {'plan': 'pro', 'cycle': 'yearly', 'currency': 'USD'})[1]
+            self.assertEqual((order['amount'], order['currency']), (11499, 'USD'))
             self.assertEqual(client.call('POST', '/api/billing/mock/pay', {'orderId': order['orderId']})[0], 200)
-            self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'business')
+            self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
         finally:
             store.usd_provider = previous
 
@@ -576,7 +589,7 @@ class HostedModeTests(AccountsBase):
             client = Client(self.base, host='myflipbook.test')
             client.call('POST', '/api/auth/register', {'email': 'nogw@b.co', 'password': 'rahasia-123'})
             self.assertFalse(client.call('GET', '/api/billing/plans')[1]['paymentsEnabled']['IDR'])
-            self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})[0], 503)
+            self.assertEqual(client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly'})[0], 503)
         finally:
             store.provider = previous
 

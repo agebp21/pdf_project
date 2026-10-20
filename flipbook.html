@@ -1,5 +1,5 @@
 <!doctype html>
-<html lang="en">
+<html lang="id">
 <head>
   <meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
 <link rel="icon" type="image/png" href="assets/img/favicon.png?v=pro">
@@ -20,14 +20,15 @@
   <script defer src="assets/export/book-seal.js"></script>
   <script defer src="assets/pdf-links.js"></script>
   <script defer src="assets/pdf-words.js"></script>
+  <script defer src="assets/ocr-engine.js"></script>
   <script defer src="assets/pdf-ocr-words.js"></script>
   <script defer src="assets/pdf-layout.js"></script>
   <script defer src="assets/pdf-translate.js"></script>
   <script defer src="assets/mf-dialog.js"></script>
-  <script defer src="assets/auth.js"></script>
+  <script defer src="/assets/site-header.js"></script>
+<script defer src="assets/auth.js"></script>
   <script defer src="assets/drive-picker.js?v=folder"></script>
   <script defer src="assets/flipbook.js?v=fit"></script>
-  <script defer src="assets/auth.js"></script>
   <style>
     /* numa banner beside the page title (the empty right side of the heading) */
     .heading{flex-wrap:wrap}
@@ -36,26 +37,33 @@
     .numa-side:hover{transform:translateY(-2px);box-shadow:0 12px 28px rgba(28,25,23,.12)}
     .numa-side img{display:block;width:100%;height:auto;min-height:72px;object-fit:cover;object-position:left center}
     @media(max-width:720px){.numa-side{flex-basis:100%}}
-    /* plan badge on locked buttons: the logo's red PRO pill */
-    .plan-pill{display:inline-flex;align-items:center;justify-content:center;min-width:20px;height:20px;margin-left:7px;padding:0 7px;border-radius:999px;
-      background:#DC0500;color:#fff;font:900 9.5px/1 'Plus Jakarta Sans',system-ui,sans-serif;letter-spacing:.04em;vertical-align:middle;
-      box-shadow:0 2px 6px rgba(220,5,0,.35)}
+    /* locked (Pro / Business) features: an orange crown after the label */
+    button:hover .plan-crown,button:focus .plan-crown{color:#fff}   /* on the orange hover */
+    /* the highlighter's AI tools without an AI plan: a crown above them */
+    .book-hl-tools .hl-locked{position:relative;overflow:visible}
+    .book-hl-tools .hl-locked::after{content:'';position:absolute;left:50%;top:-16px;width:18px;height:14px;transform:translateX(-50%);pointer-events:none;
+      background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 20'%3E%3Cg fill='%23F97316'%3E%3Cpath d='M2.2 6.2 7 10l5-6.6L17 10l4.8-3.8-1.9 9.6H4.1z'/%3E%3Crect x='4' y='16.6' width='16' height='2.6' rx='1.1'/%3E%3Ccircle cx='2.2' cy='5.2' r='1.9'/%3E%3Ccircle cx='12' cy='2.3' r='2'/%3E%3Ccircle cx='21.8' cy='5.2' r='1.9'/%3E%3C/g%3E%3C/svg%3E") no-repeat center/contain;filter:drop-shadow(0 1px 1px rgba(194,65,12,.35))}
+    /* the side panel: every button turns orange under the pointer, like the main one */
+    aside .secondary:hover:not(:disabled){background:var(--tang)!important;color:#fff!important;border-color:var(--ink)!important}
+    /* buttons whose label the script rewrites (My Library): the crown as a pseudo-element */
+    .plan-lock::after{content:'';display:inline-block;width:16px;height:13px;margin-left:7px;vertical-align:-2px;background:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 20'%3E%3Cg fill='%23F97316'%3E%3Cpath d='M2.2 6.2 7 10l5-6.6L17 10l4.8-3.8-1.9 9.6H4.1z'/%3E%3Crect x='4' y='16.6' width='16' height='2.6' rx='1.1'/%3E%3Ccircle cx='2.2' cy='5.2' r='1.9'/%3E%3Ccircle cx='12' cy='2.3' r='2'/%3E%3Ccircle cx='21.8' cy='5.2' r='1.9'/%3E%3C/g%3E%3C/svg%3E") no-repeat center/contain}
+    .plan-crown{display:inline-flex;align-items:center;margin-left:7px;color:#F97316;vertical-align:middle;line-height:0;filter:drop-shadow(0 1px 1px rgba(194,65,12,.35))}
   </style>
 </head>
 <body class="clay">
-  <header class="topbar"><a class="brand" href="index.html"><img src="assets/img/logo.png?v=pro" alt="MyFlipbook Pro" width="139" height="34"></a><span style="display:flex;align-items:center;gap:10px"><span data-auth-slot></span><button id="share-link-top" class="back-link badge" type="button">🔗 Share</button><a class="back-link badge" href="converter.html?tool=jpg-to-pdf">Open converter →</a></span></header>
+  <header data-site-header data-static><button id="share-link-top" class="back-link badge" type="button">🔗 <span data-en="Share">Bagikan</span></button></header>
   <main>
-    <div class="heading"><div><p class="eyebrow">✦ PDF TO FLIPBOOK • INTERACTIVE</p><h1>Your doc, turned into a living book.</h1><p>Upload a PDF or continue straight from a convert result. Cover first, then the inside — just like a real book.</p></div><a class="numa-side" href="https://nusantaramahayatra.com" target="_blank" rel="noopener"><picture><source type="image/webp" srcset="assets/img/numa-banner-wide.webp?v=1"><img src="assets/img/numa-banner-wide.jpg?v=1" width="1400" height="202" decoding="async" alt="numa — Beda Kepala. Banyak Cerita. Ikut nimbrung di nusantaramahayatra.com"></picture></a></div>
+    <div class="heading"><div><p class="eyebrow" data-en="✦ PDF TO FLIPBOOK • INTERACTIVE">✦ PDF KE FLIPBOOK • INTERAKTIF</p><h1 data-en="Your doc, turned into a living book.">Dokumen Anda, menjadi buku yang hidup.</h1><p data-en="Upload a PDF or continue straight from a convert result. Cover first, then the inside — just like a real book.">Unggah PDF atau lanjutkan langsung dari hasil konversi. Sampul dulu, lalu isinya — persis seperti buku sungguhan.</p></div><a class="numa-side" href="https://nusantaramahayatra.com" target="_blank" rel="noopener"><picture><source type="image/webp" srcset="assets/img/numa-banner-wide.webp?v=1"><img src="assets/img/numa-banner-wide.jpg?v=1" width="1400" height="202" decoding="async" alt="numa — Beda Kepala. Banyak Cerita. Ikut nimbrung di nusantaramahayatra.com"></picture></a></div>
     <div class="workspace">
       <aside>
-        <div class="panel-heading"><span class="step">01</span><h2>Choose document</h2></div>
-        <button id="add-file" class="primary add-file" type="button" aria-haspopup="dialog">＋ Add source</button>
+        <div class="panel-heading"><span class="step">01</span><h2 data-en="Choose document">Pilih dokumen</h2></div>
+        <button id="add-file" class="primary add-file" type="button" aria-haspopup="dialog" data-en="＋ Add source">＋ Tambah sumber</button>
         <input id="pdf-file" type="file" accept="application/pdf,.pdf,.docx,.doc,.xlsx,.xls,.csv,.pptx,.ppt,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,image/*" multiple hidden>
-        <p class="muted">PDF, Word, Excel, PowerPoint or images — or a link / Google Drive.</p>
-        <p id="load-status" class="feedback" role="status">No document yet.</p>
+        <p class="muted" data-en="PDF, Word, Excel, PowerPoint or images — or a link / Google Drive.">PDF, Word, Excel, PowerPoint, atau gambar — atau tautan / Google Drive.</p>
+        <p id="load-status" class="feedback" role="status"><span data-en="No document yet.">Belum ada dokumen.</span></p>
         <div id="draft-box" hidden>
           <p class="muted" id="draft-text"></p>
-          <div style="display:flex;gap:.5rem"><button id="draft-resume" class="secondary" type="button">Continue</button><button id="draft-discard" class="secondary" type="button">Discard</button></div>
+          <div style="display:flex;gap:.5rem"><button id="draft-resume" class="secondary" type="button">Lanjutkan</button><button id="draft-discard" class="secondary" type="button" data-en="Discard">Buang</button></div>
         </div>
         <p class="archive-line"><span id="archive-status" class="archive-status" role="status"></span></p>
         <button type="button" id="save-library" class="secondary archive-link">📚 Open My Library</button>
@@ -71,68 +79,68 @@
             <button id="remove-overlay" class="secondary" type="button">Hapus animasi halaman ini</button>
           </fieldset>
         </form>
-        <p class="muted">Save your project so the document can be reopened later.</p>
+        <p class="muted" data-en="Save your project so the document can be reopened later.">Simpan proyek agar dokumen bisa dibuka lagi nanti.</p>
         <fieldset id="export-fields" disabled>
-          <div class="panel-heading"><span class="step">02</span><h2>Save & export</h2></div>
-          <label for="export-title">Book title</label><input id="export-title" maxlength="200" value="Interactive book">
-          <button id="save-project" class="secondary" type="button">Save project as…</button>
-          <button id="export-html" class="primary apply" type="button">Save offline HTML as…</button>
-          <button id="export-apk" class="secondary" type="button" disabled>Build Android APK</button>
-          <button id="export-exe" class="secondary" type="button" disabled>Build Windows EXE (.zip)</button>
-          <button id="organize-pages" class="secondary" type="button">Organize pages…</button>
+          <div class="panel-heading"><span class="step">02</span><h2 data-en="Save &amp; export">Simpan &amp; ekspor</h2></div>
+          <label for="export-title" data-en="Book title">Judul buku</label><input id="export-title" maxlength="200" value="Buku interaktif">
+          <button id="save-project" class="secondary" type="button"><span data-en="Save project as…">Simpan proyek sebagai…</span></button>
+          <button id="export-html" class="primary apply" type="button"><span data-en="Save offline HTML as…">Simpan HTML offline sebagai…</span></button>
+          <button id="export-apk" class="secondary" type="button" disabled><span data-en="Build Android APK">Buat APK Android</span></button>
+          <button id="export-exe" class="secondary" type="button" disabled><span data-en="Build Windows EXE (.zip)">Buat EXE Windows (.zip)</span></button>
+          <button id="organize-pages" class="secondary" type="button"><span data-en="Organize pages…">Atur halaman…</span></button>
         </fieldset>
-        <button id="open-project" class="secondary" type="button" onclick="document.getElementById('project-file').click()">Open project… (.smflipbook)</button>
+        <button id="open-project" class="secondary" type="button"><span data-en="Open project… (.smflipbook)">Buka proyek… (.smflipbook)</span></button>
         <input id="project-file" type="file" accept=".smflipbook,.sm-flipbook" hidden>
-        <div id="export-progress" class="export-progress" role="progressbar" aria-label="Export progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="export-progress-track"><span></span></div><small id="export-percent">0%</small></div>
+        <div id="export-progress" class="export-progress" role="progressbar" aria-label="Progres ekspor" data-en-aria="Export progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0" hidden><div class="export-progress-track"><span></span></div><small id="export-percent">0%</small></div>
         <p id="export-status" class="feedback" role="status"></p>
         <div id="share-box" hidden>
-          <p class="muted">Anyone with the link can read and download this book. Don't share private documents.</p>
-          <div style="display:flex;gap:.5rem"><input id="share-url" readonly style="flex:1;min-width:0" onclick="this.select()"><button id="share-copy" class="secondary" type="button">Copy</button></div>
+          <p class="muted" data-en="Anyone with the link can read and download this book. Don&#39;t share private documents.">Siapa pun yang memegang tautan bisa membaca dan mengunduh buku ini. Jangan bagikan dokumen pribadi.</p>
+          <div style="display:flex;gap:.5rem"><input id="share-url" readonly style="flex:1;min-width:0" onclick="this.select()"><button id="share-copy" class="secondary" type="button" data-en="Copy">Salin</button></div>
           <p id="share-status" class="feedback" role="status"></p>
         </div>
-        <a id="build-download" class="secondary" style="text-align:center" hidden download>Download build result</a>
+        <a id="build-download" class="secondary" style="text-align:center" hidden download>Unduh hasil build</a>
       </aside>
-      <section class="preview" aria-label="Book from PDF">
-        <div class="preview-top"><span id="document-name">FLIPBOOK PREVIEW</span><span id="page-status" aria-live="polite">—</span></div>
-        <div id="reader-stage" class="stage"><div id="empty-book"><span>▤</span><h2>Open your first PDF</h2><p>PDF pages will appear here as a flippable book.</p><a href="converter.html?tool=word-to-pdf">Have a Word file? Convert it first →</a></div></div>
-        <div class="controls"><div class="navigation"><button id="prev" disabled aria-label="Previous page">←</button><button id="home" disabled aria-label="Back to cover" title="Back to cover">Home</button><button id="end" disabled aria-label="Go to the back cover" title="Go to the back cover">End</button><button id="next" disabled aria-label="Next page">→</button><button id="zoom" type="button" aria-label="Zoom in" title="Zoom (press again for 100%) · or double-tap the page">🔍</button><button id="bookmark" type="button"></button><button id="bookmarks" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="notes" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="highlight" type="button" aria-pressed="false"></button><button id="speak" type="button" aria-pressed="false" hidden></button><button id="podcast" type="button" aria-expanded="false" hidden></button><button id="edition" type="button" hidden></button><button id="translate" type="button" aria-expanded="false" hidden></button><button id="summary" type="button" aria-expanded="false" hidden></button><button id="fullscreen" type="button" aria-pressed="false" title="Full screen" data-en-title="Full screen">⛶ Full screen</button></div><div class="playback" hidden style="display:none"><button id="replay" disabled>↻ Putar animasi</button></div></div>
+      <section class="preview" aria-label="Buku dari PDF" data-en-aria="Book from PDF">
+        <div class="preview-top"><span id="document-name"><span data-en="FLIPBOOK PREVIEW">PRATINJAU FLIPBOOK</span></span><span id="page-status" aria-live="polite">—</span></div>
+        <div id="reader-stage" class="stage"><div id="empty-book"><span>▤</span><h2 data-en="Open your first PDF">Buka PDF pertama Anda</h2><p data-en="PDF pages will appear here as a flippable book.">Halaman PDF akan tampil di sini sebagai buku yang bisa dibalik.</p><button type="button" class="primary empty-add" onclick="document.getElementById('add-file').click()" data-en="＋ Choose a document">＋ Pilih dokumen</button><br><a href="converter.html?tool=word-to-pdf" data-en="Have a Word file? Convert it first →">Punya file Word? Konversi dulu →</a></div></div>
+        <div class="controls"><div class="navigation"><button id="prev" disabled aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><button id="home" disabled aria-label="Kembali ke sampul" title="Kembali ke sampul" data-en-aria="Back to cover" data-en-title="Back to cover">Home</button><button id="end" disabled aria-label="Ke sampul belakang" title="Ke sampul belakang" data-en-aria="Go to the back cover" data-en-title="Go to the back cover">End</button><button id="next" disabled aria-label="Halaman berikutnya" data-en-aria="Next page">→</button><button id="zoom" type="button" aria-label="Perbesar" title="Perbesar (tekan lagi untuk 100%) · atau ketuk dua kali halaman" data-en-aria="Zoom in" data-en-title="Zoom (press again for 100%) · or double-tap the page">🔍</button><button id="bookmark" type="button"></button><button id="bookmarks" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="notes" type="button" aria-haspopup="dialog" aria-expanded="false"></button><button id="highlight" type="button" aria-pressed="false"></button><button id="speak" type="button" aria-pressed="false" hidden></button><button id="podcast" type="button" aria-expanded="false" hidden></button><button id="edition" type="button" hidden></button><button id="translate" type="button" aria-expanded="false" hidden></button><button id="summary" type="button" aria-expanded="false" hidden></button><button id="fullscreen" type="button" aria-pressed="false" title="Layar penuh" data-en-title="Full screen">⛶ Layar penuh</button></div><div class="playback" hidden style="display:none"><button id="replay" disabled>↻ Putar animasi</button></div></div>
         <p id="reader-error" role="alert" hidden></p>
       </section>
     </div>
   </main>
   <div id="add-dialog" class="add-dialog" hidden role="dialog" aria-modal="true" aria-labelledby="add-title">
     <div class="add-card">
-      <button id="add-close" class="add-close" type="button" aria-label="Close">×</button>
-      <h2 id="add-title">Make a flipbook from<br><span>your document</span></h2>
+      <button id="add-close" class="add-close" type="button" aria-label="Tutup" data-en-aria="Close">×</button>
+      <h2 id="add-title" data-en="Make a flipbook from&lt;br&gt;&lt;span&gt;your document&lt;/span&gt;">Buat flipbook dari<br><span>dokumen Anda</span></h2>
       <form id="add-link" class="add-link">
-        <input id="add-url" type="url" inputmode="url" autocomplete="off" placeholder="Paste a link: PDF, web page or Google Drive" aria-label="Link">
-        <button id="add-go" type="submit" aria-label="Add from link">→</button>
+        <input id="add-url" type="url" inputmode="url" autocomplete="off" placeholder="Tempel tautan: PDF, halaman web, atau Google Drive" aria-label="Tautan" data-en-ph="Paste a link: PDF, web page or Google Drive" data-en-aria="Link">
+        <button id="add-go" type="submit" aria-label="Tambah dari tautan" data-en-aria="Add from link">→</button>
       </form>
       <div class="add-sources">
-        <button type="button" data-source="upload"><span aria-hidden="true">⤒</span> Upload file</button>
+        <button type="button" data-source="upload"><span aria-hidden="true">⤒</span> <span data-en="Upload file">Unggah file</span></button>
         <button type="button" data-source="drive"><span class="add-drive" aria-hidden="true"></span> Google Drive</button>
       </div>
       <ol id="add-drive-help" class="add-drive-help" hidden>
-        <li>Google Drive opened in a new tab — find your file. <i>(Picking straight from Drive needs GOOGLE_CLIENT_ID + GOOGLE_API_KEY on the server.)</i></li>
-        <li>Click <b>Share</b> → General access: <b>Anyone with the link</b>.</li>
-        <li>Click <b>Copy link</b>, come back and paste it in the box above → press <b>→</b>.</li>
+        <li data-en="Google Drive opened in a new tab — find your file.">Google Drive terbuka di tab baru — cari file Anda.</li>
+        <li data-en="Click &lt;b&gt;Share&lt;/b&gt; → General access: &lt;b&gt;Anyone with the link&lt;/b&gt;.">Klik <b>Bagikan</b> → Akses umum: <b>Siapa saja yang memiliki link</b>.</li>
+        <li data-en="Click &lt;b&gt;Copy link&lt;/b&gt;, come back and paste it in the box above → press &lt;b&gt;→&lt;/b&gt;.">Klik <b>Salin link</b>, kembali ke sini dan tempel di kotak di atas → tekan <b>→</b>.</li>
       </ol>
-      <div id="add-drop" class="add-drop">Drop files here · PDF, Word, Excel, PowerPoint, JPG, PNG</div>
+      <div id="add-drop" class="add-drop" data-en="Drop files here · PDF, Word, Excel, PowerPoint, JPG, PNG">Seret file ke sini · PDF, Word, Excel, PowerPoint, JPG, PNG</div>
       <p id="add-status" class="add-status" role="status"></p>
         </div>
   </div>
   <div id="share-popup" hidden>
     <div class="share-card" role="dialog" aria-modal="true" aria-labelledby="share-popup-title">
-      <h2 id="share-popup-title">🔗 Share this book</h2>
-      <p id="share-popup-status" class="muted" role="status">Preparing…</p>
+      <h2 id="share-popup-title" data-en="🔗 Share this book">🔗 Bagikan buku ini</h2>
+      <p id="share-popup-status" class="muted" role="status"><span data-en="Preparing…">Menyiapkan…</span></p>
       <div id="share-popup-row" hidden>
-        <input id="share-popup-url" readonly onclick="this.select()" aria-label="Share link">
-        <button id="share-popup-copy" class="primary apply" type="button">Copy link</button>
-        <button id="share-popup-launcher" class="secondary" type="button">⬇ Drive launcher file (.html)</button>
-        <button id="share-popup-shortcut" class="secondary" type="button">⬇ Shortcut (.url, Windows)</button>
-        <button id="share-popup-doc" class="secondary" type="button">📄 Save Doc to Drive</button>
+        <input id="share-popup-url" readonly onclick="this.select()" aria-label="Tautan berbagi" data-en-aria="Share link">
+        <button id="share-popup-copy" class="primary apply" type="button"><span data-en="Copy link">Salin tautan</span></button>
+        <button id="share-popup-launcher" class="secondary" type="button"><span data-en="⬇ Drive launcher file (.html)">⬇ File peluncur Drive (.html)</span></button>
+        <button id="share-popup-shortcut" class="secondary" type="button"><span data-en="⬇ Shortcut (.url, Windows)">⬇ Pintasan (.url, Windows)</span></button>
+        <button id="share-popup-doc" class="secondary" type="button"><span data-en="📄 Save Doc to Drive">📄 Simpan Doc ke Drive</span></button>
       </div>
-      <button id="share-popup-close" class="secondary" type="button">Close</button>
+      <button id="share-popup-close" class="secondary" type="button"><span data-en="Close">Tutup</span></button>
     </div>
   </div>
 </body>

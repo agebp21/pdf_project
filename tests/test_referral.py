@@ -29,7 +29,7 @@ class ReferralTests(unittest.TestCase):
         self.n += 1
         return self.store.user_for(self.store.register(email or f'u{self.n}@example.com', 'secret-pass-1'))['id']
 
-    def pay(self, user_id, plan='pro', status='paid'):
+    def pay(self, user_id, plan='medium', status='paid'):
         order_id = f'o{user_id}-{time.time_ns()}'
         with self.store.connect() as db:
             db.execute("INSERT INTO orders(id, user_id, plan, cycle, amount, status, provider, created_at) VALUES(?,?,?,?,?,?,?,?)",
@@ -82,20 +82,20 @@ class ReferralTests(unittest.TestCase):
         self.pay(friends[9], status='pending')                  # not paid: does not count
         self.pay(friends[0])                                     # paying twice counts once
         self.assertEqual(self.store.referral_stats(owner)['subscribed'], 9)
-        self.assertEqual(self.plan(owner)[0], 'free')
-        self.pay(friends[10], plan='business')                   # Business counts too
+        self.assertEqual(self.plan(owner)[0], 'basic')
+        self.pay(friends[10], plan='pro')                        # Pro counts too
         plan, until = self.plan(owner)
-        self.assertEqual(plan, 'pro'); self.assertAlmostEqual(until, time.time() + 30 * 86400, delta=60)
+        self.assertEqual(plan, 'medium'); self.assertAlmostEqual(until, time.time() + 30 * 86400, delta=60)
         stats = self.store.referral_stats(owner)
         self.assertEqual((stats['subscribed'], stats['rewards'], stats['toNext'], stats['signups']), (10, 1, 10, 12))
         # A member on Business gets 30 more days of Business at the next ten.
         with self.store.connect() as db:
-            db.execute("UPDATE users SET plan='business', plan_expires_at=? WHERE id=?", (int(time.time()) + 86400, owner))
+            db.execute("UPDATE users SET plan='pro', plan_expires_at=? WHERE id=?", (int(time.time()) + 86400, owner))
         more = [self.friend(code) for _ in range(10)]
         for f in more:
             self.pay(f)
         plan, until = self.plan(owner)
-        self.assertEqual(plan, 'business'); self.assertAlmostEqual(until, time.time() + 31 * 86400, delta=60)
+        self.assertEqual(plan, 'pro'); self.assertAlmostEqual(until, time.time() + 31 * 86400, delta=60)
         self.assertEqual(self.store.referral_stats(owner)['rewards'], 2)
 
 

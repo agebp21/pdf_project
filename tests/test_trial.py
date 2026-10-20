@@ -85,7 +85,7 @@ class TrialTests(unittest.TestCase):
         user = old.json('GET', '/api/auth/me')[1]['user']
         self.assertEqual(user['trialExpired'], True)
         self.assertEqual(user['trialDaysLeft'], 0)
-        pro = self.member('pro@t.co', plan='pro', age_days=400)
+        pro = self.member('pro@t.co', plan='medium', age_days=400)
         user = pro.json('GET', '/api/auth/me')[1]['user']
         self.assertEqual(user['trialExpired'], False)
         self.assertIsNone(user['trialDaysLeft'])
@@ -95,23 +95,25 @@ class TrialTests(unittest.TestCase):
         fresh = self.member('fresh@t.co')
         self.assertEqual(fresh.call('POST', '/api/summary', {}, headers=headers)[0], 400, 'trial: reaches validation')
         old = self.member('stale@t.co', age_days=9)
-        for route in ('/api/convert/word-to-pdf', '/api/summary', '/api/translate-free'):
-            with self.subTest(route=route):
-                status, body = old.json('POST', route, {}, headers=headers)
-                self.assertEqual(status, 402)
-                self.assertIn('7 hari', body['error'])
+        # Plans v2: after the trial only the AI stops; Office to PDF goes on (here it reaches validation).
+        status, body = old.json('POST', '/api/summary', {}, headers=headers)
+        self.assertEqual(status, 402); self.assertIn('7 hari', body['error'])
+        self.assertEqual(old.call('POST', '/api/convert/word-to-pdf', {}, headers=headers)[0], 400, 'Office to PDF stays')
+        # The whole-book translator is offline (no AI): Free keeps it after the trial (owner, 2026-10-19).
+        self.assertNotEqual(old.call('POST', '/api/translate-free', {}, headers=headers)[0], 402)
+        self.assertEqual(Member(self.base).call('POST', '/api/translate-free', {}, headers=headers)[0], 401, 'members only')
         # Library: saving stops, reading your own books keeps working.
         self.assertEqual(old.call('POST', '/api/library/save', b'x', 'application/zip')[0], 402)
         self.assertEqual(old.json('GET', '/api/library')[0], 200)
         # A dated Pro account keeps every server feature.
-        pro = self.member('pro2@t.co', plan='pro', age_days=400)
+        pro = self.member('pro2@t.co', plan='medium', age_days=400)
         self.assertEqual(pro.call('POST', '/api/summary', {}, headers=headers)[0], 400)
 
     def test_english(self):
-        self.assertEqual(messages_en.english('Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.'),
-                         'Your 7-day free trial has ended. Upgrade to Pro to use this feature.')
-        self.assertEqual(messages_en.english('Jatah 3 share gratis habis. Upgrade ke Pro untuk share tanpa batas.'),
-                         'Your 3 free shares are used up. Upgrade to Pro for unlimited sharing.')
+        self.assertEqual(messages_en.english('Masa coba gratis 7 hari Anda sudah habis. Upgrade ke Medium atau Pro untuk memakai fitur ini.'),
+                         'Your 7-day free trial has ended. Upgrade to Medium or Pro to use this feature.')
+        self.assertEqual(messages_en.english('Jatah 3 share gratis habis. Upgrade ke Medium atau Pro untuk share lebih banyak.'),
+                         'Your 3 free shares are used up. Upgrade to Medium or Pro for more share links.')
 
 
 if __name__ == '__main__':

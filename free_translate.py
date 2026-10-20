@@ -10,6 +10,9 @@ Guards around the plain model:
   * names / terms are kept: 2+ capitalised words, codes with digits or capitals
     (Activation Ceremony, Mega Mendung, JKT2A) — masked before translating and
     restored after; if the model drops a mask, the piece is redone unmasked;
+  * except in a heading written in Title Case ("Dua Jalan Membongkar Pusat"): its
+    capitalised words are the heading, not a name, so only codes are kept; it is
+    translated as a sentence (better than Title Case input) and comes back in Title Case;
   * labels and themes split at ": " are translated piece by piece.
 """
 import re
@@ -19,6 +22,21 @@ import threading
 LANGS = {'id-ID': 'id', 'en-US': 'en'}
 PAIRS = (('id', 'en'), ('en', 'id'))
 TERM = re.compile(r"\b(?:[A-Z][\w'-]*(?:\s+(?:[A-Z][\w'-]*|&|of|and|for|the))*\s+[A-Z][\w'-]*|[A-Za-z]*\d[\w-]*|[A-Z]{2,}[\w-]*)\b")
+CODE = re.compile(r"\b(?:[A-Za-z]*\d[\w-]*|[A-Z]{2,}[\w-]*)\b")       # in a heading only codes are kept
+SMALL = {'a', 'an', 'the', 'of', 'and', 'or', 'for', 'to', 'in', 'on', 'at', 'by', 'with', 'from', 'as', 'is', 'that',
+         'dan', 'atau', 'di', 'ke', 'dari', 'yang', 'untuk', 'dengan', 'pada', 'dalam', 'sebagai', 'oleh'}
+
+
+def _heading(text):
+    """A Title Case line: most of its words (3+ letters, two at least) start with a capital."""
+    words = re.findall(r"[A-Za-z][\w'-]{2,}", text)
+    return len(words) >= 2 and len(text) <= 120 and sum(w[0].isupper() for w in words) / len(words) >= 0.7
+
+
+def _title(text):
+    words = text.split(' ')
+    return ' '.join(w if re.search(r'\d', w) or w.isupper() else w[:1].upper() + w[1:] if i == 0 or w.lower() not in SMALL else w.lower()
+                    for i, w in enumerate(words))       # codes (v4, JKT2A) stay as written
 _lock = threading.Lock()
 _engine = None
 
@@ -63,19 +81,27 @@ def _piece(engine, text, src, dst):
     if not re.search(r'[A-Za-z]{2}', text) or (_mostly(text, dst) and not _mostly(text, src)):
         return text
     keep = []
+    heading = _heading(text)
 
     def mask(match):
         keep.append(match.group(0))
         return f'Z{len(keep) - 1}Q'
 
-    masked = TERM.sub(mask, text)
+    finish = _title if heading else (lambda out: out)
+    # A heading goes in as a sentence (the model reads Title Case words as names), comes back in Title Case.
+    def plain(t):
+        if not heading:
+            return t
+        low = ''.join(part if re.fullmatch(r'Z\d+Q', part) else part.lower() for part in re.split(r'(Z\d+Q)', t))   # masks stay as they are
+        return t[:1] + low[1:] if t[:1].isalpha() else low
+    masked = plain((CODE if heading else TERM).sub(mask, text))
     if keep:
         out = engine.translate(masked, src, dst)
         if all(re.search(rf'Z\s*{i}\s*Q', out, flags=re.I) for i in range(len(keep))):
             for i, term in enumerate(keep):
                 out = re.sub(rf'Z\s*{i}\s*Q', lambda _m, term=term: term, out, flags=re.I)
-            return out
-    return engine.translate(text, src, dst)            # a term got lost: without masks
+            return finish(out)
+    return finish(engine.translate(plain(text), src, dst))    # a term got lost: without masks
 
 
 def translate_text(text, target):

@@ -33,7 +33,7 @@ article(
         ('h2', 'Yang perlu disiapkan'),
         ('ul', ['File PDF yang ingin dijadikan flipbook. Bisa juga file Word, Excel, PowerPoint, atau kumpulan gambar — '
                 'semuanya akan diubah menjadi halaman buku.',
-                'Akun MyFlipbook. Daftar gratis dengan Google atau email; akun baru bisa mencoba semua fitur selama 7 hari.',
+                'Akun MyFlipbook. Daftar gratis dengan Google atau email.',
                 'Browser modern seperti Chrome, Edge, atau Safari versi terbaru.']),
         ('h2', 'Langkah membuat flipbook'),
         ('ol', ['Buka halaman [PDF ke Flipbook](/flipbook.html).',
@@ -224,7 +224,7 @@ article(
                 'Setelah selesai diedit, kembalikan ke PDF: [Word ke PDF](/word-ke-pdf).']),
         ('faq', [
             ('Apakah PDF ke Word gratis?',
-             'Akun baru bisa mencoba semua alat selama 7 hari. Konversinya berjalan di browser Anda.'),
+             'Konversinya berjalan di browser Anda.'),
             ('Mengapa hasil Word saya hanya berisi gambar?',
              'Kemungkinan PDF-nya hasil scan. Jalankan OCR PDF dulu agar teksnya dikenali, lalu ubah lagi ke Word.'),
             ('Apakah bisa dibuka di Google Docs?',
@@ -300,7 +300,7 @@ article(
         ('p', 'Cari jurnal dan ebook open access lewat [Cari Jurnal & Ebook](/cari-jurnal-ebook), lalu langsung '
               'ringkas atau baca sebagai flipbook. Untuk jurnal berbahasa Inggris, baca juga '
               '[cara menerjemahkannya tanpa merusak layout](/artikel/cara-menerjemahkan-jurnal-bahasa-inggris).'),
-        ('tip', 'AI Summarizer termasuk paket Pro dan Business, dan bisa dicoba gratis selama 7 hari masa coba akun baru. '
+        ('tip', 'AI Summarizer termasuk paket Medium dan Pro. '
                 'Setiap paket punya jatah pemakaian AI yang terisi ulang berkala; jika jatah habis, halaman akan memberi tahu '
                 'kapan jatah terisi lagi.'),
         ('faq', [
@@ -535,7 +535,7 @@ article(
         ('table', {
             'head': ['', 'MyFlipbook Pro', 'Heyzine', 'FlipHTML5', 'AnyFlip'],
             'rows': [
-                ['Paket gratis', '3 share link, coba semua fitur 7 hari', '5 flipbook, halaman tanpa batas, tanpa iklan',
+                ['Paket gratis', '3 share link, semua alat PDF', '5 flipbook, halaman tanpa batas, tanpa iklan',
                  '5 unggahan per hari, ada iklan dan watermark', '150 unggahan per bulan, ada iklan'],
                 ['Unduh untuk dibaca offline', 'HTML offline (paket Pro)', 'Mulai paket Standard',
                  'Paket berbayar (Pro ke atas)', 'Paket Pro, 5 kali per bulan'],
@@ -571,11 +571,11 @@ article(
                 'Mahasiswa dan peneliti yang membaca jurnal berbahasa Inggris — lihat '
                 '[cara menerjemahkan jurnal](/artikel/cara-menerjemahkan-jurnal-bahasa-inggris).']),
         ('h2', 'Coba sebelum memutuskan'),
-        ('p', 'Akun baru bisa mencoba semua fitur selama 7 hari. Ambil satu PDF yang biasa Anda pakai, jadikan flipbook di '
+        ('p', 'Ambil satu PDF yang biasa Anda pakai, jadikan flipbook di '
               'beberapa layanan, lalu bandingkan sendiri hasil dan kemudahannya.'),
         ('faq', [
             ('Apakah flipbook dari layanan lain bisa dipindahkan ke MyFlipbook?', 'Cukup unggah ulang file PDF aslinya ke PDF ke Flipbook; flipbook baru siap dalam hitungan detik.'),
-            ('Apakah MyFlipbook gratis?', 'Membaca dan membuat flipbook bisa dicoba gratis; akun baru mendapat masa coba 7 hari untuk semua fitur. Ekspor offline dan aplikasi tersedia di paket berbayar.'),
+            ('Apakah MyFlipbook gratis?', 'Membaca dan membuat flipbook bisa dicoba gratis. Ekspor offline dan aplikasi tersedia di paket berbayar.'),
         ]),
         ('cta', 'pdf-ke-flipbook'),
     ], tool='pdf-ke-flipbook', updated='2026-10-09')

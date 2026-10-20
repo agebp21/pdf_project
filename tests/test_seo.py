@@ -59,6 +59,18 @@ class SeoPages(unittest.TestCase):
         self.assertEqual(self.get('/kompres-pdf/x')[0], 404)
         self.assertEqual(self.get('/tidak-ada')[0], 404)
 
+    def test_tool_on_its_landing_page(self):
+        # /kompres-pdf carries the compressor itself (target sizes); other pages keep the plain button.
+        status, _, page = self.get('/kompres-pdf')
+        self.assertEqual(status, 200)
+        self.assertIn('id="quick-compress"', page)
+        self.assertEqual(re.findall(r'data-target="(\d+)"', page), ['102400', '204800', '512000', '1048576', '0'])
+        for script in seo.WIDGETS['kompres-pdf']['scripts']:
+            self.assertIn(f'<script src="{script}" defer></script>', page)
+            self.assertTrue((ROOT / script.lstrip('/')).is_file(), script)
+        self.assertIn('href="/converter.html?tool=compress-pdf"', page, 'the full tool stays one click away')
+        self.assertNotIn('quick-compress', self.get('/gabung-pdf')[2])
+
     def test_robots_and_sitemap(self):
         status, ctype, robots = self.get('/robots.txt')
         self.assertEqual(status, 200); self.assertIn('Disallow: /api/', robots)
@@ -96,10 +108,21 @@ class SeoPages(unittest.TestCase):
                 if plan['monthly']:
                     self.assertIn(seo.rupiah(plan['monthly']), page, key)
         self.assertEqual(seo.rupiah(1990000), 'Rp1.990.000')
-        self.assertIn('<s class="pw">Rp149.000</s>', home, 'launch price: the normal price struck through')
+        # segment pages: one per kind of reader, linked from the home page, in the sitemap, links that resolve
+        for key, seg in seo.SEGMENTS.items():
+            status, _, page = self.get(f'/untuk/{key}')
+            self.assertEqual(status, 200, key); self.assertLessEqual(len(seg['title']), 60, key)
+            self.assertIn(f'href="/untuk/{key}"', home); self.assertIn(f'/untuk/{key}<', xml)
+            self.assertIn('"@type": "FAQPage"', page)
+            for t in seg['tools']:
+                self.assertIn(t, seo.LANDING, f'{key}: unknown tool {t}')
+            for a in seg['guides']:
+                self.assertIn(a, seo.ARTICLES, f'{key}: unknown guide {a}')
+        self.assertEqual(self.get('/untuk/tidak-ada')[0], 404)
+        self.assertIn('Paling populer', home, 'Medium marked as the most popular plan (plans v2)')
         # business address and WhatsApp on the home page and the price page (payment providers check them)
         for page in (home, harga):
-            self.assertIn('Jl. H. Khair No. 59', page); self.assertIn('https://wa.me/6285286312477', page)
+            self.assertIn('Jl. H. Khair No. 59', page); self.assertIn('0852-8631-2477', page); self.assertNotIn('WhatsApp 0852', page)
         with mock.patch.dict(os.environ, {'GOOGLE_SITE_VERIFICATION': 'abc123'}):
             self.assertIn('<meta name="google-site-verification" content="abc123">', self.get('/')[2])
         _, _, login = self.get('/login.html')
@@ -123,8 +146,9 @@ class SeoPages(unittest.TestCase):
             for href in re.findall(r'<a href="(/[^"#]*)"', html):
                 href = href.replace('&amp;', '&')
                 target = href.split('?')[0].lstrip('/')
-                ok = (target in seo.LANDING or target in server.PAGES or target == 'artikel' or target == ''
-                      or (target.startswith('artikel/') and target[8:] in seo.ARTICLES))
+                ok = (target in seo.LANDING or target in server.PAGES or target in ('artikel', 'harga', '')
+                      or (target.startswith('artikel/') and target[8:] in seo.ARTICLES)
+                      or (target.startswith('untuk/') and target[6:] in seo.SEGMENTS))
                 self.assertTrue(ok, f'{a["slug"]}: {href}')
         self.assertEqual(self.get('/artikel/tidak-ada')[0], 404)
         _, _, landing = self.get('/kompres-pdf')
@@ -144,6 +168,19 @@ class SeoPages(unittest.TestCase):
         db = sqlite3.connect(Path(self.tmp.name) / 'visits.sqlite3')
         self.assertEqual(db.execute('SELECT path FROM visits').fetchall(), [('/kompres-pdf',)]); db.close()
 
+
+class PlanCycle(unittest.TestCase):
+    def test_monthly_and_yearly(self):
+        html = seo.plan_section()
+        self.assertIn('id="cyc-m" class="cyc" checked', html)
+        # plans v2: Medium Rp89.500 a month or Rp859.200 a year (= Rp71.600 a month), every yearly plan 20% off
+        self.assertIn('Rp89.500', html); self.assertIn('atau Rp71.600/bulan jika bayar tahunan', html)
+        self.assertIn('ditagih Rp859.200/tahun · hemat 20%', html); self.assertIn('ditagih Rp1.718.400/tahun · hemat 20%', html)
+        self.assertIn('<b data-en="save 20%">hemat 20%</b>', html, 'every plan saves 20%: no "s.d."'); self.assertIn('≈ US$5 · or Rp71.600/month billed yearly', html)
+        self.assertIn('/account.html?cycle=yearly#plans', html); self.assertIn('/account.html?cycle=monthly#plans', html)
+        self.assertIn('data-lang-set="en"', html)
+        self.assertEqual(html.count('Paling populer'), 1)
+        self.assertIn(seo.plan_section(), seo.home_pricing().decode('utf-8'))
 
 if __name__ == '__main__':
     unittest.main()

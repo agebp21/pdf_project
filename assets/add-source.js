@@ -179,7 +179,7 @@
     $('.as-upload-label').textContent = options.multiple ? L('Upload files', 'Upload file') : L('Upload file', 'Upload file');
     $('.as-help').hidden = true;
     $('.as-help').innerHTML = L('<li>Google Drive opened in a new tab — find your file.</li><li>Click <b>Share</b> → General access: <b>Anyone with the link</b>.</li><li>Click <b>Copy link</b>, come back and paste it in the box above → press <b>→</b>.</li>',
-      '<li>Google Drive terbuka di tab baru — cari file-mu.</li><li>Klik <b>Share</b> → Akses umum: <b>Siapa saja yang memiliki link</b>.</li><li>Klik <b>Salin link</b>, kembali ke sini dan tempel di kotak atas → tekan <b>→</b>.</li>');
+      '<li>Google Drive terbuka di tab baru — cari file Anda.</li><li>Klik <b>Share</b> → Akses umum: <b>Siapa saja yang memiliki link</b>.</li><li>Klik <b>Salin link</b>, kembali ke sini dan tempel di kotak atas → tekan <b>→</b>.</li>');
     $('.as-drop').textContent = L('Drop files here', 'Seret file ke sini') + (kinds.length ? ' · ' + kinds.join(', ') : '');
     const input = $('input[type=file]');
     input.accept = options.accept || ''; input.multiple = !!options.multiple;

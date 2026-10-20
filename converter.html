@@ -11,8 +11,10 @@
 <script src="assets/pdf-extra.js"></script>
 <script src="assets/pdf-compress.js"></script>
 <script src="assets/pdf-ocr-layer.js"></script>
+<script src="assets/ocr-engine.js"></script>
 <script src="assets/i18n.js"></script>
 <script src="assets/pdf-layout.js"></script>
+<script defer src="/assets/site-header.js"></script>
 <script src="assets/auth.js" defer></script>
 <script src="assets/add-source.js" defer></script>
 <script src="https://cdn.tailwindcss.com"></script>
@@ -214,12 +216,7 @@
 </head>
 <body class="relative">
   <!-- top bar -->
-  <div class="sticky top-3 z-50 max-w-[1440px] mx-auto px-4 pt-3">
-    <nav class="clay-nav">
-      <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=pro" alt="MyFlipbook Pro" width="139" height="34"></a>
-      <span style="display:flex;align-items:center;gap:8px"><span data-auth-slot></span><a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px" data-en="← All tools">← Semua alat</a></span>
-    </nav>
-  </div>
+  <header data-site-header></header>
 
   <!-- header converter -->
   <header class="relative z-10 max-w-[1440px] mx-auto px-4 pt-8 pb-2 text-center">
@@ -304,7 +301,7 @@ const TOOLS = [
   {id:'excel-to-pdf', title:'Excel to PDF', desc:'Convert spreadsheets to PDF using their layout and print settings.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.xlsx,.xls,.csv', hint:'XLSX/XLS/CSV file — converted on the MyFlipbook server (log in first)'},
   {id:'pdf-to-excel', title:'PDF to Excel', desc:'Data sheet first: columns split into cells, numbers become real numbers. Page images kept on a second sheet.', cat:'Convert PDF', icon:'X', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pages embedded as images, text/OCR on extra sheets (needs internet)'},
   {id:'html-to-pdf', title:'HTML to PDF', desc:'Print a saved web page / HTML file to PDF with its real layout, colours and images.', cat:'Convert PDF', icon:'HTML', color:'#a16207', bg:'#fef9c3', accept:'.html,.htm', hint:'.html / .htm file — printed by Edge/Chrome on the project server'},
-  {id:'merge-pdf', title:'Merge PDF', get desc(){return L('Combine PDFs in the order you want.','Gabungkan PDF sesuai urutan yang kamu mau.')}, cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, get hint(){return L('Choose 2+ PDF files to merge','Pilih 2+ file PDF untuk digabungkan')}},
+  {id:'merge-pdf', title:'Merge PDF', get desc(){return L('Combine PDFs in the order you want.','Gabungkan PDF sesuai urutan yang Anda mau.')}, cat:'Organize PDF', icon:'↘↖', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', multiple:true, get hint(){return L('Choose 2+ PDF files to merge','Pilih 2+ file PDF untuk digabungkan')}},
   {id:'split-pdf', title:'Split PDF', get desc(){return L('Extract pages 1-3, split every N pages, or just click the pages you want.','Extract halaman 1-3, split per N halaman, atau cukup klik halaman yang mau diambil.')}, cat:'Organize PDF', icon:'↗↙', color:'#ea580c', bg:'#fff1e6', accept:'.pdf', get hint(){return L('PDF file — pick a split mode below','File PDF — pilih mode split di bawah')}},
   {id:'compress-pdf', title:'Compress PDF', desc:'Shrink PDFs full of photos and scans: images are resized and re-encoded, text stays sharp.', cat:'Optimize PDF', icon:'⇲', color:'#15803d', bg:'#dcfce7', accept:'.pdf', hint:'PDF file — pick Light / Balanced / Strong'},
   {id:'rotate-pdf', title:'Rotate PDF', get desc(){return L('Rotate PDF pages 90° / 180° / 270° — some pages or all.','Putar halaman PDF 90° / 180° / 270° — per halaman atau semua.')}, cat:'Organize PDF', icon:'↻', color:'#a855a7', bg:'#fae8ff', accept:'.pdf', get hint(){return L('PDF file — pick the angle & pages','File PDF — pilih sudut & halaman')}},
@@ -312,7 +309,7 @@ const TOOLS = [
   {id:'ppt-to-pdf', title:'PowerPoint to PDF', desc:'Convert PPTX/PPT slides to PDF with their design kept.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pptx,.ppt', hint:'PPTX/PPT file — converted on the MyFlipbook server (log in first)'},
   {id:'pdf-to-ppt', title:'PDF to PowerPoint', desc:'Real .pptx: slides look like the PDF pages and every text line is an editable text box.', cat:'Convert PDF', icon:'P', color:'#c2410c', bg:'#ffedd5', accept:'.pdf', hint:'PDF file — design kept, text editable on the slide (needs internet)'},
   {id:'pdf-to-md', title:'PDF to Markdown', desc:'Headings, lists, and tables detected — perfect food for AI, notes, and blogs.', cat:'Convert PDF', icon:'{ }', color:'#4C1D95', bg:'#E9E4FF', accept:'.pdf', hint:'PDF file — structure detected from fonts and columns'},
-  {id:'ocr-pdf', title:'OCR PDF', desc:'Make scans searchable: the original pages stay exactly as they are, with invisible text you can search, select and copy.', cat:'Convert PDF', icon:'OCR', color:'#15803D', bg:'#DCFCE7', accept:'.pdf', hint:'PDF file — scanned pages are read with OCR (needs internet the first time)'},
+  {id:'ocr-pdf', title:'OCR PDF', desc:'Make scans searchable: the original pages stay exactly as they are, with invisible text you can search, select and copy.', cat:'Convert PDF', icon:'OCR', color:'#15803D', bg:'#DCFCE7', accept:'.pdf', hint:'PDF file — scanned pages are read with OCR, right in your browser'},
   {id:'sign-pdf', title:'Sign PDF', get desc(){return L('Draw, type or upload your signature and place it anywhere on the pages.','Gambar, ketik, atau upload tanda tangan lalu taruh di mana saja di halaman.')}, cat:'Edit PDF', icon:'✍', color:'#1d4ed8', bg:'#dbeafe', accept:'.pdf', get hint(){return L('PDF file — signed in your browser, nothing is uploaded','File PDF — ditandatangani di browser, tidak diunggah')}},
   {id:'pdf-forms', title:'PDF Forms', get desc(){return L('Fill in the fields of a fillable PDF form, then save — optionally locked.','Isi kolom formulir PDF yang bisa diisi, lalu simpan — bisa dikunci.')}, cat:'Edit PDF', icon:'☑', color:'#7e22ce', bg:'#fae8ff', accept:'.pdf', get hint(){return L('PDF with fillable fields (AcroForm)','PDF dengan kolom isian (AcroForm)')}},
   {id:'redact-pdf', title:'Redact PDF', get desc(){return L('Black out names, ID numbers or any area for good — the hidden text is really removed.','Hitamkan nama, NIK, atau area mana pun secara permanen — teks di bawahnya benar-benar dihapus.')}, cat:'Edit PDF', icon:'▇', color:'#111827', bg:'#e7e5e4', accept:'.pdf', get hint(){return L('PDF file — drag boxes or search for text','File PDF — seret kotak atau cari teks')}},
@@ -384,7 +381,7 @@ function renderHeader(){
     'merge-pdf':'Pilih 2+ file PDF untuk digabungkan','split-pdf':'File PDF — pilih mode pisah di bawah','compress-pdf':'File PDF — pilih Ringan / Seimbang / Kuat',
     'rotate-pdf':'File PDF — pilih sudut & halaman','organize-pdf':'File PDF — halaman digabung dalam satu grid, seret untuk mengurutkan',
     'ppt-to-pdf':'File PPTX/PPT — dikonversi di server MyFlipbook (login dulu)','pdf-to-ppt':'File PDF — desain tetap, teks bisa diedit di slide (perlu internet)',
-    'pdf-to-md':'File PDF — struktur dikenali dari font dan kolom','ocr-pdf':'File PDF — halaman scan dibaca dengan OCR (perlu internet pertama kali)',
+    'pdf-to-md':'File PDF — struktur dikenali dari font dan kolom','ocr-pdf':'File PDF — halaman scan dibaca dengan OCR, langsung di browser Anda',
     'sign-pdf':'File PDF — ditandatangani di browser, tidak ada yang diunggah','pdf-forms':'PDF dengan kolom isian (AcroForm)','redact-pdf':'File PDF — seret kotak atau cari teks',
     'scan-to-pdf':'Foto (JPG/PNG/WebP) — satu per halaman','compare-pdf':'Dua PDF — versi lama dulu, lalu yang baru'};
   $('#dropHint').textContent=L(t.hint, HINT_ID[t.id]||t.hint);
@@ -414,8 +411,8 @@ function renderHeader(){
       <select id="opt-word-mode" class="bg-white border-0 text-xs font-medium focus:ring-0 min-w-0 max-w-full py-1.5"><option value="layout" selected>${L('Keep original look (editable text on page)','Tampilan asli (teks bisa diedit di halaman)')}</option><option value="flow">${L('Flowing text + tables (easiest to edit, no pictures)','Teks mengalir + tabel (paling mudah diedit, tanpa gambar)')}</option></select></label>`;
   }else if(t.id==='ocr-pdf'){
     html=`<label class="flex items-center gap-2 bg-white border border-gray-200 rounded-full px-3 py-1.5 shadow-sm">${L('OCR language:','Bahasa OCR:')}
-      <select id="opt-ocr-lang" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="eng">${L('English','Inggris')}</option><option value="ind">${L('Indonesian','Indonesia')}</option><option value="eng+ind" selected>${L('Both','Keduanya')}</option></select></label>
-      <span class="text-[11px] text-gray-500">${L('Look stays identical — text becomes selectable. Slow on big files.','Tampilan tetap sama — teks jadi bisa dipilih. Lambat untuk file besar.')}</span>`;
+      <select id="opt-ocr-lang" class="bg-white border-0 text-xs font-medium focus:ring-0"><option value="ind+eng" selected>${L('Indonesian + English','Indonesia + Inggris')}</option><option value="ind">Indonesia</option><option value="eng">${L('English','Inggris')}</option><option value="msa">${L('Malay','Melayu')}</option><option value="jav+ind">${L('Javanese (+ Indonesian)','Jawa (+ Indonesia)')}</option><option value="sun+ind">${L('Sundanese (+ Indonesian)','Sunda (+ Indonesia)')}</option></select></label>
+      <span class="text-[11px] text-gray-500">${L('Look stays identical — text becomes selectable. Shadows and faded paper are evened out, sideways or upside-down pages are turned, several pages are read at once. Everything stays in your browser, no AI.','Tampilan tetap sama — teks jadi bisa dipilih. Bayangan dan kertas kusam dirapikan, halaman miring/terbalik diputar otomatis, beberapa halaman dibaca sekaligus. Semua di browser Anda, tanpa AI.')}</span>`;
   }else if(t.id==='split-pdf'){
     html=`<div class="w-full bg-white rounded-xl border border-gray-200 p-4 shadow-sm text-left">
       <p class="text-xs font-bold mb-2 text-center">${L('Split mode — pick one:','Mode pisah — pilih salah satu:')}</p>
@@ -2164,7 +2161,7 @@ pickBtn.addEventListener('click',(e)=>{
   e.stopPropagation();
   const t=TOOLS.find(x=>x.id===active);
   if(!window.AddSource){ input.click(); return; }
-  AddSource.open({title:TT(t), subtitle:t.multiple?L('your files','file-mu'):L('your file','file-mu'), accept:t.accept, multiple:!!t.multiple,
+  AddSource.open({title:TT(t), subtitle:t.multiple?L('your files','file Anda'):L('your file','file Anda'), accept:t.accept, multiple:!!t.multiple,
     onFiles:list=>{ log('Added '+list.length+' files'); handleFiles(list); }});
 });
 drop.addEventListener('dragover',e=>{e.preventDefault(); drop.classList.add('drag');});
@@ -2208,14 +2205,6 @@ $('#convertBtn').addEventListener('click', async ()=>{
   if(files.length===0){ showError(L('Pick a file first!','Pilih file dulu!')); return; }
   if(t.id==='compare-pdf' && files.length!==2){ showError(L('Compare needs exactly 2 PDFs: the old version and the new one.','Bandingkan butuh tepat 2 PDF: versi lama dan versi baru.')); return; }
   if(t.id==='merge-pdf' && files.length<2){ showError(L('Merge needs at least 2 PDF files.','Gabung PDF butuh minimal 2 file PDF.')); return; }
-  // The 7-day trial is over: only the flipbook reader stays, everything
-  // else needs Pro (guests may still try; members hit this wall).
-  if (window.MFAuth) {
-    try {
-      const data = await window.MFAuth.me();
-      if (data.user && !data.offline && window.MFAuth.trialWall(data.user)) return;
-    } catch (e) {}
-  }
   $('#btnSpinner').classList.remove('hidden'); $('#btnText').textContent=L('Working...','Memproses...'); $('#convertBtn').disabled=true;
   $('#progress').classList.remove('hidden'); $('#progress').textContent=L('Getting files ready...','Menyiapkan file...'); $('#error').classList.add('hidden');
   $('#result').classList.add('hidden');
@@ -2365,7 +2354,6 @@ $('#downloadBtn').addEventListener('click', event => {
   event.preventDefault();
   window.MFAuth.me().then(data => {
     if (data.user || data.offline) {
-      if (data.user && !data.offline && window.MFAuth.trialWall(data.user)) return;
       dlContinue = true; $('#downloadBtn').click();
     }
     else window.MFAuth.loginPopup(() => { dlContinue = true; $('#downloadBtn').click(); });
@@ -3053,23 +3041,10 @@ async function pdfToWord(){
 async function excelToPdf(){
   return convertOfficeToPdf('excel-to-pdf', ['xlsx','xls','csv']);
 }
-// Tesseract.js v5.1.1 (Apache-2.0, https://github.com/naptha/tesseract.js)
-// Loaded lazily from jsDelivr ONLY when a PDF page has no embedded text,
-// so normal converts stay fast. Needs internet (like the other converter CDNs).
-let _tesseractLoading=null;
-function ensureTesseract(){
-  if(window.Tesseract) return Promise.resolve();
-  if(!_tesseractLoading){
-    _tesseractLoading=new Promise((resolve,reject)=>{
-      const s=document.createElement('script');
-      s.src='https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-      s.onload=resolve;
-      s.onerror=()=>reject(new Error('Could not load the OCR engine. Check your internet connection.'));
-      document.head.appendChild(s);
-    });
-  }
-  return _tesseractLoading;
-}
+// OCR: the shared engine (assets/ocr-engine.js) — this site's own Tesseract.js, no CDN, no AI;
+// loaded only when a page has no embedded text, so normal converts stay fast.
+function ensureTesseract(){ return OcrEngine.load(); }
+let _ocrLines=null;          // one reader for the converters' scanned pages (Word / PowerPoint / Markdown)
 async function ocrPageToLines(page, pageNum){
   // Render the text-less page to an image, then read it with OCR (English + Indonesian).
   const base=page.getViewport({scale:1});
@@ -3078,9 +3053,9 @@ async function ocrPageToLines(page, pageNum){
   const canvas=document.createElement('canvas');
   canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height);
   await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
-  const result=await window.Tesseract.recognize(canvas, 'eng+ind', {
-    logger:(m)=>{ if(m.status==='recognizing text'&&typeof m.progress==='number') $('#progress').textContent=L(`OCR page ${pageNum}... `,`OCR halaman ${pageNum}... `)+`${Math.round(m.progress*100)}%`; }
-  });
+  $('#progress').textContent=L(`OCR page ${pageNum}...`,`OCR halaman ${pageNum}...`);
+  _ocrLines ||= OcrEngine.pool({langs:'ind+eng', size:1});
+  const result=await (await _ocrLines).recognize(canvas);
   canvas.width=canvas.height=0;
   // Quality gate: artwork/display type makes Tesseract hallucinate symbols.
   // Drop symbol-only lines, then reject the whole page when confidence or
@@ -3492,46 +3467,59 @@ async function ocrSearchablePdf(){
   try{ doc=await PDFLib.PDFDocument.load(buf); pdf=await pdfjsLib.getDocument({data:buf.slice(0), disableWorker: location.protocol==='file:'}).promise; }
   catch(e){ throw new Error(/encrypt|password/i.test(e.message||e.name)?'This PDF is password-protected. Remove the password first, then try again.':'This PDF could not be read (damaged or not a PDF).'); }
   log('OCRPDF pages='+pdf.numPages+' lang='+lang);
-  $('#progress').textContent=L('Loading the OCR engine (first time: a few MB)...','Memuat mesin OCR (pertama kali: beberapa MB)...');
-  await ensureTesseract();
-  let current=0;
-  const worker=await window.Tesseract.createWorker(lang, 1, {logger:(m)=>{
-    if(m.status==='recognizing text'&&typeof m.progress==='number') $('#progress').textContent=L(`OCR page ${current}/${pdf.numPages}... `,`OCR halaman ${current}/${pdf.numPages}... `)+`${Math.round(m.progress*100)}%`;
-  }});
-  const font=await doc.embedFont(PDFLib.StandardFonts.Helvetica);
-  let words=0, scanned=0, hadText=0;
-  try{
-    for(let i=1;i<=pdf.numPages;i++){
-      current=i;
+  // Pages that already carry real text are left untouched.
+  const todo=[];
+  let hadText=0;
+  for(let i=1;i<=pdf.numPages;i++){
+    const page=await pdf.getPage(i), content=await page.getTextContent();
+    if(content.items.map(t=>t.str).join('').replace(/\s+/g,'').length>=20) hadText++; else todo.push(i);
+    page.cleanup();
+  }
+  let words=0, scanned=0, turned=0, done=0;
+  if(todo.length){
+    $('#progress').textContent=L('Loading the OCR engine (first time: a few MB)...','Memuat mesin OCR (pertama kali: beberapa MB)...');
+    const pool=await OcrEngine.pool({langs:lang});
+    log(`OCR: ${todo.length} scanned pages, ${pool.size} read at once`);
+    const font=await doc.embedFont(PDFLib.StandardFonts.Helvetica), started=Date.now();
+    const tick=()=>{
+      const left=todo.length-done, per=done?(Date.now()-started)/done:0, min=per?Math.ceil(per*left/60000):0;
+      $('#progress').textContent=L(`OCR: ${done}/${todo.length} pages`,`OCR: ${done}/${todo.length} halaman`)
+        +(done&&left?L(` · about ${min} min left`,` · sekitar ${min} menit lagi`):'')+(pool.size>1?L(` · ${pool.size} at once`,` · ${pool.size} sekaligus`):'');
+    };
+    // One page: drawn at ~290 dpi on A4 (capped for memory), read (cleaned, turned if it lies
+    // sideways), its words laid on the page in the PDF's own coordinates.
+    const readPage=async i=>{
       const page=await pdf.getPage(i);
-      // Pages that already carry real text are left untouched.
-      const content=await page.getTextContent();
-      if(content.items.map(t=>t.str).join('').replace(/\s+/g,'').length>=20){ hadText++; page.cleanup(); continue; }
-      $('#progress').textContent=L(`Reading page ${i}/${pdf.numPages}...`,`Membaca halaman ${i}/${pdf.numPages}...`);
       const base=page.getViewport({scale:1});
-      // ~290 dpi on A4 for accurate OCR, capped for memory.
       const viewport=page.getViewport({scale:Math.min(4, 2400/Math.max(base.width,base.height))});
       const canvas=document.createElement('canvas');
       canvas.width=Math.ceil(viewport.width); canvas.height=Math.ceil(viewport.height);
       const ctx=canvas.getContext('2d'); ctx.fillStyle='#fff'; ctx.fillRect(0,0,canvas.width,canvas.height);
       await page.render({canvasContext:ctx, viewport}).promise;
-      const result=await worker.recognize(canvas);
-      const found=(result.data.words||[]).filter(w=>w.text&&w.text.trim()&&/[A-Za-z0-9]/.test(w.text)&&(w.confidence||0)>=40)
-        .map(w=>({text:w.text, x0:w.bbox.x0, y0:w.bbox.y0, x1:w.bbox.x1, y1:w.bbox.y1}));
-      const added=PDFOcrLayer.addWords(PDFLib, doc, doc.getPage(i-1), font, found, (x,y)=>viewport.convertToPdfPoint(x,y));
-      words+=added; scanned++;
-      log(`Page ${i}: ${added} searchable words`);
-      page.cleanup(); canvas.width=canvas.height=0;
-    }
-  } finally { await worker.terminate(); }
+      page.cleanup();
+      try{
+        const result=await pool.recognize(canvas);
+        const found=(result.data.words||[]).filter(w=>w.text&&w.text.trim()&&/[\p{L}\p{N}]/u.test(w.text)&&(w.confidence||0)>=40&&(w.text.trim().length>1||/^[aAI&%$]$/.test(w.text.trim())||w.confidence>=85))
+          .map(w=>({text:w.text, ...result.toOriginal(w.bbox)}));
+        const added=PDFOcrLayer.addWords(PDFLib, doc, doc.getPage(i-1), font, found, (x,y)=>viewport.convertToPdfPoint(x,y));
+        words+=added; scanned++; if(result.rotate) turned++;
+        log(`Page ${i}: ${added} searchable words`+(result.rotate?` (read turned ${result.rotate}°)`:'')+` · confidence ${Math.round(result.conf)}`);
+      }finally{ canvas.width=canvas.height=0; done++; tick(); }
+    };
+    tick();
+    let next=0;
+    try{ await Promise.all(Array.from({length:pool.size}, async()=>{ while(next<todo.length) await readPage(todo[next++]); })); }
+    finally{ await pool.stop(); }
+  }
   $('#progress').textContent=L('Saving...','Menyimpan...');
   const bytes=await doc.save({useObjectStreams:true});
   downloadBlob(new Blob([bytes],{type:'application/pdf'}), source.name.replace(/\.pdf$/i,'')+'-searchable.pdf');
   const note=document.createElement('p'); note.className='text-center py-2 text-xs text-gray-600';
-  note.textContent=!scanned ? '✓ Every page already has selectable text — nothing needed OCR, the PDF is unchanged.'
-    : `🔍 ${words} word${words===1?'':'s'} made searchable on ${scanned} scanned page${scanned===1?'':'s'}`
-      +(hadText?` · ${hadText} page${hadText===1?'':'s'} already had text (left as is)`:'')
-      +(scanned&&!words?' · no readable text was found in the scans':'')+'. The pages look exactly as before.';
+  note.textContent=!scanned ? L('✓ Every page already has selectable text — nothing needed OCR, the PDF is unchanged.','✓ Semua halaman sudah punya teks yang bisa dipilih — tidak perlu OCR, PDF tidak diubah.')
+    : L(`🔍 ${words} word${words===1?'':'s'} made searchable on ${scanned} scanned page${scanned===1?'':'s'}`,`🔍 ${words} kata kini bisa dicari di ${scanned} halaman scan`)
+      +(turned?L(` · ${turned} sideways or upside-down page${turned===1?'':'s'} read turned`,` · ${turned} halaman miring/terbalik dibaca setelah diputar`):'')
+      +(hadText?L(` · ${hadText} page${hadText===1?'':'s'} already had text (left as is)`,` · ${hadText} halaman sudah punya teks (dibiarkan)`):'')
+      +(scanned&&!words?L(' · no readable text was found in the scans',' · tidak ada teks terbaca di halaman scan'):'')+L('. The pages look exactly as before.','. Tampilan halaman tetap sama seperti aslinya.');
   $('#resultPreview').prepend(note);
 }
 async function htmlToPdf(){

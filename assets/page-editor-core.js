@@ -266,6 +266,61 @@
     return out;
   }
 
+  // ---- tables ---------------------------------------------------------------------------------
+  // A table element: {type: 'table', x, y, w, rows: [[cell text]], colW: [fractions], fontSize,
+  // family, color, border, header}. Cells wrap; a row is as tall as its tallest cell. The editor
+  // draws it as an HTML table with the same numbers (TABLE_LINE, TABLE_PAD).
+  const TABLE_LINE = 1.25, TABLE_PAD = 0.35;               // line height and cell padding, in font sizes
+  function colWidths(el) {
+    const n = Math.max(1, ...(el.rows || [[]]).map(r => r.length));
+    const given = Array.isArray(el.colW) && el.colW.length === n ? el.colW.map(v => Math.max(0.02, +v || 0)) : Array(n).fill(1);
+    const sum = given.reduce((a, b) => a + b, 0);
+    return given.map(v => v / sum);
+  }
+  // Lines of every cell and the height of every row, for a box `w` wide (points). measure(text, bold) -> width.
+  function tableLayout(el, w, size, measure) {
+    const cols = colWidths(el).map(f => f * w), pad = size * TABLE_PAD, lh = size * TABLE_LINE;
+    const rows = (el.rows || []).map((row, r) => {
+      const bold = !!el.header && r === 0;
+      const cells = cols.map((cw, c) => wrap(clean(row[c] || ''), t => measure(t, bold), Math.max(size, cw - 2 * pad)));
+      return { cells, bold, height: Math.max(1, ...cells.map(ls => ls.length)) * lh + 2 * pad };
+    });
+    return { cols, rows, pad, lh, height: rows.reduce((a, r) => a + r.height, 0) };
+  }
+  const newTable = (rows, cols, H) => ({ type: 'table', x: 0.12, y: 0.35, w: 0.76, h: 0.1,
+    rows: Array.from({ length: rows }, () => Array(cols).fill('')), colW: Array(cols).fill(1 / cols),
+    fontSize: 11 / H, family: 'sans', color: '#1c1917', border: '#57534e', header: true });
+
+  // ---- headings and the table of contents ------------------------------------------------------
+  // A paragraph set with Paragraph style Heading 1-3 is all bold at 2 / 1.5 / 1.25 em.
+  function headingLevel(para) {
+    const runs = (para || []).filter(r => r.text && r.text.trim());
+    if (!runs.length || !runs.every(r => r.b && r.scale)) return 0;
+    const s = Math.min(...runs.map(r => r.scale));
+    return s >= 1.75 ? 1 : s >= 1.4 ? 2 : s >= 1.2 ? 3 : 0;
+  }
+  // pages: [{elements}] in order -> [{level, text, page (1-based)}], top to bottom.
+  function collectHeadings(pages) {
+    const out = [];
+    pages.forEach((pg, i) => {
+      const texts = (pg.elements || []).filter(e => e.type === 'text' && !e.toc).sort((a, b) => a.y - b.y || a.x - b.x);
+      for (const el of texts) for (const para of richOf(el.text, el.html)) {
+        const level = headingLevel(para);
+        if (level) out.push({ level, text: para.map(r => r.text).join('').replace(/\s+/g, ' ').trim(), page: i + 1 });
+      }
+    });
+    return out;
+  }
+  // One line per heading: indented by level, dot leaders out to the page number (measure(text) -> width).
+  function tocLines(entries, measure, width) {
+    return entries.map(e => {
+      const head = '    '.repeat(e.level - 1) + e.text, tail = ' ' + e.page;
+      let dots = ' ';
+      while (measure(head + dots + '.' + tail) <= width && dots.length < 400) dots += '.';
+      return head + dots + tail;
+    });
+  }
+
   function hex(color) {
     const m = /^#?([0-9a-f]{6})$/i.exec(String(color || '').trim());
     const v = m ? m[1] : '1c1917';
@@ -520,6 +575,27 @@
           const head = Math.min(h, w * 0.3), t = (el.strokeWidth || 0.003) * H;
           page.drawLine({ start: { x, y: y + h / 2 }, end: { x: x + w - head * 0.9, y: y + h / 2 }, thickness: t, color: hex(el.stroke) });
           page.drawSvgPath(`M ${w - head} 0 L ${w} ${h / 2} L ${w - head} ${h} Z`, { x, y: y + h, color: hex(el.stroke) });
+        } else if (el.type === 'table') {
+          const size = el.fontSize * H, reg = await font(el.family, false, false), bold = await font(el.family, true, false);
+          const safe = (f, t) => Array.from(t).map(ch => { try { f.widthOfTextAtSize(ch, size); return ch; } catch (e) { missing.add(ch); return '?'; } }).join('');
+          const lay = tableLayout(el, w, size, (t, b) => (b ? bold : reg).widthOfTextAtSize(safe(b ? bold : reg, t), size));
+          const line = { thickness: Math.max(0.5, (el.strokeWidth || 0.0012) * H), color: hex(el.border || '#57534e') };
+          let top = H - el.y * H;
+          for (const row of lay.rows) {
+            if (row.bold) page.drawRectangle({ x, y: top - row.height, width: w, height: row.height, color: hex('#f3f1ec') });
+            let cx = x;
+            row.cells.forEach((lines, c) => {
+              let base = top - lay.pad - size * baseline(TABLE_LINE);
+              const f = row.bold ? bold : reg;
+              for (const ln of lines) { if (ln) page.drawText(safe(f, ln), { x: cx + lay.pad, y: base, size, font: f, color: hex(el.color) }); base -= lay.lh; }
+              cx += lay.cols[c];
+            });
+            page.drawLine({ start: { x, y: top }, end: { x: x + w, y: top }, ...line });
+            top -= row.height;
+          }
+          page.drawLine({ start: { x, y: top }, end: { x: x + w, y: top }, ...line });
+          let cx = x;
+          for (const cw of [0, ...lay.cols]) { cx += cw; page.drawLine({ start: { x: cx, y: H - el.y * H }, end: { x: cx, y: top }, ...line }); }
         } else if (el.type === 'text' && el.html && isRich(el.html)) {
           await drawRich(page, el, x, w, H);
         } else if (el.type === 'text') {
@@ -567,5 +643,6 @@
 
   globalThis.PageEditorCore = { FAMILIES, LINE, baseline, clean, family, groupLines, paragraphs, wrap, exportPdf,
     KEY1, KEY2, keyPictures, unkey, repair, textColors, clearPaper, parseRich, isRich, plainRich, richHtml, tidyRich,
-    richOf, plainOf, splitParas, joinParas, blockOf, breakPoints };
+    richOf, plainOf, splitParas, joinParas, blockOf, breakPoints,
+    TABLE_LINE, TABLE_PAD, colWidths, tableLayout, newTable, headingLevel, collectHeadings, tocLines };
 })();

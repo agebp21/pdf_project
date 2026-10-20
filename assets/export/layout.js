@@ -346,6 +346,9 @@
   // page (the strip curl read as stiff next to them); plainInside keeps the
   // turn from showing two pages at once. Kept for a later return.
   ENABLED: false,
+  // Off (owner, 2026-10-19): a plain inside read as "the page has not loaded"; the cover's
+  // sheet now shows page 2 while it turns, as every other sheet does.
+  PLAIN_INSIDE: false,
   STRIPS: 36,
   DURATION: 1600,
   // A soft cover shares its sheet with page 2, so a turning cover showed the
@@ -403,7 +406,7 @@
   },
   bind(book, root, pages, options) {
     const self = this, opts = options || {};
-    if (!self.ENABLED) return self.plainInside(book, pages);
+    if (!self.ENABLED) return self.PLAIN_INSIDE ? self.plainInside(book, pages) : { open: () => false, close: () => false, busy: () => false };
     let busy = false;
     // Gentle in and out (sine): a cubic curve crept, then snapped over the middle.
     const ease = t => (1 - Math.cos(Math.PI * t)) / 2;
@@ -1451,7 +1454,10 @@
     const summarize = document.createElement('button'); summarize.type = 'button'; summarize.className = 'book-hl-summary';
     summarize.innerHTML = self.ICONS.summary; summarize.title = 'Summarize: highlighted text becomes a short summary note';
     summarize.setAttribute('aria-label', 'Summarize highlights');
+    // options.aiLocked(): the plan has no AI (a crown on both AI tools; a click calls options.onLocked).
+    const aiLocked = () => !!(options.aiLocked && options.aiLocked());
     summarize.onclick = () => {
+      if (aiLocked()) { if (options.onLocked) options.onLocked(); return; }
       summarizing = !summarizing; translating = false; erasing = false; drawing = false;
       if (selected) { const page = selected.page; selected = null; render(page); }
       paintBar();
@@ -1462,6 +1468,7 @@
     translateTool.innerHTML = self.ICONS.translate; translateTool.title = 'Translate: highlighted text becomes a translation note';
     translateTool.setAttribute('aria-label', 'Translate highlights');
     translateTool.onclick = () => {
+      if (aiLocked()) { if (options.onLocked) options.onLocked(); return; }
       translating = !translating; summarizing = false; erasing = false; drawing = false;
       if (selected) { const page = selected.page; selected = null; render(page); }
       paintBar();
@@ -1493,6 +1500,7 @@
       pen.setAttribute('aria-pressed', String(drawing && !erasing));
       pen.style.setProperty('--hl-color', self.INK[color]);
       summarize.setAttribute('aria-pressed', String(summarizing && !erasing));
+      summarize.classList.toggle('hl-locked', aiLocked()); translateTool.classList.toggle('hl-locked', aiLocked());
       translateTool.setAttribute('aria-pressed', String(translating && !erasing));
       brush.style.setProperty('--hl-color', self.COLORS[selected ? store[selected.page][selected.index].c : color]);
       document.body.style.setProperty('--hl-cursor', self.cursor(erasing ? 'eraser' : 'brush', drawing ? self.INK[color] : self.COLORS[color]));
@@ -2397,10 +2405,12 @@
 // Summary: an overview and key points of the book (written with AI in the
 // editor, stored as summary {lang, text}), in a panel beside the book. ES2018.
 (typeof self!=='undefined'?self:global).FlipbookSummary = {
-  // Text → blocks: {kind: 'head' | 'para' | 'list', text | items}.
+  // Text → blocks: {kind: 'title' | 'head' | 'para' | 'list', text | items}; "### …" is a chapter title.
   blocks(text) {
     const out = [];
     String(text || '').split(/\r?\n/).map(l => l.trim()).filter(Boolean).forEach(line => {
+      const title = /^#{1,3}\s+(.+)$/.exec(line);
+      if (title) { out.push({kind: 'title', text: title[1]}); return; }
       const item = /^[-•*]\s+(.+)$/.exec(line);
       if (item) {
         const last = out[out.length - 1];
@@ -2437,7 +2447,8 @@
           body.appendChild(ul);
         } else {
           const el = document.createElement('p');
-          if (block.kind === 'head') el.className = 'book-translate-page';
+          if (block.kind === 'head' || block.kind === 'title') el.className = 'book-translate-page';
+          if (block.kind === 'title') el.style.fontWeight = '800';
           el.textContent = block.text; body.appendChild(el);
         }
       });

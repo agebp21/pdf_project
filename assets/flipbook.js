@@ -71,8 +71,13 @@
     const shown = sheetsOnScreen(), visible = visiblePages();
     if (!shown.length) return;
     const isCover = shown[0] === 0;
-    $('#page-status').textContent = isCover ? `Front cover · 1 / ${pageElements.length}` : !visible.length ? 'Back cover' : `Pages ${visible.map(i => i + 1).join('–')} / ${pageElements.length}`;
-    $('#next').textContent = isCover ? 'Open cover →' : '→';
+    const total = pageElements.length;
+    // The last page on its own is the back cover (a two-page spread shows it alone, too).
+    const isBack = !visible.length || (visible.length === 1 && visible[0] === total - 1 && total > 1);
+    $('#page-status').textContent = isCover ? L(`Front cover · 1 / ${total}`, `Sampul depan · 1 / ${total}`)
+      : isBack ? L(`Back cover · ${total} / ${total}`, `Sampul belakang · ${total} / ${total}`)
+      : L(`Pages ${visible.map(i => i + 1).join('–')} / ${total}`, `Halaman ${visible.map(i => i + 1).join('–')} / ${total}`);
+    $('#next').textContent = isCover ? L('Open cover →', 'Buka sampul →') : '→';
     $('#next').setAttribute('aria-label', isCover ? 'Open cover' : 'Next page');
     $('#prev').disabled = $('#home').disabled = isCover;
     $('#next').disabled = $('#end').disabled = shown.at(-1) === book.getPageCount() - 1;
@@ -106,9 +111,32 @@
     const label = document.createElement('span'); label.textContent = config.label;
     element.append(number, label); pageElements[index].append(element);
   }
+  // Free members read with every tool (AI aside) but keep nothing: no My Library, no draft,
+  // and their marks / notes / highlights live under this visit's keys, removed when it ends.
+  const VISIT = Math.random().toString(36).slice(2, 10);
+  const keeps = () => !lockedFor('library', buildConfig);
+  const keyFor = key => keeps() ? key : 'mf-temp-' + VISIT + '-' + key;
+  function forgetVisit(all) {
+    try {
+      for (let i = localStorage.length - 1; i >= 0; i--) {
+        const k = localStorage.key(i);
+        if (k && k.startsWith(all ? 'mf-temp-' : 'mf-temp-' + VISIT + '-')) localStorage.removeItem(k);
+      }
+    } catch (e) {}
+  }
+  forgetVisit(true);                                                // leftovers of earlier visits
+  addEventListener('pagehide', () => forgetVisit(false));
+  // The plan, known before a book opens (it decides where its marks are kept).
+  let capsLoading = null;
+  function loadCaps() {
+    if (buildConfig) return Promise.resolve(buildConfig);
+    return capsLoading || (capsLoading = fetch('/api/capabilities', {cache: 'no-store'}).then(r => r.ok ? r.json() : null)
+      .then(c => { if (c && !buildConfig) { buildConfig = c; markLocked(); paintLibraryButton(); } return buildConfig; }).catch(() => null));
+  }
   // Bringing a document into the reader needs an account: guests may look
   // around the empty reader, but the book itself unlocks after signing in.
-  // (Shared /s/ links use the standalone reader and are unaffected.)
+  // (Shared /s/ links use the standalone reader and are unaffected.) Every member,
+  // Free too, reads with every reader tool; keeping / exporting is Pro (lockedFor).
   function openPdf(blob, name, project = null, pictures = {}) {
     if (!window.MFAuth) return openPdfNow(blob, name, project, pictures);
     return window.MFAuth.me().then(data => {
@@ -117,6 +145,18 @@
       return false;
     });
   }
+  // A guest is asked to log in; `then` carries on afterwards. True when already signed in.
+  async function signedIn(then) {
+    if (!window.MFAuth) return true;
+    try {
+      const data = await window.MFAuth.me();
+      if (data.user || data.offline) return true;
+      window.MFAuth.loginPopup(then);
+      return false;
+    } catch (e) { return true; }
+  }
+  // A server feature answered 401: the visitor is a guest.
+  const loginNeeded = (response, again) => { if (response.status === 401 && window.MFAuth) window.MFAuth.loginPopup(again); };
   async function openPdfNow(blob, name, project = null, pictures = {}) {
     if (opening || exporting) return false;
     opening = true; $('#pdf-file').disabled = true; $('#add-file').disabled = true; $('#overlay-fields').disabled = true;
@@ -128,7 +168,8 @@
     const newUrls = [];
     let installed = false;
     try {
-      loading('Reading PDF…', 0);
+      loading(L('Reading PDF…', 'Membaca PDF…'), 0);
+      await loadCaps();
       if (!window.pdfjsLib || !window.St) throw new Error('Libraries unavailable. Reload the page.');
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
       task = pdfjsLib.getDocument({data: await blob.arrayBuffer(), isEvalSupported:false});
@@ -142,7 +183,7 @@
       for (let i = 1; i <= total; i++) {
         let url = blank;
         if (i <= first) {
-          loading(`Preparing page ${i} / ${total}…`, (i - 1) / first * 0.6);
+          loading(L(`Preparing page ${i} / ${total}…`, `Menyiapkan halaman ${i} / ${total}…`), (i - 1) / first * 0.6);
           url = await renderPageImage(i === 1 ? firstPage : await newPdf.getPage(i));
         }
         newUrls.push(url);
@@ -157,13 +198,13 @@
       let found = {links:{}, stats:{internal:0, external:0, toc:0}};
       if (saved) found = {links: project.links || {}, stats: {internal: Object.values(project.links || {}).reduce((n, list) => n + (list || []).length, 0), external: 0, toc: 0}};
       else try {
-        if (window.PdfLinks) found = await PdfLinks.extract(newPdf, {progress:(i, n) => loading(`Finding links ${i} / ${n}…`, 0.6 + i / n * 0.15)});
+        if (window.PdfLinks) found = await PdfLinks.extract(newPdf, {progress:(i, n) => loading(L(`Finding links ${i} / ${n}…`, `Mencari tautan ${i} / ${n}…`), 0.6 + i / n * 0.15)});
       } catch (cause) { console.warn('Links skipped:', cause); }
       // Word positions so readers can highlight text (never blocks opening either).
       let words = {}, text = {};
       if (saved) { words = JSON.parse(JSON.stringify(project.words)); text = JSON.parse(JSON.stringify(project.text)); }
       else try {
-        if (window.PdfWords) ({words, text} = await PdfWords.extract(newPdf, {withText:true, progress:(i, n) => loading(`Reading text ${i} / ${n}…`, 0.75 + i / n * 0.25)}));
+        if (window.PdfWords) ({words, text} = await PdfWords.extract(newPdf, {withText:true, progress:(i, n) => loading(L(`Reading text ${i} / ${n}…`, `Membaca teks ${i} / ${n}…`), 0.75 + i / n * 0.25)}));
       } catch (cause) { console.warn('Words skipped:', cause); }
       if (version !== loadVersion) return false;
       // Text read from pictures earlier (OCR) comes back with the project.
@@ -225,21 +266,21 @@
       $('#document-name').textContent = name;
       draftName = name; hideDraft(); saveDraft();
       $('#target-page').replaceChildren(...newElements.map((_, index) => {
-        const option = document.createElement('option'); option.value = String(index); option.textContent = 'Page ' + (index + 1); return option;
+        const option = document.createElement('option'); option.value = String(index); option.textContent = L('Page ', 'Halaman ') + (index + 1); return option;
       }));
       // Skip pages already on screen; a hovered corner (fold_corner) may still flip.
       const goPage = target => { if (book && ['read', 'fold_corner'].includes(book.getState()) && !visiblePages().includes(target)) { zoom?.snap(); book.flip(target, 'top'); } };
       Object.entries(bookLinks).forEach(([index, list]) => FlipbookLinks.mount(newElements[Number(index)], list, goPage));
       marks?.close();
-      marks = FlipbookBookmarks.bind({key: FlipbookBookmarks.key(name, newElements.length, ratio), pages: newElements,
+      marks = FlipbookBookmarks.bind({key: keyFor(FlipbookBookmarks.key(name, newElements.length, ratio)), pages: newElements,
         visible: visiblePages, goPage, toggle: $('#bookmark'), open: $('#bookmarks')});
       book.on('flip', () => marks.refresh());
       notes?.close();
-      notes = FlipbookNotes.bind({key: FlipbookNotes.key(name, newElements.length, ratio), title: name.replace(/\.pdf$/i, ''),
+      notes = FlipbookNotes.bind({key: keyFor(FlipbookNotes.key(name, newElements.length, ratio)), title: name.replace(/\.pdf$/i, ''),
         pages: newElements, goPage, open: $('#notes'), blank: false, bookmark: (index, on) => marks.set(index, on),
         onRemove: (index, said) => highlights?.forget(index, said)});
       highlights?.close();
-      highlights = FlipbookHighlights.bind({key: FlipbookHighlights.key(name, newElements.length, ratio),
+      highlights = FlipbookHighlights.bind({key: keyFor(FlipbookHighlights.key(name, newElements.length, ratio)),
         pages: newElements, words: bookWords, text: bookText, button: $('#highlight'),
         // On a translated edition the highlighter takes the translated words.
         edition: () => { const shown = editions?.current(), lang = shown && shown !== bookLang ? shown : liveLang; return lang && bookVersionWords[lang] ? {lang, words: bookVersionWords[lang]} : null; },
@@ -247,6 +288,8 @@
         onRecolor: (index, said, color) => notes.tint(index, said, color),
         // ✨ Summarize: the server's AI turns a highlight into a short note.
         summarize: true, onSummary: (index, said, color) => notes.summary(index, said, color, highlightSummary),
+        aiLocked: () => !!lockedFor('ai', buildConfig),
+        onLocked: toPrices,                     // a crowned AI tool: straight to the price list
         // 🌐 Translate (AI): only the highlighted text, into a note.
         translate: true, onTranslate: (index, said, color) => notes.translation(index, said, color, highlightTranslate)});
       podcastView?.close();
@@ -310,9 +353,9 @@
         newUrls.forEach(url => URL.revokeObjectURL(url));
         if (task) await task.destroy().catch(() => {});
       }
-      error('Could not open this PDF. ' + (cause.message || 'Make sure the PDF is valid and not password-protected.'));
+      error(L('Could not open this PDF. ', 'PDF ini tidak bisa dibuka. ') + (cause.message || L('Make sure the PDF is valid and not password-protected.', 'Pastikan PDF valid dan tidak dikunci kata sandi.')));
       loading(null);
-      $('#load-status').textContent = 'Failed to load the PDF. Pick another file to try again.';
+      $('#load-status').textContent = L('Failed to load the PDF. Pick another file to try again.', 'PDF gagal dimuat. Pilih file lain untuk mencoba lagi.');
       return false;
     } finally {
       opening = false; $('#pdf-file').disabled = false; $('#add-file').disabled = false;
@@ -372,15 +415,19 @@
   // then, and the button is back to 📚 Open My Library (the book is there now,
   // and keeps itself up to date).
   function paintLibraryButton() {
-    $('#save-library').textContent = sourcePdf && !libraryId ? '💾 Save My Library' : '📚 Open My Library';
+    const saving = sourcePdf && !libraryId;
+    $('#save-library').textContent = saving ? L('💾 Save to My Library', '💾 Simpan ke My Library') : L('📚 Open My Library', '📚 Buka My Library');
+    $('#save-library').classList.toggle('plan-lock', !!(saving && lockedFor('library', buildConfig)));
   }
   paintLibraryButton();
   // 💾 Save My Library: the open book goes into the member's archive now
   // (with a link to it); nothing open yet → the archive itself.
   $('#save-library').onclick = async () => {
     if (!sourcePdf || libraryId) { location.href = 'library.html'; return; }
+    if (!(await allowed('library'))) return;
     if (!(await archiveMember())) {
       archiveNote(L('Log in first to save this book in My Library.', 'Masuk dulu untuk menyimpan buku ini ke My Library.'), true);
+      if (window.MFAuth) window.MFAuth.loginPopup(() => { archiveUser = undefined; archiveNote(''); $('#save-library').click(); });
       return;
     }
     const button = $('#save-library');
@@ -416,7 +463,7 @@
     $('#add-file').setAttribute('aria-expanded', String(open));
     if (open) {
       addStatus(''); $('#add-drive-help').hidden = true;
-      $('#add-url').placeholder = 'Paste a link: PDF, web page or Google Drive';
+      $('#add-url').placeholder = L('Paste a link: PDF, web page or Google Drive', 'Tempel tautan: PDF, halaman web, atau Google Drive');
       setTimeout(() => $('#add-url').focus(), 0);
       loadDriveConfig();
     }
@@ -462,12 +509,14 @@
   // page-by-page panel, the free offline translator for whole-book editions.
   const translateFree = (pages, target) => translatePages(pages, target, '/api/translate-free');
   async function translatePages(pages, target, path = '/api/translate') {
+    if (path === '/api/translate') aiAllowed();
     const caps = await serverCaps();
     const response = await fetch(path, {method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-Build-Token': caps.token || ''},
       body: JSON.stringify({pages, target, title: $('#export-title').value.trim() || 'Book'})});
     let data = {};
     try { data = await response.json(); } catch (e) {}
+    loginNeeded(response);
     if (!response.ok) throw Error(data.error || L('The translation could not be made.', 'Terjemahan tidak bisa dibuat.'));
     return data.pages || {};
   }
@@ -646,11 +695,18 @@
   }
   // Short AI summary of one highlighted passage (Summarize tool in the preview).
   async function highlightSummary(text) {
+    aiAllowed();
     const caps = await serverCaps();
     const response = await fetch('/api/highlight-summary', {method: 'POST',
       headers: {'Content-Type': 'application/json', 'X-Build-Token': caps.token || ''}, body: JSON.stringify({text})});
     let data = {};
     try { data = await response.json(); } catch (e) {}
+    loginNeeded(response);
+    // the month's summary allowance used up: say so, and offer the price list
+    if (!response.ok && data.upgrade && window.MFDialog) {
+      MFDialog.confirm({title: L('Summary allowance used up', 'Kuota ringkasan habis'), message: data.error,
+        ok: L('Upgrade to Pro', 'Upgrade ke Pro'), cancel: L('Later', 'Nanti'), icon: '👑'}).then(go => { if (go) location.href = data.upgrade; });
+    }
     if (!response.ok) throw Error(data.error || 'The summary could not be made.');
     return data.summary;
   }
@@ -677,7 +733,7 @@
     await ensurePdfLib();
     const doc = await PDFLib.PDFDocument.create();
     for (let i = 0; i < images.length; i++) {
-      addStatus(`Turning image ${i + 1} / ${images.length} into a page…`);
+      addStatus(L(`Turning image ${i + 1} / ${images.length} into a page…`, `Mengubah gambar ${i + 1} / ${images.length} menjadi halaman…`));
       let bitmap;
       try { bitmap = await createImageBitmap(images[i]); }
       catch (e) {
@@ -706,7 +762,7 @@
   async function officeToPdf(file) {
     const ext = extOf(file.name), caps = await serverCaps();
     if (!caps.office) throw Error('LibreOffice was not found on the server, so Office files cannot be converted.');
-    addStatus('Converting ' + file.name + ' to PDF…');
+    addStatus(L(`Converting ${file.name} to PDF…`, `Mengonversi ${file.name} ke PDF…`));
     const response = await fetch('/api/convert/' + OFFICE_ROUTE[ext] + '-to-pdf', {method:'POST', headers:{
       'Content-Type': OFFICE_TYPE[ext], 'X-Build-Token': caps.token, 'X-Filename': encodeURIComponent(file.name)}, body: file});
     if (!response.ok) { let m = 'Conversion failed.'; try { m = (await response.json()).error || m; } catch (e) {} throw Error(m); }
@@ -724,7 +780,7 @@
       else if (ext === 'pdf' || first.type === 'application/pdf') pdf = first;
       else if (OFFICE_ROUTE[ext]) pdf = await officeToPdf(first);
       else throw Error(first.name + ': this file type is not supported. Use PDF, Word, Excel, PowerPoint or an image.');
-      if (files.length > 1 && !files.every(isImage)) addStatus('Only the first file was used: ' + first.name);
+      if (files.length > 1 && !files.every(isImage)) addStatus(L('Only the first file was used: ', 'Hanya file pertama yang dipakai: ') + first.name);
       showAdd(false);
       await openPdf(pdf, ext === 'pdf' ? first.name : base + '.pdf');
     } catch (cause) { showAdd(true); addStatus(cause.message, true); }
@@ -747,7 +803,7 @@
       // Drive picking not set up on this server: open Drive, the reader shares
       // the file publicly and pastes its link.
       window.open('https://drive.google.com/drive/my-drive', '_blank', 'noopener');
-      $('#add-url').placeholder = 'Paste the Google Drive share link here';
+      $('#add-url').placeholder = L('Paste the Google Drive share link here', 'Tempel link berbagi Google Drive di sini');
       $('#add-drive-help').hidden = false;
     }
     $('#add-url').focus();
@@ -854,26 +910,26 @@
     finally { exporting = false; exportState(); $('#pdf-file').disabled=false; $('#overlay-fields').disabled=!book; }
   });
   // Paywall (server decides; this only explains it before any work starts).
+  // project / organize / openproject (save project, Organize, open project), library (My Library)
+  // and html need 'export' (Medium); ai the AI tools (Medium); apk and exe Pro. Reading stays free.
   function lockedFor(target, caps) {
-    if (target === 'project' || !caps || !caps.paywall) return null;
-    const need = target === 'exe' ? 'exe' : target === 'apk' ? 'apk' : 'export';
+    if (!caps || !caps.paywall) return null;
+    const need = target === 'exe' ? 'exe' : target === 'apk' ? 'apk' : target === 'ai' ? 'ai' : 'export';
     if ((caps.entitlements || []).includes(need)) return null;
-    return target === 'exe' ? 'Business' : 'Pro';
+    return target === 'exe' || target === 'apk' ? 'Pro' : 'Medium';
   }
-  function showPaywall(plan) {
-    const box = $('#export-status');
-    const link = Object.assign(document.createElement('a'), { href: 'account.html', textContent: L('See plans →', 'Lihat paket →') });
-    link.style.fontWeight = '800';
-    box.replaceChildren(L('This export needs the ' + (plan === 'Business' ? 'Business' : 'Pro or Business') + ' plan. Preview and saving the project stay free. ',
-      'Ekspor ini butuh paket ' + (plan === 'Business' ? 'Business' : 'Pro atau Business') + '. Preview dan simpan proyek tetap gratis. '), link);
-  }
+  // A crowned (locked) feature clicked: straight to the price list.
+  function toPrices() { location.href = '/harga'; }
+  const CROWN = '<svg viewBox="0 0 24 20" width="17" height="14" aria-hidden="true"><path fill="currentColor" d="M2.2 6.2 7 10l5-6.6L17 10l4.8-3.8-1.9 9.6H4.1z"/>' +
+    '<rect x="4" y="16.6" width="16" height="2.6" rx="1.1" fill="currentColor"/><circle cx="2.2" cy="5.2" r="1.9" fill="currentColor"/><circle cx="12" cy="2.3" r="2" fill="currentColor"/><circle cx="21.8" cy="5.2" r="1.9" fill="currentColor"/></svg>';
   function markLocked() {
-    for (const [id, target] of [['#export-html','html'],['#export-apk','apk'],['#export-exe','exe'],['#share-link-top','html']]) {
+    for (const [id, target] of [['#save-project','project'],['#export-html','html'],['#export-apk','apk'],['#export-exe','exe'],['#organize-pages','organize'],['#open-project','openproject']]) {
       const button = $(id), plan = lockedFor(target, buildConfig);
       if (!button) continue;
       if (!button.dataset.label) button.dataset.label = button.textContent;
-      // The plan as a red pill, like the PRO badge on the logo (Business in the same red).
-      const pill = plan ? Object.assign(document.createElement('span'), {className: 'plan-pill', textContent: plan.toUpperCase()}) : null;
+      // A locked feature carries an orange crown (Medium and Pro alike; the tooltip names the plan).
+      const pill = plan ? Object.assign(document.createElement('span'), {className: 'plan-crown', innerHTML: CROWN, title: L(plan + ' feature', 'Fitur ' + plan)}) : null;
+      if (pill) pill.setAttribute('aria-label', pill.title);
       button.replaceChildren(button.dataset.label, ...(pill ? [pill] : []));
     }
   }
@@ -887,15 +943,28 @@
     $('#export-percent').textContent = percent + '%';
   }
   const EXPORT_NAMES = {project: '.smflipbook', html: '.html', apk: '.apk', exe: '-Windows.zip'};
+  // The AI tools (highlighter's AI translate / summary): Medium, Pro and the trial.
+  function aiAllowed() {
+    if (!lockedFor('ai', buildConfig)) return;
+    toPrices();
+    throw Error(L('AI tools need the Medium or Pro plan.', 'Fitur AI butuh paket Medium atau Pro.'));
+  }
+  // The action a locked button stands for (run again after a guest logs in).
+  const retry = target => ({ project: () => exportBook('project'), html: () => exportBook('html'), apk: () => exportBook('apk'), exe: () => exportBook('exe'),
+    organize: () => $('#organize-pages').click(), openproject: () => $('#open-project').click() }[target] || (() => {}))();
+  // The plan check before a locked action (the config loaded with the page, so a save dialog
+  // still opens within the click; fetched only if it never arrived).
+  async function allowed(target) {
+    // After the login the plan is read again (the guest's capabilities lock everything).
+    if (!(await signedIn(() => { buildConfig = null; allowed(target).then(ok => ok && retry(target)); }))) return false;
+    if (!buildConfig) { try { const r = await fetch('/api/capabilities', { cache: 'no-store' }); if (r.ok) { buildConfig = await r.json(); markLocked(); } } catch (e) {} }
+    const plan = lockedFor(target, buildConfig);
+    if (plan) { toPrices(); return false; }
+    return true;
+  }
   async function exportBook(target) {
     if (!sourcePdf || opening || exporting) return;
-    if (target !== 'project') {
-      // Use the config loaded with the page so the save dialog still opens
-      // within the click; fetch only if it never arrived.
-      if (!buildConfig) { try { const r = await fetch('/api/capabilities', { cache: 'no-store' }); if (r.ok) { buildConfig = await r.json(); markLocked(); } } catch (e) {} }
-      const plan = lockedFor(target, buildConfig);
-      if (plan) { showPaywall(plan); return; }
-    }
+    if (!(await allowed(target))) return;
     exporting = true; exportState(); $('#pdf-file').disabled=true; $('#overlay-fields').disabled=true;
     error(''); $('#build-download').hidden=true;
     const status = message => { $('#export-status').textContent=message; };
@@ -908,16 +977,10 @@
       const saveHandle = await FlipbookExport.chooseSave(outputName);
       status(L('Preparing the export…', 'Menyiapkan ekspor…')); progress(0);
       if (target === 'project') {
-        // Project files unlock exports later: expired trials keep the
-        // reader only, so saving one needs Pro too.
-        try {
-          const who = window.MFAuth ? await window.MFAuth.me() : null;
-          if (who && who.user && !who.offline && window.MFAuth.trialWall(who.user)) return;
-        } catch (e) {}
         const blob = await FlipbookExport.saveProject(data, sourcePdf, (message, fraction) => { status(message); step(0, .9)(fraction); }, bookVersions);
         status(L('Saving the project…', 'Menyimpan proyek…'));
         const saved = await FlipbookExport.saveBlob(blob, outputName, saveHandle); progress(1);
-        status(saved?L('Project saved where you chose.','Proyek tersimpan di lokasi pilihanmu.'):L('Project sent to the browser downloads.','Proyek dikirim ke download browser.'));
+        status(saved?L('Project saved where you chose.','Proyek tersimpan di lokasi pilihan Anda.'):L('Project sent to the browser downloads.','Proyek dikirim ke download browser.'));
         if (libraryId) archiveBook();                          // only books already in My Library
         return;
       }
@@ -930,7 +993,7 @@
         const saved = await FlipbookExport.saveBlob(single, outputName, saveHandle); progress(1);
         archiveExport('html', single, outputName);
         status(L((saved?'HTML saved where you chose. ':'HTML sent to the browser downloads. ')+'Double-click '+outputName+' to read the book.',
-          (saved?'HTML tersimpan di lokasi pilihanmu. ':'HTML dikirim ke download browser. ')+'Klik 2x file '+outputName+' untuk membaca bukunya.'));
+          (saved?'HTML tersimpan di lokasi pilihan Anda. ':'HTML dikirim ke download browser. ')+'Klik 2x file '+outputName+' untuk membaca bukunya.'));
         return;
       }
       const pack = step(0, .12);
@@ -956,7 +1019,7 @@
         const check=await fetch('/api/jobs/'+sent.data.id);if(!check.ok)throw Error(L('Build status is not available.','Status build tidak tersedia.'));
         job=await check.json();status(job.message);
         if(job.status==='failed') {
-          if(job.log) { const link=$('#build-download');link.onclick=null;link.href=job.log;link.textContent='Download log build';link.hidden=false; }
+          if(job.log) { const link=$('#build-download');link.onclick=null;link.href=job.log;link.textContent=L('Download the build log','Unduh log build');link.hidden=false; }
           throw Error(job.message);
         }
         const reported = Number(job.progress) || 0;
@@ -975,11 +1038,11 @@
         try {
           const again = await FlipbookExport.chooseSave(outputName);
           const ok=await FlipbookExport.saveRemote(job.download,outputName,again);
-          status(ok?L('Copy saved where you chose.','Salinan tersimpan di lokasi pilihanmu.'):L('File sent to the browser downloads.','File dikirim ke download browser.'));
+          status(ok?L('Copy saved where you chose.','Salinan tersimpan di lokasi pilihan Anda.'):L('File sent to the browser downloads.','File dikirim ke download browser.'));
         } catch(cause) { if(cause.name==='AbortError')status(L('Saving cancelled.','Penyimpanan dibatalkan.'));else error(L('Saving failed: ','Gagal menyimpan: ')+cause.message); }
         finally { saving=false; }
       };
-      status((saved?(target==='apk'?'APK':'EXE ZIP')+L(' saved where you chose',' tersimpan di lokasi pilihanmu'):L('Build sent to the browser downloads','Hasil build dikirim ke download browser'))+' ('+Math.round((Date.now()-started)/1000)+L(' seconds).',' detik).'));
+      status((saved?(target==='apk'?'APK':'EXE ZIP')+L(' saved where you chose',' tersimpan di lokasi pilihan Anda'):L('Build sent to the browser downloads','Hasil build dikirim ke download browser'))+' ('+Math.round((Date.now()-started)/1000)+L(' seconds).',' detik).'));
     } catch(cause) { progress(null); if(cause.name==='AbortError')status(L('Export cancelled.','Ekspor dibatalkan.'));else { status(L('Export failed: ','Ekspor gagal: ')+cause.message); error(cause.message); } }
     finally { exporting=false;exportState();$('#pdf-file').disabled=false;$('#overlay-fields').disabled=!book; }
   }
@@ -992,7 +1055,7 @@
   let draftName = '', draftTimer = 0;
   function hideDraft() { const box = $('#draft-box'); if (box) box.hidden = true; }
   function saveDraft() {
-    if (!sourcePdf) return;
+    if (!sourcePdf || !keeps()) return;
     const titleEl = $('#export-title');
     FlipbookExport.draftSave({blob: sourcePdf, name: draftName || 'document.pdf',
       title: (titleEl && titleEl.value) || '', savedAt: Date.now()}).then(() => {});
@@ -1122,8 +1185,10 @@
   $('#save-project').onclick=()=>exportBook('project');$('#export-html').onclick=()=>exportBook('html');
   $('#export-apk').onclick=()=>exportBook('apk');$('#export-exe').onclick=()=>exportBook('exe');
   $('#share-link-top').onclick=()=>shareBook();
+  $('#open-project').onclick=async ()=>{ if(await allowed('openproject')) $('#project-file').click(); };
   $('#organize-pages').onclick=async ()=>{
     if(!sourcePdf){ error(L('Open a PDF first.','Buka PDF dulu.')); return; }
+    if(!(await allowed('organize'))) return;
     const raw=(($('#document-name')||{}).textContent||'').trim()||'document.pdf';
     const name=/\.pdf$/i.test(raw)?raw:raw+'.pdf';
     try{
@@ -1168,7 +1233,7 @@
   // ?book=oapen|archive&id=… (ebook / magazine search) the same way through /api/ebooks/file.
   const handedJournal = new URLSearchParams(location.search).get('journal');
   const handedBook = new URLSearchParams(location.search).get('book');
-  if ((handedJournal && /^W\d{1,12}$/.test(handedJournal)) || /^(oapen|archive)$/.test(handedBook || '')) {
+  if ((handedJournal && /^(W\d{1,12}|S2[0-9a-f]{40}|doi)$/.test(handedJournal)) || /^(oapen|archive)$/.test(handedBook || '')) {
     const params = new URLSearchParams(location.search);
     pendingTitle = (params.get('title') || '').slice(0, 200);
     history.replaceState(null, '', location.pathname);
@@ -1176,7 +1241,7 @@
     addStatus(handedJournal ? L('Fetching the article PDF…', 'Mengambil PDF artikel…') : L('Fetching the PDF…', 'Mengambil PDF…'));
     (async () => {
       try {
-        const response = await fetch(handedJournal ? '/api/journals/file?' + new URLSearchParams({id: handedJournal, pdf: params.get('pdf') || ''})
+        const response = await fetch(handedJournal ? '/api/journals/file?' + new URLSearchParams({id: handedJournal === 'doi' ? '' : handedJournal, pdf: params.get('pdf') || '', doi: params.get('doi') || ''})
                                                    : '/api/ebooks/file?' + new URLSearchParams({src: handedBook, id: params.get('id') || ''}));
         if (!response.ok) { let m = L('The article PDF could not be fetched.', 'PDF artikel tidak bisa diambil.'); try { m = (await response.json()).error || m; } catch (e) {} throw Error(m); }
         const blob = await response.blob(), name = decodeURIComponent(response.headers.get('X-Filename') || (handedJournal || 'document') + '.pdf');
@@ -1202,7 +1267,7 @@
     }
   }
   if (!fromLibrary && !handedLink && !handedJournal && !handedBook && !source) {
-    FlipbookExport.draftLoad().then(draft => {
+    loadCaps().then(() => keeps() ? FlipbookExport.draftLoad() : FlipbookExport.draftClear().then(() => null)).then(draft => {
       if (!draft || !draft.blob || sourcePdf) return;
       if (reloaded) { resumeDraft(draft); return; }
       const box = $('#draft-box'); if (!box) return;

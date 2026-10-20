@@ -150,8 +150,8 @@ class Report:
         return write_pages(['\n'.join(p.ops).encode('latin-1') for p in self.pages], self.title)
 
 
-def write_pages(contents, title):
-    """A multi-page PDF (invoice._write makes one page)."""
+def write_pages(contents, title, size=(PAGE_W, PAGE_H)):
+    """A multi-page PDF (invoice._write makes one page); size: (width, height) in points."""
     n = len(contents)
     font1, font2 = 3 + 2 * n, 4 + 2 * n
     info = 5 + 2 * n
@@ -159,7 +159,7 @@ def write_pages(contents, title):
                f'<< /Type /Pages /Kids [{" ".join(f"{3 + 2 * i} 0 R" for i in range(n))}] /Count {n} >>'.encode()]
     for i, content in enumerate(contents):
         stream = zlib.compress(content)
-        objects.append(f'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {PAGE_W} {PAGE_H}] '
+        objects.append(f'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {size[0]} {size[1]}] '
                        f'/Resources << /Font << /F1 {font1} 0 R /F2 {font2} 0 R >> >> /Contents {4 + 2 * i} 0 R >>'.encode())
         objects.append(f'<< /Length {len(stream)} /Filter /FlateDecode >>\nstream\n'.encode() + stream + b'\nendstream')
     objects.append(b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>')
@@ -190,7 +190,7 @@ def build(days, overview, stats, orders, server, now=None):
     r.pairs([('TOTAL MEMBER', fmt_int(overview.get('members'))),
              ('MEMBER BARU (PERIODE)', fmt_int(stats.get('newMembers'))),
              ('MEMBER BERBAYAR AKTIF', fmt_int(overview.get('paid'))),
-             ('FREE / PRO / BUSINESS', f'{fmt_int(plans.get("free"))} / {fmt_int(plans.get("pro"))} / {fmt_int(plans.get("business"))}'),
+             ('BASIC / MEDIUM / PRO', f'{fmt_int(plans.get("basic"))} / {fmt_int(plans.get("medium"))} / {fmt_int(plans.get("pro"))}'),
              ('PENGUNJUNG (PERIODE)', fmt_int(stats.get('visitors'))),
              ('TAMPILAN HALAMAN (PERIODE)', fmt_int(stats.get('views'))),
              ('RATA-RATA PENGUNJUNG / HARI', str(stats.get('average', 0)).replace('.', ',')),

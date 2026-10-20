@@ -105,12 +105,11 @@ class ShareTests(unittest.TestCase):
         status, body = self.upload(free, sealed(), 'Buku 4')
         self.assertEqual(status, 402, 'fourth share needs Pro')
         self.assertIn('3 share', body['error'])
-        # Old free accounts (trial over) cannot publish at all.
+        # Plans v2: a Basic account whose trial ended still shares its first 3 books.
         old = self.member('lawas@s.co')
         self.backdate('lawas@s.co', 9)
         status, body = self.upload(old, sealed())
-        self.assertEqual(status, 402)
-        self.assertIn('7 hari', body['error'])
+        self.assertEqual(status, 200, 'the trial ending does not stop sharing')
 
     def test_publish_read_download_delete(self):
         pro = self.member('pub@s.co', 'pro')

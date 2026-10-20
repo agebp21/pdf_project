@@ -83,7 +83,7 @@
       name.textContent = (data.user.verified ? '✓ ' : '') + (data.user.name || data.user.email.split('@')[0]);
       link.title = data.user.email + (data.user.verified ? ' · ' + T('auth.verified', 'verified') : '');
       var plan = document.createElement('span');
-      plan.className = 'mf-plan' + (data.user.plan !== 'free' ? ' paid' : '');
+      plan.className = 'mf-plan' + (data.user.plan !== 'basic' ? ' paid' : '');
       plan.textContent = data.user.planName;
       link.append(name, plan);
     } else {
@@ -278,41 +278,5 @@
     }, function () { if (onSuccess) onSuccess(); });
   }
 
-  /* Free-trial wall: after 7 days only the flipbook reader stays. Locked
-   * actions call trialWall(user) instead: expired members get the upgrade
-   * popup every time (it is a gate, not a nudge), everyone else passes.
-   */
-  function trialExpired(user) { return !!(user && user.plan === 'free' && user.trialExpired); }
-
-  function upgradePopup() {
-    if (document.getElementById('mf-upg-back')) return;
-    nudgeStyle();
-    var back = document.createElement('div');
-    back.className = 'mf-nudge-back'; back.id = 'mf-upg-back';
-    back.innerHTML =
-      '<div class="mf-nudge-card" role="dialog" aria-modal="true" aria-labelledby="mf-upg-title">' +
-      '<button type="button" class="mf-nudge-x" aria-label="' + T('auth.nudgeClose', 'Close') + '">×</button>' +
-      '<h2 id="mf-upg-title"></h2><p class="mf-nudge-sub"></p>' +
-      '<div class="mf-nudge-row"><a class="mf-nudge-reg" href="account.html"></a>' +
-      '<button type="button" class="mf-nudge-later"></button></div></div>';
-    back.querySelector('h2').textContent = T('auth.upgTitle', 'Free trial ended');
-    back.querySelector('.mf-nudge-sub').textContent = T('auth.upgBody', 'Upgrade to Pro.');
-    var plans = back.querySelector('.mf-nudge-reg');
-    plans.textContent = T('auth.upgPlans', 'See plans →');
-    back.querySelector('.mf-nudge-later').textContent = T('auth.nudgeLater', 'Later');
-    function close() { back.remove(); }
-    back.querySelector('.mf-nudge-x').onclick = close;
-    back.querySelector('.mf-nudge-later').onclick = close;
-    back.addEventListener('mousedown', function (event) { if (event.target === back) close(); });
-    back.addEventListener('keydown', function (event) { if (event.key === 'Escape') close(); });
-    document.body.appendChild(back);
-  }
-
-  function trialWall(user) {
-    if (!trialExpired(user)) return false;
-    upgradePopup();
-    return true;
-  }
-
-  window.MFAuth = { me: me, api: api, safeNext: safeNext, mount: mount, nudge: nudgeStart, loginPopup: loginPopup, trialWall: trialWall, _nudge: { due: nudgeDue, busy: nudgeBusy } };
+  window.MFAuth = { me: me, api: api, safeNext: safeNext, mount: mount, nudge: nudgeStart, loginPopup: loginPopup, _nudge: { due: nudgeDue, busy: nudgeBusy } };
 })();

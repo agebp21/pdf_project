@@ -15,15 +15,12 @@
   <script defer src="assets/animation-playback.js"></script>
   <script defer src="assets/animation-ocr.js"></script>
   <script defer src="assets/animation-editor.js"></script>
-  <script defer src="assets/auth.js"></script>
+  <script defer src="/assets/site-header.js"></script>
+<script defer src="assets/auth.js"></script>
 </head>
 <body style="margin:0;padding:0;background:#faf4e8;display:flex;flex-direction:column;height:100dvh;overflow:hidden">
 
-<header class="topbar" style="flex-shrink:0">
-  <a class="brand" href="index.html"><img src="assets/img/logo.png?v=pro" alt="MyFlipbook Pro" width="139" height="34"></a>
-  <span data-auth-slot style="margin-left:auto;margin-right:10px"></span>
-  <a class="back-link badge" href="index.html">← Back to tools</a>
-</header>
+<header data-site-header data-static></header>
 
 <div class="ae-app" style="flex:1;min-height:0">
 
@@ -186,7 +183,7 @@
     <div class="ae-canvas-scroll">
       <div class="ae-empty" id="ae-empty-state">
         <div class="ae-empty-icon">🎬</div>
-        <h2>Animasikan dokumenmu</h2>
+        <h2>Animasikan dokumen Anda</h2>
         <p>Upload PDF, Word, Excel, PPT, atau gambar.<br>
         Setiap halaman jadi canvas interaktif.<br>
         Tambah animasi, link, lalu export.</p>

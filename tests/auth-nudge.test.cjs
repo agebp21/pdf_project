@@ -49,7 +49,7 @@ const now = Date.now();
   assert.equal(modal(), null, 'snoozed: stays away');
   // Members never see it (refresh the cached session first).
   w.localStorage.removeItem('mf-login-nudge');
-  meUser = { email: 'm@b.co', plan: 'free' };
+  meUser = { email: 'm@b.co', plan: 'basic' };
   await w.MFAuth.me(true);
   run(); await tick();
   assert.equal(modal(), null, 'members: no popup');
@@ -88,25 +88,15 @@ const now = Date.now();
   await new Promise(r => setTimeout(r, 20));
   assert.equal(continued, 1, 'logged in: the held action continues');
   assert.equal(modal(), null, 'modal closes after login');
-  meUser = { email: 'w@b.co', plan: 'free' };
+  meUser = { email: 'w@b.co', plan: 'basic' };
   await w.MFAuth.me(true);
   continued = 0;
   w.MFAuth.loginPopup(() => { continued++; });
   await new Promise(r => setTimeout(r, 10));
   assert.equal(continued, 1, 'members pass straight through');
   assert.equal(modal(), null, 'members: no wall either');
-  // Trial wall: expired members get the upgrade popup instead of the feature.
-  const upg = () => w.document.getElementById('mf-upg-back');
-  assert.equal(w.MFAuth.trialWall(null), false, 'guests: no trial wall (login wall handles them)');
-  assert.equal(w.MFAuth.trialWall({ plan: 'free' }), false, 'fresh trial: passes');
-  assert.equal(w.MFAuth.trialWall({ plan: 'pro' }), false, 'paid: passes');
-  assert.equal(w.MFAuth.trialWall({ plan: 'free', trialExpired: true }), true, 'expired: walled');
-  assert.ok(upg(), 'upgrade popup opens');
-  assert.ok(upg().querySelector('h2').textContent.length > 3, 'titled');
-  assert.ok(upg().querySelector('.mf-nudge-reg').href.includes('account.html'), 'plans link goes to the account page');
-  upg().querySelector('.mf-nudge-later').click();
-  assert.equal(upg(), null, 'later closes the upgrade wall');
+  // Plans v2: no trial wall in the browser (Basic keeps its tools; the server gates AI).
+  assert.equal(w.MFAuth.trialWall, undefined, 'no trial wall');
   w.close();
   console.log('PASS login nudge: weekly cadence, guest popup + login, snooze, member/typing/dialog/login-page skips');
-  console.log('PASS trial wall: expired members walled with upgrade, everyone else passes');
 })().catch(e => { console.error(e); process.exit(1); }).then(() => process.exit(0));

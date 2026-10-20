@@ -23,7 +23,7 @@ CONTACT = 'cs@myflipbookpro.com'
 ADDRESS = 'Sarvamaya — Jl. H. Khair No. 59, Ragunan, Ps. Minggu, Jakarta Selatan, DKI Jakarta 12550'
 PHONE = '+62 852-8631-2477'
 WA_LOCAL = '0852-8631-2477'   # WhatsApp
-WHATSAPP = 'https://wa.me/6285286312477'
+PHONE_INTL = '6285286312477'           # the footers show the number (owner: no WhatsApp label)
 POSTAL = {'@type': 'PostalAddress', 'streetAddress': 'Jl. H. Khair No. 59, Ragunan', 'addressLocality': 'Pasar Minggu, Jakarta Selatan',
           'addressRegion': 'DKI Jakarta', 'postalCode': '12550', 'addressCountry': 'ID'}
 OG_IMAGE = SITE + '/assets/img/hero-id-1671.jpg'   # the Indonesian banner (main site language)
@@ -38,6 +38,7 @@ APP_TITLES = {
     'notebook.html': 'AI Summarizer: Ringkas PDF & Jurnal | MyFlipbook Pro',
     'workflow.html': 'Alur Kerja PDF Otomatis | MyFlipbook Pro',
     'editor.html': 'Edit PDF Online seperti Word | MyFlipbook Pro',
+    'authors.html': 'Profil Penulis & h-index ala Publish or Perish | MyFlipbook Pro',
 }
 UPDATED = '2026-10-09'
 
@@ -55,7 +56,7 @@ PRIVATE = ('File diproses langsung di browser Anda — tidak diunggah ke server 
            'tugas kuliah, maupun dokumen pribadi.')
 SERVER = ('File dikirim lewat koneksi terenkripsi (HTTPS) ke server MyFlipbook untuk dikonversi, lalu langsung '
           'dihapus setelah hasilnya dikirim kembali ke Anda.')
-TRIAL = 'Daftar gratis dan coba semua fitur selama 7 hari — tanpa kartu kredit.'
+TRIAL = 'Daftar gratis — tanpa kartu kredit.'      # no trial mentioned for now (owner, 2026-10-20)
 # PDF to flipbook stores nothing on its own, but My Library and share links do (share.py: public, not encrypted).
 FLIPBOOK_PRIVACY = ('Tidak, kecuali Anda memilihnya. Flipbook dibuat langsung di browser Anda. File baru tersimpan di server bila '
                     'Anda menyimpannya ke My Library (tersimpan terenkripsi) atau membuat share link (bisa dibuka siapa pun yang '
@@ -75,7 +76,7 @@ page('pdf-ke-flipbook', 'flipbook.html', 'PDF ke Flipbook',
       'Audio book: halaman dibacakan dengan suara, termasuk setelah diterjemahkan ke Bahasa Indonesia.',
       'Terjemahkan seluruh buku dengan tombol Translate, layout tetap mengikuti kolom aslinya.',
       'Stabilo, catatan, dan spidol untuk belajar atau presentasi.'],
-     [('Apakah membuat flipbook di MyFlipbook gratis?', 'Membaca dan membuat flipbook bisa dicoba gratis. Akun baru mendapat masa coba 7 hari untuk semua fitur. Ekspor HTML offline dan aplikasi APK tersedia di paket Pro, aplikasi Windows (EXE) di paket Business.'),
+     [('Apakah membuat flipbook di MyFlipbook gratis?', 'Membaca dan membuat flipbook bisa dicoba gratis. Ekspor HTML offline tersedia di paket Medium; aplikasi Android (APK) dan Windows (EXE) di paket Pro.'),
       ('PDF seperti apa yang bisa dijadikan flipbook?', 'Hampir semua PDF: majalah, katalog, buku, modul, jurnal, portofolio, hingga PDF hasil scan. Halaman bergambar tetap bisa distabilo dan dibacakan berkat OCR.'),
       ('Bagaimana cara membagikan flipbook?', 'Simpan ke My Library lalu buat share link. Siapa pun yang punya link bisa membacanya di browser tanpa perlu login.'),
       ('Apakah bisa dibuka tanpa internet?', 'Bisa. Ekspor flipbook ke HTML offline atau jadikan aplikasi Android/Windows supaya bisa dibaca tanpa koneksi.'),
@@ -119,17 +120,17 @@ page('pdf-jadi-audiobook', 'flipbook.html', 'PDF jadi Audio Book',
 
 page('ringkas-pdf-ai', 'notebook.html', 'AI Summarizer',
      'Ringkas PDF & Jurnal dengan AI | MyFlipbook Pro',
-     'Buat ringkasan PDF otomatis dengan AI: rangkuman poin penting, terjemahan, hingga podcast dari dokumen Anda. '
+     'Buat ringkasan PDF otomatis dengan AI: rangkuman poin penting per bab, terjemahan, hingga tanya jawab tentang dokumen Anda. '
      'Cocok untuk jurnal, skripsi, laporan, dan materi kuliah.',
      'Ringkas PDF dengan AI dalam Hitungan Detik',
      'Unggah jurnal, laporan, atau materi kuliah — AI Summarizer membuat ringkasan poin penting, menjawab pertanyaan '
-     'tentang isinya, menerjemahkan, bahkan mengubahnya menjadi podcast.',
+     'tentang isinya, menerjemahkan, bahkan menjawab pertanyaan Anda tentang isinya.',
      ['Buka AI Summarizer dan tambahkan sumber: PDF, dokumen, atau link.',
-      'Pilih jenis hasil: ringkasan, terjemahan, atau podcast.', 'Salin atau simpan hasilnya.'],
+      'Pilih jenis hasil: ringkasan, terjemahan, atau tanya jawab.', 'Salin atau simpan hasilnya.'],
      ['Hemat waktu membaca jurnal dan laporan panjang.', 'Bisa menggabungkan beberapa sumber sekaligus.',
       'Ringkasan dalam Bahasa Indonesia.'],
      [('Apakah dokumen saya dipakai untuk melatih AI?', 'Teks dokumen dikirim ke penyedia AI hanya untuk diproses dan hasilnya dikembalikan kepada Anda. Hindari memakai fitur AI untuk dokumen yang sangat rahasia.'),
-      ('Apakah gratis?', 'AI Summarizer termasuk paket Pro dan Business. Akun baru bisa mencobanya gratis selama 7 hari masa coba.')],
+      ('Apakah gratis?', 'AI Summarizer termasuk paket Medium dan Pro.')],
      browser=False, related=['cari-jurnal-ebook', 'terjemahkan-pdf', 'pdf-ke-word'])
 
 page('cari-jurnal-ebook', 'journals.html', 'Cari Jurnal & Ebook',
@@ -159,9 +160,12 @@ tool('kompres-pdf', 'compress-pdf', 'Kompres PDF',
      'Kompres PDF — Perkecil Ukuran File dengan Mudah',
      'File PDF terlalu besar untuk diunggah ke portal pendaftaran, dikirim lewat WhatsApp, atau dilampirkan di email? '
      'Kecilkan ukurannya dalam beberapa detik.',
-     ['Buka alat Kompres PDF dan pilih file.', 'Pilih tingkat kompresi: ringan (kualitas terbaik), seimbang, atau kuat (paling kecil).', 'Unduh PDF yang sudah lebih kecil.'],
-     ['Cocok untuk syarat unggah berkas CPNS, beasiswa, dan pendaftaran kampus.', PRIVATE, 'Tanpa watermark pada hasil.'],
-     [('Apakah kualitas PDF akan turun?', 'Kompresi mengecilkan gambar di dalam PDF. Pilih tingkat kompresi ringan bila kualitas gambar penting.'),
+     ['Pilih atau seret file PDF ke kotak di atas.',
+      'Pilih target ukuran: maks 100 KB, 200 KB, 500 KB, 1 MB, atau kualitas terbaik. MyFlipbook mencari kualitas paling bagus yang masih masuk target.',
+      'Unduh PDF yang sudah lebih kecil.'],
+     ['Cocok untuk syarat unggah berkas CPNS, beasiswa, dan pendaftaran kampus yang membatasi ukuran file.', PRIVATE, 'Tanpa watermark pada hasil.'],
+     [('Apakah kualitas PDF akan turun?', 'Kompresi mengecilkan gambar di dalam PDF; teks tetap tajam. Pilih target yang lebih besar atau "Kualitas terbaik" bila kualitas gambar penting.'),
+      ('Bagaimana kalau ukurannya tidak bisa sampai 100 KB?', 'PDF yang sebagian besar berisi teks atau gambar vektor sudah kecil dan tidak bisa dikecilkan lagi. MyFlipbook akan memberi tahu dan tetap memberikan hasil terkecilnya.'),
       ('Apakah file saya diunggah?', 'Tidak. Kompresi berjalan di browser Anda.')],
      related=['gabung-pdf', 'pisah-pdf', 'jpg-ke-pdf', 'pdf-ke-flipbook'])
 tool('gabung-pdf', 'merge-pdf', 'Gabung PDF',
@@ -385,9 +389,6 @@ STYLE = '''
 :root{--ink:#1C1917;--muted:#6B635B;--pine:#1A3C34;--tang:#FF5C28;--hair:#E8E2D4;--paper:#fff;--bg:#FBFAF7}
 *{box-sizing:border-box}body{margin:0;background:var(--bg);color:var(--ink);font:16px/1.65 'Plus Jakarta Sans',system-ui,sans-serif}
 a{color:var(--pine)}.wrap{max-width:980px;margin:0 auto;padding:0 18px}
-header{display:flex;align-items:center;justify-content:space-between;gap:12px;padding:16px 0}
-header img{height:34px;width:auto;display:block}header nav{display:flex;gap:14px;flex-wrap:wrap;font-size:14px}
-header nav a{text-decoration:none;color:var(--ink);font-weight:600}
 .hero{padding:42px 0 26px}.hero h1{font:700 clamp(30px,5vw,48px)/1.12 'Fraunces',Georgia,serif;margin:0 0 14px;letter-spacing:-.5px}
 .hero p{font-size:18px;color:var(--muted);max-width:720px;margin:0 0 22px}
 .cta{display:inline-block;background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;text-decoration:none;font-weight:700;
@@ -403,7 +404,6 @@ ul.why{margin:0;padding-left:20px;display:grid;gap:8px}
 details{border-bottom:1px solid var(--hair);padding:12px 0}details:last-child{border-bottom:0}
 summary{font-weight:700;cursor:pointer}details p{margin:8px 0 0;color:var(--muted)}
 .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(150px,1fr));gap:10px}
-@media(max-width:520px){header nav{gap:10px;font-size:13px;justify-content:flex-end}header img{height:28px}}
 .list{display:grid;gap:12px}.list a{display:block;background:var(--paper);border:1px solid var(--hair);border-radius:16px;
   padding:16px 18px;text-decoration:none;color:var(--ink)}.list a:hover{border-color:var(--pine)}
 .list b{display:block;font:700 18px/1.35 'Fraunces',Georgia,serif;margin-bottom:4px}.list span{color:var(--muted);font-size:14.5px}
@@ -449,6 +449,7 @@ def head(title, description, path, extra=''):
 <style>{STYLE}</style>
 <script>try{{if(!localStorage.getItem('pdf-tools-lang'))localStorage.setItem('pdf-tools-lang','id')}}catch(e){{}}</script>
 <script src="/assets/i18n.js"></script>
+<script defer src="/assets/site-header.js"></script>
 <script src="/assets/auth.js" defer></script>
 {extra}
 </head>'''
@@ -456,6 +457,50 @@ def head(title, description, path, extra=''):
 
 def ld(data):
     return '<script type="application/ld+json">' + json.dumps(data, ensure_ascii=False).replace('</', '<\\/') + '</script>'
+
+
+# ---------- Tools right on their landing pages (no second page to open). Each entry: the box's
+# HTML, its scripts (deferred, so the page still renders first) and its CSS.
+WIDGET_CSS = '''
+.qc{background:var(--paper);border:1.5px solid var(--ink);border-radius:20px;padding:18px;margin:6px 0 18px;box-shadow:6px 6px 0 var(--ink);max-width:720px}
+.qc-drop{display:flex;flex-direction:column;align-items:center;gap:4px;border:2px dashed #C9CFC2;border-radius:16px;padding:22px 14px;text-align:center;cursor:pointer;background:#FBFAF7}
+.qc-drop.qc-drag{border-color:var(--tang);background:#FFF7ED}.qc-drop b{font-size:16px}.qc-drop span{font-size:13.5px;color:var(--muted)}
+.qc-input{position:absolute;width:1px;height:1px;opacity:0}
+.hero .qc p{margin:0;max-width:none;font-size:14px;color:var(--muted)}
+.hero .qc .qc-label{font-size:13px;font-weight:700;margin:16px 0 8px}
+.qc-presets{display:flex;flex-wrap:wrap;gap:8px}
+.qc-preset{border:1.5px solid var(--hair);background:#fff;border-radius:999px;padding:9px 14px;font:700 14px 'Plus Jakarta Sans',system-ui,sans-serif;cursor:pointer;color:var(--ink)}
+.qc-preset[aria-pressed=true]{background:var(--pine);border-color:var(--pine);color:#fff}
+.hero .qc .qc-file{font-weight:600;color:var(--ink);margin:14px 0 0;overflow-wrap:anywhere}.qc-file:empty{display:none}
+.qc-bar{height:8px;border-radius:999px;background:#E7E0D2;overflow:hidden;margin-top:12px}.qc-bar span{display:block;height:100%;width:0;background:linear-gradient(90deg,#FF7A45,#FF5C28);transition:width .2s}
+.hero .qc .qc-status{margin:10px 0 0}.qc-status:empty{display:none}.hero .qc .qc-status.qc-error{color:#9A5B00}
+.qc-result{margin-top:12px}.hero .qc .qc-sizes{font:700 20px/1.3 'Fraunces',Georgia,serif;color:var(--ink);margin:0 0 12px}
+.qc-actions{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
+.qc-again{border:1.5px solid var(--hair);background:#fff;border-radius:14px;padding:13px 18px;font:700 14px 'Plus Jakarta Sans',system-ui,sans-serif;cursor:pointer}
+.alt{display:inline-block;margin-top:6px;font-size:14px;font-weight:600}
+[hidden]{display:none!important}
+'''
+WIDGETS = {
+    'kompres-pdf': dict(
+        html='''<div class="qc" id="quick-compress">
+<label class="qc-drop"><input class="qc-input" type="file" accept=".pdf,application/pdf"><b>📄 Pilih PDF atau seret ke sini</b>
+<span>Diproses di browser Anda — file tidak diunggah</span></label>
+<p class="qc-label">Target ukuran</p>
+<div class="qc-presets" role="group" aria-label="Target ukuran">
+<button type="button" class="qc-preset" data-target="102400" aria-pressed="false">Maks 100 KB</button>
+<button type="button" class="qc-preset" data-target="204800" aria-pressed="false">Maks 200 KB</button>
+<button type="button" class="qc-preset" data-target="512000" aria-pressed="true">Maks 500 KB</button>
+<button type="button" class="qc-preset" data-target="1048576" aria-pressed="false">Maks 1 MB</button>
+<button type="button" class="qc-preset" data-target="0" aria-pressed="false">Kualitas terbaik</button>
+</div>
+<p class="qc-file"></p>
+<div class="qc-bar" hidden><span></span></div>
+<p class="qc-status" role="status"></p>
+<div class="qc-result" hidden><p class="qc-sizes"></p>
+<div class="qc-actions"><a class="cta qc-download" href="#">⬇ Unduh PDF</a><button type="button" class="qc-again">Kompres file lain</button></div></div>
+</div>''',
+        scripts=['/assets/vendor/pdf-lib.min.js', '/assets/pdf-compress.js', '/assets/landing-compress.js']),
+}
 
 
 def landing_html(slug):
@@ -476,12 +521,20 @@ def landing_html(slug):
     guides = [a for a in articles.ARTICLES if a['tool'] == slug]
     guide_html = (f'<section><h2>Panduan terkait</h2><div class="list">{"".join(article_card(a) for a in guides)}</div></section>'
                   if guides else '')
-    return head(p['title'], p['description'], path, ''.join(ld(d) for d in data)) + f'''
+    widget = WIDGETS.get(slug)
+    extra = ''.join(ld(d) for d in data)
+    if widget:
+        extra += f'<style>{WIDGET_CSS}</style>' + ''.join(f'<script src="{src}" defer></script>' for src in widget['scripts'])
+        # The tool itself, then the full tool page as an alternative.
+        start = (widget['html'] + f'\n<a class="alt" href="/{esc(p["link"])}">Butuh lebih banyak pilihan? Buka {esc(p["name"])} lengkap →</a>')
+    else:
+        start = f'<a class="cta" href="/{esc(p["link"])}">Mulai {esc(p["name"])} sekarang →</a>'
+    return head(p['title'], p['description'], path, extra) + f'''
 <body><div class="wrap">
 {TOP}
 <main>
 <div class="hero"><h1>{esc(p['h1'])}</h1><p>{esc(p['lead'])}</p>
-<a class="cta" href="/{esc(p['link'])}">Mulai {esc(p['name'])} sekarang →</a>
+{start}
 <div class="note">{esc(TRIAL)}{(' ' + esc(privacy)) if privacy else ''}</div></div>
 <section><h2>Cara memakai {esc(p['name'])}</h2><div class="card"><ol class="steps">{''.join(f'<li>{esc(s)}</li>' for s in p['steps'])}</ol></div></section>
 <section><h2>Kenapa memakai MyFlipbook?</h2><div class="card"><ul class="why">{''.join(f'<li>{esc(w)}</li>' for w in p['why'])}</ul></div></section>
@@ -494,12 +547,11 @@ def landing_html(slug):
 </div></body></html>'''
 
 
-TOP = f'''<header><a href="/" aria-label="{BRAND}"><img src="/assets/img/logo.png?v=pro" alt="{BRAND}" width="139" height="34"></a>
-<nav><a href="/pdf-ke-flipbook">PDF ke Flipbook</a><a href="/converter.html">Semua alat PDF</a><a href="/artikel">Artikel</a><a href="/login.html">Masuk</a></nav></header>'''
+TOP = '<header data-site-header></header>'          # assets/site-header.js: the same header as every page
 FOOT = (f'<footer>© {time.strftime("%Y")} {BRAND} — dikelola oleh Sarvamaya. <a href="/artikel">Artikel</a> · '
         '<a href="/privacy.html">Kebijakan Privasi</a> · <a href="/terms.html">Syarat &amp; Ketentuan</a> · '
         '<a href="mailto:cs@myflipbookpro.com">cs@myflipbookpro.com</a> · <a href="/">Beranda</a>'
-        f'<br>📍 {esc(ADDRESS)} · <a href="{WHATSAPP}" target="_blank" rel="noopener">WhatsApp {WA_LOCAL}</a></footer>')
+        f'<br>📍 {esc(ADDRESS)} · 📞 <a href="tel:+{PHONE_INTL}">{WA_LOCAL}</a></footer>')
 ARTICLES = {a['slug']: a for a in articles.ARTICLES}
 MONTHS = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 LINK = re.compile(r'\[([^\]]+)\]\((/[^)\s]*)\)')
@@ -580,27 +632,131 @@ def article_html(slug):
 </div></body></html>'''
 
 
+HARGA_FAQ_EN = {
+    'Bagaimana cara membayar?': ('How do I pay?', 'Log in, choose a plan, then pay by QRIS, bank transfer (virtual account) or e-wallet. The plan turns on as soon as the payment goes through.'),
+}
+
+
 def harga_html():
-    faq = [('Bagaimana cara membayar?', 'Masuk ke akun, pilih paket, lalu bayar lewat QRIS, transfer bank (virtual account), atau e-wallet. Paket aktif otomatis setelah pembayaran berhasil.'),
-           ('Apakah ada masa coba?', 'Ada. Akun baru bisa mencoba semua fitur selama 7 hari tanpa kartu kredit.'),
-           ('Apa bedanya Pro dan Business?', 'Pro membuka AI Summarizer (ringkasan, terjemahan, podcast), ekspor flipbook ke HTML offline, aplikasi Android (APK), dan 20 share link. Business menambah aplikasi Windows (EXE) dan 100 share link, cocok untuk tim dan instansi.')]
+    faq = [('Bagaimana cara membayar?', 'Masuk ke akun, pilih paket, lalu bayar lewat QRIS, transfer bank (virtual account), atau e-wallet. Paket aktif otomatis setelah pembayaran berhasil.')]
     data = [{'@context': 'https://schema.org', '@type': 'Product', 'name': f'{BRAND} {p["name"]}', 'description': PLAN_DESC.get(k, ''),
              'brand': BRAND, 'offers': {'@type': 'Offer', 'price': str(p['monthly']), 'priceCurrency': 'IDR', 'url': SITE + '/harga'}}
             for k, p in accounts.PLANS.items() if p['monthly']]
     data.append({'@context': 'https://schema.org', '@type': 'FAQPage', 'mainEntity': [
         {'@type': 'Question', 'name': q, 'acceptedAnswer': {'@type': 'Answer', 'text': a}} for q, a in faq]})
-    return head(f'Harga Paket | {BRAND}', 'Harga paket MyFlipbook Pro dalam Rupiah: Free, Pro, dan Business. Ekspor flipbook offline, '
+    return head(f'Harga Paket | {BRAND}', 'Harga paket MyFlipbook Pro dalam Rupiah: Basic (gratis), Medium, dan Pro. Ekspor flipbook offline, '
                 'aplikasi Android dan Windows, share link, dan semua alat PDF.', '/harga', ''.join(ld(d) for d in data)) + f'''
 <body><div class="wrap">
 {TOP}
 <main>
-<div class="hero"><h1>Paket &amp; Harga</h1><p>Mulai gratis. Semua harga dalam Rupiah.</p></div>
 <style>{PRICE_STYLE}</style>
-<div class="plans3">{plan_cards()}</div>
-<section><h2>Pertanyaan yang sering diajukan</h2><div class="card">{''.join(f'<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>' for q, a in faq)}</div></section>
+<div class="hero">{plan_section('h1')}</div>
+<section>{both('Pertanyaan yang sering diajukan', 'Frequently asked questions', 'h2')}<div class="card">{''.join(f'<details>{both(esc(q), HARGA_FAQ_EN.get(q, ("", ""))[0] or q, "summary")}{both(esc(a), HARGA_FAQ_EN.get(q, ("", ""))[1] or a, "p")}</details>' for q, a in faq)}</div></section>
 </main>
 {FOOT}
 </div></body></html>'''
+
+
+# ---------- Segment pages (/untuk/<slug>): one page per kind of reader, in the words they search with.
+# tools: landing slugs (cards); guides: article slugs; claims must match what the product does.
+SEGMENTS_UPDATED = '2026-10-15'      # when the segment pages last changed (sitemap lastmod)
+SEGMENTS = {
+    'akademisi': dict(
+        name='Akademisi', title='Alat Baca & Terjemah Jurnal untuk Akademisi | MyFlipbook Pro',
+        description='Untuk dosen, peneliti, dan mahasiswa: cari jurnal open access, terjemahkan jurnal berbahasa Inggris dengan '
+                    'layout tetap, ringkas dengan AI, lalu baca sebagai buku lengkap dengan stabilo dan catatan.',
+        h1='Baca, Terjemahkan, dan Pahami Jurnal Lebih Cepat',
+        lead='Satu tempat untuk mahasiswa, dosen, dan peneliti: dari mencari jurnal open access sampai membacanya dengan nyaman '
+             'dalam Bahasa Indonesia, tanpa berpindah-pindah aplikasi.',
+        pains=['Jurnal berbahasa Inggris memakan waktu lama untuk dipahami.',
+               'Terjemahan biasa merusak susunan kolom, tabel, dan gambar.',
+               'Puluhan PDF tercecer, catatan tersebar di mana-mana.'],
+        tools=['cari-jurnal-ebook', 'terjemahkan-pdf', 'ringkas-pdf-ai', 'pdf-ke-flipbook', 'gabung-pdf', 'ocr-pdf'],
+        steps=['Cari jurnal open access di Cari Jurnal, lalu klik "Jadikan Flipbook".',
+               'Terjemahkan ke Bahasa Indonesia; teks mengikuti kolom aslinya.',
+               'Ringkas dengan AI Summarizer, lalu tandai bagian penting dengan stabilo dan catatan.'],
+        guides=['cara-menerjemahkan-jurnal-bahasa-inggris', 'cara-merangkum-jurnal-dengan-ai', 'cara-mencari-jurnal-open-access',
+                'cara-membaca-jurnal-dengan-cepat', 'cara-menggabungkan-jurnal-jadi-buku-referensi'],
+        faq=[('Apakah jurnal berbayar bisa dibuka?', 'Tidak. Cari Jurnal hanya menjadikan flipbook artikel open access yang PDF-nya tersedia untuk umum. Artikel tertutup tetap bisa dibuka di situs penerbitnya.'),
+             ('Apakah AI Summarizer gratis?', 'AI Summarizer termasuk paket Medium dan Pro.'),
+             ('Bisakah dipakai untuk buku ajar?', 'Bisa. Ubah buku ajar PDF menjadi flipbook dan bagikan lewat share link, atau ekspor ke HTML offline (paket Medium) agar mahasiswa bisa membacanya tanpa internet.')]),
+    'pembaca': dict(
+        name='Pembaca Buku', title='Baca Ebook PDF Seperti Buku di HP | MyFlipbook Pro',
+        description='Baca ebook dan buku PDF dengan nyaman seperti buku asli, dengarkan dibacakan, terjemahkan seluruh buku ke '
+                    'Bahasa Indonesia, dan temukan ebook serta majalah gratis yang legal.',
+        h1='Baca Ebook PDF dengan Nyaman, Seperti Buku Asli',
+        lead='Halaman yang bisa dibalik, suara yang membacakan, dan terjemahan seluruh buku. Membaca PDF di HP maupun laptop jadi '
+             'tidak melelahkan lagi.',
+        pains=['Membaca PDF di HP harus terus zoom dan geser.',
+               'Buku berbahasa Inggris sulit dinikmati.',
+               'Tidak sempat membaca, tapi ingin tetap "membaca" sambil beraktivitas.'],
+        tools=['pdf-ke-flipbook', 'pdf-jadi-audiobook', 'terjemahkan-pdf', 'cari-jurnal-ebook', 'kompres-pdf', 'jpg-ke-pdf'],
+        steps=['Buka PDF ke Flipbook, lalu tambahkan ebook dari HP, laptop, atau Google Drive.',
+               'Baca dengan efek membalik halaman; tandai dengan stabilo dan catatan.',
+               'Tekan Audio book untuk mendengarkan, atau Translate untuk membaca dalam Bahasa Indonesia.'],
+        guides=['cara-membuat-flipbook-dari-pdf', 'cara-membaca-jurnal-pdf-lebih-nyaman', 'cara-mencari-jurnal-open-access'],
+        faq=[('Apakah bisa dibaca tanpa internet?', 'Bisa, dengan mengekspor flipbook ke HTML offline (paket Medium) atau aplikasi Android (paket Pro).'),
+             ('Di mana mencari ebook gratis?', 'Buka Cari Jurnal & Ebook, tab Ebook atau Majalah. Isinya buku dan majalah berlisensi bebas yang legal, langsung bisa dijadikan flipbook.'),
+             ('Apakah buku saya diunggah ke server?', 'Tidak, kecuali Anda memilih menyimpannya ke My Library (tersimpan terenkripsi) atau membuat share link.')]),
+    'penulis': dict(
+        name='Penulis & Penerbit', title='Terbitkan Ebook Jadi Flipbook & Aplikasi | MyFlipbook Pro',
+        description='Untuk penulis dan penerbit indie: terbitkan ebook sebagai flipbook dengan share link, jadikan aplikasi Android '
+                    'atau Windows, tambahkan watermark dan audio book, tanpa coding.',
+        h1='Terbitkan Ebook Sendiri, dari Flipbook sampai Aplikasi',
+        lead='Naskah PDF Anda jadi flipbook yang bisa dibagikan lewat link, dibaca offline, didengarkan, bahkan dipasang sebagai '
+             'aplikasi di HP pembaca.',
+        pains=['Ingin menerbitkan sendiri tanpa repot membuat website atau aplikasi.',
+               'Khawatir naskah disebar tanpa izin.',
+               'Ingin karya bisa dinikmati pembaca yang lebih suka mendengar.'],
+        tools=['pdf-ke-flipbook', 'watermark-pdf', 'pdf-jadi-audiobook', 'kompres-pdf', 'word-ke-pdf', 'tanda-tangan-pdf'],
+        steps=['Ubah naskah Word atau PDF menjadi flipbook, lalu atur sampul dan judulnya.',
+               'Tambahkan watermark nama atau penerbit bila perlu.',
+               'Bagikan lewat share link, ekspor HTML offline, atau build aplikasi Android dan Windows (Pro).'],
+        guides=['cara-membuat-ebook-jadi-aplikasi-android', 'cara-membuat-flipbook-dari-pdf', 'cara-membuat-e-modul-flipbook-untuk-guru',
+                'alternatif-heyzine-fliphtml5-bahasa-indonesia'],
+        faq=[('Berapa banyak share link yang bisa dibuat?', 'Basic 3 share link, Medium 20, dan Pro 100.'),
+             ('Apakah share link bisa dibuka siapa saja?', 'Ya, siapa pun yang memegang link bisa membacanya tanpa login. Jangan membagikan naskah rahasia lewat share link.'),
+             ('Apakah perlu bisa coding untuk membuat aplikasi?', 'Tidak. Aplikasi Android dan Windows (paket Pro) dibuat otomatis dari flipbook Anda.')]),
+}
+
+
+def segment_html(slug):
+    g = SEGMENTS[slug]
+    path = f'/untuk/{slug}'
+    tools = ''.join(f'<a class="seg-tool" href="/{t}"><b>{esc(LANDING[t]["name"])}</b><span>{esc(LANDING[t]["description"][:110])}…</span></a>'
+                    for t in g['tools'] if t in LANDING)
+    guides = [ARTICLES[a] for a in g['guides'] if a in ARTICLES]
+    others = ' · '.join(f'<a href="/untuk/{k}">{esc(v["name"])}</a>' for k, v in SEGMENTS.items() if k != slug)
+    data = [{'@context': 'https://schema.org', '@type': 'WebPage', 'name': g['h1'], 'description': g['description'],
+             'url': SITE + path, 'inLanguage': 'id', 'isPartOf': {'@type': 'WebSite', 'name': BRAND, 'url': SITE + '/'}},
+            {'@context': 'https://schema.org', '@type': 'FAQPage', 'mainEntity': [
+                {'@type': 'Question', 'name': q, 'acceptedAnswer': {'@type': 'Answer', 'text': a}} for q, a in g['faq']]},
+            {'@context': 'https://schema.org', '@type': 'BreadcrumbList', 'itemListElement': [
+                {'@type': 'ListItem', 'position': 1, 'name': BRAND, 'item': SITE + '/'},
+                {'@type': 'ListItem', 'position': 2, 'name': 'Untuk ' + g['name'], 'item': SITE + path}]}]
+    style = (STYLE_SEGMENT if 'seg-tool' not in STYLE else '')
+    return head(g['title'], g['description'], path, ''.join(ld(d) for d in data) + f'<style>{style}</style>') + f'''
+<body><div class="wrap">
+{TOP}
+<main>
+<div class="hero"><p class="note" style="margin:0 0 6px">Untuk {esc(g['name'])}</p><h1>{esc(g['h1'])}</h1><p>{esc(g['lead'])}</p>
+<a class="cta" href="/{esc(LANDING[g['tools'][0]]['link'])}">Mulai sekarang →</a>
+<div class="note">{esc(TRIAL)}</div></div>
+<section><h2>Masalah yang sering dihadapi</h2><div class="card"><ul class="why">{''.join(f'<li>{esc(x)}</li>' for x in g['pains'])}</ul></div></section>
+<section><h2>Alat yang paling sering dipakai</h2><div class="seg-tools">{tools}</div></section>
+<section><h2>Alur kerjanya</h2><div class="card"><ol class="steps">{''.join(f'<li>{esc(x)}</li>' for x in g['steps'])}</ol></div></section>
+{f'<section><h2>Panduan terkait</h2><div class="list">{"".join(article_card(a) for a in guides)}</div></section>' if guides else ''}
+<section><h2>Pertanyaan yang sering diajukan</h2><div class="card">{''.join(f'<details><summary>{esc(q)}</summary><p>{esc(a)}</p></details>' for q, a in g['faq'])}</div></section>
+<section><h2>Paket</h2><div class="card"><p>Mulai gratis. Fitur lanjutan ada di paket Medium dan Pro. <a href="/harga">Lihat harga →</a></p></div></section>
+<p class="note">Juga untuk: {others}</p>
+</main>
+{FOOT}
+</div></body></html>'''
+
+
+STYLE_SEGMENT = '''.seg-tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}
+.seg-tool{display:flex;flex-direction:column;gap:4px;padding:16px;border:1.5px solid #E8E2D4;border-radius:16px;background:#fff;text-decoration:none;color:inherit}
+.seg-tool:hover{border-color:#1A3C34}.seg-tool b{font-size:15px}.seg-tool span{font-size:12.5px;color:#78716C;line-height:1.5}'''
 
 
 def articles_index():
@@ -633,13 +789,15 @@ APP_META = {
     'workflow.html': ('Buat alur kerja PDF sendiri: gabungkan beberapa alat menjadi satu langkah otomatis.', '/workflow.html'),
     'editor.html': ('Edit PDF langsung di halaman: klik teks lalu ketik seperti di Word, pindahkan dan ganti gambar seperti di PowerPoint. '
                     'Bisa untuk PDF hasil scan (OCR).', '/editor.html'),
+    'authors.html': ('Cari penulis ilmiah dan lihat metrik sitasinya seperti Publish or Perish: h-index, g-index, i10-index, '
+                     'sitasi per tahun, lalu ekspor daftar karyanya ke BibTeX, RIS, CSV, atau APA.', '/authors.html'),
     'privacy.html': (None, '/privacy.html'),
     'terms.html': (None, '/terms.html'),
 }
 NOINDEX = {'login.html', 'account.html', 'library.html', 'coming-soon.html', 'animation.html'}
 # Working app pages: thin for search and competing with their Indonesian landing pages.
 # Kept out of the index (links still followed) and out of the sitemap.
-APP_NOINDEX = {'converter.html', 'editor.html', 'notebook.html', 'journals.html', 'workflow.html'}
+APP_NOINDEX = {'converter.html', 'editor.html', 'notebook.html', 'journals.html', 'workflow.html', 'authors.html'}
 
 
 def verification():
@@ -682,57 +840,146 @@ def footer_links():
     """Plain links to every landing page (the home page's tool grid is built by script)."""
     links = ' <span style="color:#D6CFBF">·</span> '.join(
         [f'<a href="/{s}" style="color:#78716C">{esc(p["name"])}</a>' for s, p in LANDING.items()]
+        + [f'<a href="/untuk/{k}" style="color:#78716C">Untuk {esc(v["name"])}</a>' for k, v in SEGMENTS.items()]
         + ['<a href="/artikel" style="color:#78716C">Artikel &amp; tutorial</a>'])
     return f'<nav aria-label="Alat PDF" style="text-align:center;font-size:11px;font-weight:600;margin-top:10px;line-height:2">{links}</nav>'.encode('utf-8')
 
 
 # ---------- Prices: built from accounts.PLANS (the prices checkout charges), never typed twice.
-PLAN_DESC = {'free': 'Untuk mencoba dan kebutuhan PDF sehari-hari.',
-             'pro': 'Untuk guru, dosen, penulis, dan UMKM yang membagikan flipbook.',
-             'business': 'Untuk tim, sekolah, kampus, dan instansi.'}
+PLAN_DESC = {'basic': 'Untuk mencoba dan kebutuhan PDF sehari-hari.',
+             'medium': 'Untuk guru, dosen, mahasiswa, dan penulis.',
+             'pro': 'Untuk penerbit, UMKM, sekolah, dan instansi.'}
+PLAN_DESC_EN = {'basic': 'For trying out and everyday PDF tasks.',
+                'medium': 'For teachers, lecturers, students and writers.',
+                'pro': 'For publishers, small businesses, schools and institutions.'}
+POPULAR = 'medium'
+USD_RATE = 16_500          # rupiah per US$, only for the English "≈ US$" hint (checkout charges rupiah)
+
+def both(id_text, en_text, tag='span', attrs=''):
+    """An element in Indonesian with its English (assets/i18n.js swaps them by the visitor's language)."""
+    return f'<{tag}{attrs} data-en="{esc(en_text)}">{id_text}</{tag}>'
 
 
 def rupiah(n):
     return 'Rp' + f'{n:,}'.replace(',', '.')
 
 
-def plan_cards(compact=False):
-    """The three plans as HTML cards (home page: compact; /harga: with yearly prices)."""
+def plan_cards():
+    """The plans as cards: each price twice (monthly / yearly), the switch above shows one."""
     out = []
+    check = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
     for key, p in accounts.PLANS.items():
-        was = p.get('list_monthly')
-        price = ('Gratis' if not p['monthly'] else
-                 (f'<s class="pw">{rupiah(was)}</s> ' if was and was > p['monthly'] else '') + f'{rupiah(p["monthly"])}<small>/bulan</small>')
-        promo = ('<span class="promo">Promo peluncuran −' + str(round(100 - p['monthly'] * 100 / was)) + '%</span>'
-                 if was and was > p['monthly'] else '')
-        yearly = '' if not p['yearly'] else f'<p class="py">atau {rupiah(p["yearly"])}/tahun (hemat 2 bulan)</p>'
-        feats = ''.join(f'<li>{esc(f)}</li>' for f in p['features']['id'])
-        cta = ('Coba gratis' if key == 'free' else f'Pilih {p["name"]}')
-        out.append(f'<div class="plan{" hot" if key == "pro" else ""}"><h3>{esc(p["name"])}</h3><p class="pd">{esc(PLAN_DESC.get(key, ""))}</p>'
-                   f'{promo}<p class="pp">{price}</p>{yearly}<ul>{feats}</ul>'
-                   f'<a class="pc" href="/account.html#plans">{cta} →</a></div>')
+        hot = key == POPULAR
+        head = (f'<div class="plan{" hot" if hot else ""}" data-plan="{key}"><div class="ph"><h3>{esc(p["name"])}</h3>'
+                + (both('Paling populer', 'Most popular', 'span', ' class="badge"') if hot else '') + '</div>'
+                + both(esc(PLAN_DESC.get(key, '')), PLAN_DESC_EN.get(key, ''), 'p', ' class="pd"'))
+        feats = '<ul>' + ''.join(f'<li>{check}' + both(esc(f), e) + '</li>' for f, e in zip(p['features']['id'], p['features']['en'])) + '</ul>'
+        if not p['monthly']:
+            price = (both('Gratis', 'Free', 'span', ' class="big"') + '</div>'
+                     + both('Tanpa biaya langganan.', 'No subscription fee.', 'p', ' class="pn"'))
+            out.append(f'{head}<div class="pp">{price}{feats}<a class="pc" href="/account.html#plans">'
+                       + both('Coba gratis →', 'Try free →') + '</a></div>')
+            continue
+        per_month = round(p['yearly'] / 12 / 100) * 100
+        save = round(100 - p['yearly'] * 100 / (p['monthly'] * 12))
+        usd = lambda idr: f'≈ US${idr // USD_RATE} · '
+        monthly = (f'<div class="pm"><div class="pp"><span class="big">{rupiah(p["monthly"])}</span>' + both('/bulan', '/month', 'span', ' class="per"') + '</div>'
+                   + both(f'atau {rupiah(per_month)}/bulan jika bayar tahunan', f'{usd(p["monthly"])}or {rupiah(per_month)}/month billed yearly', 'p', ' class="pn"') + '</div>')
+        yearly = (f'<div class="pyr"><div class="pp"><span class="big">{rupiah(per_month)}</span>' + both('/bulan', '/month', 'span', ' class="per"') + '</div>'
+                  + both(f'ditagih {rupiah(p["yearly"])}/tahun · hemat {save}%', f'{usd(per_month)}billed {rupiah(p["yearly"])}/year · save {save}%', 'p', ' class="pn"') + '</div>')
+        cta = both(f'Pilih {p["name"]} →', f'Choose {p["name"]} →')
+        out.append(f'{head}{monthly}{yearly}{feats}'
+                   f'<a class="pc pm" href="/account.html?cycle=monthly#plans">{cta}</a><a class="pc pyr" href="/account.html?cycle=yearly#plans">{cta}</a></div>')
     return ''.join(out)
 
 
-PRICE_STYLE = '''.plans3{display:grid;grid-template-columns:repeat(auto-fit,minmax(230px,1fr));gap:14px;margin:14px 0}
-.plans3 .plan{background:#fff;border:1.5px solid #E8E2D4;border-radius:20px;padding:20px;display:flex;flex-direction:column}
-.plans3 .plan.hot{border-color:#DC0500;box-shadow:0 10px 26px rgba(220,5,0,.12)}
-.plans3 h3{margin:0;font-size:20px}.plans3 .pd{font-size:13px;color:#78716C;margin:6px 0 10px}
-.plans3 .pp{font-size:26px;font-weight:900;margin:0}.plans3 .pp small{font-size:13px;font-weight:600;color:#78716C}
-.plans3 .pp s.pw{font-size:15px;font-weight:700;color:#A8A29E;margin-right:4px}
-.plans3 .promo{align-self:flex-start;background:#FFE9E7;color:#DC0500;font-size:11px;font-weight:800;padding:3px 9px;border-radius:999px;margin-bottom:6px}
-.plans3 .py{font-size:12px;color:#57534E;margin:4px 0 0}.plans3 ul{list-style:disc;padding-left:18px;font-size:13px;line-height:1.7;flex:1}
-.plans3 .pc{display:block;text-align:center;margin-top:10px;padding:10px;border-radius:999px;background:#1C1917;color:#fff;font-weight:800;text-decoration:none}
-.plans3 .plan.hot .pc{background:#DC0500}'''
+def savings():
+    """The yearly saving of each paid plan, in percent."""
+    return [round(100 - p['yearly'] * 100 / (p['monthly'] * 12)) for p in accounts.PLANS.values() if p['monthly']]
+
+
+def plan_section(heading='h2'):
+    """Heading, the Monthly / Yearly and IN / EN switches, the cards and the footnote (CSS only:
+    the checked radio shows its prices; IN / EN are assets/i18n.js's data-lang-set)."""
+    cuts = savings() or [0]
+    top, same = max(cuts), len(set(cuts)) == 1          # "hemat 20%" when every plan saves the same, else "hemat s.d."
+    save_id, save_en = (f'hemat {top}%', f'save {top}%') if same else (f'hemat s.d. {top}%', f'save up to {top}%')
+    return ('<div class="prices"><input type="radio" name="cycle" id="cyc-m" class="cyc" checked><input type="radio" name="cycle" id="cyc-y" class="cyc">'
+            '<div class="ptop"><div>' + both('Paket &amp; Harga', 'Plans & Pricing', heading, ' class="ptitle"')
+            + both('Pilih paket sesuai kebutuhan. Upgrade atau berhenti kapan saja.', 'Pick the plan that fits. Upgrade or cancel anytime.', 'p', ' class="psub"')
+            + '</div><div class="switches"><div class="cycle" role="group" aria-label="Periode pembayaran" data-en-aria="Billing period">'
+            + both('Bulanan', 'Monthly', 'label', ' for="cyc-m"')
+            + '<label for="cyc-y">' + both('Tahunan', 'Yearly') + both(save_id, save_en, 'b') + '</label></div>'
+            '<div class="cycle langs" role="group" aria-label="Bahasa" data-en-aria="Language">'
+            '<button type="button" data-lang-set="id" aria-label="Bahasa Indonesia">IN</button><button type="button" data-lang-set="en" aria-label="English">EN</button></div>'
+            f'</div></div><div class="plans3">{plan_cards()}</div>{PICK_SCRIPT}'
+            + both('Semua harga dalam Rupiah. Paket tahunan dibayar di muka; '
+                   'bisa berhenti kapan saja dan akses tetap aktif sampai masa langganan habis.',
+                   'All prices in Indonesian Rupiah (IDR); your card issuer converts automatically. '
+                   'Yearly plans are paid upfront; cancel anytime and keep access until the period ends.', 'p', ' class="pfoot"')
+            + '</div>')
+
+
+# The highlight goes to the plan clicked; a signed-in Medium / Pro member sees Pro highlighted
+# (the next step up), as on the account page.
+PICK_SCRIPT = ('<script>(function(){function pick(g,c){g.querySelectorAll(".plan").forEach(function(x){x.classList.toggle("hot",x===c)})}'
+               'document.querySelectorAll(".plans3").forEach(function(g){g.addEventListener("click",function(e){var c=e.target.closest(".plan");if(c)pick(g,c)})});'
+               'addEventListener("load",function(){if(!window.MFAuth||!MFAuth.me)return;MFAuth.me().then(function(me){var u=me&&me.user;if(!u)return;'
+               'document.querySelectorAll(".plans3").forEach(function(g){'
+               # the member's own plan: its buttons say so (and lead to the account page)
+               'var mine=g.querySelector(".plan[data-plan="+u.plan+"]");if(mine)mine.querySelectorAll(".pc").forEach(function(a){'
+               'a.classList.add("cur");a.href="/account.html#plans";a.setAttribute("aria-current","true");'
+               'a.innerHTML="<span data-en=\\"Your current plan\\">Paket Anda saat ini</span>";if(window.I18N&&I18N.apply)I18N.apply()});'
+               'if(u.plan!=="basic"){var c=g.querySelector(".plan[data-plan=pro]");if(c)pick(g,c)}})})["catch"](function(){})})})()</script>')
+
+
+# The design's values (Paket & Harga-html/Main.dc.html).
+PRICE_STYLE = """.prices{display:flex;flex-direction:column;gap:28px;color:#1C1A17;font-family:'Plus Jakarta Sans',sans-serif}
+.prices .ptop{display:flex;justify-content:space-between;align-items:flex-end;gap:24px;flex-wrap:wrap}
+.prices .ptitle{margin:0;font-family:'Fraunces',serif;font-weight:800;font-size:40px;letter-spacing:-.5px;line-height:1.1}
+.prices .psub{margin:8px 0 0;font-size:15px;color:#5F5A52}
+.prices .switches{display:flex;gap:12px;align-items:center;flex-wrap:wrap}
+.cyc{position:absolute;opacity:0;pointer-events:none}
+.prices .cycle{display:flex;padding:4px;gap:4px;background:#fff;border:1px solid #E5E0D8;border-radius:999px}
+.prices .cycle label,.prices .cycle button{display:inline-flex;align-items:center;gap:8px;min-height:44px;padding:0 18px;border:0;border-radius:999px;font:inherit;font-size:14px;font-weight:600;cursor:pointer;background:transparent;color:#1C1A17}
+.prices .cycle label:hover,.prices .cycle button:hover{color:#5F5A52}
+.prices .cycle b{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:#FDECEC;color:#B00808}
+#cyc-m:checked~.ptop label[for=cyc-m],#cyc-y:checked~.ptop label[for=cyc-y],.prices .cycle button[aria-pressed=true]{background:#1C1A17;color:#fff}
+#cyc-y:checked~.ptop label[for=cyc-y] b{background:#fff}
+#cyc-m:focus-visible~.ptop label[for=cyc-m],#cyc-y:focus-visible~.ptop label[for=cyc-y]{outline:2px solid #D40B0B;outline-offset:2px}
+.plans3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:stretch}
+.plans3 .plan{display:flex;flex-direction:column;min-height:500px;padding:32px 28px 28px;background:#fff;border:1px solid #E5E0D8;border-radius:20px;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+.plans3 .plan:not(.hot){margin:1px}
+.plans3 .plan.hot{border:2px solid #D40B0B;box-shadow:0 12px 32px rgba(28,26,23,.10)}
+.plans3 .ph{display:flex;justify-content:space-between;align-items:center;gap:12px;min-height:30px}
+.plans3 h3{margin:0;font-size:22px;font-weight:600}
+.plans3 .badge{font-size:12px;font-weight:700;padding:6px 10px;border-radius:999px;background:#FDECEC;color:#B00808;white-space:nowrap}
+.plans3 .pd{margin:8px 0 0;font-size:14px;line-height:1.45;color:#5F5A52;min-height:40px}
+.plans3 .pp{display:flex;align-items:baseline;gap:6px;margin-top:20px}
+.plans3 .big{font-size:38px;font-weight:800;letter-spacing:-1px;line-height:1.1}
+.plans3 .per{font-size:15px;color:#5F5A52}
+.plans3 .pn{margin:6px 0 0;font-size:13px;line-height:1.45;color:#5F5A52;min-height:38px}
+.plans3 ul{list-style:none;margin:18px 0 0;padding:0;display:flex;flex-direction:column;gap:10px}
+.plans3 li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45}
+.plans3 li svg{flex:none;margin-top:1px;color:#1C1A17}.plans3 .plan.hot li svg{color:#D40B0B}
+.plans3 .pc{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;margin-top:auto;border-radius:999px;font-size:15px;font-weight:700;color:#fff;background:#1C1A17;text-decoration:none;transition:transform .15s,box-shadow .15s}
+.plans3 .plan>ul{margin-bottom:28px}
+.plans3 .plan.hot .pc{background:#D40B0B}
+.plans3 .pc:hover{transform:translateY(-2px);box-shadow:0 10px 22px rgba(28,26,23,.18);color:#fff}
+.plans3 .pc.cur,.plans3 .plan.hot .pc.cur{background:#F3F0EA;color:#78716C;box-shadow:none;transform:none}
+.plans3 div.pyr,.plans3 a.pyr{display:none}
+#cyc-y:checked~.plans3 div.pm,#cyc-y:checked~.plans3 a.pm{display:none}
+#cyc-y:checked~.plans3 div.pyr{display:block}
+#cyc-y:checked~.plans3 a.pyr{display:flex}
+.prices .pfoot{margin:0;font-size:13px;line-height:1.5;color:#5F5A52}
+@media (max-width:900px){.plans3{grid-template-columns:1fr}.plans3 .plan{min-height:0}.prices .ptitle{font-size:32px}}"""
 
 
 def home_pricing():
     """Price section for the home page (products, descriptions and rupiah prices, as payment providers require)."""
     return (f'<section id="harga" class="max-w-[1440px] mx-auto px-4 pb-6"><style>{PRICE_STYLE}</style>'
-            '<h2 class="serif text-[22px] md:text-[26px] font-black tracking-tight">Paket &amp; Harga</h2>'
-            '<p class="text-[13px] text-[#78716C] mt-1">Semua harga dalam Rupiah. Akun baru bisa mencoba semua fitur selama 7 hari.</p>'
-            f'<div class="plans3">{plan_cards()}</div>'
-            '<p class="text-[12px] text-[#78716C]"><a href="/harga" style="color:#1A3C34;font-weight:700">Lihat detail paket &amp; pertanyaan umum →</a></p>'
+            + plan_section() +
+            '<p class="text-[12px] text-[#78716C] mt-3">' + both('Lihat detail paket &amp; pertanyaan umum →', 'See plan details & FAQ →', 'a', ' href="/harga" style="color:#1A3C34;font-weight:700"') + '</p>'
             '</section>').encode('utf-8')
 
 
@@ -772,8 +1019,9 @@ def robots():
 
 def sitemap():
     urls = [('/', '1.0')] + [('/' + s, '0.9') for s in LANDING] + [
-        ('/harga', '0.8'), ('/privacy.html', '0.2'), ('/terms.html', '0.2'), ('/artikel', '0.8')]
-    rows = ''.join(f'<url><loc>{esc(SITE + u)}</loc><lastmod>{UPDATED}</lastmod><priority>{pr}</priority></url>' for u, pr in urls)
+        ('/harga', '0.8')] + [(f'/untuk/{k}', '0.9') for k in SEGMENTS] + [('/privacy.html', '0.2'), ('/terms.html', '0.2'), ('/artikel', '0.8')]
+    rows = ''.join(f'<url><loc>{esc(SITE + u)}</loc><lastmod>{SEGMENTS_UPDATED if u.startswith("/untuk/") else UPDATED}</lastmod>'
+                   f'<priority>{pr}</priority></url>' for u, pr in urls)
     rows += ''.join(f'<url><loc>{SITE}/artikel/{a["slug"]}</loc><lastmod>{a["updated"]}</lastmod><priority>0.8</priority></url>'
                     for a in articles.ARTICLES)
     return f'<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">{rows}</urlset>\n'
@@ -792,6 +1040,10 @@ def respond(path):
     if slug in LANDING and path == '/' + slug:
         if slug not in CACHE:
             CACHE[slug] = landing_html(slug).encode('utf-8')
+        return CACHE[slug], 'text/html; charset=utf-8'
+    if slug.startswith('untuk/') and slug[6:] in SEGMENTS and path == '/' + slug:
+        if slug not in CACHE:
+            CACHE[slug] = segment_html(slug[6:]).encode('utf-8')
         return CACHE[slug], 'text/html; charset=utf-8'
     if path == '/harga':
         if 'harga' not in CACHE:

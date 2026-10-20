@@ -12,14 +12,12 @@
 <link rel="stylesheet" href="assets/legal.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script defer src="/assets/site-header.js"></script>
 <script src="assets/auth.js" defer></script>
 </head>
 <body>
 <div class="wrap">
-  <nav class="clay-nav">
-    <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=pro" alt="MyFlipbook Pro" width="139" height="34"></a>
-    <div class="nav-right"><span data-auth-slot></span><button type="button" class="lang" data-lang-toggle>EN</button></div>
-  </nav>
+  <header data-site-header></header>
 
   <!-- ============ BAHASA INDONESIA ============ -->
   <article class="clay-panel legal" data-legal-lang="id">
@@ -49,12 +47,12 @@
       <li>Beberapa fitur memang membutuhkan server: konversi Word/Excel/PowerPoint ↔ PDF, mengambil dokumen dari tautan, dan membuat aplikasi Android (APK) / Windows (EXE). File sementara konversi <b>dihapus segera setelah selesai</b>; paket build dan hasilnya disimpan paling lama <b>7 hari</b> agar bisa diunduh, lalu dihapus otomatis.</li>
       <li><b>My Library</b>: bila Anda masuk, proyek dan hasil ekspor flipbook disimpan di server
       dalam keadaan <b>terenkripsi</b>, sampai Anda menghapusnya atau akun Anda dihapus.</li>
-      <li><b>Share link</b>: bila Anda membagikan buku (Pro/Business), salinan buku hasil ekspor disimpan di server
+      <li><b>Share link</b>: bila Anda membagikan buku (Medium/Pro), salinan buku hasil ekspor disimpan di server
       <b>tanpa enkripsi</b> supaya bisa dibuka lewat tautan. <b>Siapa pun yang punya tautannya bisa membaca dan
       mengunduh buku itu</b> — jangan membagikan dokumen pribadi. Tautan ikut terhapus bila Anda menghapusnya
       atau akun Anda dihapus.</li>
     </ul>
-    <h3>Fitur AI (AI Summarizer: ringkasan, terjemahan, podcast)</h3>
+    <h3>Fitur AI (AI Summarizer: ringkasan, terjemahan, tanya dokumen)</h3>
     <ul>
       <li>Saat Anda memakai fitur ini, <b>teks dokumen dikirim ke penyedia AI</b> (lihat bagian 6) untuk diproses dan hasilnya dikembalikan kepada Anda. Jangan memakai fitur AI untuk dokumen yang bersifat rahasia.</li>
     </ul>
@@ -98,7 +96,7 @@
       <tbody>
         <tr><td>Google (Sign-In, Picker, Drive API)</td><td>Masuk & memilih file Drive</td><td>Sesuai bagian 3</td></tr>
         <tr><td>Google Gmail (SMTP)</td><td>Mengirim email verifikasi</td><td>Email & nama penerima, isi email</td></tr>
-        <tr><td>Sumopod (gateway AI) → Anthropic (Claude) / Google (Gemini)</td><td>Ringkasan, terjemahan, podcast</td><td>Teks dokumen yang Anda proses</td></tr>
+        <tr><td>Sumopod (gateway AI) → Anthropic (Claude) / Google (Gemini)</td><td>Ringkasan, terjemahan, tanya dokumen</td><td>Teks dokumen yang Anda proses</td></tr>
         <tr><td>OpenAlex, OAPEN Library, Internet Archive</td><td>Pencarian jurnal & ebook</td><td>Kata kunci pencarian</td></tr>
         <tr><td>Penyedia pembayaran (Tripay / Midtrans untuk Rupiah, Lemon Squeezy untuk dolar AS)</td><td>Pembayaran langganan</td><td>Data pesanan; data pembayaran Anda masukkan langsung di halaman mereka</td></tr>
       </tbody>
@@ -151,11 +149,11 @@
       <li>Some features need the server: Word/Excel/PowerPoint ↔ PDF conversion, fetching a document from a link, and building Android (APK) / Windows (EXE) apps. Temporary conversion files are <b>deleted as soon as the job finishes</b>; build packages and their results are kept for at most <b>7 days</b> so you can download them, then deleted automatically.</li>
       <li><b>My Library</b>: when signed in, flipbook projects and exports are stored on our server
       <b>encrypted</b>, until you delete them or your account is deleted.</li>
-      <li><b>Share link</b>: when you share a book (Pro/Business), a copy of the exported book is stored on our
+      <li><b>Share link</b>: when you share a book (Medium/Pro), a copy of the exported book is stored on our
       server <b>unencrypted</b> so the link can open it. <b>Anyone with the link can read and download that
       book</b> — don't share private documents. The copy is deleted when you delete the link or your account.</li>
     </ul>
-    <h3>AI features (AI Summarizer: summary, translation, podcast)</h3>
+    <h3>AI features (AI Summarizer: summary, translation, ask the document)</h3>
     <ul><li>When you use them, <b>the document's text is sent to an AI provider</b> (see section 6) to be processed, and the result is returned to you. Don't use AI features on confidential documents.</li></ul>
     <h3>Journal & ebook search</h3>
     <ul><li>Search keywords are sent to OpenAlex, OAPEN Library and Internet Archive to find results. We don't link searches to your account.</li></ul>
@@ -197,7 +195,7 @@
       <tbody>
         <tr><td>Google (Sign-In, Picker, Drive API)</td><td>Signing in & picking Drive files</td><td>As in section 3</td></tr>
         <tr><td>Google Gmail (SMTP)</td><td>Sending verification email</td><td>Recipient email & name, message</td></tr>
-        <tr><td>Sumopod (AI gateway) → Anthropic (Claude) / Google (Gemini)</td><td>Summary, translation, podcast</td><td>The text of the document you process</td></tr>
+        <tr><td>Sumopod (AI gateway) → Anthropic (Claude) / Google (Gemini)</td><td>Summary, translation, ask the document</td><td>The text of the document you process</td></tr>
         <tr><td>OpenAlex, OAPEN Library, Internet Archive</td><td>Journal & ebook search</td><td>Search keywords</td></tr>
         <tr><td>Payment providers (Tripay / Midtrans for rupiah, Lemon Squeezy for US dollars)</td><td>Subscription payments</td><td>Order data; you enter payment details on their pages</td></tr>
       </tbody>

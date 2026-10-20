@@ -10,6 +10,11 @@
     high: {maxSide: 1150, quality: 0.58, label: 'Strong'},
   };
   const MAX_PIXELS = 40e6;   // bigger images are left as they are (memory)
+  // compressTo's settings, best quality first: it looks for the first one under the target size.
+  const LADDER = [
+    {maxSide: 2400, quality: 0.85}, {maxSide: 1700, quality: 0.72}, {maxSide: 1400, quality: 0.62}, {maxSide: 1150, quality: 0.55},
+    {maxSide: 1000, quality: 0.48}, {maxSide: 850, quality: 0.42}, {maxSide: 700, quality: 0.36}, {maxSide: 560, quality: 0.3},
+  ];
 
   async function inflate(bytes) {
     if (typeof DecompressionStream === 'undefined') throw Error('no DecompressionStream');
@@ -61,12 +66,12 @@
     return {bytes: new Uint8Array(await blob.arrayBuffer()), width: w, height: h};
   }
 
-  /* compress(bytes, levelName, {onProgress(message, fraction), recode}) →
-     {bytes, stats: {images, recoded, skipped, before, after}} */
+  /* compress(bytes, levelName, {onProgress(message, fraction), recode, level}) →
+     {bytes, stats: {images, recoded, skipped, before, after}}; options.level ({maxSide, quality}) overrides the name. */
   async function compress(input, levelName = 'medium', options = {}) {
     const lib = globalThis.PDFLib;
     if (!lib) throw Error('PDF engine is unavailable. Reload the page.');
-    const level = LEVELS[levelName] || LEVELS.medium;
+    const level = options.level || LEVELS[levelName] || LEVELS.medium;
     const recode = options.recode || canvasRecode, progress = options.onProgress || (() => {});
     const {PDFName, PDFRawStream, PDFArray, PDFNumber, PDFDict, PDFRef} = lib;
     const before = input.byteLength;
@@ -137,5 +142,36 @@
     stats.after = bytes.byteLength;
     return {bytes, stats};
   }
-  globalThis.PDFCompress = {LEVELS, compress, unpredict};
+  /* compressTo(bytes, targetBytes, {onProgress(message, fraction), recode}) →
+     {bytes, stats, reached, step}: the best-quality LADDER step whose file fits the target
+     (binary search: a few passes, each from the original), else the smallest one tried. */
+  async function compressTo(input, target, options = {}) {
+    const progress = options.onProgress || (() => {});
+    const original = new Uint8Array(input);
+    if (original.byteLength <= target) return {bytes: original, stats: {before: original.byteLength, after: original.byteLength, unchanged: true}, reached: true, step: -1};
+    const tried = new Map();
+    let pass = 0;
+    const attempt = async step => {
+      if (!tried.has(step)) {
+        pass++;
+        const result = await compress(original.slice(), '', Object.assign({}, options, {level: LADDER[step],
+          onProgress: (message, fraction) => progress(message, Math.min(0.98, (pass - 1 + (fraction || 0)) / 4))}));
+        tried.set(step, result);
+      }
+      return tried.get(step);
+    };
+    let low = 0, high = LADDER.length - 1, best = null;
+    if ((await attempt(high)).bytes.byteLength > target) {
+      return Object.assign({}, tried.get(high), {reached: false, step: high});      // even the strongest is too big
+    }
+    best = high;
+    while (low < high) {
+      const middle = Math.floor((low + high) / 2);
+      if ((await attempt(middle)).bytes.byteLength <= target) { best = middle; high = middle; }
+      else low = middle + 1;
+    }
+    progress('Done', 1);
+    return Object.assign({}, tried.get(best), {reached: true, step: best});
+  }
+  globalThis.PDFCompress = {LEVELS, LADDER, compress, compressTo, unpredict};
 })();

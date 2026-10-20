@@ -21,7 +21,7 @@ MB = 1024 * 1024
 # plan -> (max links or None, max bytes). Free members publish at most
 # SHARE_FREE links (see accounts.SHARE_FREE): the route checks that first
 # with its own message; the quota below only bounds bytes for them.
-SHARE_LIMITS = {'free': (3, 200 * MB), 'pro': (20, 2 * 1024 * MB), 'business': (100, 10 * 1024 * MB)}
+SHARE_LIMITS = {'basic': (3, 200 * MB), 'medium': (20, 2 * 1024 * MB), 'pro': (100, 10 * 1024 * MB)}     # plans v2
 MAX_SHARE_FILE = 200 * MB
 CHUNK = MB
 MARKER = b'book-payload'
@@ -59,7 +59,7 @@ class Share:
         with self.store.connect() as db:
             row = db.execute('SELECT COUNT(*) AS links, COALESCE(SUM(size), 0) AS bytes FROM shared_links WHERE user_id=?',
                              (user['id'],)).fetchone()
-        links, max_bytes = SHARE_LIMITS.get(user['plan'], SHARE_LIMITS['free'])
+        links, max_bytes = SHARE_LIMITS.get(user['plan'], SHARE_LIMITS['basic'])
         return dict(links=row['links'], bytes=row['bytes'], maxLinks=links, maxBytes=max_bytes, plan=user['plan'])
 
     def check_room(self, user, extra_bytes):

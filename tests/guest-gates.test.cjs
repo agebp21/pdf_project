@@ -1,6 +1,5 @@
-// Guest + trial gates: downloads and flipbook entry need an account (the
-// held action continues after login); expired trials get the upgrade popup
-// instead; members and offline pages pass straight through.
+// Guest gates: downloads and flipbook entry need an account (the held action continues
+// after login); members — a Basic member whose trial ended too (plans v2) — and offline pages pass.
 const assert = require('node:assert/strict');
 const fs = require('node:fs');
 const path = require('node:path');
@@ -65,7 +64,7 @@ async function loginAs(user) {
   await flush();
   assert.equal(await w.qaClicks(), c0 + 1, 'guest: no second click yet');
   assert.ok(modal('mf-nudge-back'), 'guest: login wall opens');
-  await loginAs({ email: 'm@b.co', plan: 'free' });
+  await loginAs({ email: 'm@b.co', plan: 'basic' });
   assert.equal(modal('mf-nudge-back'), null, 'modal closes after login');
   assert.equal(await w.qaClicks(), c0 + 2, 'after login: the held download clicks through');
   // Guest flipbook entry: transfer waits for the login too.
@@ -75,24 +74,24 @@ async function loginAs(user) {
   await flush();
   assert.ok(modal('mf-nudge-back'), 'guest: flipbook entry walled');
   assert.equal(saved, 0, 'guest: nothing transferred yet');
-  await loginAs({ email: 'm@b.co', plan: 'free' });
+  await loginAs({ email: 'm@b.co', plan: 'basic' });
   assert.equal(saved, 1, 'after login: transfer runs');
-  // Expired trial: downloads and Convert die on the upgrade wall instead.
-  meUser = { email: 'old@b.co', plan: 'free', trialExpired: true };
+  // Plans v2: a Basic member whose trial ended keeps converting and downloading (no wall).
+  meUser = { email: 'old@b.co', plan: 'basic', trialExpired: true };
   await w.MFAuth.me(true);
   await w.qaEnableFlipbook();
   await w.qaSetFiles([{ name: 'a.pdf' }]);
   await w.qaConvert();
   await flush();
-  assert.ok(modal('mf-upg-back'), 'expired: Convert walled with upgrade');
-  assert.ok(modal('mf-upg-back').querySelector('.mf-nudge-reg').href.includes('account.html'), 'upgrade points at plans');
-  modal('mf-upg-back').querySelector('.mf-nudge-later').click();
-  assert.equal(await w.qaClickDownload(), true, 'expired: download held');
+  assert.equal(modal('mf-upg-back'), null, 'expired: Convert runs, no upgrade wall');
+  const before = await w.qaClicks();
+  assert.equal(await w.qaClickDownload(), true, 'expired: click intercepted');
   await flush();
-  assert.ok(modal('mf-upg-back'), 'expired: download walled with upgrade, not login');
-  modal('mf-upg-back').querySelector('.mf-nudge-later').click();
+  assert.equal(await w.qaClicks(), before + 2, 'expired: the download goes through');
+  assert.equal(modal('mf-upg-back'), null, 'expired: no upgrade wall');
+  assert.equal(modal('mf-nudge-back'), null, 'expired: no login wall either');
   // Members pass both gates with no wall.
-  meUser = { email: 'm@b.co', plan: 'free' };
+  meUser = { email: 'm@b.co', plan: 'basic' };
   await w.MFAuth.me(true);
   saved = 0; const seen = await w.qaClicks();
   assert.equal(await w.qaClickDownload(), true, 'member: click intercepted');
@@ -103,5 +102,5 @@ async function loginAs(user) {
   assert.equal(modal('mf-upg-back'), null, 'member: no upgrade wall');
   assert.equal(modal('mf-nudge-back'), null, 'member: no login wall either');
   w.close();
-  console.log('PASS guest gates: download + flipbook entry walled for guests, trial upgrade walls, continue after login, members/offline pass');
+  console.log('PASS guest gates: download + flipbook entry walled for guests, continue after login, members (expired trials too) / offline pass');
 })().catch(e => { console.error(e); process.exit(1); }).then(() => process.exit(0));

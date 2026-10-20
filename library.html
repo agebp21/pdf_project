@@ -10,6 +10,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script src="assets/i18n.js"></script>
+<script defer src="/assets/site-header.js"></script>
 <script src="assets/auth.js" defer></script>
 <script src="assets/mf-dialog.js" defer></script>
 <style>
@@ -42,31 +43,66 @@
   .delete:hover{background:#FEF2F2}
   .empty{padding:36px 20px;text-align:center;color:#57534E}
   .notice{margin:14px 0 0;padding:14px 16px;border-radius:16px;font-size:13px;background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C}
+  .tools{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:14px}
+  .tools input{flex:1;min-width:220px;padding:11px 16px;border:1.5px solid #D6CFBF;border-radius:999px;font-size:14px;background:#fff}
+  .tools input:focus{outline:none;border-color:#1A3C34}
+  .tools button,.crumb button,.menu button{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:9px 16px;font:800 12.5px 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer}
+  .tools button:hover,.crumb button:hover{border-color:#1A3C34}
+  .crumb{display:flex;flex-wrap:wrap;align-items:center;gap:8px;margin-top:16px;font-size:15px}
+  .crumb b{font-size:17px;margin-right:6px}
+  .crumb .drop{border-style:dashed}
+  .folders{display:grid;grid-template-columns:repeat(auto-fill,minmax(200px,1fr));gap:12px;margin-top:16px}
+  .folder{display:flex;align-items:center;gap:12px;padding:14px 16px;border-radius:18px;background:#fff;border:1.5px solid #E8E2D4;cursor:pointer;text-align:left;
+    box-shadow:0 6px 16px rgba(28,25,23,.05);transition:.15s;font-family:inherit;color:inherit}
+  .folder:hover{border-color:#1A3C34;transform:translateY(-1px)}
+  .folder .ic{font-size:30px;line-height:1}
+  .folder b{display:block;font-size:14px;overflow-wrap:anywhere}.folder small{color:#78716C;font-size:11.5px}
+  .over{border-color:#FF5C28!important;background:#FFF7ED!important}
+  .book{cursor:default}
+  .book.dragging{opacity:.45}
+  .where{display:inline-flex;align-self:flex-start;font-size:11px;font-weight:700;color:#57534E;background:#F3EFE6;border-radius:999px;padding:3px 9px}
+  .move{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:9px 12px;font-weight:800;font-size:12px;cursor:pointer}
+  .move:hover{border-color:#1A3C34}
+  .menu{position:fixed;z-index:100;background:#fff;border:1px solid #E8E2D4;border-radius:14px;box-shadow:0 14px 34px rgba(28,25,23,.18);padding:6px;min-width:220px;max-height:60vh;overflow:auto}
+  .menu button{display:block;width:100%;text-align:left;border:0;border-radius:10px;padding:9px 12px;margin:0}
+  .menu button:hover{background:#FFF1EA;color:#C2410C}.menu button.on{color:#1A3C34;background:#EFF6EC}
+  .hint{font-size:12px;color:#78716C;margin:8px 2px 0}
   [hidden]{display:none!important}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <nav class="clay-nav">
-    <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=pro" alt="MyFlipbook Pro" width="139" height="34"></a>
-    <div class="nav-right"><span data-auth-slot></span><a href="flipbook.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px" data-en="＋ New book">＋ Buku baru</a><button type="button" class="lang" data-lang-toggle>EN</button></div>
-  </nav>
+  <header data-site-header><a href="flipbook.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px" data-en="＋ New book">＋ Buku baru</a></header>
 
   <h1 class="clay-h">📚 My Library</h1>
-  <p class="lead" data-en="Every flipbook you make is saved here automatically — encrypted on the server, only you can open it.">Semua flipbook yang kamu buat tersimpan otomatis di sini — terenkripsi di server, hanya kamu yang bisa membukanya.</p>
+  <p class="lead" data-en="Every flipbook you make is saved here automatically — encrypted on the server, only you can open it.">Semua flipbook yang Anda buat tersimpan otomatis di sini — terenkripsi di server, hanya Anda yang bisa membukanya.</p>
 
   <div id="login" class="clay-panel empty" hidden>
-    <p data-en="Log in to see your library.">Masuk dulu untuk melihat My Library-mu.</p>
+    <p data-en="Log in to see your library.">Masuk dulu untuk melihat My Library Anda.</p>
     <a class="clay-btn clay-btn-primary" href="login.html?next=library.html" data-en="Log in">Masuk</a>
   </div>
   <div id="usage" class="clay-panel usage" hidden>
     <b id="usage-books"></b><div class="meter" id="meter"><span></span></div><small id="usage-bytes"></small>
     <a class="clay-btn clay-btn-ghost" href="account.html" style="padding:7px 14px;font-size:12px" id="upgrade" hidden data-en="More space">Tambah ruang</a>
   </div>
+  <div id="tools" class="tools" hidden>
+    <input id="search" type="search" placeholder="Cari judul atau folder di My Library…" data-en-ph="Search titles or folders in My Library…" aria-label="Cari di My Library" data-en-aria="Search My Library" autocomplete="off">
+    <button type="button" id="new-folder" data-en="📁 New folder">📁 Folder baru</button>
+  </div>
+  <nav id="crumb" class="crumb" hidden aria-label="Folder">
+    <button type="button" id="back" class="drop" title="Seret buku ke sini untuk mengeluarkannya dari folder" data-en-title="Drop a book here to take it out of the folder" data-en="‹ My Library">‹ My Library</button>
+    <b id="crumb-name"></b>
+    <button type="button" id="rename-folder" data-en="✎ Rename">✎ Ganti nama</button>
+    <button type="button" id="delete-folder" data-en="🗑 Delete folder">🗑 Hapus folder</button>
+  </nav>
+  <p id="hint" class="hint" hidden data-en="Tip: double-click a book to open it; drag a book onto a folder to move it.">Tips: klik 2× buku untuk membukanya; seret buku ke folder untuk memindahkannya.</p>
   <div id="notice" class="notice" role="alert" hidden></div>
+  <div id="folders" class="folders"></div>
   <div id="grid" class="grid"></div>
+  <div id="none" class="clay-panel empty" hidden><p data-en="Nothing matches that search.">Tidak ada judul atau folder yang cocok.</p></div>
+  <div id="folder-empty" class="clay-panel empty" hidden><p data-en="This folder is empty. Drag books here, or use 📁 on a book.">Folder ini masih kosong. Seret buku ke sini, atau pakai tombol 📁 di buku.</p></div>
   <div id="empty" class="clay-panel empty" hidden>
-    <p data-en="No books yet. Make your first flipbook — it's saved here automatically.">Belum ada buku. Buat flipbook pertamamu — otomatis tersimpan di sini.</p>
+    <p data-en="No books yet. Make your first flipbook — it's saved here automatically.">Belum ada buku. Buat flipbook pertama Anda — otomatis tersimpan di sini.</p>
     <a class="clay-btn clay-btn-primary" href="flipbook.html" data-en="＋ Make a flipbook">＋ Buat flipbook</a>
   </div>
 </div>
@@ -79,6 +115,80 @@
   const when = t => new Date(t * 1000).toLocaleString(L('en-GB', 'id-ID'), {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'});
   const KIND = {html: '🌐 HTML', apk: '🤖 APK', exe: '🪟 EXE'};
   const covers = [];
+  let books = [], folders = [], here = null, query = '', menu = null;     // here: the open folder's id (null: the top)
+  const folderOf = id => folders.find(f => f.id === id);
+  async function send(path, body) {
+    const response = await fetch(path, {method: 'POST', credentials: 'same-origin', headers: {Accept: 'application/json', 'Content-Type': 'application/json'}, body: JSON.stringify(body || {})});
+    const data = await response.json().catch(() => ({}));
+    if (!response.ok) throw Error(data.error || 'HTTP ' + response.status);
+    return data;
+  }
+  function closeMenu() { if (menu) { menu.remove(); menu = null; } }
+  addEventListener('pointerdown', e => { if (menu && !menu.contains(e.target)) closeMenu(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape') closeMenu(); });
+  async function moveBook(book, folder) {
+    closeMenu();
+    if ((book.folder || null) === (folder || null)) return;
+    try { await send(`/api/library/${book.id}/move`, {folder: folder || null}); book.folder = folder || null; await load(); }
+    catch (e) { notice(e.message); }
+  }
+  async function newFolder(then) {
+    const name = await MFDialog.prompt({title: L('New folder', 'Folder baru'), icon: '📁', placeholder: L('e.g. Thesis references', 'mis. Referensi skripsi'), ok: L('Make', 'Buat'), cancel: L('Cancel', 'Batal')});
+    if (!name) return;
+    try { const {id} = await send('/api/library/folders', {name}); await load(); if (then) await then(id); }
+    catch (e) { notice(e.message); }
+  }
+  function moveMenu(book, anchor) {
+    closeMenu();
+    const r = anchor.getBoundingClientRect();
+    menu = el('div', {className: 'menu', role: 'menu'});
+    const item = (text, fn, on) => { const b = el('button', {type: 'button', textContent: text, className: on ? 'on' : ''}); b.onclick = fn; menu.append(b); };
+    item(L('⌂ No folder (top)', '⌂ Tanpa folder (atas)'), () => moveBook(book, null), !book.folder);
+    folders.forEach(f => item('📁 ' + f.name, () => moveBook(book, f.id), book.folder === f.id));
+    item(L('＋ New folder…', '＋ Folder baru…'), () => { closeMenu(); newFolder(id => moveBook(book, id)); });
+    document.body.append(menu);
+    menu.style.left = Math.min(r.left, innerWidth - menu.offsetWidth - 12) + 'px';
+    menu.style.top = (r.bottom + 6 + menu.offsetHeight > innerHeight ? r.top - menu.offsetHeight - 6 : r.bottom + 6) + 'px';
+  }
+  // A folder (or the way back) takes a book dropped on it.
+  function dropTarget(node, folder) {
+    node.addEventListener('dragover', e => { if (e.dataTransfer.types.includes('text/x-book')) { e.preventDefault(); node.classList.add('over'); } });
+    node.addEventListener('dragleave', () => node.classList.remove('over'));
+    node.addEventListener('drop', e => {
+      e.preventDefault(); node.classList.remove('over');
+      const book = books.find(b => b.id === e.dataTransfer.getData('text/x-book'));
+      if (book) moveBook(book, folder);
+    });
+  }
+  function folderTile(f) {
+    const tile = el('button', {type: 'button', className: 'folder', title: L('Open the folder', 'Buka folder')},
+      el('span', {className: 'ic', textContent: '📁'}), el('span', null, el('b', {textContent: f.name}), el('small', {textContent: L(`${f.books} book${f.books === 1 ? '' : 's'}`, `${f.books} buku`)})));
+    tile.onclick = () => openFolder(f.id);
+    dropTarget(tile, f.id);
+    return tile;
+  }
+  function openFolder(id) {
+    here = id; $('#search').value = ''; query = '';
+    try { history.replaceState(null, '', id ? '#folder=' + id : location.pathname); } catch (e) {}
+    render(); scrollTo({top: 0});
+  }
+  function render() {
+    covers.splice(0).forEach(url => URL.revokeObjectURL(url));
+    if (here && !folderOf(here)) here = null;
+    const q = query.toLowerCase(), searching = !!q;
+    const shownFolders = searching ? folders.filter(f => f.name.toLowerCase().includes(q)) : here ? [] : folders;
+    const shownBooks = searching ? books.filter(b => b.title.toLowerCase().includes(q) || ((folderOf(b.folder) || {}).name || '').toLowerCase().includes(q))
+      : books.filter(b => (b.folder || null) === here);
+    $('#folders').replaceChildren(...shownFolders.map(folderTile));
+    $('#grid').replaceChildren(...shownBooks.map(b => card(b, searching)));
+    const f = folderOf(here);
+    $('#crumb').hidden = !f || searching;
+    if (f) $('#crumb-name').textContent = '📁 ' + f.name;
+    $('#empty').hidden = !!(books.length || folders.length) || searching;
+    $('#none').hidden = !(searching && !shownBooks.length && !shownFolders.length);
+    $('#folder-empty').hidden = !(f && !searching && !shownBooks.length);
+    $('#hint').hidden = !books.length;
+  }
   function notice(text) { $('#notice').textContent = text || ''; $('#notice').hidden = !text; }
   async function api(method, path) {
     const response = await fetch(path, {method, credentials: 'same-origin', headers: {Accept: 'application/json'}});
@@ -92,9 +202,9 @@
     const fraction = Math.max(u.maxBooks == null ? 0 : u.books / u.maxBooks, u.bytes / u.maxBytes);
     $('#meter').firstElementChild.style.width = Math.min(100, Math.round(fraction * 100)) + '%';
     $('#meter').classList.toggle('full', fraction >= 0.9);
-    const planName = {free: 'Free', pro: 'Pro', business: 'Business'}[u.plan] || u.plan;   // the plan's name, as on the price list
+    const planName = u.planName || u.plan;   // the plan's name, as on the price list
     $('#usage-bytes').textContent = L(`${size(u.bytes)} of ${size(u.maxBytes)} · ${planName} plan`, `${size(u.bytes)} dari ${size(u.maxBytes)} · paket ${planName}`);
-    $('#upgrade').hidden = u.plan === 'business';
+    $('#upgrade').hidden = u.plan === 'pro';      // the biggest plan
   }
   async function cover(book, box) {
     if (!book.hasCover) return;
@@ -105,7 +215,7 @@
       box.style.backgroundImage = `url("${url}")`; box.textContent = '';
     } catch (e) {}
   }
-  function card(book) {
+  function card(book, searching) {
     const box = el('div', {className: 'cover', textContent: '📖'});
     cover(book, box);
     const files = el('div', {className: 'files'});
@@ -119,25 +229,54 @@
       remove.disabled = true;
       try { await api('POST', `/api/library/${book.id}/delete`); load(); } catch (e) { notice(e.message); remove.disabled = false; }
     };
-    return el('article', {className: 'clay-panel book'},
-      box, el('h3', {textContent: book.title}),
+    const move = el('button', {type: 'button', className: 'move', textContent: '📁', title: L('Move to a folder', 'Pindahkan ke folder'), ariaLabel: L('Move ', 'Pindahkan ') + book.title});
+    move.onclick = () => moveMenu(book, move);
+    const where = searching && book.folder && folderOf(book.folder) ? el('span', {className: 'where', textContent: '📁 ' + folderOf(book.folder).name}) : null;
+    const node = el('article', {className: 'clay-panel book', draggable: true, title: L('Double-click to open', 'Klik 2× untuk membuka')},
+      box, el('h3', {textContent: book.title}), where,
       el('div', {className: 'meta', textContent: L(`${book.pageCount || '?'} pages · ${size(book.size)} · changed ${when(book.updatedAt)}`, `${book.pageCount || '?'} halaman · ${size(book.size)} · diubah ${when(book.updatedAt)}`)}),
       files,
-      el('div', {className: 'actions'}, el('a', {className: 'clay-btn clay-btn-primary', href: `flipbook.html?library=${book.id}`, textContent: L('✎ Open in the editor', '✎ Buka di editor')}), remove));
+      el('div', {className: 'actions'}, el('a', {className: 'clay-btn clay-btn-primary', href: `flipbook.html?library=${book.id}`, textContent: L('✎ Open in the editor', '✎ Buka di editor')}), move, remove));
+    // Double-click opens the book (not on its buttons and links).
+    node.addEventListener('dblclick', e => { if (!e.target.closest('a,button')) location.href = `flipbook.html?library=${book.id}`; });
+    node.addEventListener('dragstart', e => { e.dataTransfer.setData('text/x-book', book.id); e.dataTransfer.effectAllowed = 'move'; node.classList.add('dragging'); });
+    node.addEventListener('dragend', () => node.classList.remove('dragging'));
+    return node;
   }
   async function load() {
     covers.splice(0).forEach(url => URL.revokeObjectURL(url));
     try {
-      const {books, usage} = await api('GET', '/api/library');
-      renderUsage(usage);
-      $('#grid').replaceChildren(...books.map(card));
-      $('#empty').hidden = books.length > 0;
+      const data = await api('GET', '/api/library');
+      books = data.books; folders = data.folders || [];
+      renderUsage(data.usage);
+      $('#tools').hidden = false;
+      render();
       notice('');
     } catch (e) {
       if (e.status === 401) { $('#login').hidden = false; $('#usage').hidden = true; return; }
       notice(L('My Library could not be loaded: ', 'My Library tidak bisa dimuat: ') + e.message);
     }
   }
+  // Search as you type; folders: open from the hash (a reload stays in the folder), rename, delete.
+  $('#search').addEventListener('input', e => { query = e.target.value.trim(); render(); });
+  $('#new-folder').onclick = () => newFolder();
+  $('#back').onclick = () => openFolder(null);
+  dropTarget($('#back'), null);
+  $('#rename-folder').onclick = async () => {
+    const f = folderOf(here); if (!f) return;
+    const name = await MFDialog.prompt({title: L('Rename folder', 'Ganti nama folder'), icon: '✎', value: f.name, ok: L('Save', 'Simpan'), cancel: L('Cancel', 'Batal')});
+    if (!name || name === f.name) return;
+    try { await send(`/api/library/folders/${f.id}/rename`, {name}); await load(); } catch (e) { notice(e.message); }
+  };
+  $('#delete-folder').onclick = async () => {
+    const f = folderOf(here); if (!f) return;
+    if (!await MFDialog.confirm({title: L(`Delete the folder "${f.name}"?`, `Hapus folder "${f.name}"?`), danger: true,
+      message: L('Its books are kept: they go back to the top of My Library.', 'Bukunya tidak ikut terhapus: kembali ke halaman utama My Library.'),
+      ok: L('Delete folder', 'Hapus folder'), cancel: L('Cancel', 'Batal')})) return;
+    try { await send(`/api/library/folders/${f.id}/delete`); here = null; openFolder(null); await load(); } catch (e) { notice(e.message); }
+  };
+  const fromHash = (location.hash.match(/^#folder=([0-9a-f]{32})$/) || [])[1];
+  if (fromHash) here = fromHash;
   load();
   document.addEventListener('langchange', load);
 })();

@@ -100,7 +100,7 @@ def failed(ip):
 # ---------- the numbers --------------------------------------------------
 def paid_active(row, now):
     # Same rule as accounts.public_user: a paid plan needs an end date in the future.
-    return row['plan'] != 'free' and bool(row['plan_expires_at']) and row['plan_expires_at'] > now
+    return row['plan'] not in ('free', 'basic') and bool(row['plan_expires_at']) and row['plan_expires_at'] > now
 
 
 def overview(now=None):
@@ -119,7 +119,7 @@ def overview(now=None):
                 out['new30'] += 1 if u['created_at'] > now - 30 * 86400 else 0
                 active = paid_active(u, now)
                 out['paid'] += 1 if active else 0
-                plan = u['plan'] if active else 'free'
+                plan = u['plan'] if active else 'basic'
                 out['plans'][plan] = out['plans'].get(plan, 0) + 1
             for r in db.execute("SELECT currency, COUNT(*) AS n, COALESCE(SUM(amount), 0) AS total FROM orders WHERE status='paid' GROUP BY currency"):
                 out['revenue'][r['currency']] = dict(orders=r['n'], total=r['total'])
@@ -184,10 +184,16 @@ def member(user_id, now=None):
                          for o in db.execute('SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 100', (user_id,))]
         out['books'] = uploads_rows(db, 'WHERE b.user_id=?', [user_id], 500) if has_table(db, 'library_books') else []
         out['sessions'] = db.execute('SELECT COUNT(*) FROM sessions WHERE user_id=? AND expires_at>?', (user_id, now)).fetchone()[0]
+        # this month's summary words against the plan's allowance (accounts.SUMMARY_WORDS)
+        start, end = accounts.month_bounds(now)
+        used = db.execute("SELECT COALESCE(SUM(amount), 0) FROM usage WHERE user_id=? AND kind='summary_words' AND at>=?",
+                          (user_id, start)).fetchone()[0] if has_table(db, 'usage') else 0
+        tier = r['plan'] if r['plan'] in accounts.PAID and paid_active(r, now) else 'medium'
+        out['summaryWords'] = dict(used=used, limit=accounts.SUMMARY_WORDS.get(tier), resetAt=end)
         if 'referred_by' in r.keys():
             by = db.execute('SELECT email FROM users WHERE id=?', (r['referred_by'],)).fetchone() if r['referred_by'] else None
             subscribed = db.execute("""SELECT COUNT(DISTINCT u.id) FROM users u JOIN orders o ON o.user_id=u.id
-                                       WHERE u.referred_by=? AND o.status='paid' AND o.plan IN ('pro','business')""", (user_id,)).fetchone()[0]
+                                       WHERE u.referred_by=? AND o.status='paid' AND o.plan IN ('medium','pro')""", (user_id,)).fetchone()[0]
             rewards = db.execute('SELECT COUNT(*) FROM referral_rewards WHERE user_id=?', (user_id,)).fetchone()[0] if has_table(db, 'referral_rewards') else 0
             out['referral'] = dict(code=r['ref_code'], referredBy=by['email'] if by else None,
                                    signups=db.execute('SELECT COUNT(*) FROM users WHERE referred_by=?', (user_id,)).fetchone()[0],

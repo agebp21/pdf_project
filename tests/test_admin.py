@@ -29,9 +29,9 @@ class AdminTests(unittest.TestCase):
         self.bob = store.user_for(store.register('bob@example.com', 'secret-pass-2', 'Bob'))
         now = int(time.time())
         with store.connect() as db:
-            db.execute("UPDATE users SET plan='pro', plan_expires_at=? WHERE id=?", (now + 86400 * 20, self.alice['id']))
+            db.execute("UPDATE users SET plan='medium', plan_expires_at=? WHERE id=?", (now + 86400 * 20, self.alice['id']))
             db.execute("INSERT INTO orders(id, user_id, plan, cycle, amount, status, provider, created_at, paid_at, currency) "
-                       "VALUES('o1', ?, 'pro', 'monthly', 49000, 'paid', 'mock', ?, ?, 'IDR')", (self.alice['id'], now, now))
+                       "VALUES('o1', ?, 'medium', 'monthly', 49000, 'paid', 'mock', ?, ?, 'IDR')", (self.alice['id'], now, now))
             db.executescript('''CREATE TABLE library_books(id TEXT PRIMARY KEY, user_id INTEGER, title TEXT, page_count INTEGER, size INTEGER,
                                   has_cover INTEGER, created_at INTEGER, updated_at INTEGER);
                                 CREATE TABLE library_exports(id TEXT PRIMARY KEY, book_id TEXT, user_id INTEGER, kind TEXT, filename TEXT,
@@ -129,7 +129,7 @@ class AdminTests(unittest.TestCase):
         ro = admin_server.read_only(self.db)
         try:
             with self.assertRaises(sqlite3.OperationalError):
-                ro.execute("UPDATE users SET plan='free'")
+                ro.execute("UPDATE users SET plan='basic'")
         finally:
             ro.close()
         self.assertEqual(self.call('POST', '/api/logout', {})[0], 200)
@@ -163,15 +163,15 @@ class GrantPlan(unittest.TestCase):
             store = accounts.Accounts(str(Path(tmp) / 'a.sqlite3'))
             store.register('m@example.com', 'secret-pass-1')
             now = int(time.time())
-            u = store.grant_plan('M@example.com', 'business', None, now)
-            self.assertEqual((u['plan'], u['planExpiresAt']), ('business', accounts.Accounts.LIFETIME))
-            u = store.grant_plan('m@example.com', 'pro', 30, now)
-            self.assertEqual(u['plan'], 'pro'); self.assertEqual(u['planExpiresAt'], now + 30 * 86400)
-            u = store.grant_plan('m@example.com', 'pro', 10, now)
+            u = store.grant_plan('M@example.com', 'pro', None, now)
+            self.assertEqual((u['plan'], u['planExpiresAt']), ('pro', accounts.Accounts.LIFETIME))
+            u = store.grant_plan('m@example.com', 'medium', 30, now)
+            self.assertEqual(u['plan'], 'medium'); self.assertEqual(u['planExpiresAt'], now + 30 * 86400)
+            u = store.grant_plan('m@example.com', 'medium', 10, now)
             self.assertEqual(u['planExpiresAt'], now + 40 * 86400, 'added after the running period')
-            self.assertEqual(store.grant_plan('m@example.com', 'free', None, now)['plan'], 'free')
+            self.assertEqual(store.grant_plan('m@example.com', 'basic', None, now)['plan'], 'basic')
             with self.assertRaises(accounts.AccountError):
-                store.grant_plan('nobody@example.com', 'pro', 30)
+                store.grant_plan('nobody@example.com', 'medium', 30)
             with self.assertRaises(accounts.AccountError):
                 store.grant_plan('m@example.com', 'gold', 30)
 

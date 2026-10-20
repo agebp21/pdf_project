@@ -35,21 +35,47 @@
   .notice.err{background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C}
   section{margin-top:28px}
   .head{display:flex;flex-wrap:wrap;align-items:end;justify-content:space-between;gap:12px;margin-bottom:12px}
-  .toggle{display:inline-flex;background:#fff;border:1px solid #E4DED0;border-radius:999px;padding:4px;box-shadow:inset 0 2px 6px rgba(28,25,23,.05)}
-  .toggle button{border:0;background:transparent;border-radius:999px;padding:8px 14px;font-weight:800;font-size:12px;cursor:pointer;color:#57534E}
-  .toggle button.on{background:#1A3C34;color:#FFF7EA}
   .method{display:flex;align-items:center;gap:8px;font-size:12px;font-weight:800}
   .method select{border:1px solid #E4DED0;border-radius:999px;padding:8px 12px;background:#fff;font:700 12px 'Plus Jakarta Sans',sans-serif;max-width:260px}
-  .head-right{display:flex;flex-wrap:wrap;gap:10px;align-items:center}
-  .plans{display:grid;grid-template-columns:repeat(auto-fit,minmax(240px,1fr));gap:14px}
-  .plan{padding:20px;display:flex;flex-direction:column;gap:10px;position:relative}
-  .plan.current{outline:2px solid #1A3C34}
-  .plan h3{margin:0;font-size:20px}
-  .price{font-family:'Fraunces',Georgia,serif;font-weight:900;font-size:26px}
-  .price small{font:700 12px 'Plus Jakarta Sans',sans-serif;color:#78716C}
-  .save{font-size:11px;font-weight:800;color:#15803D;min-height:14px}
-  .plan ul{margin:0;padding-left:18px;font-size:12.5px;line-height:1.7;color:#57534E;flex:1}
-  .plan .clay-btn{width:100%}
+  /* Plans: the price list's design (Paket & Harga) */
+  #plansSection .phead{display:flex;justify-content:space-between;align-items:flex-end;gap:16px;flex-wrap:wrap;margin-bottom:18px}
+  #plansSection .ptitle{margin:0;font-family:'Fraunces',Georgia,serif;font-weight:800;font-size:30px;letter-spacing:-.4px;line-height:1.1}
+  #plansSection .switches{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+  #plansSection .cycle{display:flex;padding:4px;gap:4px;background:#fff;border:1px solid #E5E0D8;border-radius:999px}
+  #plansSection .cycle button{display:inline-flex;align-items:center;gap:8px;min-height:40px;padding:0 16px;border:0;border-radius:999px;font:600 14px 'Plus Jakarta Sans',sans-serif;cursor:pointer;background:transparent;color:#1C1A17}
+  #plansSection .cycle button:hover{color:#5F5A52}
+  #plansSection .cycle button.on{background:#1C1A17;color:#fff}
+  #plansSection .cycle b{font-size:11px;font-weight:700;padding:3px 8px;border-radius:999px;background:#FDECEC;color:#B00808}
+  #plansSection .cycle b:empty{display:none}
+  #plansSection .cycle button.on b{background:#fff}
+  #plansSection .method{display:flex;align-items:center;gap:8px;font:600 14px 'Plus Jakarta Sans',sans-serif;color:#1C1A17}
+  #plansSection .method select{min-height:48px;border:1px solid #E5E0D8;border-radius:999px;padding:0 16px;background:#fff;font:600 14px 'Plus Jakarta Sans',sans-serif;color:#1C1A17;max-width:260px;cursor:pointer}
+  .plans3{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:24px;align-items:stretch}
+  .plans3 .plan{display:flex;flex-direction:column;padding:32px 28px 28px;background:#fff;border:1px solid #E5E0D8;border-radius:20px;color:#1C1A17;cursor:pointer;transition:border-color .15s,box-shadow .15s}
+  .plans3 .plan:not(.hot){margin:1px}
+  .plans3 .plan.hot{border:2px solid #D40B0B;box-shadow:0 12px 32px rgba(28,26,23,.10)}
+  .plans3 .ph{display:flex;justify-content:space-between;align-items:center;gap:8px;min-height:30px}
+  .plans3 h3{margin:0;font:600 22px 'Plus Jakarta Sans',sans-serif}
+  .plans3 .badges{display:flex;gap:5px;flex-wrap:wrap;justify-content:flex-end}
+  .plans3 .badge{font-size:11.5px;font-weight:700;padding:5px 9px;border-radius:999px;background:#FDECEC;color:#B00808;white-space:nowrap}
+  .plans3 .badge.mine{background:#1C1A17;color:#fff}
+  .plans3 .pd{margin:8px 0 0;font-size:14px;line-height:1.45;color:#5F5A52;min-height:40px}
+  .plans3 .pp{display:flex;align-items:baseline;flex-wrap:wrap;gap:6px;margin-top:20px}
+  .plans3 .big{font-size:38px;font-weight:800;letter-spacing:-1px;line-height:1.1}
+  .plans3 .per{font-size:15px;color:#5F5A52}
+  .plans3 .was{font-size:16px;font-weight:700;color:#A8A29E}
+  .plans3 .pn{margin:6px 0 0;font-size:13px;line-height:1.45;color:#5F5A52;min-height:38px}
+  .plans3 ul{list-style:none;margin:18px 0 28px;padding:0;display:flex;flex-direction:column;gap:10px}
+  .plans3 li{display:flex;gap:10px;align-items:flex-start;font-size:14px;line-height:1.45}
+  .plans3 li svg{flex:none;margin-top:1px;color:#1C1A17}.plans3 .plan.hot li svg{color:#D40B0B}
+  .plans3 .pc{display:flex;align-items:center;justify-content:center;width:100%;min-height:48px;margin-top:auto;border:0;border-radius:999px;font:700 15px 'Plus Jakarta Sans',sans-serif;color:#fff;background:#1C1A17;text-decoration:none;cursor:pointer;transition:transform .15s,box-shadow .15s}
+  .plans3 .plan.hot .pc{background:#D40B0B}
+  .plans3 .pc:hover:not(:disabled){transform:translateY(-2px);box-shadow:0 10px 22px rgba(28,26,23,.18);color:#fff}
+  .plans3 .pc:disabled{background:#F3F0EA!important;color:#78716C;cursor:default}
+  .plans3 .renew{margin-top:10px;border:0;background:none;font:700 13px 'Plus Jakarta Sans',sans-serif;color:#5F5A52;text-decoration:underline;cursor:pointer;align-self:center}
+  .plans3 .renew:hover:not(:disabled){color:#D40B0B}
+  .plans3 .renew:disabled{opacity:.5;cursor:default}
+  @media (max-width:900px){.plans3{grid-template-columns:1fr}}
   table{width:100%;border-collapse:collapse;font-size:12.5px}
   th,td{text-align:left;padding:10px 12px;border-bottom:1px solid #EFE9DC}
   th{font-size:11px;letter-spacing:.06em;text-transform:uppercase;color:#78716C}
@@ -71,21 +97,15 @@
   .referral .stats b{font-size:16px}
   .invoice-link{display:inline-block;padding:6px 10px;border-radius:999px;border:1px solid #E4DED0;background:#fff;color:#1A3C34;font-weight:800;font-size:11.5px;text-decoration:none;white-space:nowrap}
   .invoice-link:hover{background:#EFF6EC}
+  button.invoice-link{cursor:pointer;font-family:inherit}
+  .invoice-tools{display:inline-flex;gap:6px;flex-wrap:wrap}
   .fine{font-size:11.5px;margin-top:8px}
   [hidden]{display:none!important}
-  .price s.was{font-size:.55em;font-weight:700;color:#A8A29E;margin-right:2px}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <nav class="clay-nav">
-    <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=pro" alt="MyFlipbook Pro" width="139" height="34"></a>
-    <div class="nav-right">
-      <a href="library.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">📚 My Library</a>
-      <button type="button" class="lang" data-lang-toggle>EN</button>
-      <a href="index.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px" data-i18n="auth.back">← All tools</a>
-    </div>
-  </nav>
+  <header data-site-header><a href="library.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px">📚 My Library</a></header>
 
   <h1 class="clay-h" id="pageTitle" data-i18n="acct.title">Your account</h1>
   <div class="clay-panel profile" id="profile" hidden>
@@ -102,7 +122,7 @@
     <div id="usageRows"></div>
   </div>
   <div class="clay-panel referral" id="referral" hidden>
-    <h2 class="clay-h" data-i18n="ref.title">Invite friends, get Pro free</h2>
+    <h2 class="clay-h" data-i18n="ref.title">Invite friends, get Medium free</h2>
     <p class="clay-muted" id="refRule"></p>
     <div class="ref-link"><input id="refLink" readonly aria-label="Referral link"><button type="button" class="clay-btn clay-btn-dark" id="refCopy" data-i18n="ref.copy">Copy link</button></div>
     <div class="bar"><span id="refBar" style="width:0%"></span></div>
@@ -111,21 +131,21 @@
   </div>
 
   <section id="plansSection">
-    <div class="head">
-      <h2 class="clay-h" data-i18n="acct.plans">Plans</h2>
-      <div class="head-right">
+    <div class="phead">
+      <h2 class="ptitle" data-i18n="acct.plans">Plans</h2>
+      <div class="switches">
         <label class="method" id="methodBox" hidden><span data-i18n="acct.method">Payment method</span> <select id="method"></select></label>
-        <div class="toggle" role="group" aria-label="Currency">
+        <div class="cycle" role="group" aria-label="Currency">
           <button type="button" data-currency="IDR">Rp</button>
           <button type="button" data-currency="USD">$ USD</button>
         </div>
-        <div class="toggle" role="group">
-          <button type="button" data-cycle="monthly" class="on" data-i18n="acct.monthly">Monthly</button>
-          <button type="button" data-cycle="yearly" data-i18n="acct.yearly">Yearly</button>
+        <div class="cycle" role="group" aria-label="Periode pembayaran">
+          <button type="button" data-cycle="monthly" class="on"><span data-i18n="acct.monthly">Monthly</span></button>
+          <button type="button" data-cycle="yearly"><span data-i18n="acct.yearly">Yearly</span><b id="saveBadge"></b></button>
         </div>
       </div>
     </div>
-    <div class="plans" id="plans"></div>
+    <div class="plans3" id="plans"></div>
     <p class="fine clay-muted" data-i18n="acct.draft">Rupiah (QRIS, bank transfer, e-wallet) for Indonesia; US dollars (card, PayPal) everywhere else.</p>
   </section>
 
@@ -137,6 +157,7 @@
     </table></div>
   </section>
 </div>
+<script defer src="/assets/site-header.js"></script>
 <script src="assets/auth.js"></script>
 <script>
 (function(){
@@ -154,7 +175,7 @@
   let savedCurrency=null;try{savedCurrency=localStorage.getItem('mf-currency');}catch(e){}
   const date=s=>new Date(s*1000).toLocaleDateString(lang(),{day:'numeric',month:'short',year:'numeric'});
   const orderParam=new URLSearchParams(location.search).get('order');
-  let state={user:null,plans:[],providers:{},paymentsEnabled:{},orders:[],cycle:'monthly',methods:[],
+  let state={user:null,plans:[],providers:{},paymentsEnabled:{},orders:[],cycle:new URLSearchParams(location.search).get('cycle')==='yearly'?'yearly':'monthly',methods:[],
     currency:savedCurrency==='IDR'||savedCurrency==='USD'?savedCurrency:defaultCurrency()};
   const payable=()=>state.paymentsEnabled[state.currency]!==false;
   const priceOf=(plan,cycle)=>state.currency==='USD'?plan.usd[cycle]:plan[cycle];
@@ -181,37 +202,71 @@
     $('verified').className='verified'+(u.verified===false?' no':'');
     $('verified').textContent=u.verified===false?(id?'Belum terverifikasi':'Not verified'):(id?'✓ Terverifikasi':'✓ Verified')+(u.google?' · Google':'');
     $('planChip').textContent=u.planName;
-    $('planChip').className='chip'+(u.plan!=='free'?' paid':'');
+    $('planChip').className='chip'+(u.plan!=='basic'?' paid':'');
     $('until').textContent=u.planExpiresAt?t('acct.until','Active until')+' '+date(u.planExpiresAt):'';
   }
 
+  // The plans as on the price list (seo.py plan_cards): monthly shows the month's price, yearly
+  // the price per month billed once a year.
+  const PLAN_DESC={basic:['Untuk mencoba dan kebutuhan PDF sehari-hari.','For trying out and everyday PDF tasks.'],
+    medium:['Untuk guru, dosen, mahasiswa, dan penulis.','For teachers, lecturers, students and writers.'],
+    pro:['Untuk penerbit, UMKM, sekolah, dan instansi.','For publishers, small businesses, schools and institutions.']};
+  const CHECK='<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
+  const saveOf=plan=>{const m=priceOf(plan,'monthly');return m?Math.round((1-priceOf(plan,'yearly')/(m*12))*100):0;};
+  // The highlighted plan: the one picked, else the next step up (Medium from Basic, Pro from Medium).
+  const picked=()=>state.pick||(state.user&&state.user.plan!=='basic'?'pro':'medium');
   function renderPlans(){
-    const grid=$('plans');grid.replaceChildren();
+    const id=lang()==='id-ID',grid=$('plans');grid.replaceChildren();
+    const per=t('acct.perMonth','/month');
+    const cuts=state.plans.filter(p=>!p.free).map(saveOf).filter(n=>n>0),top=cuts.length?Math.max(...cuts):0;
+    $('saveBadge').textContent=top?t('acct.save','save')+' '+(new Set(cuts).size>1?(id?'s.d. ':'up to '):'')+top+'%':'';
     state.plans.forEach(plan=>{
-      const current=state.user&&state.user.plan===plan.id;
-      const card=el('div',{className:'clay-panel plan'+(current?' current':'')});
-      const price=priceOf(plan,state.cycle);
-      const per=state.cycle==='yearly'?t('acct.perYear','/year'):t('acct.perMonth','/month');
-      const priceNode=el('div',{className:'price'});
-      // Launch price: the normal monthly price struck through (rupiah, monthly view only).
-      if(state.currency==='IDR'&&state.cycle==='monthly'&&plan.listMonthly>price&&price)
-        priceNode.append(el('s',{className:'was',textContent:money(plan.listMonthly,'IDR')}),' ');
-      priceNode.append(money(price,state.currency));
-      priceNode.append(' ',el('small',{textContent:plan.id==='free'?t('acct.free','Free'):per}));
-      const saving=state.cycle==='yearly'&&priceOf(plan,'monthly')?Math.round((1-priceOf(plan,'yearly')/(priceOf(plan,'monthly')*12))*100):0;
-      const list=el('ul');(plan.features[lang()==='id-ID'?'id':'en']||[]).forEach(f=>list.append(el('li',{textContent:f})));
-      card.append(el('h3',{className:'clay-h',textContent:plan.name}),priceNode,
-        el('div',{className:'save',textContent:saving>0?t('acct.save','save')+' '+saving+'%':''}),list);
+      const current=state.user&&state.user.plan===plan.id,hot=plan.id===picked();
+      const card=el('div',{className:'plan'+(hot?' hot':'')+(current?' current':'')});
+      card.dataset.plan=plan.id;
+      // a click on a plan (its button too) brings the highlight to it
+      card.addEventListener('click',()=>{state.pick=plan.id;document.querySelectorAll('.plans3 .plan').forEach(c=>c.classList.toggle('hot',c===card));});
+      const badges=el('div',{className:'badges'});
+      if(plan.id==='medium')badges.append(el('span',{className:'badge',textContent:id?'Paling populer':'Most popular'}));
+      if(current)badges.append(el('span',{className:'badge mine',textContent:t('acct.active','Your plan')}));
+      card.append(el('div',{className:'ph'},el('h3',{textContent:plan.name}),badges),
+        el('p',{className:'pd',textContent:(PLAN_DESC[plan.id]||['',''])[id?0:1]}));
+      const pp=el('div',{className:'pp'}),note=el('p',{className:'pn'});
+      if(plan.free){
+        pp.append(el('span',{className:'big',textContent:t('acct.free','Free')}));
+        note.textContent=id?'Tanpa biaya langganan.':'No subscription fee.';
+      }else{
+        const m=priceOf(plan,'monthly'),y=priceOf(plan,'yearly');
+        const month=state.currency==='USD'?Math.round(y/12):Math.round(y/12/100)*100;   // a year's price per month
+        if(state.cycle==='monthly'){
+          // launch price: the normal monthly price struck through (rupiah)
+          if(state.currency==='IDR'&&plan.listMonthly>m&&m)pp.append(el('s',{className:'was',textContent:money(plan.listMonthly,'IDR')}));
+          pp.append(el('span',{className:'big',textContent:money(m,state.currency)}),el('span',{className:'per',textContent:per}));
+          note.textContent=id?`atau ${money(month,state.currency)}/bulan jika bayar tahunan`:`or ${money(month,state.currency)}/month billed yearly`;
+        }else{
+          pp.append(el('span',{className:'big',textContent:money(month,state.currency)}),el('span',{className:'per',textContent:per}));
+          note.textContent=id?`ditagih ${money(y,state.currency)}/tahun · hemat ${saveOf(plan)}%`:`billed ${money(y,state.currency)}/year · save ${saveOf(plan)}%`;
+        }
+      }
+      const list=el('ul');
+      (plan.features[id?'id':'en']||[]).forEach(f=>{const li=el('li');li.innerHTML=CHECK;li.append(el('span',{textContent:f}));list.append(li);});
+      card.append(pp,note,list);
       if(!state.user){
         // Guest: pricing is public; choosing a plan goes through login first.
-        card.append(el('a',{className:'clay-btn '+(plan.id==='free'?'clay-btn-ghost':'clay-btn-primary'),
-          href:'login.html?mode=register&next='+encodeURIComponent('account.html'),
-          textContent:plan.id==='free'?t('acct.startFree','Start free'):t('acct.choose','Choose')+' '+plan.name}));
-      }else if(plan.id==='free'){
-        if(current)card.append(el('button',{className:'clay-btn clay-btn-ghost',disabled:true,textContent:t('acct.active','Your plan')}));
+        card.append(el('a',{className:'pc',href:'login.html?mode=register&next='+encodeURIComponent('account.html'),
+          textContent:plan.free?t('acct.startFree','Start free')+' →':t('acct.choose','Choose')+' '+plan.name+' →'}));
+      }else if(current){
+        // the member's own plan: marked as current; a paid one can still be extended (paid per period)
+        card.append(el('button',{className:'pc',type:'button',disabled:true,textContent:id?'Paket Anda saat ini':'Your current plan'}));
+        if(!plan.free){
+          const renew=el('button',{className:'renew',type:'button',textContent:(id?'Perpanjang masa aktif':'Extend your plan')+' →',disabled:!payable()});
+          renew.addEventListener('click',()=>checkout(plan.id,renew));
+          card.append(renew);
+        }
+      }else if(plan.free){
+        card.append(el('button',{className:'pc',type:'button',disabled:true,textContent:id?'Selalu gratis':'Always free'}));
       }else{
-        const button=el('button',{className:'clay-btn '+(current?'clay-btn-dark':'clay-btn-primary'),type:'button',
-          textContent:current?t('acct.extend','Extend'):t('acct.choose','Choose')+' '+plan.name,disabled:!payable()});
+        const button=el('button',{className:'pc',type:'button',textContent:t('acct.choose','Choose')+' '+plan.name+' →',disabled:!payable()});
         button.addEventListener('click',()=>checkout(plan.id,button));
         card.append(button);
       }
@@ -233,9 +288,30 @@
         el('td',{textContent:(plan?plan.name:o.plan)+' · '+t('acct.'+o.cycle,o.cycle)}),
         el('td',{textContent:money(o.amount,o.currency)}),
         el('td',{textContent:t('status.'+o.status,o.status)}),
-        el('td',{},o.status==='paid'?el('a',{className:'invoice-link',href:'/api/billing/orders/'+encodeURIComponent(o.id)+'/invoice.pdf',
-          download:'MyFlipbook-INV-'+o.id+'.pdf',textContent:'⬇ PDF'}):'—')));
+        el('td',{},o.status==='paid'?el('span',{className:'invoice-tools'},
+          el('a',{className:'invoice-link',href:'/api/billing/orders/'+encodeURIComponent(o.id)+'/invoice.pdf',download:'MyFlipbook-INV-'+o.id+'.pdf',textContent:'⬇ PDF'}),
+          printButton(o.id)):'—')));
     });
+  }
+
+  // Print an invoice: the PDF in a hidden frame, the browser's print dialog over it
+  // (a browser that cannot print a framed PDF gets it in a new tab).
+  function printButton(id){
+    const b=el('button',{type:'button',className:'invoice-link',textContent:'🖨 '+t('acct.print','Print')});
+    b.addEventListener('click',async()=>{
+      b.disabled=true;
+      try{
+        const r=await fetch('/api/billing/orders/'+encodeURIComponent(id)+'/invoice.pdf',{credentials:'same-origin',cache:'no-store'});
+        if(!r.ok)throw Error((await r.json().catch(()=>({}))).error||t('acct.invoiceFail','The invoice could not be opened.'));
+        const url=URL.createObjectURL(new Blob([await r.arrayBuffer()],{type:'application/pdf'}));
+        const frame=el('iframe',{title:'Invoice'});frame.style.cssText='position:fixed;right:0;bottom:0;width:1px;height:1px;border:0;opacity:0';
+        frame.onload=()=>{try{frame.contentWindow.focus();frame.contentWindow.print();}catch(e){window.open(url,'_blank');}};
+        frame.src=url;document.body.append(frame);
+        setTimeout(()=>{frame.remove();URL.revokeObjectURL(url);},120000);
+      }catch(error){notice('err',error.message);}
+      finally{b.disabled=false;}
+    });
+    return b;
   }
 
   function renderOrderNotice(){
@@ -341,7 +417,7 @@
     try{r=await MFAuth.api('GET','/api/auth/referral');}catch(e){return;}
     $('referral').hidden=false;
     $('refLink').value=r.link;
-    $('refRule').textContent=t('ref.rule','Share your link. Every {n} friends who sign up through it and subscribe to Pro or Business give you {d} days of Pro free (or more days of your current paid plan).').replace('{n}',r.target).replace('{d}',r.days);
+    $('refRule').textContent=t('ref.rule','Share your link. Every {n} friends who sign up through it and subscribe to Medium or Pro give you {d} days of Medium free (or more days of your current paid plan).').replace('{n}',r.target).replace('{d}',r.days);
     const done=r.subscribed%r.target;
     $('refBar').style.width=(done/r.target*100)+'%';
     $('refNext').textContent=t('ref.next','{x} of {n} friends subscribed — {left} more for the next free month.').replace('{x}',done).replace('{n}',r.target).replace('{left}',r.toNext);

@@ -250,7 +250,7 @@
     var translate = async function (request, lang) {
       try { return await options.translate(request, lang); }
       catch (first) {
-        if (/budget|quota|429|402|Pro|Business|log in|masuk/i.test(first && first.message)) throw first;   // retrying won't help
+        if (/budget|quota|429|402|Medium|Pro|Business|log in|masuk/i.test(first && first.message)) throw first;   // retrying won't help
         await new Promise(function (resolve) { setTimeout(resolve, options.retryDelay === undefined ? 1500 : options.retryDelay); });
         return options.translate(request, lang);
       }

@@ -15,22 +15,242 @@
 <script defer src="assets/pdf-words.js"></script>
 <script defer src="assets/export/layout.js"></script>
 <script defer src="assets/flipbook-transfer.js"></script>
+<script defer src="assets/ocr-engine.js"></script>
 <script src="assets/i18n.js"></script>
+<script defer src="/assets/site-header.js"></script>
 <script defer src="assets/auth.js"></script>
 <script defer src="assets/mf-dialog.js"></script>
 <script defer src="assets/add-source.js"></script>
+<script defer src="assets/pdf-layout.js"></script>
+<script defer src="assets/notebook-work.js"></script>
 <style>
   *{box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
   body{margin:0;min-height:100dvh;background:#FBFAF7;color:#1C1917}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:-1;
     background:radial-gradient(700px 420px at 50% 0%,#EDE9FE 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
-  .wrap{max-width:1100px;margin:0 auto;padding:12px 16px 56px}
+  .wrap{max-width:1500px;margin:0 auto;padding:12px 16px 56px}
+  .workspace{display:grid;grid-template-columns:300px minmax(0,1fr);grid-template-areas:"src view";gap:16px;align-items:start;margin-top:18px}
+  .sources{grid-area:src}.viewer{grid-area:view}
+  .col-h-sub{margin-top:8px;padding-top:14px;border-top:1px solid #EFE9DC}
+  .col-h{margin:0 0 2px;font:700 14px 'Plus Jakarta Sans',sans-serif;color:#1C1917}
+  .viewer-top:not(:has(button:not([hidden]))){display:none}     /* no tabs yet: no empty bar */
+  .side .clay-btn:disabled{background:#fff;color:#A8A29E;border-color:#EFE9DC;box-shadow:none;opacity:1}
+  .sources .doc-btns{flex-direction:column}
+  .sources .doc-btns .clay-btn{width:100%;font-size:13px;padding:9px 12px}
+  .doc-card{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid #EFE9DC;border-radius:12px;background:#FAF8F4}
+  .doc-ico{color:#78716C;padding-top:2px}.doc-ico::before{margin:0}
+  .doc-text{display:grid;gap:2px;min-width:0}
+  .doc .doc-name{font-weight:700;font-size:13.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
+  .doc .doc-meta{font-size:12px;color:#78716C}
+  .hl-box{display:grid;gap:6px;margin-top:4px;padding-top:10px;border-top:1px solid #EFE9DC}
+  .hl-head{display:flex;align-items:center;gap:8px}
+  .link-btn{margin-left:auto;border:0;background:none;padding:2px 4px;font:700 12px 'Plus Jakarta Sans',sans-serif;color:#78716C;cursor:pointer;border-radius:6px}
+  .link-btn:hover{color:#FF5C28}
+  .hl-list{list-style:none;margin:0;padding:0;display:grid;gap:4px;max-height:46vh;overflow:auto}
+  .hl-item{display:flex;gap:8px;align-items:flex-start;width:100%;text-align:left;border:0;background:none;padding:7px 8px;border-radius:10px;cursor:pointer;font:500 12.5px/1.45 'Plus Jakarta Sans',sans-serif;color:#44403C}
+  .hl-item:hover{background:#FAF4E8}
+  .hl-item b{flex:none;font-size:11px;font-weight:800;color:#1C1917;background:#FFE680;border-radius:6px;padding:1px 6px;margin-top:1px}
+  .hl-item span{flex:1;min-width:0;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+  .hl-item i{flex:none;font-style:normal;color:#A8A29E;padding:0 2px}.hl-item i:hover{color:#B91C1C}
+  .side{background:#fff;border:1px solid #ECE7DD;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:10px}
+  .side .sep{width:100%;border:0;border-top:1px solid #EFE9DC;margin:8px 0 2px}
+  .side .status:empty{display:none}                   /* no reserved line while there is nothing to say */
+  /* a feature the plan lacks: an orange crown after the label (a pseudo-element: scripts rewrite the labels) */
+  .plan-lock::after{content:"";display:inline-block;width:17px;height:14px;margin-left:7px;vertical-align:-2px;background:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2020%22%3E%3Cg%20fill%3D%22%23F97316%22%3E%3Cpath%20d%3D%22M2.2%206.2%207%2010l5-6.6L17%2010l4.8-3.8-1.9%209.6H4.1z%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2216.6%22%20width%3D%2216%22%20height%3D%222.6%22%20rx%3D%221.1%22%2F%3E%3Ccircle%20cx%3D%222.2%22%20cy%3D%225.2%22%20r%3D%221.9%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%222.3%22%20r%3D%222%22%2F%3E%3Ccircle%20cx%3D%2221.8%22%20cy%3D%225.2%22%20r%3D%221.9%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E") no-repeat center/contain}
+  .plan-lock:hover::after,.plan-lock:focus-visible::after{background-image:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2020%22%3E%3Cg%20fill%3D%22%23ffffff%22%3E%3Cpath%20d%3D%22M2.2%206.2%207%2010l5-6.6L17%2010l4.8-3.8-1.9%209.6H4.1z%22%2F%3E%3Crect%20x%3D%224%22%20y%3D%2216.6%22%20width%3D%2216%22%20height%3D%222.6%22%20rx%3D%221.1%22%2F%3E%3Ccircle%20cx%3D%222.2%22%20cy%3D%225.2%22%20r%3D%221.9%22%2F%3E%3Ccircle%20cx%3D%2212%22%20cy%3D%222.3%22%20r%3D%222%22%2F%3E%3Ccircle%20cx%3D%2221.8%22%20cy%3D%225.2%22%20r%3D%221.9%22%2F%3E%3C%2Fg%3E%3C%2Fsvg%3E")}
+  .side .desc{margin:0;font-size:12px;color:#57534E;line-height:1.5}
+  .side .clay-btn{padding:10px 14px;font-size:13px;width:100%}
+  .doc-btns{display:flex;gap:6px;width:100%}.doc-btns .clay-btn{flex:1;padding:8px 10px;font-size:12px}
+  .viewer{background:#fff;border:1px solid #ECE7DD;border-radius:20px;overflow:hidden;min-height:72vh;display:flex;flex-direction:column}
+  .viewer-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:10px;padding:10px 14px;background:#fff;color:#78716C;
+    border-bottom:1px solid #F1ECE2;font-size:11px;font-weight:800;letter-spacing:.12em}
+  .vtabs{display:flex;gap:6px;letter-spacing:0}
+  .vtabs button{border:1px solid #E8E2D6;background:#fff;color:#44403C;border-radius:999px;padding:6px 14px;font:700 12px 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+  .vtabs button:hover{border-color:#FF5C28;color:#FF5C28}
+  .vtabs button[aria-selected=true]{background:#1C1917;border-color:#1C1917;color:#fff}
+  .viewer-body{flex:1;padding:26px 22px;overflow:auto;max-height:78vh;background:#fff;display:flex;flex-direction:column;align-items:center}
+  .sheet{width:100%;max-width:760px;min-height:60vh;box-sizing:border-box;background:transparent;padding:14px 8px 40px;flex:none}
+  .viewer-empty{display:grid;place-content:center;text-align:center;color:#78716C;gap:4px}
+  .vpanel[data-panel=doc]{width:100%}
+  .doc-bar{max-width:800px;margin:0 auto 14px;justify-content:flex-end}
+  .side .clay-btn-primary:not(:disabled),.side .clay-btn-ghost{background:#fff;color:#1C1917;border-color:#E4DED0;box-shadow:none}
+  .side .clay-btn:not(:disabled):hover,.side .clay-btn:not(:disabled):focus-visible,.mini button:not(:disabled):hover,.mini button:not(:disabled):focus-visible{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border-color:#E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.35)}
+  .vpanel .result[contenteditable]{outline:none;border-radius:6px;cursor:text}
+  .vpanel .result[contenteditable]:focus{box-shadow:0 0 0 2px #FFD9C9}
+  .edit-hint{margin:0 0 12px;font-size:11.5px;color:#A8A29E}
+  .ocr-stop{align-self:flex-start;border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:5px 12px;font:700 11.5px 'Plus Jakarta Sans',sans-serif;color:#44403C;cursor:pointer}
+  .ocr-stop:hover{background:#FF5C28;color:#fff;border-color:#E04E1F}
+  .seg{display:flex;border:1px solid #D6CFBF;border-radius:999px;background:#fff;padding:3px;gap:2px}
+  .seg button{flex:1;border:0;background:transparent;border-radius:999px;padding:7px 4px;font:700 12px 'Plus Jakarta Sans',system-ui,sans-serif;color:#57534E;cursor:pointer}
+  .seg button:hover{color:#FF5C28}
+  .seg button[aria-checked=true]{background:#1A3C34;color:#FFF7EA}
+  .field{height:36px;padding:0 12px;border:1px solid #D6CFBF;border-radius:12px;background:#fff;font:600 12.5px 'Plus Jakarta Sans',system-ui,sans-serif;color:#1C1917;min-width:0}
+  .field:focus,.ask-form textarea:focus{outline:none;border-color:#FF5C28}
+  fieldset:disabled .seg,fieldset:disabled .field{opacity:.55}
+  .side .field{width:100%;box-sizing:border-box}
+  .pref{display:inline-block;margin:0 1px;padding:0 7px;border-radius:999px;background:#FFF1EA;color:#C2410C;font-size:.82em;font-weight:700;text-decoration:none;cursor:pointer;white-space:nowrap;vertical-align:1px}
+  .pref:hover{background:#FF5C28;color:#fff}
+  .doc-page.flash{box-shadow:0 0 0 4px #FF5C28,0 10px 30px rgba(0,0,0,.14);transition:box-shadow .3s}
+  .busy{display:flex;flex-direction:column;gap:12px}
+  .busy-label{margin:0 0 10px;font:700 13px 'Plus Jakarta Sans',sans-serif;color:#1A3C34}
+  .busy i{display:block;height:12px;border-radius:6px;background:linear-gradient(90deg,#F1ECE2 25%,#FBF8F2 50%,#F1ECE2 75%);background-size:200% 100%;animation:shimmer 1.3s infinite linear}
+  .busy i:nth-of-type(1){width:30%}.busy i:nth-of-type(2){width:92%}.busy i:nth-of-type(3){width:85%}.busy i:nth-of-type(4){width:40%;margin-top:14px}.busy i:nth-of-type(5){width:88%}.busy i:nth-of-type(6){width:70%}
+  @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
+  @media (prefers-reduced-motion:reduce){.busy i{animation:none}}
+  /* Ask the document: a chat (ChatGPT / Claude style) filling the viewer */
+  .viewer-body.chat{padding:0;background:#fff;overflow:hidden;display:block}
+  .viewer{scroll-margin-top:96px}
+  .ask{display:flex;flex-direction:column;height:min(78vh,860px);width:100%}
+  .chat-top{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:8px 14px 0;font-size:13px}
+  .chat-title{font:700 15px 'Fraunces',Georgia,serif;color:#1A3C34}
+  .chat-doc{flex:1;min-width:0;color:#78716C;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .chat-new{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:6px 12px;font:700 12px 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer}
+  .chat-new:hover{background:#FF5C28;color:#fff;border-color:#E04E1F}
+  .ask-log{flex:1;overflow-y:auto;padding:24px 18px 12px;display:flex;flex-direction:column;gap:22px;scroll-behavior:smooth}
+  .ask-log>*{width:100%;max-width:760px;margin:0 auto}
+  .ask-hello{margin:auto;text-align:center;color:#57534E}
+  .hello-mark{width:52px;height:52px;margin:0 auto 12px;border-radius:16px;display:grid;place-items:center;font-size:24px;color:#fff;background:linear-gradient(135deg,#FF7A45,#FF5C28);box-shadow:0 10px 24px rgba(255,92,40,.3)}
+  .ask-hello h3{margin:0 0 6px;font:800 24px 'Fraunces',Georgia,serif;color:#1C1917}
+  .ask-hello p{margin:0 auto 18px;max-width:520px;font-size:13.5px;line-height:1.6}
+  .ask-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;text-align:left}
+  .ask-chips button{text-align:left;border:1px solid #E8E2D4;background:#fff;border-radius:14px;padding:12px 14px;font:600 13px/1.4 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
+  .ask-chips button:hover{border-color:#FF5C28;box-shadow:0 6px 16px rgba(28,25,23,.08);transform:translateY(-1px)}
+  .msg{display:flex;gap:12px;font-size:15px;line-height:1.7;color:#1C1917}
+  .msg.me{justify-content:flex-end}
+  .msg.me .msg-body{max-width:80%;background:#F3EFE6;border-radius:20px;padding:10px 16px;white-space:pre-wrap;overflow-wrap:anywhere}
+  .msg .av{flex:none;width:30px;height:30px;border-radius:50%;display:grid;place-items:center;font-size:14px;color:#fff;background:linear-gradient(135deg,#FF7A45,#FF5C28);margin-top:2px}
+  .msg.ai .msg-body{flex:1;min-width:0;overflow-wrap:anywhere}
+  .msg-body p{margin:0 0 10px}.msg-body p:last-child{margin-bottom:0}.msg-body ul{margin:4px 0 10px;padding-left:22px}.msg-body li{margin:3px 0}
+  .msg-body p.head{font-weight:800;margin-top:6px}
+  .msg.typing .msg-body{white-space:pre-wrap}
+  .msg.error .msg-body{color:#B91C1C}
+  .msg-tools{display:flex;gap:4px;margin-top:6px}
+  .msg-tools button{border:0;background:none;border-radius:8px;padding:4px 8px;font:700 11.5px 'Plus Jakarta Sans',sans-serif;color:#78716C;cursor:pointer}
+  .msg-tools button:hover{background:#F3EFE6;color:#1C1917}
+  .dots{display:inline-flex;gap:4px;align-items:center;height:26px}
+  .dots i{width:7px;height:7px;border-radius:50%;background:#C9BFAA;animation:dot 1.2s infinite ease-in-out}
+  .dots i:nth-child(2){animation-delay:.15s}.dots i:nth-child(3){animation-delay:.3s}
+  @keyframes dot{0%,80%,100%{transform:translateY(0);opacity:.5}40%{transform:translateY(-5px);opacity:1}}
+  .wait-sec{margin-left:8px;font-size:12px;color:#A8A29E}
+  @media (prefers-reduced-motion:reduce){.dots i{animation:none}}
+  .ask-form{padding:8px 18px 12px;background:#fff}
+  .composer{max-width:760px;margin:0 auto;display:flex;align-items:flex-end;gap:8px;border:1.5px solid #E4DED0;border-radius:24px;padding:8px 8px 8px 16px;background:#fff;box-shadow:0 6px 20px rgba(28,25,23,.06);transition:border-color .15s}
+  .composer:focus-within{border-color:#FF5C28}
+  .composer textarea{flex:1;min-width:0;border:0;outline:none;resize:none;max-height:180px;padding:7px 0;background:transparent;font:500 15px/1.5 'Plus Jakarta Sans',system-ui,sans-serif;color:#1C1917}
+  .ask-send{flex:none;width:38px;height:38px;border-radius:50%;border:0;display:grid;place-items:center;color:#fff;background:#1C1917;cursor:pointer;transition:background .15s,transform .15s}
+  .ask-send:hover:not(:disabled){background:#FF5C28;transform:translateY(-1px)}
+  .ask-send:disabled{background:#D6CFBF;cursor:default}
+  .composer-hint{max-width:760px;margin:6px auto 0;text-align:center;font-size:11px;color:#A8A29E}
+  @media (max-width:900px){.ask{height:72vh}.ask-chips{grid-template-columns:1fr}.msg.me .msg-body{max-width:90%}}
+  .viewer.over .viewer-body{outline:3px dashed #FF5C28;outline-offset:-10px}
+  .doc-pages{display:flex;flex-direction:column;align-items:center;gap:18px}
+  .doc-page{position:relative;width:100%;max-width:800px;background:#fff;border:1px solid #ECE7DD;border-radius:6px;overflow:hidden}
+  .doc-page canvas{display:block;width:100%;height:100%}
+  /* Stabilo: the page's text layer (selectable, invisible) over the picture, the marks under it */
+  .doc-page .textLayer{position:absolute;inset:0;overflow:hidden;line-height:1;text-align:initial;z-index:2;forced-color-adjust:none}
+  .doc-page .textLayer span,.doc-page .textLayer br{color:transparent;position:absolute;white-space:pre;cursor:text;transform-origin:0 0}
+  .doc-page .textLayer ::selection{background:rgba(255,196,0,.38)}
+  .doc-page .textLayer .endOfContent{display:block;position:absolute;inset:100% 0 0;z-index:-1;cursor:default;user-select:none}
+  .doc-page .textLayer.selecting .endOfContent{top:0}
+  .doc-page .hl-layer{position:absolute;inset:0;pointer-events:none;z-index:1}
+  .doc-page .hl-mark{position:absolute;background:rgba(255,214,0,.45);border-radius:2px;mix-blend-mode:multiply}
+  .doc-page.whole{box-shadow:0 0 0 3px #FFD600}
+  .doc-page.whole::after{content:"";position:absolute;inset:0;background:rgba(255,214,0,.12);pointer-events:none;z-index:1}
+  .page-pick{position:absolute;top:8px;right:8px;z-index:3;border:1px solid #E4DED0;background:rgba(255,255,255,.95);border-radius:999px;padding:5px 11px;font:700 11.5px 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer;opacity:0;transition:opacity .15s}
+  .doc-page:hover .page-pick,.doc-page.whole .page-pick,.page-pick:focus-visible{opacity:1}
+  .page-pick:hover{background:#FF5C28;color:#fff;border-color:#E04E1F}
+  .page-pick[aria-pressed=true]{background:#FFD600;border-color:#E6B800;color:#1C1917}
+  .hl-pop{position:fixed;z-index:70;border:1px solid #E6B800;background:#FFD600;color:#1C1917;border-radius:999px;padding:7px 14px;font:800 12.5px 'Plus Jakarta Sans',sans-serif;cursor:pointer;box-shadow:0 8px 20px rgba(28,25,23,.18)}
+  .hl-pop:hover{background:#FF5C28;color:#fff;border-color:#E04E1F}
+  .hl-info{margin-right:auto;font-size:12.5px;color:#57534E}
+  .hl-info b{color:#1C1917}
+  @media (hover:none){.page-pick{opacity:1}}
+  .viewer-empty span{font-size:52px;color:#C9BFAA}.viewer-empty h2{margin:0;font:700 24px 'Fraunces',Georgia,serif;color:#1A3C34}.viewer-empty p{margin:0;font-size:13px}
+  .vpanel .result{max-height:none;border:0;background:transparent;padding:0;font-size:15px;line-height:1.75}
+  .vpanel textarea.result{width:100%;box-sizing:border-box;min-height:60vh;border:1px solid #EFE9DC;border-radius:10px;padding:12px 14px;background:#fff}
+  .vpanel .mini{margin-top:14px}
+  @media (max-width:900px){.workspace{grid-template-columns:1fr;grid-template-areas:"src" "view"}.viewer{min-height:50vh}.viewer-body{max-height:none;padding:12px}.sheet{min-height:50vh;padding:10px 4px 30px}}
+  /* The workspace: Notes, Journal draft, Slides (assets/notebook-work.js) */
+  .sheet.work{max-width:860px}.sheet.work.wide{max-width:1000px}
+  .wbar{position:sticky;top:-26px;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 0;margin-bottom:12px;background:#fff;border-bottom:1px solid #F1ECE2}
+  .wbar button,.wsel{height:32px;border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:0 12px;font:700 12px 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer}
+  .wbar button:hover:not(:disabled),.wbar button:focus-visible{background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;border-color:#E04E1F}
+  .wbar button:disabled{opacity:.5;cursor:default}
+  .wbar .fmt{width:32px;padding:0;display:inline-grid;place-items:center;font-size:13px}
+  .wbar [data-ico]::before,.jhead [data-ico]::before{width:14px;height:14px;margin-right:5px;vertical-align:-2px}
+  .wsel{padding:0 10px}
+  .wsep{width:1px;height:20px;background:#E8E2D6;margin:0 4px}
+  .wgrow{flex:1}
+  .vpanel.work .status{margin:0 0 10px}.vpanel.work .status:empty{display:none}
+  .wdoc{outline:none;min-height:1.7em;font-size:15px;line-height:1.75;color:#1C1917;cursor:text;overflow-wrap:anywhere}
+  .wdoc:empty::before,.slide-face [data-ph]:empty::before{content:attr(data-ph);color:#A8A29E;pointer-events:none}
+  .wdoc.notes{min-height:56vh}
+  .wdoc p{margin:0 0 8px}.wdoc ul,.wdoc ol{margin:4px 0 10px;padding-left:22px}
+  .wdoc h3{margin:18px 0 6px;font:800 18px/1.35 'Fraunces',Georgia,serif;color:#1A3C34}
+  .wdoc blockquote{margin:8px 0;padding:6px 12px;border-left:3px solid #FFD600;background:#FFFBEA;border-radius:0 8px 8px 0;color:#44403C}
+  .journal{display:grid;gap:4px}
+  .jsec{padding:10px 12px 12px;border:1px solid transparent;border-radius:12px}
+  .jsec:focus-within{border-color:#FFE1D3;background:#FFFCFA}
+  .jsec.writing{background:linear-gradient(90deg,#FFF4EE 25%,#fff 50%,#FFF4EE 75%);background-size:200% 100%;animation:shimmer 1.3s infinite linear}
+  .jsec.writing .wdoc{opacity:.45}
+  .jhead{display:flex;align-items:center;gap:8px;margin-bottom:4px}
+  .jhead h3{flex:1;margin:0;font:800 11px 'Plus Jakarta Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#78716C}
+  .jhead button{border:0;background:none;border-radius:8px;padding:4px 8px;font:700 12px 'Plus Jakarta Sans',sans-serif;color:#78716C;cursor:pointer}
+  .jhead button:hover:not(:disabled),.jhead button:focus-visible{background:#FF5C28;color:#fff}
+  .jhead button:disabled{opacity:.5;cursor:default}
+  .jtitle .wdoc{font:800 26px/1.3 'Fraunces',Georgia,serif;color:#1C1917}
+  .wempty{margin:48px 0;text-align:center;color:#A8A29E;font-size:13px}
+  .slides{list-style:none;margin:0;padding:0;display:grid;gap:20px}
+  .slide-card{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:14px;align-items:start}
+  .slide-face{position:relative;container-type:inline-size;aspect-ratio:16/9;overflow:hidden;background:#fff center/cover no-repeat;border:1px solid #E8E2D6;border-radius:10px;box-shadow:0 6px 18px rgba(28,25,23,.06)}
+  .slide-face .it{position:absolute;box-sizing:border-box}
+  .slide-face .it.img img{display:block;width:100%;height:100%;user-select:none;-webkit-user-drag:none}
+  .slide-face .it-text{white-space:pre-wrap;overflow-wrap:anywhere;line-height:1.2;outline:none;min-height:1.2em}
+  .slide-face.edit .it.txt .it-text{cursor:text}
+  .slide-face.edit .it.img{cursor:move}
+  .slide-face.edit .it:hover{outline:1px dashed rgba(255,92,40,.6);outline-offset:1px}
+  .slide-face.edit .it.on{outline:2px solid #FF5C28;outline-offset:1px;z-index:5}
+  .slide-face .it-text:empty::before{content:attr(data-ph);color:#A8A29E}
+  .slide-face .h-move,.slide-face .h-size{display:none;position:absolute;width:14px;height:14px;background:#FF5C28;border:2px solid #fff;box-shadow:0 1px 4px rgba(0,0,0,.3);z-index:6;touch-action:none}
+  .slide-face .h-move{left:-9px;top:-9px;border-radius:50%;cursor:move}
+  .slide-face .h-size{right:-9px;bottom:-9px;border-radius:3px;cursor:nwse-resize}
+  .slide-face.edit .it.on .h-move,.slide-face.edit .it.on .h-size{display:block}
+  .pg-wait{position:absolute;inset:0;display:grid;place-items:center;color:#A8A29E;font-size:13px}
+  .pg-tag{position:absolute;left:10px;bottom:10px;padding:2px 9px;border-radius:999px;background:rgba(28,25,23,.62);color:#fff;font:700 11px 'Plus Jakarta Sans',sans-serif;pointer-events:none;z-index:7}
+  .slide-side{display:grid;gap:8px;align-content:start}
+  .slide-adds,.bg-row,.it-bar{display:flex;flex-wrap:wrap;align-items:center;gap:4px}
+  .it-bar:empty{display:none}
+  .it-bar{padding:6px;border:1px solid #FFE1D3;border-radius:10px;background:#FFFAF7}
+  .slide-side .tool{min-width:30px;height:30px;padding:0 8px;display:inline-grid;grid-auto-flow:column;place-items:center;border:1px solid #E8E2D6;border-radius:8px;background:#fff;font:700 12px 'Plus Jakarta Sans',sans-serif;color:#44403C;cursor:pointer}
+  .slide-side .tool.wide{flex:1}
+  .slide-side .tool::before{margin:0 4px 0 0;width:14px;height:14px}
+  .slide-side .tool:hover{background:#FF5C28;border-color:#E04E1F;color:#fff}
+  .slide-side input[type=color]{width:30px;height:30px;padding:2px;border:1px solid #E8E2D6;border-radius:8px;background:#fff;cursor:pointer}
+  .bg-label{width:100%;font:800 10.5px 'Plus Jakarta Sans',sans-serif;letter-spacing:.08em;text-transform:uppercase;color:#78716C}
+  .bg-row .sw{width:22px;height:22px;padding:0;border:1px solid #D6CFBF;border-radius:50%;cursor:pointer}
+  .bg-row .sw.on,.bg-row .sw:hover{box-shadow:0 0 0 2px #fff,0 0 0 4px #FF5C28}
+  .slide-tools{display:flex;align-items:center;gap:4px}
+  .slide-tools .sn{margin-right:auto;font:800 12px 'Plus Jakarta Sans',sans-serif;color:#78716C}
+  .slide-tools .icon{width:30px;height:30px;padding:0;display:grid;place-items:center;border:1px solid #E8E2D6;border-radius:8px;background:#fff;color:#44403C;cursor:pointer}
+  .slide-tools .icon::before{margin:0;width:14px;height:14px}
+  .slide-tools .icon:hover:not(:disabled){background:#FF5C28;border-color:#E04E1F;color:#fff}
+  .slide-tools .icon:disabled{opacity:.35;cursor:default}
+  .sf-notes{width:100%;resize:vertical;border:1px solid #E8E2D6;border-radius:10px;padding:8px 10px;font:500 12.5px/1.5 'Plus Jakarta Sans',sans-serif;color:#44403C}
+  .sf-notes:focus{outline:none;border-color:#FF5C28}
+  .show{position:fixed;inset:0;z-index:200;display:flex;flex-direction:column;align-items:center;justify-content:center;background:#0C0A09;outline:none}
+  .show-stage{width:min(100vw,calc((100vh - 56px) * 16 / 9));cursor:pointer}
+  .show-stage .slide-face{border:0;border-radius:0;box-shadow:none}
+  .show-bar{display:flex;align-items:center;gap:10px;height:56px;color:#D6D3D1;font:700 13px 'Plus Jakarta Sans',sans-serif;opacity:.55;transition:opacity .2s}
+  .show-bar:hover,.show-bar:focus-within{opacity:1}
+  .show-bar button{border:1px solid #44403C;background:transparent;color:#F5F5F4;border-radius:999px;padding:6px 14px;font:700 13px 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+  .show-bar button:hover{background:#FF5C28;border-color:#FF5C28}
+  @media (max-width:900px){.slide-card{grid-template-columns:1fr}.wbar{top:-12px}}
   .nav-right{display:flex;align-items:center;gap:8px}
   .lang{border:1px solid #E8E2D4;background:#E9E4FF;border-radius:999px;padding:7px 12px;font-weight:800;font-size:12px;cursor:pointer}
   h1{margin:32px 0 6px;font-size:32px}
   .lead{margin:0 0 18px;color:#57534E;font-size:14px}
   .source{padding:18px}
-  .drop{display:block;padding:26px 18px;border:2px dashed #D6CFBF;border-radius:18px;text-align:center;color:#57534E;font-size:14px;cursor:pointer}
+  .drop{display:block;padding:16px 12px;border:1.5px dashed #DDD6C8;border-radius:16px;text-align:center;color:#57534E;font-size:13px;cursor:pointer;background:#FAF8F4}
   .drop.is-over{border-color:#4C1D95;background:#F5F3FF}
   .drop b{color:#4C1D95}
   .doc{display:flex;flex-wrap:wrap;align-items:center;gap:10px 16px}
@@ -46,9 +266,13 @@
   .tool .clay-btn{padding:10px 14px;font-size:13px}
   .status{min-height:1.2em;margin:0;font-size:12.5px;color:#4C1D95}
   .status.error{color:#B91C1C}
+  .upgrade-link{display:inline-block;margin-top:6px;padding:6px 12px;border-radius:999px;background:#1C1917;color:#fff;font-weight:800;font-size:12px;text-decoration:none}
+  .upgrade-link:hover{background:#FF5C28;color:#fff}
   .result{max-height:420px;overflow:auto;padding:12px 14px;border-radius:14px;background:#fff;border:1px solid #EFE9DC;font-size:13.5px;line-height:1.6}
   .result p{margin:0 0 8px}
   .result .head{margin:6px 0 4px;font-size:11px;font-weight:800;letter-spacing:.06em;text-transform:uppercase;color:#78716C}
+  .result h3.chapter,.msg-body h3.chapter{margin:26px 0 6px;font:800 18px/1.35 'Fraunces',Georgia,serif;color:#1A3C34}
+  .result h3.chapter:first-of-type{margin-top:30px;padding-top:18px;border-top:1px solid #EFE9DC}
   .result ul{margin:0 0 8px;padding-left:20px}
   textarea.result{width:100%;min-height:220px;resize:vertical;font:12.5px/1.55 ui-monospace,Consolas,monospace}
   .pager{display:flex;align-items:center;gap:8px;font-size:12.5px;font-weight:700}
@@ -57,69 +281,218 @@
   .pager span{flex:1;text-align:center}
   .mini{display:flex;flex-wrap:wrap;gap:8px}
   .mini button{padding:7px 12px;border:1px solid #D6CFBF;border-radius:999px;background:#fff;font:700 12px 'Plus Jakarta Sans',system-ui,sans-serif;cursor:pointer}
-  .mini button:hover{background:#F5F3FF}
+
   .note{margin:20px 2px 0;font-size:11.5px;color:#78716C;line-height:1.6}
   fieldset{border:0;margin:0;padding:0;min-width:0}
   fieldset:disabled{opacity:.45}
+  /* one set of line icons for every control (a mask in the text colour; labels may change) */
+  [data-ico]::before{content:"";display:inline-block;flex:none;width:16px;height:16px;margin-right:7px;vertical-align:-3px;background:currentColor;-webkit-mask:var(--ico) no-repeat center/contain;mask:var(--ico) no-repeat center/contain}
+  .mini [data-ico]::before,.msg-tools [data-ico]::before,.page-pick[data-ico]::before{width:14px;height:14px;margin-right:5px;vertical-align:-2px}
+  [data-ico=note]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%2020h9%22%2F%3E%3Cpath%20d%3D%22M16.5%203.5a2.1%202.1%200%200%201%203%203L7%2019l-4%201%201-4z%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=journal]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M14%203H6a2%202%200%200%200-2%202v14a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V9z%22%2F%3E%3Cpath%20d%3D%22M14%203v6h6%22%2F%3E%3Cpath%20d%3D%22M8%2013h8M8%2017h5%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=slides]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%224%22%20width%3D%2218%22%20height%3D%2212%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M12%2016v4M8%2020h8%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=spark]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%203l1.9%205.1L19%2010l-5.1%201.9L12%2017l-1.9-5.1L5%2010l5.1-1.9z%22%2F%3E%3Cpath%20d%3D%22M19%2015l.8%202.2L22%2018l-2.2.8L19%2021l-.8-2.2L16%2018l2.2-.8z%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=plus]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%205v14M5%2012h14%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=up]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%2019V5M6%2011l6-6%206%206%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=down]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%205v14M6%2013l6%206%206-6%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=play]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M7%204.5v15l12-7.5z%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=image]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%224%22%20width%3D%2218%22%20height%3D%2216%22%20rx%3D%222%22%2F%3E%3Ccircle%20cx%3D%229%22%20cy%3D%2210%22%20r%3D%222%22%2F%3E%3Cpath%20d%3D%22M21%2016l-5-5L5%2020%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=book]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M2%204h6a4%204%200%200%201%204%204v12a3%203%200%200%200-3-3H2z%22%2F%3E%3Cpath%20d%3D%22M22%204h-6a4%204%200%200%200-4%204v12a3%203%200%200%201%203-3h7z%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=swap]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m17%203%204%204-4%204%22%2F%3E%3Cpath%20d%3D%22M21%207H9%22%2F%3E%3Cpath%20d%3D%22m7%2021-4-4%204-4%22%2F%3E%3Cpath%20d%3D%22M3%2017h12%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=summary]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%206h16M4%2011h16M4%2016h10M4%2021h7%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=translate]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m5%208%206%206%22%2F%3E%3Cpath%20d%3D%22m4%2014%206-6%202-3%22%2F%3E%3Cpath%20d%3D%22M2%205h12%22%2F%3E%3Cpath%20d%3D%22M7%202h1%22%2F%3E%3Cpath%20d%3D%22m22%2022-5-10-5%2010%22%2F%3E%3Cpath%20d%3D%22M14%2018h6%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=ask]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M7.9%2020A9%209%200%201%200%204%2016.1L2%2022z%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=doc]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%202H6a2%202%200%200%200-2%202v16a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V7z%22%2F%3E%3Cpath%20d%3D%22M14%202v4a2%202%200%200%200%202%202h4%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=edit]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M21.2%206.8a2.8%202.8%200%200%200-4-4L4%2016v4h4z%22%2F%3E%3Cpath%20d%3D%22m14.5%205.5%204%204%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=copy]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%228%22%20y%3D%228%22%20width%3D%2213%22%20height%3D%2213%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M4%2016a2%202%200%200%201-2-2V4a2%202%200%200%201%202-2h10a2%202%200%200%201%202%202%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=download]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%203v12%22%2F%3E%3Cpath%20d%3D%22m7%2010%205%205%205-5%22%2F%3E%3Cpath%20d%3D%22M5%2021h14%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=upload]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%2015V3%22%2F%3E%3Cpath%20d%3D%22m7%208%205-5%205%205%22%2F%3E%3Cpath%20d%3D%22M5%2021h14%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=mark]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m9%2011-6%206v3h9l3-3%22%2F%3E%3Cpath%20d%3D%22m22%2012-4.6%204.6a2%202%200%200%201-2.8%200l-5.2-5.2a2%202%200%200%201%200-2.8L14%204%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=check]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M20%206%209%2017l-5-5%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=stop]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%226%22%20y%3D%226%22%20width%3D%2212%22%20height%3D%2212%22%20rx%3D%221.5%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=retry]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%2012a9%209%200%201%200%209-9%209.75%209.75%200%200%200-6.74%202.74L3%208%22%2F%3E%3Cpath%20d%3D%22M3%203v5h5%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=trash]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%206h18%22%2F%3E%3Cpath%20d%3D%22M8%206V4h8v2%22%2F%3E%3Cpath%20d%3D%22M6%206l1%2015h10l1-15%22%2F%3E%3C%2Fsvg%3E")}
   [hidden]{display:none!important}
 </style>
 </head>
 <body>
 <div class="wrap">
-  <nav class="clay-nav">
-    <a href="index.html" class="clay-brand"><img class="clay-brand-logo" src="assets/img/logo.png?v=pro" alt="MyFlipbook Pro" width="139" height="34"></a>
-    <div class="nav-right"><span data-auth-slot></span><a href="journals.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px" data-en="🔎 Find Journal & Ebook">🔎 Find Journal & Ebook</a><button type="button" class="lang" data-lang-toggle>EN</button></div>
-  </nav>
+  <header data-site-header></header>
 
-  <h1 class="clay-h">✦ AI Summarizer</h1>
-  <p class="lead" data-en="Upload a PDF and let AI summarise it, translate it, and make a two-host podcast from it.">Upload PDF, lalu biarkan AI meringkas, menerjemahkan, dan membuat podcast dua penyiar dari isinya.</p>
-
-  <section class="clay-panel source">
-    <label id="drop" class="drop" for="file" data-en="<b>📄 Choose a PDF</b> or drag it here<br><small>A PDF with text (scans: run OCR in the Converter first)</small>"><b>📄 Pilih PDF</b> atau seret ke sini<br><small>PDF dengan teks (hasil scan: jalankan OCR di Converter dulu)</small></label>
-    <input id="file" type="file" accept="application/pdf,.pdf" hidden>
-    <div id="doc" class="doc" hidden>
-      <span id="doc-name" class="doc-name"></span>
-      <span id="doc-meta" class="doc-meta"></span>
-      <button id="to-flipbook" class="clay-btn clay-btn-ghost" type="button" data-en="📖 Make a flipbook">📖 Jadikan Flipbook</button>
-      <button id="change" class="clay-btn clay-btn-ghost" type="button" data-en="Change PDF">Ganti PDF</button>
-    </div>
-    <p id="load-status" class="status" role="status"></p>
-  </section>
-
-  <fieldset id="tools" class="tools" disabled>
-    <section class="clay-panel tool">
-      <h2 data-en="📝 Summary">📝 Ringkasan</h2>
-      <p class="desc" data-en="The gist and key points of the document, true to its content.">Intisari dan poin penting dokumen, setia pada isinya.</p>
-      <label class="row"><span data-en="Language">Bahasa</span> <select id="summary-lang"><option value="" data-en="Same as the document">Ikut dokumen</option><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
-      <button id="summary-make" class="clay-btn clay-btn-primary" type="button" data-en="📝 Make a summary">📝 Buat ringkasan</button>
-      <p id="summary-status" class="status" role="status"></p>
-      <div id="summary-out" class="result" hidden></div>
-      <div id="summary-tools" class="mini" hidden><button id="summary-copy" type="button" data-en="Copy">Salin</button><button id="summary-save" type="button">⬇ .txt</button></div>
+  <div class="workspace">
+    <aside class="side sources" aria-label="Sumber" data-en-aria="Source">
+      <h2 class="col-h" data-en="Source">Sumber</h2>
+      <label id="drop" class="drop" for="file" data-en="<b data-ico=&quot;upload&quot;>Choose a PDF</b> or drag it here<br><small>Scanned PDFs work too — their text is read automatically (OCR)</small>"><b data-ico="upload">Pilih PDF</b> atau seret ke sini<br><small>PDF hasil scan juga bisa — teksnya dibaca otomatis (OCR)</small></label>
+      <input id="file" type="file" accept="application/pdf,.pdf" hidden>
+      <div id="doc" class="doc" hidden>
+        <div class="doc-card"><span class="doc-ico" data-ico="doc" aria-hidden="true"></span><div class="doc-text"><span id="doc-name" class="doc-name"></span><span id="doc-meta" class="doc-meta"></span></div></div>
+        <span class="doc-btns"><button id="to-flipbook" class="clay-btn clay-btn-ghost" type="button" data-ico="book" data-en="Make a flipbook">Jadikan Flipbook</button><button id="change" class="clay-btn clay-btn-ghost" type="button" data-ico="swap" data-en="Change PDF">Ganti PDF</button></span>
+        <button id="to-editor" class="clay-btn clay-btn-ghost" type="button" data-ico="edit" data-en="Edit this PDF">Edit PDF ini</button>
+      </div>
+      <p id="load-status" class="status" role="status"></p>
+      <button id="ocr-stop" class="ocr-stop" type="button" hidden data-en="Stop OCR (keep the pages read)">Hentikan OCR (simpan halaman yang sudah terbaca)</button>
+      <h2 class="col-h col-h-sub">Studio</h2>
+      <fieldset id="tools" disabled>
+        <button id="summary-make" class="clay-btn clay-btn-primary" type="button" data-ico="summary" data-en="Make a summary">Buat ringkasan</button>
+        <p id="summary-status" class="status" role="status"></p>
+        <hr class="sep">
+        <label class="row"><span data-en="Into">Ke bahasa</span> <select id="translate-target"><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
+        <button id="translate-make" class="clay-btn clay-btn-primary" type="button" data-ico="translate" data-en="Translate">Terjemahkan</button>
+        <p id="translate-status" class="status" role="status"></p>
+        <hr class="sep">
+        <button id="ask-open" class="clay-btn clay-btn-primary" type="button" data-ico="ask" data-en="Ask the document">Tanya dokumen</button>
+        <hr class="sep">
+        <button id="notes-open" class="clay-btn clay-btn-ghost" type="button" data-ico="note" data-en="Notes">Catatan</button>
+      </fieldset>
+      <div id="hl-box" class="hl-box" hidden>
+        <div class="hl-head"><span id="hl-info" class="hl-info" role="status"></span><button id="hl-clear" class="link-btn" type="button" hidden data-ico="trash" data-en="Clear highlights">Hapus stabilo</button></div>
+        <ol id="hl-list" class="hl-list"></ol>
+      </div>
+    </aside>
+    <section class="viewer" aria-label="Hasil" data-en-aria="Results">
+      <div class="viewer-top">
+        <div class="vtabs" role="tablist">
+          <button type="button" role="tab" data-view="doc" hidden data-ico="doc" data-en="Document">Dokumen</button>
+          <button type="button" role="tab" data-view="summary" hidden data-ico="summary" data-en="Summary">Ringkasan</button>
+          <button type="button" role="tab" data-view="translate" hidden data-ico="translate" data-en="Translation">Terjemahan</button>
+          <button type="button" role="tab" data-view="ask" hidden data-ico="ask" data-en="Ask">Tanya</button>
+          <button type="button" role="tab" data-view="notes" hidden data-ico="note" data-en="Notes">Catatan</button>
+          <button type="button" role="tab" data-view="journal" hidden data-ico="journal" data-en="Journal">Jurnal</button>
+          <button type="button" role="tab" data-view="slides" hidden data-ico="slides" data-en="Slides">Slide</button>
+        </div></div>
+      <div class="viewer-body">
+        <div id="viewer-empty" class="viewer-empty sheet"><span>✦</span><h2 data-en="Choose a PDF to start">Pilih PDF untuk mulai</h2>
+          <p data-en="Then highlight what matters on its pages.">Lalu stabilo bagian yang penting di halamannya.</p></div>
+        <div class="vpanel" data-panel="doc" hidden><div id="doc-pages" class="doc-pages"></div></div>
+        <div class="vpanel sheet" data-panel="summary" hidden><div id="summary-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Ringkasan (bisa diedit)" data-en-aria="Summary (editable)"></div><div id="summary-tools" class="mini" hidden><button id="summary-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="summary-save" type="button" data-ico="download">.txt</button></div></div>
+        <div class="vpanel sheet" data-panel="translate" hidden><div id="translate-pager" class="pager" hidden><button id="tr-prev" type="button" aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><span id="tr-page"></span><button id="tr-next" type="button" aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div><div id="translate-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Terjemahan (bisa diedit)" data-en-aria="Translation (editable)"></div><div id="translate-tools" class="mini" hidden><button id="translate-save" type="button" data-ico="download">.txt</button></div></div>
+        <div class="vpanel sheet work" data-panel="notes" hidden>
+          <div class="wbar" id="notes-bar"><button type="button" class="fmt" data-cmd="h3" title="Subjudul" data-en-title="Subheading">H</button><button type="button" class="fmt" data-cmd="bold" title="Tebal (Ctrl+B)" data-en-title="Bold (Ctrl+B)"><b>B</b></button><button type="button" class="fmt" data-cmd="italic" title="Miring (Ctrl+I)" data-en-title="Italic (Ctrl+I)"><i>I</i></button><button type="button" class="fmt" data-cmd="insertUnorderedList" title="Daftar" data-en-title="List">•</button><button type="button" class="fmt" data-cmd="quote" title="Kutipan" data-en-title="Quote">❝</button><span class="wsep"></span><button id="notes-quotes" type="button" data-ico="mark" data-en="Insert highlights">Sisipkan stabilo</button><button id="notes-summary" type="button" data-ico="summary" data-en="Insert AI summary">Sisipkan ringkasan AI</button><span class="wgrow"></span><button id="notes-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="notes-docx" type="button" data-ico="download">.docx</button></div>
+          <p id="notes-status" class="status" role="status"></p>
+          <div id="notes-out" class="wdoc notes" aria-label="Catatan" data-en-aria="Notes" data-ph="Tulis catatan atau ringkasan Anda sendiri…"></div>
+        </div>
+        <div class="vpanel sheet work" data-panel="journal" hidden>
+          <div class="wbar" id="journal-bar"><span class="wsep"></span><button type="button" class="fmt" data-cmd="bold" title="Tebal (Ctrl+B)" data-en-title="Bold (Ctrl+B)"><b>B</b></button><button type="button" class="fmt" data-cmd="italic" title="Miring (Ctrl+I)" data-en-title="Italic (Ctrl+I)"><i>I</i></button><button type="button" class="fmt" data-cmd="insertUnorderedList" title="Daftar" data-en-title="List">•</button><span class="wgrow"></span><button id="journal-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="journal-docx" type="button" data-ico="download">.docx</button><button id="journal-clear" type="button" class="fmt" data-ico="trash" title="Kosongkan draf" data-en-title="Empty the draft" aria-label="Kosongkan draf" data-en-aria="Empty the draft"></button></div>
+          <p id="journal-status" class="status" role="status"></p>
+          <div id="journal-out" class="journal"></div>
+        </div>
+        <div class="vpanel sheet work wide" data-panel="slides" hidden>
+          <div class="wbar" id="slides-bar"><select id="slides-count" class="wsel" aria-label="Jumlah slide" data-en-aria="Number of slides"><option value="5" data-en="5 slides">5 slide</option><option value="8" selected data-en="8 slides">8 slide</option><option value="12" data-en="12 slides">12 slide</option></select><span class="wsep"></span><button id="slides-add" type="button" data-ico="plus" data-en="Slide">Slide</button><button id="slides-pages" type="button" data-ico="doc" data-en="From the pages">Dari halaman</button><span class="wgrow"></span><button id="slides-play" type="button" data-ico="play" data-en="Present">Presentasi</button><button id="slides-pptx" type="button" data-ico="download">.pptx</button><button id="slides-pdf" type="button" data-ico="download">PDF</button></div>
+          <p id="slides-status" class="status" role="status"></p>
+          <p id="slides-empty" class="wempty" data-en="No slides yet.">Belum ada slide.</p>
+          <ol id="slides-list" class="slides"></ol>
+        </div>
+        <div id="viewer-busy" class="sheet busy" hidden><p id="busy-label" class="busy-label"></p><i></i><i></i><i></i><i></i><i></i><i></i></div>
+        <div class="vpanel ask" data-panel="ask" hidden>
+          <div class="chat-top"><span id="chat-doc" class="chat-doc" hidden></span>
+            <button type="button" id="ask-new" class="chat-new" data-en="＋ New chat">＋ Chat baru</button></div>
+          <div id="ask-log" class="ask-log" aria-live="polite">
+            <div id="ask-hello" class="ask-hello"><div class="hello-mark" aria-hidden="true">✦</div>
+              <h3 data-en="Ask anything about this document">Tanya apa saja tentang dokumen ini</h3>
+              <p data-en="Answers come only from what you highlighted, with the page they come from — click a page tag to see it.">Jawaban hanya dari bagian yang Anda stabilo, lengkap dengan halaman sumbernya — klik label halaman untuk melihatnya.</p>
+              <div id="ask-chips" class="ask-chips"></div></div>
+          </div>
+          <form id="ask-form" class="ask-form">
+            <div class="composer"><textarea id="ask-q" rows="1" maxlength="1000" placeholder="Tanyakan sesuatu tentang dokumen…" data-en-ph="Ask something about the document…" aria-label="Pertanyaan" data-en-aria="Question"></textarea>
+              <button id="ask-send" type="submit" class="ask-send" aria-label="Kirim" data-en-aria="Send" title="Kirim (Enter)" data-en-title="Send (Enter)"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
+            <p class="composer-hint" data-en="AI can be wrong — check the source page.">AI bisa keliru — cek halaman sumbernya.</p>
+          </form>
+        </div>
+      </div>
     </section>
-
-    <section class="clay-panel tool">
-      <h2 data-en="🌐 Translation">🌐 Terjemahan</h2>
-      <p class="desc" data-en="Every page translated. Long documents go a few pages at a time; you can stop and carry on later.">Terjemahan tiap halaman. Dokumen tebal dikerjakan bertahap; bisa dihentikan dan dilanjutkan.</p>
-      <label class="row"><span data-en="To">Ke</span> <select id="translate-target"><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
-      <button id="translate-make" class="clay-btn clay-btn-primary" type="button" data-en="🌐 Translate">🌐 Terjemahkan</button>
-      <p id="translate-status" class="status" role="status"></p>
-      <div id="translate-pager" class="pager" hidden><button id="tr-prev" type="button" aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><span id="tr-page"></span><button id="tr-next" type="button" aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div>
-      <div id="translate-out" class="result" hidden></div>
-      <div id="translate-tools" class="mini" hidden><button id="translate-save" type="button">⬇ .txt</button></div>
-    </section>
-
-    <section class="clay-panel tool">
-      <h2>🎙 Podcast</h2>
-      <p class="desc" data-en="Two hosts, Rina &amp; Bima, talk through this document from start to finish. The script can be edited.">Dua penyiar, Rina &amp; Bima, membahas dokumen ini dari awal sampai akhir. Naskah bisa diedit.</p>
-      <button id="podcast-make" class="clay-btn clay-btn-primary" type="button" data-en="🎙 Make a podcast">🎙 Buat podcast</button>
-      <p id="podcast-status" class="status" role="status"></p>
-      <textarea id="podcast-script" class="result" hidden spellcheck="false" aria-label="Naskah podcast" data-en-aria="Podcast script"></textarea>
-      <div id="podcast-tools" class="mini" hidden><button id="podcast" type="button" data-en="🎙 Play">🎙 Putar</button><button id="podcast-save" type="button">⬇ .txt</button></div>
-    </section>
-  </fieldset>
-
-  <p class="note" data-en="AI features are for the Pro / Business plans. The document's content is sent to an AI service only to make the result; results aren't kept on the server — download them if you need them.">Fitur AI untuk paket Pro / Business. Isi dokumen dikirim ke layanan AI hanya untuk membuat hasilnya; hasil tidak disimpan di server — unduh bila perlu.</p>
+  </div>
 </div>
+<button id="hl-pop" class="hl-pop" type="button" hidden data-ico="mark" data-en="Highlight">Stabilo</button>
+<script>
+// Results viewer: a tab appears for each result the page makes (its box shown by the script
+// below); the newest result comes to the front.
+window.addEventListener('DOMContentLoaded', () => {
+  const tabs = [...document.querySelectorAll('.vtabs [data-view]')], panels = [...document.querySelectorAll('.vpanel')];
+  const boxes = {summary: '#summary-out', translate: '#translate-out'};
+  let current = null, working = false;
+  const show = view => {
+    current = view;
+    tabs.forEach(t => { t.setAttribute('aria-selected', String(t.dataset.view === view)); });
+    panels.forEach(p => { p.hidden = working || p.dataset.panel !== view; });
+    document.querySelector('#viewer-empty').hidden = working || !!view;
+    document.querySelector('.viewer-body').classList.toggle('chat', view === 'ask' && !working);
+  };
+  const body = document.querySelector('.viewer-body');
+  // On a phone the viewer sits below the steps: bring it up when a result arrives.
+  const reveal = () => { const box = document.querySelector('.viewer').getBoundingClientRect(); if (box.top > innerHeight * 0.6) document.querySelector('.viewer').scrollIntoView({behavior: 'smooth', block: 'start'}); };
+  window.viewer = {
+    show: view => { const tab = tabs.find(t => t.dataset.view === view); if (tab) tab.hidden = false; show(view); reveal(); },
+    hide: view => { const tab = tabs.find(t => t.dataset.view === view); if (tab) tab.hidden = true; if (current === view) show(null); },
+    tab: view => { const tab = tabs.find(t => t.dataset.view === view); if (tab) tab.hidden = false; },
+    // A sheet with moving lines while the AI works; label: text, or null when done.
+    busy: label => {
+      working = !!label;
+      document.querySelector('#viewer-busy').hidden = !working;
+      if (working) { document.querySelector('#busy-label').textContent = label; body.scrollTop = 0; }
+      show(current);
+    },
+    page: n => {
+      const box = document.querySelector(`.doc-page[data-page="${n}"]`);
+      if (!box) return;
+      show('doc');
+      box.scrollIntoView({behavior: 'smooth', block: 'start'});
+      box.classList.add('flash'); setTimeout(() => box.classList.remove('flash'), 1400);
+    },
+  };
+  body.addEventListener('click', event => {
+    const ref = event.target.closest('.pref');
+    if (ref) { event.preventDefault(); window.viewer.page(+ref.dataset.page); }
+  });
+  tabs.forEach(t => t.onclick = () => show(t.dataset.view));
+  // The opened PDF on the desk, like Edit PDF: one sheet per page, drawn as it scrolls into view.
+  const pagesBox = document.querySelector('#doc-pages'), docTab = tabs.find(t => t.dataset.view === 'doc');
+  let shown = null, seen = null;
+  window.previewPdf = async blob => {
+    if (seen) seen.disconnect();
+    if (shown) { const old = shown; shown = null; old.destroy().catch(() => {}); }
+    pagesBox.replaceChildren();
+    if (!blob) { docTab.hidden = true; return; }
+    const pdf = shown = await pdfjsLib.getDocument({data: new Uint8Array(await blob.arrayBuffer())}).promise;
+    const first = await pdf.getPage(1), base = first.getViewport({scale: 1});
+    seen = new IntersectionObserver(entries => entries.forEach(async entry => {
+      if (!entry.isIntersecting || entry.target.dataset.drawn) return;
+      const box = entry.target; box.dataset.drawn = '1'; seen.unobserve(box);
+      try {
+        const page = await pdf.getPage(+box.dataset.page), one = page.getViewport({scale: 1});
+        const view = page.getViewport({scale: Math.min(3, (box.clientWidth || 800) * (window.devicePixelRatio || 1) / one.width)});
+        const canvas = document.createElement('canvas'); canvas.width = Math.round(view.width); canvas.height = Math.round(view.height);
+        await page.render({canvasContext: canvas.getContext('2d'), viewport: view}).promise;
+        if (shown === pdf) {
+          box.style.aspectRatio = `${one.width} / ${one.height}`; box.prepend(canvas);
+          // the words, selectable (to highlight), laid at the page's shown size
+          const layer = Object.assign(document.createElement('div'), {className: 'textLayer'});
+          const shownView = page.getViewport({scale: (box.clientWidth || 800) / one.width});
+          layer.style.setProperty('--scale-factor', shownView.scale);
+          box.append(layer);
+          try { await pdfjsLib.renderTextLayer({textContentSource: await page.getTextContent(), container: layer, viewport: shownView}).promise; } catch (e) {}
+          layer.append(Object.assign(document.createElement('div'), {className: 'endOfContent'}));
+          box.dispatchEvent(new CustomEvent('pageready', {bubbles: true}));
+        }
+      } catch (e) { delete box.dataset.drawn; }
+    }), {rootMargin: '600px 0px'});
+    for (let i = 1; i <= pdf.numPages; i++) {
+      const box = document.createElement('div'); box.className = 'doc-page'; box.dataset.page = i;
+      box.style.aspectRatio = `${base.width} / ${base.height}`;
+      pagesBox.append(box); seen.observe(box);
+    }
+    docTab.hidden = false;
+    if (!current || current === 'doc') show('doc');      // drawn late: the reader may be in the chat already
+  };
+  Object.entries(boxes).forEach(([view, sel]) => {
+    const box = document.querySelector(sel), tab = tabs.find(t => t.dataset.view === view);
+    new MutationObserver(() => {
+      const on = !box.hidden;
+      if (on && tab.hidden) { tab.hidden = false; show(view); reveal(); }
+      if (!on && !tab.hidden) { tab.hidden = true; const next = [...tabs].reverse().find(t => !t.hidden); show(next ? next.dataset.view : null); }
+    }).observe(box, {attributes: true, attributeFilter: ['hidden']});
+  });
+});
+</script>
 <script>
 window.addEventListener('DOMContentLoaded', () => {
   const $ = s => document.querySelector(s);
@@ -128,9 +501,14 @@ window.addEventListener('DOMContentLoaded', () => {
   const NAMES_EN = {'id-ID': 'Indonesian', 'en-US': 'English', 'ms-MY': 'Malay'};
   const NAMES = new Proxy({}, {get: (o, k) => L(NAMES_EN, NAMES_ID)[k]});
   let doc = null;            // {name, blob, pages, text: {page: [lines]}, lang}
-  let summary = null, translations = {}, podcast = null, translating = false, trPage = 0;
+  let summary = null, translations = {}, translating = false, trPage = 0;
 
   function status(id, text, bad = false) { const el = $(id); el.textContent = text || ''; el.classList.toggle('error', bad); }
+  // An error that comes with the way out (the allowance used up): the price list as a button.
+  function failed(id, cause) {
+    status(id, cause.message, true);
+    if (cause.upgrade) $(id).append(' ', Object.assign(document.createElement('a'), {href: cause.upgrade, className: 'upgrade-link', textContent: L('Upgrade to Pro →', 'Upgrade ke Pro →')}));
+  }
   async function caps() {
     let c = null;
     try { const r = await fetch('/api/capabilities', {cache: 'no-store'}); if (r.ok) c = await r.json(); } catch (e) {}
@@ -142,7 +520,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const c = await caps();
     const r = await fetch(path, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/json', 'X-Build-Token': c.token}, body: JSON.stringify(body)});
     const data = await r.json().catch(() => ({}));
-    if (!r.ok) throw Error(data.error || L('The request failed.', 'Permintaan gagal.'));
+    if (!r.ok) throw Object.assign(Error(data.error || L('The request failed.', 'Permintaan gagal.')), {status: r.status, upgrade: data.upgrade});
     return data;
   }
   function download(name, text) {
@@ -168,38 +546,156 @@ window.addEventListener('DOMContentLoaded', () => {
   }
 
   // ---------- Source
-  const player = FlipbookPodcast.bind({podcast: () => podcast, button: $('#podcast')});
+  // Scanned pages (fewer than 8 words of their own) are read with OCR in the browser — no AI,
+  // pages side by side; Stop keeps what is read. Returns how many pages were read.
+  let ocrStop = false, ocrRun = 0;
+  const countWords = lines => (lines || []).join(' ').split(/\s+/).filter(Boolean).length;
+  const thinPages = (pdf, text) => Array.from({length: pdf.numPages}, (_, i) => i).filter(i => countWords(text[String(i)]) < 8);
+  async function ocrPages(pdf, text, thin, background) {
+    const run = ++ocrRun;
+    ocrStop = false;
+    status('#load-status', background ? L(`Checking ${thin.length} pages without text in the background (OCR)…`, `Memeriksa ${thin.length} halaman tanpa teks di latar belakang (OCR)…`)
+                                      : L('Scanned PDF: loading the OCR engine…', 'PDF hasil scan: memuat mesin OCR…'));
+    const pool = await OcrEngine.pool({langs: 'ind+eng'});
+    $('#ocr-stop').hidden = false;
+    const started = Date.now();
+    let done = 0, next = 0, found = 0;
+    const tick = () => {
+      if (run !== ocrRun) return;                     // another document was opened meanwhile
+      const left = thin.length - done, per = done ? (Date.now() - started) / done : 0, min = Math.max(1, Math.ceil(per * left / 60000));
+      status('#load-status', (background ? L(`Checking pages without text in the background (OCR) ${done} / ${thin.length}`, `Memeriksa halaman tanpa teks di latar belakang (OCR) ${done} / ${thin.length}`)
+                                         : L(`Scanned PDF: reading the text (OCR) ${done} / ${thin.length} pages`, `PDF hasil scan: membaca teks (OCR) ${done} / ${thin.length} halaman`))
+        + (done && left ? L(` · about ${min} min left`, ` · sekitar ${min} menit lagi`) : ''));
+    };
+    const read = async i => {
+      const page = await pdf.getPage(i + 1), base = page.getViewport({scale: 1});
+      const view = page.getViewport({scale: Math.min(3, 2000 / Math.max(base.width, base.height))});
+      const canvas = document.createElement('canvas');
+      canvas.width = Math.ceil(view.width); canvas.height = Math.ceil(view.height);
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, canvas.width, canvas.height);
+      await page.render({canvasContext: ctx, viewport: view}).promise;
+      page.cleanup();
+      try {
+        const r = await pool.recognize(canvas);
+        const lines = (r.data.lines || []).map(line => (line.words || [])
+          .filter(w => w.confidence >= 45 && /[\p{L}\p{N}]/u.test(w.text || '') && (w.text.trim().length > 1 || /^[aAI&%$]$/.test(w.text.trim()) || w.confidence >= 85))
+          .map(w => w.text.trim()).join(' ')).filter(l => (l.match(/[\p{L}\p{N}]/gu) || []).length >= 3);
+        if (countWords(lines) > countWords(text[String(i)])) { text[String(i)] = lines; found++; }      // only a real gain counts
+      } finally { canvas.width = canvas.height = 0; done++; tick(); }
+    };
+    tick();
+    try { await Promise.all(Array.from({length: pool.size}, async () => { while (next < thin.length && !ocrStop && run === ocrRun) await read(thin[next++]); })); }
+    finally { await pool.stop(); if (run === ocrRun) $('#ocr-stop').hidden = true; }
+    return found;
+  }
+  $('#ocr-stop').addEventListener('click', () => { ocrStop = true; $('#ocr-stop').hidden = true; });
+  // The PDF's chapters from its outline (bookmarks): [{title, page (index)}] — the level that
+  // gives 3+ entries (a single root such as "Contents" opens to its children). [] when none.
+  async function chaptersOf(pdf) {
+    try {
+      let level = await pdf.getOutline();
+      if (!level || !level.length) return [];
+      if (level.length < 3) { const kids = level.flatMap(i => i.items || []); if (kids.length >= 3) level = kids; }
+      const out = [];
+      for (const item of level.slice(0, 120)) {
+        try {
+          let dest = item.dest;
+          if (typeof dest === 'string') dest = await pdf.getDestination(dest);
+          if (!Array.isArray(dest) || dest[0] == null) continue;
+          const page = typeof dest[0] === 'number' ? dest[0] : await pdf.getPageIndex(dest[0]);
+          const title = String(item.title || '').replace(/\s+/g, ' ').trim().slice(0, 200);
+          if (title) out.push({title, page});
+        } catch (e) {}
+      }
+      return out.sort((a, b) => a.page - b.page).filter((c, i, all) => !i || c.page !== all[i - 1].page);
+    } catch (e) { return []; }
+  }
+  // The document's line (name · pages · words · language · OCR) and the tools.
+  function docReady(ocred) {
+    const words = allText().split(/\s+/).filter(Boolean).length;
+    doc.lang = FlipbookSpeech.lang(allText().slice(0, 20000));
+    $('#doc-meta').textContent = L(`${doc.pages} pages · ${words.toLocaleString('en-US')} words · ${NAMES[doc.lang]}`, `${doc.pages} halaman · ${words.toLocaleString('id-ID')} kata · ${NAMES[doc.lang]}`)
+      + (ocred ? L(` · ${ocred} pages read with OCR`, ` · ${ocred} halaman dibaca OCR`) : '');
+    return words;
+  }
   async function open(blob, name) {
     status('#load-status', L('Reading the PDF…', 'Membaca PDF…'));
     $('#tools').disabled = true;
+    ocrRun++;                                            // a background OCR of the last document stops
     try {
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
       const pdf = await pdfjsLib.getDocument({data: new Uint8Array(await blob.arrayBuffer())}).promise;
+      if (window.previewPdf) window.previewPdf(blob).catch(() => {});
+      $('#doc-name').textContent = name; $('#doc-meta').textContent = ''; $('#drop').hidden = true; $('#doc').hidden = false;
       const {text} = await PdfWords.extract(pdf, {withText: true, progress: (i, n) => status('#load-status', L(`Reading text ${i} / ${n}…`, `Membaca teks ${i} / ${n}…`))});
-      const pages = pdf.numPages;
+      doc = {name, blob, pages: pdf.numPages, text, chapters: await chaptersOf(pdf), highlights: []};
+      hlInfo();
+      summary = null; translations = {};
+      ['#summary-out', '#summary-tools', '#translate-out', '#translate-pager', '#translate-tools'].forEach(s => { $(s).hidden = true; });
+      ['#summary-status', '#translate-status'].forEach(s => status(s, ''));
+      $('#translate-make').textContent = L('Translate', 'Terjemahkan');
+      askReset();
+      if (window.NotebookWork) NotebookWork.reset();
+      const thin = window.OcrEngine ? thinPages(pdf, text) : [];
+      const own = Object.keys(text).reduce((sum, k) => sum + countWords(text[k]), 0);
+      const mine = doc;
+      if (thin.length && own >= 40) {
+        // Enough text already: the tools open now, the scanned pages join in the background.
+        docReady(0); $('#translate-target').value = doc.lang === 'en-US' ? 'id-ID' : 'en-US';
+        $('#tools').disabled = false;
+        remember();
+        backgroundOcr(pdf, thin, mine);
+        return;
+      }
+      let ocred = 0;
+      if (!thin.length) doc.ocrDone = true;
+      if (thin.length) {
+        try { ocred = await ocrPages(pdf, text, thin, false); }
+        catch (cause) { status('#load-status', L('OCR could not run: ', 'OCR gagal dijalankan: ') + cause.message, true); }
+      }
       await pdf.destroy();
-      doc = {name, blob, pages, text};
-      doc.lang = FlipbookSpeech.lang(allText().slice(0, 20000));
-      const words = allText().split(/\s+/).filter(Boolean).length;
-      summary = null; translations = {}; podcast = null; player.close();
-      ['#summary-out', '#summary-tools', '#translate-out', '#translate-pager', '#translate-tools', '#podcast-script', '#podcast-tools'].forEach(s => { $(s).hidden = true; });
-      ['#summary-status', '#translate-status', '#podcast-status'].forEach(s => status(s, ''));
-      $('#translate-make').textContent = L('🌐 Translate', '🌐 Terjemahkan');
-      $('#doc-name').textContent = name;
-      $('#doc-meta').textContent = L(`${pages} pages · ${words.toLocaleString('en-US')} words · ${NAMES[doc.lang]}`, `${pages} halaman · ${words.toLocaleString('id-ID')} kata · ${NAMES[doc.lang]}`);
+      if (doc !== mine) return;
+      doc.ocrDone = true; doc.ocred = ocred;
+      const words = docReady(ocred);
       $('#translate-target').value = doc.lang === 'en-US' ? 'id-ID' : 'en-US';
-      $('#drop').hidden = true; $('#doc').hidden = false;
-      if (words < 40) { status('#load-status', L('This PDF has almost no text (a scan?). Run OCR in the Converter first.', 'PDF ini hampir tidak punya teks (hasil scan?). Jalankan OCR di Converter dulu.'), true); return; }
-      status('#load-status', '');
+      if (words < 40) { status('#load-status', L('No readable text was found in this PDF, even with OCR (a photo or a drawing?).', 'Tidak ada teks yang terbaca di PDF ini, bahkan dengan OCR (foto atau gambar?).'), true); return; }
+      status('#load-status', ocred ? L(`Text read with OCR from ${ocred} scanned pages — results may need a quick check.`, `Teks dari ${ocred} halaman scan dibaca dengan OCR — hasilnya mungkin perlu dicek sekilas.`) : '');
       $('#tools').disabled = false;
+      remember();
     } catch (cause) { status('#load-status', L('The PDF could not be read: ', 'PDF tidak bisa dibaca: ') + cause.message, true); }
   }
+  // The scanned pages of a document that already reads, in the background (on open, or when a
+  // restored session had not finished them).
+  function backgroundOcr(pdf, thin, mine) {
+    ocrPages(pdf, mine.text, thin, true).then(ocred => {
+      if (doc !== mine) return;
+      if (!ocrStop) mine.ocrDone = true;
+      mine.ocred = (mine.ocred || 0) + ocred;
+      docReady(mine.ocred);
+      status('#load-status', ocred ? L(`Text of ${ocred} scanned pages added (OCR) — summaries made from now on include it.`, `Teks ${ocred} halaman scan sudah ditambahkan (OCR) — ringkasan berikutnya ikut memuatnya.`) : '');
+      remember();
+    }).catch(cause => { if (doc === mine) status('#load-status', L('OCR could not run: ', 'OCR gagal dijalankan: ') + cause.message, true); })
+      .finally(() => pdf.destroy());
+  }
+  const viewerBox = document.querySelector('.viewer');
+  ['dragenter', 'dragover'].forEach(t => viewerBox.addEventListener(t, e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); viewerBox.classList.add('over'); } }));
+  viewerBox.addEventListener('dragleave', e => { if (!viewerBox.contains(e.relatedTarget)) viewerBox.classList.remove('over'); });
+  viewerBox.addEventListener('drop', e => {
+    viewerBox.classList.remove('over');
+    const f = [...(e.dataTransfer.files || [])].find(x => /pdf$/i.test(x.type) || /\.pdf$/i.test(x.name));
+    if (!f) return;
+    e.preventDefault(); open(f, f.name);
+  });
+  // Finished results stay in this browser (the last session, below): leaving warns only mid-job.
+  addEventListener('beforeunload', e => {
+    if (translating || $('#ask-send').disabled || $('#summary-make').disabled) { e.preventDefault(); e.returnValue = ''; }
+  });
   $('#file').addEventListener('change', () => { const f = $('#file').files[0]; if (f) open(f, f.name); $('#file').value = ''; });
   // Choose a PDF: the shared Add source dialog (link, upload, Google Drive, drop).
   const addPdf = event => {
     if (!window.AddSource) return;                 // no dialog: the plain file picker (label for="file")
     if (event) event.preventDefault();
-    AddSource.open({title: 'AI Summarizer', subtitle: L('your PDF', 'PDF-mu'), accept: '.pdf', onFiles: list => open(list[0], list[0].name)});
+    AddSource.open({title: L('AI Summarizer', 'AI Ringkasan'), subtitle: L('your PDF', 'PDF Anda'), accept: '.pdf', onFiles: list => open(list[0], list[0].name)});
   };
   $('#drop').addEventListener('click', addPdf);
   $('#change').addEventListener('click', event => (window.AddSource ? addPdf(event) : $('#file').click()));
@@ -226,23 +722,225 @@ window.addEventListener('DOMContentLoaded', () => {
     })();
   }
 
+  // ---------- Stabilo: what the member marks is what the AI reads. A mark is a passage chosen
+  // on a page (its text, and where it sits as fractions of the page) or a whole page (its
+  // text, OCR included). The summary, the translation and Ask read only the marks.
+  const marks = () => (doc && doc.highlights) || [];
+  // {page index: [passages]} in page order (top to bottom within a page)
+  function picked() {
+    const out = {};
+    marks().slice().sort((a, b) => a.page - b.page || (a.top || 0) - (b.top || 0)).forEach(h => {
+      const text = h.whole ? (doc.text[String(h.page)] || []).join('\n') : h.text;
+      if (text && text.trim()) (out[String(h.page)] ||= []).push(text);
+    });
+    return out;
+  }
+  const pickedPages = () => Object.keys(picked()).map(Number).sort((a, b) => a - b);
+  const pickedWords = () => Object.values(picked()).flat().join(' ').split(/\s+/).filter(Boolean).length;
+  // Nothing marked yet: say how, and show the pages.
+  let askedForMarks = null;              // where the "highlight first" note shows (gone with the first mark)
+  function needMarks(where) {
+    askedForMarks = where;
+    status(where, L('Highlight what matters first: select text on a page and press Highlight, or pick Whole page.',
+                    'Stabilo dulu bagian yang penting: blok teks di halaman lalu tekan Stabilo, atau pilih Seluruh halaman.'), true);
+    viewer.show('doc');
+  }
+  function hlInfo() {
+    const n = marks().length, pages = new Set(marks().map(h => h.page)).size;
+    $('#hl-info').innerHTML = n ? L(`<b>${n} highlight${n > 1 ? 's' : ''}</b> · ${pages} page${pages > 1 ? 's' : ''}`, `<b>${n} stabilo</b> · ${pages} halaman`)
+                                : '';                       // nothing marked: no hint (owner, 2026-10-20)
+    $('#hl-clear').hidden = !n;
+    $('#hl-box').hidden = !n;
+    // every mark, page by page: a click shows its page, × takes it off
+    const pageWord = L('p.', 'hlm.');
+    $('#hl-list').replaceChildren(...marks().slice().sort((a, b) => a.page - b.page || (a.top || 0) - (b.top || 0)).map(h => {
+      const item = Object.assign(document.createElement('button'), {type: 'button', className: 'hl-item', title: L('Show this page', 'Lihat halaman ini')});
+      const text = h.whole ? L('Whole page', 'Seluruh halaman') : h.text;
+      const off = Object.assign(document.createElement('i'), {textContent: '×', title: L('Remove', 'Hapus')});
+      item.append(Object.assign(document.createElement('b'), {textContent: `${pageWord} ${h.page + 1}`}), Object.assign(document.createElement('span'), {textContent: text}), off);
+      item.onclick = e => {
+        if (e.target === off) { doc.highlights = marks().filter(x => x !== h); marksChanged([h.page]); return; }
+        viewer.page(h.page + 1);
+      };
+      const li = document.createElement('li'); li.append(item); return li;
+    }));
+  }
+  function drawMarks(box) {
+    const page = +box.dataset.page - 1;
+    let layer = box.querySelector('.hl-layer');
+    if (!layer) { layer = Object.assign(document.createElement('div'), {className: 'hl-layer'}); box.append(layer); }
+    const mine = marks().filter(h => h.page === page);
+    layer.replaceChildren(...mine.filter(h => !h.whole).flatMap(h => h.rects.map(r => Object.assign(document.createElement('div'), {className: 'hl-mark',
+      style: `left:${r.x * 100}%;top:${r.y * 100}%;width:${r.w * 100}%;height:${r.h * 100}%`}))));
+    const whole = mine.some(h => h.whole);
+    box.classList.toggle('whole', whole);
+    let pick = box.querySelector('.page-pick');
+    if (!pick) {
+      pick = Object.assign(document.createElement('button'), {type: 'button', className: 'page-pick'});
+      pick.onclick = e => { e.stopPropagation(); toggleWhole(page); };
+      box.append(pick);
+    }
+    pick.setAttribute('aria-pressed', String(whole));
+    pick.textContent = whole ? L('Whole page highlighted', 'Seluruh halaman distabilo') : L('Whole page', 'Seluruh halaman');
+    pick.dataset.ico = whole ? 'check' : 'mark';
+  }
+  const drawAll = () => document.querySelectorAll('#doc-pages .doc-page').forEach(drawMarks);
+  // A page's marks changed: draw, keep, and forget translations made from its old marks.
+  function marksChanged(pages) {
+    pages.forEach(page => Object.values(translations).forEach(done => { delete done[page]; }));
+    if (pages.length) showTranslation();
+    if (askedForMarks && marks().length) { status(askedForMarks, ''); askedForMarks = null; }
+    drawAll(); hlInfo(); remember();
+  }
+  function toggleWhole(page) {
+    if (!doc) return;
+    const had = marks().some(h => h.page === page && h.whole);
+    doc.highlights = had ? marks().filter(h => !(h.page === page && h.whole)) : marks().concat({id: Date.now() + Math.random(), page, whole: true, top: 0});
+    marksChanged([page]);
+  }
+  // A selection on the pages: the floating 🖍 Stabilo button by it.
+  const pop = $('#hl-pop');
+  let popRange = null;
+  const boxOf = node => (node && (node.nodeType === 1 ? node : node.parentElement) || null)?.closest?.('#doc-pages .doc-page') || null;
+  document.addEventListener('selectionchange', () => {
+    clearTimeout(pop.timer);
+    pop.timer = setTimeout(() => {
+      const sel = getSelection();
+      const range = sel.rangeCount && !sel.isCollapsed ? sel.getRangeAt(0) : null;
+      if (!range || !doc || !(boxOf(range.startContainer) || boxOf(range.endContainer)) || !sel.toString().trim()) { pop.hidden = true; popRange = null; return; }
+      popRange = range.cloneRange();
+      const rects = [...range.getClientRects()].filter(r => r.width > 1), last = rects[rects.length - 1] || range.getBoundingClientRect();
+      pop.hidden = false;
+      pop.style.left = Math.max(8, Math.min(innerWidth - pop.offsetWidth - 8, last.right - pop.offsetWidth / 2)) + 'px';
+      pop.style.top = Math.min(innerHeight - pop.offsetHeight - 8, last.bottom + 8) + 'px';
+    }, 120);
+  });
+  pop.addEventListener('mousedown', e => e.preventDefault());      // keep the selection
+  pop.addEventListener('click', () => {
+    const range = popRange;
+    pop.hidden = true; popRange = null;
+    if (!range || !doc) return;
+    // One mark, on one page: where the selection starts (or ends, if it started off the words),
+    // clipped to that page's words — a drag that ran on never marks other pages.
+    const changed = [];
+    const box = [range.startContainer, range.endContainer].map(boxOf).find(b => b && b.querySelector('.textLayer'));
+    if (box) {
+      const layer = box.querySelector('.textLayer');
+      const part = document.createRange();
+      part.selectNodeContents(layer);
+      if (layer.contains(range.startContainer)) part.setStart(range.startContainer, range.startOffset);
+      if (layer.contains(range.endContainer)) part.setEnd(range.endContainer, range.endOffset);
+      const text = part.toString().replace(/\s+/g, ' ').trim();
+      const frame = box.getBoundingClientRect();
+      const rects = [...part.getClientRects()].filter(r => r.width > 1 && r.height > 1 && r.width < frame.width * 0.98)
+        .map(r => ({x: (r.left - frame.left) / frame.width, y: (r.top - frame.top) / frame.height, w: r.width / frame.width, h: r.height / frame.height}))
+        .filter(r => r.x >= -0.01 && r.y >= -0.01 && r.x + r.w <= 1.01 && r.y + r.h <= 1.01)
+        .map(r => Object.fromEntries(Object.entries(r).map(([k, v]) => [k, Math.round(v * 10000) / 10000])));
+      if (text && rects.length) {
+        const page = +box.dataset.page - 1;
+        doc.highlights = marks().concat({id: Date.now() + Math.random(), page, text: text.slice(0, 20000), rects, top: Math.min(...rects.map(r => r.y))});
+        changed.push(page);
+      }
+    }
+    getSelection().removeAllRanges();
+    if (changed.length) marksChanged(changed);
+  });
+  $('#doc-pages').addEventListener('mousedown', e => {
+    if (e.detail > 2) { e.preventDefault(); return; }        // a triple click would take the whole page: Whole page is for that
+    const layer = e.target.closest && e.target.closest('.textLayer');
+    if (layer) layer.classList.add('selecting');
+  });
+  document.addEventListener('mouseup', () => document.querySelectorAll('#doc-pages .textLayer.selecting').forEach(l => l.classList.remove('selecting')));
+  // A tap on a mark (nothing selected) takes it off.
+  $('#doc-pages').addEventListener('click', e => {
+    const box = boxOf(e.target);
+    if (!box || !doc || !getSelection().isCollapsed || e.target.closest('.page-pick')) return;
+    const frame = box.getBoundingClientRect(), x = (e.clientX - frame.left) / frame.width, y = (e.clientY - frame.top) / frame.height, page = +box.dataset.page - 1;
+    const hit = marks().find(h => h.page === page && !h.whole && h.rects.some(r => x >= r.x && x <= r.x + r.w && y >= r.y && y <= r.y + r.h));
+    if (hit) { doc.highlights = marks().filter(h => h !== hit); marksChanged([page]); }
+  });
+  $('#hl-clear').addEventListener('click', async () => {
+    if (!marks().length || !await MFDialog.confirm({title: L('Clear every highlight?', 'Hapus semua stabilo?'), message: L('The AI will have nothing to read until you highlight again.', 'AI tidak punya bahan sampai Anda menstabilo lagi.'),
+      ok: L('Clear', 'Hapus'), cancel: L('Cancel', 'Batal'), danger: true, icon: '🖍'})) return;
+    const pages = [...new Set(marks().map(h => h.page))];
+    doc.highlights = []; marksChanged(pages);
+  });
+  // Pages are made (and drawn) by the viewer: each new one gets its marks and its Whole page button.
+  new MutationObserver(() => { if (doc) drawAll(); }).observe($('#doc-pages'), {childList: true});
+  $('#doc-pages').addEventListener('pageready', e => drawMarks(e.target));
+
   // ---------- Summary
+  // An edited result box back to plain text (lists as "- item"), so Copy / .txt take the edits.
+  function boxText(box) {
+    return [...box.childNodes].map(n => n.nodeName === 'UL' || n.nodeName === 'OL' ? [...n.querySelectorAll('li')].map(li => '- ' + li.innerText.trim()).join('\n')
+      : (n.nodeName === 'H3' ? '### ' : '') + (n.innerText ?? n.textContent ?? '').trim()).filter(t => t && t !== '### ').join('\n\n');
+  }
+  $('#summary-out').addEventListener('input', () => { if (summary) { summary.text = boxText($('#summary-out')); remember(); } });
+  $('#translate-out').addEventListener('input', () => {
+    const out = $('#translate-out'), done = translations[$('#translate-target').value];
+    if (done && out.dataset.page) { done[+out.dataset.page] = boxText(out).replace(/\n\n/g, '\n'); remember(); }
+  });
+  $('#to-editor').addEventListener('click', async () => {
+    try { const id = await FlipbookTransfer.save(doc.blob, doc.name); location.href = 'editor.html?source=' + encodeURIComponent(id); }
+    catch (cause) { status('#load-status', cause.message, true); }
+  });
+  // Text with its page references, "(hlm. 12)" / "(p. 3-4)", as links to that page of the document.
+  const REF = /\((?:hlm\.?|hal\.?|halaman|pp?\.|pages?)\s*(\d+)(?:\s*[-–,]\s*\d+)*\)/gi;
+  function withRefs(text) {
+    const out = document.createDocumentFragment();
+    let last = 0;
+    String(text).replace(REF, (match, page, at) => {
+      out.append(text.slice(last, at));
+      if (doc && +page >= 1 && +page <= doc.pages) {
+        const a = Object.assign(document.createElement('a'), {className: 'pref', href: '#', textContent: match, contentEditable: 'false'});
+        a.dataset.page = page; a.title = L(`Show page ${page}`, `Lihat halaman ${page}`);
+        out.append(a);
+      } else out.append(match);
+      last = at + match.length;
+      return match;
+    });
+    out.append(text.slice(last));
+    return out;
+  }
+  // Plain text (lines; "- " lines a list) into paragraphs and lists, page references as links.
+  function richText(box, text) {
+    box.replaceChildren();
+    FlipbookSummary.blocks(text).forEach(b => {
+      if (b.kind === 'list') { const ul = document.createElement('ul'); b.items.forEach(t => { const li = document.createElement('li'); li.append(withRefs(t)); ul.append(li); }); box.append(ul); }
+      else if (b.kind === 'title') { const h = Object.assign(document.createElement('h3'), {className: 'chapter'}); h.append(withRefs(b.text)); box.append(h); }
+      else { const el = Object.assign(document.createElement('p'), {className: b.kind === 'head' ? 'head' : ''}); el.append(withRefs(b.text)); box.append(el); }
+    });
+  }
+  // A status line that counts the seconds while the AI works (and the viewer's moving sheet).
+  function working(id, text, sheet) {
+    const start = Date.now();
+    const tick = () => { const sec = Math.round((Date.now() - start) / 1000); status(id, `⏱ ${sec} ${L('s', 'dtk')} · ${text}`); if (sheet) viewer.busy(`${sheet} · ${sec} ${L('s', 'dtk')}`); };
+    tick();
+    const timer = setInterval(tick, 1000);
+    return () => { clearInterval(timer); if (sheet) viewer.busy(null); };
+  }
   function showSummary() {
     const out = $('#summary-out');
-    out.replaceChildren();
-    FlipbookSummary.blocks(summary.text).forEach(b => {
-      if (b.kind === 'list') { const ul = document.createElement('ul'); b.items.forEach(t => ul.appendChild(Object.assign(document.createElement('li'), {textContent: t}))); out.appendChild(ul); }
-      else out.appendChild(Object.assign(document.createElement('p'), {className: b.kind === 'head' ? 'head' : '', textContent: b.text}));
-    });
+    richText(out, summary.text);
     out.hidden = false; $('#summary-tools').hidden = false;
   }
+  const length = 'sedang';
   $('#summary-make').addEventListener('click', async () => {
+    if (!marks().length) { needMarks('#summary-status'); return; }
+    if (pickedWords() < 40) { status('#summary-status', L('Highlight a little more (about 40 words at least) for a summary.', 'Stabilo sedikit lebih banyak (minimal sekitar 40 kata) untuk diringkas.'), true); return; }
+    if (summary && !await MFDialog.confirm({title: L('Make the summary again?', 'Buat ulang ringkasan?'), message: L('The current summary (with your edits) will be replaced.', 'Ringkasan sekarang (termasuk editan Anda) akan diganti.'),
+      ok: L('Make again', 'Buat ulang'), cancel: L('Cancel', 'Batal'), icon: '📝'})) return;
     const button = $('#summary-make');
-    button.disabled = true; status('#summary-status', L('Making the summary… 15-60 seconds (long documents take longer).', 'Membuat ringkasan… 15-60 detik (dokumen tebal bisa lebih lama).'));
+    button.disabled = true;
+    const long = Object.values(picked()).flat().join(' ').length > 72000;
+    const done = working('#summary-status', long ? L('Long document: read chapter by chapter, about 1-5 minutes.', 'Dokumen tebal: dibaca per bab, sekitar 1-5 menit.')
+                                                 : L('Making the summary… usually 15-60 seconds.', 'Membuat ringkasan… biasanya 15-60 detik.'), L('Reading the document and writing the summary', 'Membaca dokumen dan menulis ringkasan'));
     try {
-      const r = await post('/api/summary', {title: title(), text: doc.text, lang: $('#summary-lang').value || doc.lang});
-      summary = {lang: r.lang, text: r.text}; showSummary(); status('#summary-status', L('Summary ready.', 'Ringkasan siap.'));
-    } catch (cause) { status('#summary-status', cause.message, true); }
+      const r = await post('/api/summary', {title: title(), text: picked(), lang: doc.lang, length, focus: '', chapters: []});
+      done(); summary = {lang: r.lang, text: r.text}; showSummary(); remember();
+      const n = marks().length;
+      status('#summary-status', L(`Summary of ${n} highlight${n > 1 ? 's' : ''} ready.`, `Ringkasan ${n} stabilo siap.`));
+    } catch (cause) { done(); failed('#summary-status', cause); }
     finally { button.disabled = false; }
   });
   $('#summary-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(summary.text); status('#summary-status', L('Copied.', 'Disalin.')); } catch (e) { status('#summary-status', L('The browser did not allow copying.', 'Browser tidak mengizinkan menyalin.'), true); } });
@@ -254,6 +952,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!pages.length) { $('#translate-out').hidden = $('#translate-pager').hidden = $('#translate-tools').hidden = true; return; }
     trPage = Math.max(0, Math.min(trPage, pages.length - 1));
     const index = pages[trPage], out = $('#translate-out');
+    out.dataset.page = index;
     out.replaceChildren(...done[index].split(/\n+/).filter(t => t.trim()).map(t => Object.assign(document.createElement('p'), {textContent: t})));
     out.scrollTop = 0;
     $('#tr-page').textContent = L(`Page ${index + 1} · ${trPage + 1} / ${pages.length}`, `Halaman ${index + 1} · ${trPage + 1} / ${pages.length}`);
@@ -265,8 +964,9 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#translate-target').addEventListener('change', () => { trPage = 0; showTranslation(); });
   $('#translate-make').addEventListener('click', async () => {
     if (translating) { translating = false; return; }
-    const target = $('#translate-target').value, pages = textPages();
-    if (Object.keys(translations[target] || {}).length >= pages.length) {
+    if (!marks().length) { needMarks('#translate-status'); return; }
+    const target = $('#translate-target').value, pages = pickedPages(), marked = picked();
+    if (pages.every(i => (translations[target] || {})[i])) {
       if (!await MFDialog.confirm({title: L(`Translate into ${NAMES[target]} again?`, `Terjemahkan ulang ke ${NAMES[target]}?`), message: L('The existing translation will be replaced.', 'Terjemahan yang sudah ada akan diganti.'),
         ok: L('Translate again', 'Terjemahkan ulang'), cancel: L('Cancel', 'Batal'), icon: '🌐'})) return;
       delete translations[target];
@@ -274,18 +974,18 @@ window.addEventListener('DOMContentLoaded', () => {
     const todo = pages.filter(i => !(translations[target] || {})[i]), batches = [];
     let batch = {}, size = 0;
     todo.forEach(i => {
-      const text = paragraphs(doc.text[i]).slice(0, 20000);
+      const text = marked[String(i)].join('\n\n').slice(0, 20000);
       if (Object.keys(batch).length && (size + text.length > 8000 || Object.keys(batch).length >= 12)) { batches.push(batch); batch = {}; size = 0; }
       batch[i] = text; size += text.length;
     });
     if (Object.keys(batch).length) batches.push(batch);
-    translating = true; $('#translate-make').textContent = L('⏹ Stop', '⏹ Berhenti');
+    translating = true; $('#translate-make').textContent = L('Stop', 'Berhenti'); $('#translate-make').dataset.ico = 'stop';
     try {
       for (let n = 0; n < batches.length && translating; n++) {
         const sofar = Object.keys(translations[target] || {}).length;
         status('#translate-status', L(`Translating into ${NAMES[target]}… ${sofar} / ${pages.length} pages`, `Menerjemahkan ke ${NAMES[target]}… ${sofar} / ${pages.length} halaman`));
         const r = await post('/api/translate', {pages: batches[n], target, title: title()});
-        translations[target] = Object.assign(translations[target] || {}, r.pages);
+        translations[target] = Object.assign(translations[target] || {}, r.pages); remember();
         showTranslation();
       }
       const done = Object.keys(translations[target] || {}).length;
@@ -297,7 +997,8 @@ window.addEventListener('DOMContentLoaded', () => {
     } finally {
       translating = false;
       const have = Object.keys(translations[target] || {}).length;
-      $('#translate-make').textContent = have && have < pages.length ? L('🌐 Carry on', '🌐 Lanjutkan') : L('🌐 Translate', '🌐 Terjemahkan');
+      $('#translate-make').textContent = have && have < pages.length ? L('Carry on', 'Lanjutkan') : L('Translate', 'Terjemahkan');
+      $('#translate-make').dataset.ico = 'translate';
     }
   });
   $('#translate-save').addEventListener('click', () => {
@@ -305,37 +1006,184 @@ window.addEventListener('DOMContentLoaded', () => {
     download(`${title()} - ${NAMES[target]}.txt`, title() + ` (${NAMES[target]})\n\n` + textPages().filter(i => done[i]).map(i => L(`[Page ${i + 1}]`, `[Halaman ${i + 1}]`) + `\n${done[i]}`).join('\n\n'));
   });
 
-  // ---------- Podcast (script by AI; played with the device's voices)
-  function showPodcast() {
-    $('#podcast-script').value = FlipbookPodcast.format(podcast);
-    $('#podcast-script').hidden = $('#podcast-tools').hidden = false;
-    player.refresh();
-    $('#podcast').textContent = L('🎙 Play', '🎙 Putar');
+  // ---------- Ask the document (answers from its content, with page references)
+  let asked = [];            // [{role: 'user' | 'ai', text}]
+  const CHIPS = () => L(['What is the main idea of this document?', "What does the author conclude?", 'Explain the key terms and their meaning', 'Make 5 quiz questions with answers'],
+                        ['Apa gagasan utama dokumen ini?', 'Apa kesimpulan penulis?', 'Jelaskan istilah penting dan artinya', 'Buat 5 soal kuis beserta jawabannya']);
+  function chips() {
+    $('#ask-chips').replaceChildren(...CHIPS().map(q => Object.assign(document.createElement('button'), {type: 'button', textContent: q, onclick: () => ask(q)})));
   }
-  $('#podcast-make').addEventListener('click', async () => {
-    if (podcast && !await MFDialog.confirm({title: L('Make the podcast again?', 'Buat ulang podcast?'), message: L('The current script (with your edits) will be replaced.', 'Naskah sekarang (termasuk editanmu) akan diganti.'),
-      ok: L('Make again', 'Buat ulang'), cancel: L('Cancel', 'Batal'), icon: '🎙️'})) return;
-    const button = $('#podcast-make');
-    button.disabled = true; status('#podcast-status', L('Writing the podcast script… 20-60 seconds; long documents are read in parts and can take 1-3 minutes.', 'Menulis naskah podcast… 20-60 detik; dokumen tebal dibaca per bagian, bisa 1-3 menit.'));
+  // One message: yours (right) or the AI's (left, its mark, the answer with page tags, Copy / Retry).
+  function message(role, text) {
+    const row = Object.assign(document.createElement('div'), {className: 'msg ' + role});
+    const body = Object.assign(document.createElement('div'), {className: 'msg-body'});
+    if (role === 'me') { body.textContent = text; row.append(body); }
+    else { row.append(Object.assign(document.createElement('span'), {className: 'av', textContent: '✦', ariaHidden: 'true'}), body); }
+    $('#ask-hello').hidden = true;
+    $('#ask-log').append(row);
+    $('#ask-log').scrollTop = $('#ask-log').scrollHeight;
+    return {row, body};
+  }
+  const chatButton = (label, onclick, ico) => { const b = Object.assign(document.createElement('button'), {type: 'button', textContent: label, onclick}); if (ico) b.dataset.ico = ico; return b; };
+  // The answer written out word by word (like a chat), then shown with its lists and page tags.
+  function writeOut(body, text) {
+    return new Promise(done => {
+      const words = text.split(/(\s+)/), log = $('#ask-log');
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches || words.length < 4) { richText(body, text); done(); return; }
+      const step = Math.max(2, Math.ceil(words.length / 140));         // about 2.5 s at most
+      let i = 0;
+      body.parentElement.classList.add('typing');
+      const tick = () => {
+        i = Math.min(words.length, i + step);
+        body.textContent = words.slice(0, i).join('');
+        if (log.scrollHeight - log.scrollTop - log.clientHeight < 120) log.scrollTop = log.scrollHeight;
+        if (i < words.length) setTimeout(tick, 18);
+        else { body.parentElement.classList.remove('typing'); richText(body, text); log.scrollTop = log.scrollHeight; done(); }
+      };
+      tick();
+    });
+  }
+  async function ask(question, retry = false) {
+    question = String(question || '').trim();
+    if (!question || !doc || $('#ask-send').disabled) return;
+    if (!marks().length) { needMarks('#load-status'); return; }
+    $('#ask-q').value = ''; grow(); $('#ask-send').disabled = true;
+    if (!retry) message('me', question);
+    const {row, body} = message('ai', '');
+    const sec = Object.assign(document.createElement('span'), {className: 'wait-sec'});
+    body.replaceChildren(Object.assign(document.createElement('span'), {className: 'dots', innerHTML: '<i></i><i></i><i></i>'}), sec);
+    const start = Date.now(), timer = setInterval(() => { sec.textContent = L(`reading the document… ${Math.round((Date.now() - start) / 1000)} s`, `membaca dokumen… ${Math.round((Date.now() - start) / 1000)} dtk`); }, 1000);
     try {
-      const r = await post('/api/podcast/script', {title: title(), text: doc.text, lang: doc.lang});
-      podcast = {lines: r.lines, hosts: r.hosts, lang: r.lang}; showPodcast();
-      status('#podcast-status', L(`Script ready: ${r.lines.length} turns. Press 🎙 Play.`, `Naskah siap: ${r.lines.length} giliran bicara. Tekan 🎙 Putar.`));
-    } catch (cause) { status('#podcast-status', cause.message, true); }
-    finally { button.disabled = false; }
+      const r = await post('/api/ask', {title: title(), text: picked(), question, history: asked.slice(-6), work: window.NotebookWork ? NotebookWork.context() : ''});
+      clearInterval(timer);
+      asked.push({role: 'user', text: question}, {role: 'ai', text: r.answer}); remember();
+      await writeOut(body, r.answer);
+      const tools = Object.assign(document.createElement('div'), {className: 'msg-tools'});
+      tools.append(chatButton(L('Copy', 'Salin'), async e => {
+        try { await navigator.clipboard.writeText(r.answer); e.target.textContent = L('Copied', 'Disalin'); e.target.dataset.ico = 'check'; } catch (err) { e.target.textContent = L('Not allowed', 'Tidak diizinkan'); }
+      }, 'copy'), chatButton(L('Retry', 'Ulangi'), () => {
+        // the last answer again: this turn leaves the history and its message goes
+        if ($('#ask-send').disabled || row !== $('#ask-log').lastElementChild) return;
+        asked.splice(-2, 2); remember(); row.remove(); ask(question, true);
+      }, 'retry'));
+      body.append(tools);
+    } catch (cause) {
+      clearInterval(timer); row.classList.add('error'); body.textContent = cause.message;
+      const tools = Object.assign(document.createElement('div'), {className: 'msg-tools'});
+      tools.append(chatButton(L('Try again', 'Coba lagi'), () => { if (!$('#ask-send').disabled) { row.remove(); ask(question, true); } }, 'retry'));
+      body.append(tools);
+    } finally { clearInterval(timer); $('#ask-send').disabled = false; $('#ask-q').focus(); }
+  }
+  // The composer grows with the text (up to its max height).
+  function grow() { const q = $('#ask-q'); q.style.height = 'auto'; q.style.height = Math.min(180, q.scrollHeight) + 'px'; }
+  $('#ask-q').addEventListener('input', grow);
+  $('#ask-form').addEventListener('submit', e => { e.preventDefault(); ask($('#ask-q').value); });
+  $('#ask-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask($('#ask-q').value); } });
+  $('#ask-open').addEventListener('click', () => {
+    viewer.show('ask');
+    document.querySelector('.viewer').scrollIntoView({behavior: 'smooth', block: 'start'});      // the whole chat in view, under the header
+    $('#ask-q').focus({preventScroll: true});
   });
-  let timer = 0;
-  $('#podcast-script').addEventListener('input', () => {
-    clearTimeout(timer);
-    timer = setTimeout(() => {
-      const parsed = FlipbookPodcast.parse($('#podcast-script').value, podcast && podcast.hosts);
-      if (!parsed.lines.length) { status('#podcast-status', L('Empty script: start every line with a host\'s name, e.g. "RINA: …".', 'Naskah kosong: tiap baris diawali nama penyiar, mis. "RINA: …".'), true); return; }
-      player.stop(); podcast = {lines: parsed.lines, hosts: parsed.hosts, lang: (podcast && podcast.lang) || doc.lang};
-      player.refresh(); $('#podcast').textContent = L('🎙 Play', '🎙 Putar');
-      status('#podcast-status', L(`Edits saved: ${parsed.lines.length} turns.`, `Editan tersimpan: ${parsed.lines.length} giliran bicara.`));
-    }, 500);
+  $('#ask-new').addEventListener('click', () => { if (!$('#ask-send').disabled) { clearChat(); remember(); $('#ask-q').focus(); } });
+  function clearChat() {
+    asked = [];
+    $('#ask-log').querySelectorAll('.msg').forEach(m => m.remove());
+    $('#ask-hello').hidden = false; chips();
+    $('#chat-doc').textContent = doc ? doc.name : '';
+  }
+  // A saved answer shown again (restored session): its text, page tags and Copy.
+  function showAnswer(question, answer) {
+    message('me', question);
+    const {body} = message('ai', '');
+    richText(body, answer);
+    const tools = Object.assign(document.createElement('div'), {className: 'msg-tools'});
+    tools.append(chatButton(L('Copy', 'Salin'), async e => {
+      try { await navigator.clipboard.writeText(answer); e.target.textContent = L('Copied', 'Disalin'); e.target.dataset.ico = 'check'; } catch (err) { e.target.textContent = L('Not allowed', 'Tidak diizinkan'); }
+    }, 'copy'));
+    body.append(tools);
+  }
+  function askReset() { clearChat(); viewer.hide('ask'); }
+
+  // ---------- The last session, kept in this browser only (IndexedDB, never sent): the document,
+  // its text (OCR included) and every result, so coming back from Edit PDF / Flipbook (or a
+  // reload) carries on. Kept SESSION_DAYS; a new document replaces it; Close forgets it.
+  const SESSION_DAYS = 7;
+  const sessionDb = () => new Promise((ok, fail) => {
+    const r = indexedDB.open('mf-notebook', 1);
+    r.onupgradeneeded = () => r.result.createObjectStore('s');
+    r.onsuccess = () => ok(r.result); r.onerror = () => fail(r.error);
   });
-  $('#podcast-save').addEventListener('click', () => download(title() + ' - podcast.txt', $('#podcast-script').value));
+  async function sessionDo(mode, work) {
+    const db = await sessionDb();
+    try {
+      return await new Promise((ok, fail) => {
+        const tx = db.transaction('s', mode), req = work(tx.objectStore('s'));
+        tx.oncomplete = () => ok(req && req.result); tx.onerror = tx.onabort = () => fail(tx.error);
+      });
+    } finally { db.close(); }
+  }
+  let saveTimer = 0;
+  function remember() { clearTimeout(saveTimer); saveTimer = setTimeout(saveSession, 600); }
+  async function saveSession() {
+    if (!doc) return;
+    try {
+      await sessionDo('readwrite', st => st.put({name: doc.name, blob: doc.blob, pages: doc.pages, text: doc.text, chapters: doc.chapters || [], highlights: marks(), ocrDone: !!doc.ocrDone, ocred: doc.ocred || 0,
+        summary, translations, asked, work: window.NotebookWork ? NotebookWork.state() : null, savedAt: Date.now()}, 'last'));
+    } catch (e) {}                                       // private window / storage full: just not kept
+  }
+  async function restoreSession() {
+    let saved = null;
+    try { saved = await sessionDo('readonly', st => st.get('last')); } catch (e) { return; }
+    if (!saved || !saved.blob || !saved.text || Date.now() - (saved.savedAt || 0) > SESSION_DAYS * 86400000 || doc) return;
+    doc = {name: saved.name, blob: saved.blob, pages: saved.pages, text: saved.text, chapters: saved.chapters || [], highlights: saved.highlights || [], ocrDone: saved.ocrDone, ocred: saved.ocred || 0};
+    hlInfo();
+    summary = saved.summary || null; translations = saved.translations || {};
+    if (window.NotebookWork) NotebookWork.load(saved.work);
+    $('#doc-name').textContent = doc.name; $('#drop').hidden = true; $('#doc').hidden = false;
+    if (window.previewPdf) window.previewPdf(doc.blob).catch(() => {});
+    docReady(doc.ocred);
+    $('#translate-target').value = Object.keys(translations).find(k => Object.keys(translations[k]).length) || (doc.lang === 'en-US' ? 'id-ID' : 'en-US');
+    clearChat();
+    (saved.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text); });
+    asked = (saved.asked || []).slice();
+    if (asked.length) viewer.show('ask');
+    if (Object.keys(translations).length) showTranslation();
+    if (summary) showSummary();
+    $('#tools').disabled = false;
+    status('#load-status', '');
+    // the scanned pages had not all been read: carry on in the background
+    if (!doc.ocrDone && window.OcrEngine) {
+      try {
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
+        const pdf = await pdfjsLib.getDocument({data: new Uint8Array(await doc.blob.arrayBuffer())}).promise;
+        const thin = thinPages(pdf, doc.text);
+        if (thin.length) backgroundOcr(pdf, thin, doc); else { doc.ocrDone = true; pdf.destroy(); remember(); }
+      } catch (e) {}
+    }
+  }
+  // Crowns on the AI tools the member's plan lacks (as on the flipbook): a click goes straight
+  // to the price list. Guests keep the usual login first.
+  (async () => {
+    let who = null, c = null;
+    try { who = window.MFAuth ? await MFAuth.me() : null; } catch (e) {}
+    if (!who || !who.user) return;
+    try { const r = await fetch('/api/capabilities', {cache: 'no-store'}); if (r.ok) c = await r.json(); } catch (e) {}
+    if (!c || !c.paywall) return;
+    const has = new Set(c.entitlements || []);
+    if (window.NotebookWork) NotebookWork.lock(!has.has('ai'));
+    for (const [sel, need, plan] of [['#summary-make', 'ai', 'Medium'], ['#translate-make', 'ai', 'Medium'], ['#ask-open', 'ai', 'Medium']]) {
+      const button = $(sel);
+      if (!button || has.has(need)) continue;
+      button.classList.add('plan-lock');
+      button.title = L(plan + ' feature — see the plans', 'Fitur ' + plan + ' — lihat paket');
+      // before the button's own handler (capture on the target runs first)
+      button.addEventListener('click', e => { e.preventDefault(); e.stopImmediatePropagation(); location.href = '/harga'; }, true);
+    }
+  })();
+  if (window.NotebookWork) NotebookWork.init({title, post, status, remember, marks, picked, needMarks, summary: () => summary,
+    blob: () => doc && doc.blob, pages: () => (doc ? doc.pages : 0),
+    lang: () => (doc && doc.lang) || 'id-ID'});
+  if (!/^https?:\/\//i.test(handed.get('link') || '')) restoreSession();      // a handed link opens that one instead
 });
 </script>
 </body>

@@ -8,6 +8,7 @@ import sys
 import tempfile
 import threading
 import unittest
+from unittest import mock
 import urllib.error
 import urllib.parse
 import urllib.request
@@ -78,9 +79,40 @@ class LibraryTests(unittest.TestCase):
         headers = {'X-Book-Id': book_id} if book_id else None
         return member.json('POST', '/api/library/save', data, 'application/zip', headers)
 
+    def test_editor_draft(self):
+        # The PDF editor's autosave: one draft per member, sealed on disk, owners only.
+        self.assertEqual(Member(self.base).call('GET', '/api/library/draft')[0], 401)
+        eka = self.member('eka@b.co')
+        self.assertEqual(eka.call('GET', '/api/library/draft')[0], 404, 'none yet')
+        draft = bytes([0x1f, 0x8b]) + b' gzip draft ' + b'%PDF-1.7 skripsi ' * 50
+        status, body = eka.json('POST', '/api/library/draft', draft, 'application/octet-stream',
+                                {'X-Draft-Name': urllib.parse.quote('Skripsi Eka.pdf'), 'X-Saved-At': '1760000000123'})
+        self.assertEqual((status, body['savedAt']), (200, 1760000000123))
+        status, headers, raw = eka.call('GET', '/api/library/draft')
+        self.assertEqual((status, raw), (200, draft))
+        self.assertEqual((urllib.parse.unquote(headers['X-Draft-Name']), headers['X-Saved-At']), ('Skripsi Eka.pdf', '1760000000123'))
+        path = Path(self.temporary.name) / 'library' / str(server.ACCOUNTS.me_by_email('eka@b.co')['id']) / 'editor-draft.bin'             if hasattr(server.ACCOUNTS, 'me_by_email') else next((Path(self.temporary.name) / 'library').rglob('editor-draft.bin'))
+        self.assertNotIn(b'skripsi', path.read_bytes(), 'sealed on disk')
+        # A newer save replaces it; other members do not see it; delete removes it.
+        eka.call('POST', '/api/library/draft', b'v2', 'application/octet-stream', {'X-Saved-At': '1760000000999'})
+        self.assertEqual(eka.call('GET', '/api/library/draft')[2], b'v2')
+        self.assertEqual(self.member('fajar@b.co').call('GET', '/api/library/draft')[0], 404)
+        self.assertEqual(eka.call('POST', '/api/library/draft/delete', b'{}')[0], 200)
+        self.assertEqual(eka.call('GET', '/api/library/draft')[0], 404)
+        with mock.patch.object(library, 'MAX_DRAFT', 10):
+            self.assertEqual(eka.call('POST', '/api/library/draft', b'x' * 11, 'application/octet-stream')[0], 413)
+
     def test_archive_flow_encryption_quota_and_ownership(self):
         self.assertEqual(Member(self.base).json('GET', '/api/library')[0], 401, 'members only')
         ana = self.member('ana@b.co')
+        # Free reads every book but keeps nothing in My Library (owner, 2026-10-19).
+        status, body = self.save(ana, project())
+        self.assertEqual(status, 402); self.assertIn('My Library butuh paket Medium atau Pro', body['error'])
+        server.ACCOUNTS.grant_plan('ana@b.co', 'medium', 30)
+        with mock.patch.dict(library.LIMITS, {'medium': (3, 100 * library.MB)}):          # a small archive to fill
+            self._archive_flow(ana)
+
+    def _archive_flow(self, ana):
         status, body = self.save(ana, project())
         self.assertEqual(status, 200)
         book = body['id']
@@ -111,11 +143,12 @@ class LibraryTests(unittest.TestCase):
             self.assertNotIn(b'%PDF', data); self.assertNotIn(b'<html>', data); self.assertNotIn(b'Laporan', data)
         # Another member sees nothing and can touch nothing.
         budi = self.member('budi@b.co')
+        server.ACCOUNTS.grant_plan('budi@b.co', 'medium', 30)
         self.assertEqual(budi.json('GET', '/api/library')[1]['books'], [])
         self.assertEqual(budi.call('GET', f'/api/library/{book}/project')[0], 404)
         self.assertEqual(budi.call('POST', f'/api/library/{book}/delete', b'{}')[0], 404)
         self.assertEqual(self.save(budi, project('Punya Budi'), book)[1]['id'] != book, True, "can't overwrite someone else's book")
-        # Free plan: 3 books.
+        # A plan of 3 books.
         for n in range(2):
             self.assertEqual(self.save(ana, project(f'Buku {n}'))[0], 200)
         status, body = self.save(ana, project('Buku ke-4'))
@@ -128,6 +161,34 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(ana.call('POST', f'/api/library/{book}/delete', b'{}')[0], 200)
         self.assertEqual(len(ana.json('GET', '/api/library')[1]['books']), 2)
         self.assertFalse(any(book in str(f) for f in (Path(self.temporary.name) / 'library').rglob('*')))
+
+
+    def test_folders(self):
+        # Folders: make, rename, move books in and out, delete (books stay); a member's own only.
+        rani = self.member('rani@b.co'); server.ACCOUNTS.grant_plan('rani@b.co', 'medium', 30)
+        book = self.save(rani, project('Bab 1'))[1]['id']
+        status, body = rani.json('POST', '/api/library/folders', {'name': '  Referensi   Skripsi '})
+        self.assertEqual(status, 200)
+        folder = body['id']
+        self.assertEqual([(f['name'], f['books']) for f in body['folders']], [('Referensi Skripsi', 0)])
+        self.assertEqual(rani.json('POST', '/api/library/folders', {'name': '   '})[0], 400, 'a name is needed')
+        self.assertEqual(rani.json('POST', f'/api/library/{book}/move', {'folder': folder})[0], 200)
+        listing = rani.json('GET', '/api/library')[1]
+        self.assertEqual(listing['books'][0]['folder'], folder); self.assertEqual(listing['folders'][0]['books'], 1)
+        self.assertEqual(rani.json('POST', f'/api/library/folders/{folder}/rename', {'name': 'Pustaka'})[1]['folders'][0]['name'], 'Pustaka')
+        # Someone else's folder or book: not found.
+        budi = self.member('budi2@b.co'); server.ACCOUNTS.grant_plan('budi2@b.co', 'medium', 30)
+        other = self.save(budi, project('Punya Budi'))[1]['id']
+        self.assertEqual(budi.json('POST', f'/api/library/{other}/move', {'folder': folder})[0], 404, "not into someone else's folder")
+        self.assertEqual(budi.json('POST', f'/api/library/folders/{folder}/rename', {'name': 'x'})[0], 404)
+        self.assertEqual(rani.json('POST', f'/api/library/{other}/move', {'folder': None})[0], 404, "not someone else's book")
+        # Out of the folder, back in, then the folder goes: the book stays, at the top.
+        self.assertEqual(rani.json('POST', f'/api/library/{book}/move', {'folder': None})[0], 200)
+        self.assertIsNone(rani.json('GET', '/api/library')[1]['books'][0]['folder'])
+        rani.json('POST', f'/api/library/{book}/move', {'folder': folder})
+        self.assertEqual(rani.json('POST', f'/api/library/folders/{folder}/delete', {})[1]['folders'], [])
+        listing = rani.json('GET', '/api/library')[1]
+        self.assertEqual(len(listing['books']), 1); self.assertIsNone(listing['books'][0]['folder'])
 
     def test_tampered_file_refused_and_key_kept(self):
         folder = Path(self.temporary.name)

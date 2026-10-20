@@ -40,7 +40,8 @@
 
 Owahan nginx: backup file dhisik (`/root/nginx-myflipbookpro-backup-<tanggal>`), `nginx -t`, banjur `systemctl reload nginx`.
 Ganti password admin: `python3 admin_server.py --hash-password` → ganti `ADMIN_PASSWORD_HASH` nang `.env` → `systemctl restart myflipbook-admin`.
-Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL business lifetime` (utowo `pro 30`); kecatet nang `.data/admin.log`.
+Menehi paket tanpa bayar: `python3 admin_server.py --grant EMAIL pro lifetime` (utowo `medium 30`, `basic`); kecatet nang `.data/admin.log`.
+Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlaku nganggo kode iki mindhah DB **sepisan** (`free→basic`, `pro→medium`, `business→pro`, ditandhai `meta.plans_v2`) — **backup DB dhisik**, lan ojo mbalekno kode lawas sakwise migrasi (kode lawas bakal maca `pro` dadi Pro lawas). Variabel `.env` anyar yen perlu: `QUOTA_BASIC_*`/`QUOTA_MEDIUM_*`/`QUOTA_PRO_*`, `LEMONSQUEEZY_VARIANT_MEDIUM_*`/`_PRO_*`.
 
 ## 4. Watesan
 

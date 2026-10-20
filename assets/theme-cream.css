@@ -33,7 +33,7 @@ button.primary.apply:hover,.primary:hover{transform:translate(-1px,-1px);box-sha
 .controls .navigation.fit-tight{gap:3px}.controls .navigation.fit-tight button{padding-left:9px;padding-right:9px}
 .controls.fit-scroll{overflow-x:auto;justify-content:flex-start;scrollbar-width:thin;-webkit-overflow-scrolling:touch}.controls.fit-scroll .navigation{flex-shrink:0}
 #empty-book h2{font-family:'Fraunces',serif!important;color:var(--pine)!important}
-.feedback{background:#EFF6EC;border:1.5px dashed var(--pine);border-radius:12px;padding:10px}
+.feedback{background:#EFF6EC;border:1.5px dashed var(--pine);border-radius:12px;padding:10px}.feedback:empty{display:none}
 .export-progress{display:flex;align-items:center;gap:10px;margin:10px 0 6px}
 .export-progress[hidden]{display:none}
 .export-progress-track{flex:1;height:10px;border-radius:999px;background:#E7E0D2;overflow:hidden}

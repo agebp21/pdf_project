@@ -3,8 +3,8 @@
  * highlighter, notes, search and the audio book work there too. The page
  * pictures are never changed; this only reads them.
  *
- * Tesseract.js v5.1.1 (Apache-2.0, https://github.com/naptha/tesseract.js),
- * pinned on jsDelivr and loaded only when a book has picture pages.
+ * Read with the shared OCR engine (assets/ocr-engine.js: this site's own Tesseract.js
+ * v5.1.1, no CDN, no AI; the paper evened out first), loaded only when a book has picture pages.
  *
  *   PdfOcrWords.needs(words, index) → true when the page has (almost) no text
  *   PdfOcrWords.start(langs) → worker;  worker.page(pdfPage, bookRatio) →
@@ -13,18 +13,6 @@
 (function (root) {
   'use strict';
   const UNIT = 10000, MIN_WORDS = 8;
-  let loading = null;
-  function load() {
-    if (root.Tesseract) return Promise.resolve();
-    if (!loading) loading = new Promise((resolve, reject) => {
-      const s = document.createElement('script');
-      s.src = 'https://cdn.jsdelivr.net/npm/tesseract.js@5.1.1/dist/tesseract.min.js';
-      s.onload = resolve;
-      s.onerror = () => { loading = null; reject(new Error('Could not load the OCR engine (internet needed the first time).')); };
-      document.head.appendChild(s);
-    });
-    return loading;
-  }
   function needs(words, index) {
     const lines = (words || {})[String(index)] || [];
     let count = 0;
@@ -54,8 +42,7 @@
     return total >= 3 ? { lines, text } : null;
   }
   async function start(langs) {
-    await load();
-    const worker = await root.Tesseract.createWorker(langs || 'eng+ind', 1);
+    const pool = await root.OcrEngine.pool({ langs: langs || 'ind+eng', size: 1 });
     return {
       async page(pdfPage, bookRatio) {
         const viewport = pdfPage.getViewport({ scale: 1 });
@@ -65,11 +52,11 @@
         canvas.width = Math.ceil(view.width); canvas.height = Math.ceil(view.height);
         await pdfPage.render({ canvasContext: canvas.getContext('2d'), viewport: view }).promise;
         try {
-          const result = await worker.recognize(canvas);
+          const result = await pool.recognize(canvas, { rotate: false });   // the page as shown
           return toLines(result.data || {}, scale, viewport, bookRatio);
         } finally { canvas.width = canvas.height = 0; }
       },
-      stop() { try { worker.terminate(); } catch (e) {} }
+      stop() { pool.stop(); }
     };
   }
   root.PdfOcrWords = { needs, start, toLines, MIN_WORDS };

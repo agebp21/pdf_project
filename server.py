@@ -44,6 +44,8 @@ except ImportError:          # optional: pip install truststore
     pass
 
 import accounts
+import text_pdf
+import doab_index
 import library
 import share
 import messages_en
@@ -78,7 +80,8 @@ TRANSLATE_CLAIM_WAIT = 25           # the PC's long poll
 POSITIONS = {'top-left', 'top-right', 'bottom-left', 'bottom-right'}
 SESSION_COOKIE = 'mf_session'
 PAGES = {'index.html', 'editor.html', 'converter.html', 'workflow.html', 'library.html', 'journals.html', 'flipbook.html', 'animation.html', 'notebook.html',
-         'login.html', 'account.html', 'coming-soon.html', 'privacy.html', 'terms.html'}
+         'login.html', 'account.html', 'coming-soon.html', 'privacy.html', 'terms.html',
+         'hero-3d.html', 'authors.html'}          # 3D hero preview (noindex) until it moves onto the homepage
 # Unreleased features: on a normal run (paywall on) these pages show the
 # coming-soon page; --no-paywall keeps them usable internally.
 SOON_PAGES = {'animation.html': 'Flipbook Animation'}
@@ -176,7 +179,7 @@ def get_accounts():
                   ('LEMONSQUEEZY_API_KEY', 'LEMONSQUEEZY_STORE_ID', 'LEMONSQUEEZY_SIGNING_SECRET')]
             if all(ls):
                 variants = {(plan, cycle): os.environ.get(f'LEMONSQUEEZY_VARIANT_{plan.upper()}_{cycle.upper()}', '').strip()
-                            for plan in ('pro', 'business') for cycle in ('monthly', 'yearly')}
+                            for plan in accounts.PAID for cycle in ('monthly', 'yearly')}
                 usd_provider = accounts.LemonSqueezyProvider(*ls, variants)
             elif hosted() and os.environ.get('MYFLIPBOOK_MOCK_PAYMENTS') != '1':
                 usd_provider = accounts.DisabledProvider()
@@ -237,13 +240,32 @@ def payments_paused(user=None):
 
 
 # Usage quotas per rolling window (hosted): None = no limit. Change with .env,
-# e.g. QUOTA_FREE_AI=5, QUOTA_PRO_TRANSLATE=400000, QUOTA_WINDOW_HOURS=5.
+# e.g. QUOTA_BASIC_AI=5, QUOTA_MEDIUM_TRANSLATE=400000, QUOTA_WINDOW_HOURS=5.
 QUOTAS = {
-    'free': {'office': 10, 'ai': 5, 'translate': 40_000},
-    'pro': {'office': None, 'ai': 50, 'translate': 400_000},
-    'business': {'office': None, 'ai': 150, 'translate': None},
+    'basic': {'office': 10, 'ai': 5, 'translate': 40_000},
+    'medium': {'office': None, 'ai': 50, 'translate': 400_000},
+    'pro': {'office': None, 'ai': 150, 'translate': None},
 }
 QUOTA_LABELS = {'office': 'konversi', 'ai': 'AI', 'translate': 'terjemahan buku'}
+SUMMARY_ROUTES = ('/api/summary', '/api/highlight-summary')     # what counts against the monthly summary words
+
+
+def summary_words_limit(user):
+    """The member's summary words per month (accounts.SUMMARY_WORDS; .env SUMMARY_WORDS_MEDIUM /
+    SUMMARY_WORDS_PRO may change them); a Basic member on the trial has Medium's."""
+    tier = user['plan'] if user['plan'] in accounts.PAID else 'medium'
+    value = os.environ.get(f'SUMMARY_WORDS_{tier.upper()}', '').strip()
+    if value:
+        return None if value.lower() in ('0', 'none', 'unlimited') else int(value)
+    return accounts.SUMMARY_WORDS.get(tier)
+
+
+def month_label(ts):
+    t = time.gmtime(ts + accounts.WIB)
+    return f'{t.tm_mday} {MONTHS_ID[t.tm_mon - 1]} {t.tm_year}'
+
+
+MONTHS_ID = ['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember']
 
 
 def quota_window():
@@ -256,7 +278,7 @@ def quota_window():
 def quota_limit(user, kind):
     # Free members (during their trial — afterwards these features need a plan) get
     # the small allowance: that is what makes piles of new accounts not worth it.
-    tier = user['plan'] if user['plan'] in ('pro', 'business') else 'free'
+    tier = user['plan'] if user['plan'] in accounts.PAID else accounts.FREE_PLAN
     value = os.environ.get(f'QUOTA_{tier.upper()}_{kind.upper()}', '').strip()
     if value:
         return None if value.lower() in ('0', 'none', 'unlimited') else int(value)
@@ -505,7 +527,7 @@ def validate_summary(summary):
         return None
     if not isinstance(summary, dict) or not isinstance(summary.get('text'), str):
         raise ValueError('Data ringkasan tidak valid.')
-    text = summary['text'].strip()[:20000]
+    text = summary['text'].strip()[:SUMMARY_MAX_CHARS]
     if not text:
         return None
     lang = summary.get('lang') if summary.get('lang') in TRANSLATE_LANGUAGES else 'id-ID'
@@ -516,37 +538,267 @@ SUMMARY_CHUNK = 60_000            # characters per part of a long book
 BOOK_PARTS = 24                   # at most this many parts (bigger parts for huge books)
 
 
-def book_notes(title, text, language, model):
-    """A long book as faithful notes, part by part from the first page to the
-    last (parts run in parallel). Returns one text with [Bagian n/N] headers."""
+PART_WORDS = {'singkat': '80-120', 'sedang': '150-250', 'detail': '250-400'}   # words per chapter summary
+PART_MIN_CHARS = 4_000          # a smaller chapter joins the one before it
+PART_MAX_CHARS = 200_000        # of one part sent to the model
+SUMMARY_MAX_CHARS = 150_000     # the whole summary (overview + every chapter)
+
+
+def book_parts(text, chapters=None):
+    """A long book in parts, in order: [{title, first, last, text}]. With the PDF's chapters
+    ([(title, page index)]) each chapter is a part (front matter before the first one too,
+    tiny chapters joined to the one before, at most BOOK_PARTS); without, even slices."""
+    pages = [p for p in re.split(r'(?=\[Halaman \d+\]\n)', text) if p.strip()]
+    number = lambda p: int(re.match(r'\[Halaman (\d+)\]', p).group(1)) if re.match(r'\[Halaman (\d+)\]', p) else None
+    marks = lambda t: re.findall(r'\[Halaman (\d+)\]', t)
+    part = lambda title, t: dict(title=title, first=(marks(t) or [None])[0], last=(marks(t) or [None])[-1], text=t[:PART_MAX_CHARS])
+    starts = sorted({(c[1] + 1, c[0]) for c in (chapters or [])}, key=lambda c: c[0])      # page numbers from 1
+    starts = [c for i, c in enumerate(starts) if not i or c[0] != starts[i - 1][0]]
+    if len(starts) >= 2 and pages:
+        parts, current = [], dict(title=None, pages=[])
+        for page in pages:
+            n = number(page)
+            while starts and n is not None and n >= starts[0][0]:
+                if current['pages']:
+                    parts.append(current)
+                current = dict(title=starts.pop(0)[1], pages=[])
+            current['pages'].append(page)
+        parts.append(current)
+        merged = []
+        for p in parts:
+            size = sum(len(x) for x in p['pages'])
+            if merged and (size < PART_MIN_CHARS or (p['title'] is None and merged[-1]['title'] is None)):
+                merged[-1]['pages'] += p['pages']
+            elif not merged and p['title'] is None and size < PART_MIN_CHARS * 2 and len(parts) > 1:
+                parts[1]['pages'][0:0] = p['pages']       # a short front matter joins the first chapter
+            else:
+                merged.append(p)
+        while len(merged) > BOOK_PARTS:                    # too many: join the smallest pair of neighbours
+            sizes = [sum(len(x) for x in a['pages']) + sum(len(x) for x in b['pages']) for a, b in zip(merged, merged[1:])]
+            i = sizes.index(min(sizes))
+            merged[i]['pages'] += merged[i + 1]['pages']; merged[i]['title'] = merged[i]['title'] or merged[i + 1]['title']
+            del merged[i + 1]
+        return [part(p['title'], ''.join(p['pages'])) for p in merged]
     size = max(SUMMARY_CHUNK, -(-len(text) // BOOK_PARTS))
-    pieces = [text[i:i + size] for i in range(0, len(text), size)]
-    system = (f'Buat catatan ringkas yang setia dari bagian buku ini dalam {language}: alur atau pokok bahasan, tokoh dan nama, '
-              'peristiwa atau argumen penting, istilah, sesuai urutan dalam teks. Maksimal 300 kata. Hanya isi dari teks, tanpa pendapat.')
+    return [part(None, text[i:i + size]) for i in range(0, len(text), size)]
+
+
+def book_notes(title, text, language, model, length='sedang', chapters=None, page='hlm.'):
+    """A long book read part by part (parts run in parallel): (the notes as one text with
+    [Bagian n/N] headers for the overview, [the parts with their summary])."""
+    parts = book_parts(text, chapters)
+    system = (f'Ringkas bagian buku ini dalam {language}, setia pada isi (jangan menambah fakta, angka, atau pendapat): pokok bahasan, '
+              'argumen atau peristiwa penting, tokoh, nama, dan istilah, sesuai urutan dalam teks. '
+              f'Tulis 1-3 paragraf yang runtut, sekitar {PART_WORDS.get(length, PART_WORDS["sedang"])} kata, langsung ke isinya '
+              '(tanpa judul dan tanpa pembuka seperti "Bagian ini membahas"). '
+              f'Sebut halaman sumber dari penanda [Halaman N] dalam kurung di akhir kalimat penting, mis. ({page} 12). Tanpa markdown.')
     def note(n):
-        return f'[Bagian {n + 1}/{len(pieces)}]\n' + ai_chat(system, f'Judul buku: {title}\n\n{pieces[n]}', model, max_tokens=3000).strip()
+        p = parts[n]
+        p['note'] = ai_chat(system, f'Judul buku: {title}' + (f'\nBab: {p["title"]}' if p['title'] else '') + f'\n\n{p["text"]}',
+                            model, max_tokens=3000).replace('**', '').replace('##', '').strip()
+        p['note'] = re.sub(r'\s*\((?:hlm|hal|p|pp)\.?\s*\d*\s*$', '.', p['note']).replace('..', '.')    # a page tag cut off at the end
+        span = f' (hlm. {p["first"]}–{p["last"]})' if p['first'] else ''
+        return f'[Bagian {n + 1}/{len(parts)}]{span}' + (f' {p["title"]}' if p['title'] else '') + f'\n{p["note"]}'
     with ThreadPoolExecutor(max_workers=4) as pool:
-        notes = list(pool.map(note, range(len(pieces))))
-    return 'Catatan per bagian, dari awal sampai akhir buku:\n\n' + '\n\n'.join(notes)
+        notes = list(pool.map(note, range(len(parts))))
+    return 'Catatan per bagian, dari awal sampai akhir buku:\n\n' + '\n\n'.join(notes), parts
 
 
-def summarize_book(title, text, lang='id-ID'):
-    """A faithful summary: an overview paragraph and 5-8 key points (long books
-    are first summarised in parts, then combined)."""
+SUMMARY_LENGTHS = {      # length -> (overview sentences, key points)
+    'singkat': ('1-2', '3-5'), 'sedang': ('2-4', '5-8'), 'detail': ('4-6', '10-15')}
+PAGE_WORD = {'en-US': 'p.'}   # page reference in the summary's language ("hlm." otherwise)
+
+
+def summarize_book(title, text, lang='id-ID', length='sedang', focus='', chapters=None):
+    """A faithful summary: an overview paragraph and key points (how many: `length`),
+    each point with its source page; `focus` puts one topic first. Long books are read in
+    parts (their own chapters when `chapters` is given), combined into the overview, and
+    each part's summary follows it ("Ringkasan per bab")."""
     model = os.environ.get('SUMMARY_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
     language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
-    heads = {'en-US': ('Overview', 'Key points'), 'ms-MY': ('Intisari', 'Perkara penting')}.get(lang, ('Intisari', 'Poin penting'))
-    source = book_notes(title, text, language, model) if len(text) > SUMMARY_CHUNK * 1.2 else text
+    heads = {'en-US': ('Overview', 'Key points', 'Key terms'), 'ms-MY': ('Intisari', 'Perkara penting', 'Istilah penting')}.get(
+        lang, ('Intisari', 'Poin penting', 'Istilah penting'))
+    sentences, points = SUMMARY_LENGTHS.get(length, SUMMARY_LENGTHS['sedang'])
+    page = PAGE_WORD.get(lang, 'hlm.')
+    focus = ' '.join(str(focus or '').split())[:200]
+    parts = []
+    if len(text) > SUMMARY_CHUNK * 1.2:
+        source, parts = book_notes(title, text, language, model, length, chapters, page)
+    else:
+        source = text
     system = (f'Kamu editor buku. Tulis ringkasan buku dalam {language}, setia pada isi (jangan menambah fakta, angka, atau pendapat). Format persis:\n'
-              f'Baris pertama: judul bagian "{heads[0]}", lalu 2-4 kalimat inti buku.\n'
-              f'Lalu baris "{heads[1]}" diikuti 5-8 butir, tiap butir satu baris diawali "- ".\n'
-              'Tanpa markdown lain (tanpa #, **, atau tabel).')
+              f'Baris pertama: judul bagian "{heads[0]}", lalu {sentences} kalimat inti buku.\n'
+              f'Lalu baris "{heads[1]}" diikuti {points} butir, tiap butir satu baris diawali "- ".\n'
+              + (f'Lalu baris "{heads[2]}" diikuti 3-8 butir "- istilah: arti singkat" dari teks.\n' if length == 'detail' else '')
+              + ('Jika teks memuat penanda [Halaman N] atau (hlm. N), akhiri tiap butir dengan halaman sumbernya dalam kurung, '
+                 f'mis. ({page} 12) atau ({page} 12-14); jangan menebak halaman.\n' if re.search(r'\[Halaman \d+\]|\(hlm\. \d', source) else '')
+              + (f'Utamakan hal yang berkaitan dengan: {focus}. Jika teks tidak membahasnya, katakan singkat di intisari.\n' if focus else '')
+              + 'Tanpa markdown lain (tanpa #, **, atau tabel).')
     for _ in range(2):
         reply = ai_chat(system, f'Judul buku: {title}\n\n{source}', model, max_tokens=4000)
         reply = reply.replace('**', '').replace('##', '').strip()
         if len(reply.split()) >= 30:
-            return dict(lang=lang, text=reply[:20000], model=model)
+            if parts:                              # every part's summary, under its own heading
+                by_chapter = any(p['title'] for p in parts)
+                head = {'en-US': ('Chapter by chapter', 'Part'), 'ms-MY': ('Ringkasan setiap bab', 'Bahagian')}.get(
+                    lang, ('Ringkasan per bab', 'Bagian'))
+                head = (head[0] if by_chapter else {'en-US': 'Part by part', 'ms-MY': 'Ringkasan setiap bahagian'}.get(lang, 'Ringkasan per bagian'), head[1])
+                lines = [f'### {head[0]}']
+                for n, p in enumerate(parts, 1):
+                    span = f' ({page} {p["first"]}–{p["last"]})' if p['first'] and p['first'] != p['last'] else (f' ({page} {p["first"]})' if p['first'] else '')
+                    lines.append(f'### {p["title"] or f"{head[1]} {n}"}{span}\n{p.get("note", "")}')
+                reply += '\n\n' + '\n\n'.join(lines)
+            return dict(lang=lang, text=reply[:SUMMARY_MAX_CHARS], model=model, parts=len(parts))
     raise RuntimeError('AI tidak menghasilkan ringkasan. Coba lagi.')
+
+
+ASK_MAX_CHARS = 80_000      # of the document sent with one question
+ASK_HISTORY = 6             # earlier turns kept
+WORK_MAX_CHARS = 20_000     # of the member's own work sent along (notes, summary, journal, slides)
+
+
+def ask_pages(text, question):
+    """The pages of a long document that best fit the question (word overlap, rarer words
+    weigh more), with their neighbours, in page order, up to ASK_MAX_CHARS."""
+    if len(text) <= ASK_MAX_CHARS:
+        return text
+    pages = [p for p in re.split(r'(?=\[Halaman \d+\]\n)', text) if p.strip()]
+    words = lambda t: set(re.findall(r'\w{3,}', t.lower()))
+    sets = [words(p) for p in pages]
+    wanted = words(question)
+    count = {w: sum(w in s for s in sets) for w in wanted}
+    score = [sum(math.log(1 + len(pages) / count[w]) for w in wanted & s if count[w]) for s in sets]
+    keep, size = set(), 0
+    for i in sorted(range(len(pages)), key=lambda i: (-score[i], i)):
+        for j in (i, i - 1, i + 1):
+            if 0 <= j < len(pages) and j not in keep and size + len(pages[j]) <= ASK_MAX_CHARS:
+                keep.add(j); size += len(pages[j])
+        if size >= ASK_MAX_CHARS * 0.95:
+            break
+    return '\n\n'.join(pages[i] for i in sorted(keep))
+
+
+def clean_work(work):
+    """The member's own work sent with a request (notes, summary, journal draft) as plain
+    text, at most WORK_MAX_CHARS."""
+    if not isinstance(work, str):
+        return ''
+    lines = [' '.join(line.split()) for line in work.splitlines()]
+    return '\n'.join(line for line in lines if line)[:WORK_MAX_CHARS]
+
+
+def ask_document(title, text, question, history=(), work=''):
+    """An answer to a reader's question, from the document (and the reader's own notes on it,
+    `work`) only, with page references."""
+    question = ' '.join(str(question or '').split())[:1000]
+    if len(question) < 2:
+        raise ValueError('Tulis pertanyaan Anda dulu.')
+    model = os.environ.get('SUMMARY_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
+    turns = ''.join(f'{"Pembaca" if t.get("role") == "user" else "Asisten"}: {str(t.get("text") or "")[:2000]}\n'
+                    for t in list(history)[-ASK_HISTORY:] if isinstance(t, dict))
+    work = clean_work(work)
+    system = ('Kamu asisten baca yang menjawab pertanyaan pembaca tentang dokumen di bawah. Jawab HANYA dari isi dokumen; '
+              'jangan menambah fakta, angka, atau pendapat dari luar. Jika dokumen tidak membahasnya, katakan terus terang '
+              'bahwa jawabannya tidak ada di dokumen. Jawab dalam bahasa yang sama dengan pertanyaan, ringkas dan jelas '
+              '(paragraf pendek; boleh butir diawali "- "). Sebut halaman sumber dari penanda [Halaman N] dalam kurung, '
+              'mis. (hlm. 12) — untuk jawaban berbahasa Inggris (p. 12). Tanpa markdown lain (tanpa #, **, atau tabel).'
+              + (' Pembaca juga punya hasil kerja sendiri (catatan, ringkasan, draf jurnal, slide) di bagian "HASIL KERJA PEMBACA": '
+                 'pakai untuk pertanyaan tentang pekerjaannya (mis. memeriksa, melengkapi, atau membandingkan dengan dokumen), '
+                 'tetapi bedakan dengan jelas mana yang dari dokumen dan mana yang dari catatan pembaca.' if work else ''))
+    user = (f'Judul dokumen: {title}\n\n{ask_pages(text, question + " " + turns[-500:])}\n\n'
+            + (f'HASIL KERJA PEMBACA:\n{work}\n\n' if work else '')
+            + (f'Percakapan sebelumnya:\n{turns}\n' if turns else '') + f'Pertanyaan: {question}')
+    reply = ai_chat(system, user, model, max_tokens=2500).replace('**', '').replace('##', '').strip()
+    if not reply:
+        raise RuntimeError('AI tidak menjawab. Coba lagi.')
+    return reply[:12000]
+
+
+# A journal article draft, section by section (AI Summarizer > Jurnal): what each section holds.
+JOURNAL_SECTIONS = {
+    'judul': ('Judul', 'satu judul artikel ilmiah yang padat dan informatif, maksimal 20 kata, tanpa titik di akhir'),
+    'abstrak': ('Abstrak', 'satu paragraf 150-250 kata: latar belakang, tujuan, metode atau sumber, temuan utama, dan simpulan'),
+    'kata_kunci': ('Kata kunci', '3-6 kata kunci dipisahkan titik koma, dalam satu baris'),
+    'pendahuluan': ('Pendahuluan', '3-5 paragraf: latar belakang, masalah, celah yang dibahas, dan tujuan tulisan'),
+    'metode': ('Metode', '2-4 paragraf: pendekatan, sumber data atau bahan yang dikaji, dan cara analisis, sejauh ada di sumber'),
+    'hasil': ('Hasil', '3-5 paragraf (boleh butir "- ") berisi temuan utama dari sumber'),
+    'pembahasan': ('Pembahasan', '3-5 paragraf yang menafsirkan temuan, mengaitkan antarbagian sumber, dan menyebut keterbatasan'),
+    'kesimpulan': ('Kesimpulan', '1-2 paragraf simpulan dan saran'),
+}
+SLIDES_MIN, SLIDES_MAX = 3, 20
+
+
+def writing_model():
+    return os.environ.get('SUMMARY_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
+
+
+def write_journal(title, text, section, lang='id-ID', work=''):
+    """One section of a journal article draft from the highlighted source (and the member's
+    notes), faithful to them, with page references."""
+    if section not in JOURNAL_SECTIONS:
+        raise ValueError('Bagian jurnal tidak dikenal.')
+    name, what = JOURNAL_SECTIONS[section]
+    language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
+    work = clean_work(work)
+    page = PAGE_WORD.get(lang, 'hlm.')
+    system = (f'Kamu membantu menulis draf artikel jurnal ilmiah dalam {language} yang baku. Tulis HANYA bagian "{name}": {what}. '
+              'Gunakan hanya isi SUMBER (bagian dokumen yang distabilo pembaca) dan CATATAN PEMBACA; jangan mengarang data, angka, '
+              'kutipan, nama, atau rujukan lain. Jika sumber tidak cukup untuk bagian ini, tulis seadanya dan tandai bagian yang perlu '
+              'dilengkapi penulis dengan [lengkapi: ...]. '
+              + ('' if section in ('judul', 'kata_kunci') else
+                 f'Sebut halaman sumber dari penanda [Halaman N] dalam kurung di akhir kalimat yang memakainya, mis. ({page} 12). ')
+              + 'Langsung tulis isinya, tanpa judul bagian, tanpa pembuka, tanpa markdown (tanpa #, **, atau tabel).')
+    user = (f'Judul dokumen sumber: {title}\n\nSUMBER:\n{ask_pages(text, name + " " + work[:500])}'
+            + (f'\n\nCATATAN PEMBACA (draf dan catatannya sejauh ini):\n{work}' if work else ''))
+    reply = ai_chat(system, user, writing_model(), max_tokens=3000).replace('**', '').replace('##', '').strip()
+    if not reply:
+        raise RuntimeError('AI tidak menghasilkan tulisan. Coba lagi.')
+    if section in ('judul', 'kata_kunci'):
+        reply = ' '.join(reply.split()).strip('"')
+    return reply[:12000]
+
+
+def parse_slides(reply):
+    """The slides in an AI reply: [{title, points: [...], notes}], however it was wrapped."""
+    start, end = reply.find('{'), reply.rfind('}')
+    try:
+        data = json.loads(reply[start:end + 1]) if start >= 0 < end else None
+    except json.JSONDecodeError:
+        data = None
+    rows = data.get('slides') if isinstance(data, dict) else None
+    out = []
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        head = ' '.join(str(row.get('title') or '').split())[:160]
+        points = [' '.join(str(x).split())[:300] for x in (row.get('points') or []) if isinstance(x, (str, int, float)) and str(x).strip()][:8]
+        notes = ' '.join(str(row.get('notes') or '').split())[:1500]
+        if head or points:
+            out.append({'title': head, 'points': points, 'notes': notes})
+    return out[:SLIDES_MAX]
+
+
+def make_slides(title, text, lang='id-ID', count=8, work=''):
+    """A presentation from the highlighted source (and the member's notes): `count` content
+    slides, each a title, 3-5 short points and speaker notes."""
+    count = max(SLIDES_MIN, min(SLIDES_MAX, int(count or 8)))
+    language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
+    work = clean_work(work)
+    page = PAGE_WORD.get(lang, 'hlm.')
+    system = (f'Kamu menyusun slide presentasi dalam {language} dari SUMBER (bagian dokumen yang distabilo) dan CATATAN PEMBACA. '
+              f'Buat tepat {count} slide isi (tanpa slide judul pembuka; slide terakhir berisi kesimpulan). Tiap slide: judul pendek '
+              '(maks. 8 kata), 3-5 poin singkat (maks. 14 kata per poin, bukan kalimat panjang), dan catatan pembicara 2-4 kalimat '
+              f'yang menyebut halaman sumber, mis. ({page} 12). Setia pada isi sumber: jangan mengarang data, angka, atau kutipan. '
+              'Balas HANYA JSON valid tanpa teks lain, persis bentuk ini: '
+              '{"slides":[{"title":"...","points":["...","..."],"notes":"..."}]}')
+    user = (f'Judul dokumen: {title}\n\nSUMBER:\n{ask_pages(text, title + " " + work[:500])}'
+            + (f'\n\nCATATAN PEMBACA:\n{work}' if work else ''))
+    model = writing_model()
+    for _ in range(2):
+        slides = parse_slides(ai_chat(system, user, model, max_tokens=6000))
+        if len(slides) >= min(3, count):
+            return slides
+    raise RuntimeError('AI tidak menghasilkan slide. Coba lagi.')
 
 
 HIGHLIGHT_MAX_CHARS = 6000
@@ -677,7 +929,7 @@ def podcast_script(title, text, lang='id-ID', hosts=('Rina', 'Bima')):
     long = len(text) > PODCAST_MAX_SOURCE
     if long:
         notes_model = os.environ.get('SUMMARY_MODEL', '').strip() or model
-        source = f'Judul: {title}\n\n' + book_notes(title, text, PODCAST_LANGUAGES.get(lang, 'Bahasa Indonesia'), notes_model)
+        source = f'Judul: {title}\n\n' + book_notes(title, text, PODCAST_LANGUAGES.get(lang, 'Bahasa Indonesia'), notes_model)[0]
     else:
         source = f'Judul: {title}\n\n{text}'
     last = 'Naskah kosong.'
@@ -1182,8 +1434,8 @@ def abstract_text(inverted, limit=700):
     return text if len(text) <= limit else text[:limit].rsplit(' ', 1)[0] + '…'
 
 
-def journal_search(query, page=1, oa=True, year_from=None, year_to=None, lang=None, indonesia=False, sort='relevance'):
-    """Articles for a query: dict(total, page, results=[...])."""
+def openalex_search(query, page=1, oa=True, year_from=None, year_to=None, lang=None, indonesia=False, sort='relevance'):
+    """OpenAlex articles for a query: dict(total, page, results=[...])."""
     filters = ['type:article|review']
     if oa:
         filters.append('is_oa:true')
@@ -1196,9 +1448,7 @@ def journal_search(query, page=1, oa=True, year_from=None, year_to=None, lang=No
     # Title and abstract only (full texts drift to loosely related papers), and
     # exact words: a stemmed "immersive" also finds "immersed"/"immersion" (physics, chemistry).
     filters.append('title_and_abstract.search.exact:' + query.replace(',', ' '))
-    params = {'filter': ','.join(filters), 'per-page': 20, 'page': page,
-              'select': 'id,display_name,publication_year,doi,cited_by_count,language,authorships,primary_location,'
-                        'best_oa_location,open_access,abstract_inverted_index'}
+    params = {'filter': ','.join(filters), 'per-page': 20, 'page': page, 'select': OPENALEX_FIELDS}
     if JOURNAL_SORTS.get(sort):
         params['sort'] = JOURNAL_SORTS[sort]
     if os.environ.get('OPENALEX_API_KEY'):
@@ -1220,36 +1470,349 @@ def journal_search(query, page=1, oa=True, year_from=None, year_to=None, lang=No
         raise RuntimeError(f'Layanan pencarian menolak permintaan ({cause.code}).') from cause
     except (urllib.error.URLError, TimeoutError, OSError) as cause:
         raise RuntimeError('Layanan pencarian tidak bisa dihubungi. Cek koneksi internet server.') from cause
-    results = []
-    for work in data.get('results') or []:
-        primary = work.get('primary_location') or {}
-        source = primary.get('source') or {}
-        best = work.get('best_oa_location') or {}
-        doi = work.get('doi') or ''
-        pdf = best.get('pdf_url') or ''
-        names = list(dict.fromkeys(n for n in ((x.get('author') or {}).get('display_name') for x in work.get('authorships') or []) if n))   # OpenAlex repeats some
-        results.append(dict(
-            id=str(work.get('id', '')).rsplit('/', 1)[-1],
-            title=' '.join(str(work.get('display_name') or 'Tanpa judul').split()),
-            authors=names[:8],
-            moreAuthors=max(0, len(names) - 8),
-            journal=source.get('display_name') or '',
-            publisher=source.get('host_organization_name') or '',
-            year=work.get('publication_year'),
-            cited=work.get('cited_by_count') or 0,
-            language=work.get('language') or '',
-            doi=doi,
-            link=best.get('landing_page_url') or primary.get('landing_page_url') or doi,
-            pdf=pdf if pdf.startswith(('http://', 'https://')) else '',
-            oa=bool((work.get('open_access') or {}).get('is_oa')),
-            license=best.get('license') or '',
-            abstract=abstract_text(work.get('abstract_inverted_index')),
-        ))
+    results = [openalex_article(work) for work in data.get('results') or []]
     out = dict(total=(data.get('meta') or {}).get('count') or 0, page=page, results=results)
     if len(JOURNAL_CACHE) > 300:
         JOURNAL_CACHE.clear()
     JOURNAL_CACHE[key] = (time.time(), out)
     return out
+
+
+OPENALEX_FIELDS = ('id,display_name,publication_year,doi,cited_by_count,language,authorships,primary_location,'
+                   'best_oa_location,open_access,abstract_inverted_index,biblio,type')
+
+
+def openalex_article(work):
+    """One OpenAlex work as a search result."""
+    primary = work.get('primary_location') or {}
+    source = primary.get('source') or {}
+    best = work.get('best_oa_location') or {}
+    doi = work.get('doi') or ''
+    pdf = best.get('pdf_url') or ''
+    names = list(dict.fromkeys(n for n in ((x.get('author') or {}).get('display_name') for x in work.get('authorships') or []) if n))   # OpenAlex repeats some
+    return dict(
+        id=str(work.get('id', '')).rsplit('/', 1)[-1],
+        title=' '.join(str(work.get('display_name') or 'Tanpa judul').split()),
+        authors=names[:8],
+        moreAuthors=max(0, len(names) - 8),
+        journal=source.get('display_name') or '',
+        publisher=source.get('host_organization_name') or '',
+        year=work.get('publication_year'),
+        cited=work.get('cited_by_count') or 0,
+        language=work.get('language') or '',
+        doi=doi,
+        link=best.get('landing_page_url') or primary.get('landing_page_url') or doi,
+        pdf=pdf if pdf.startswith(('http://', 'https://')) else '',
+        oa=bool((work.get('open_access') or {}).get('is_oa')),
+        license=best.get('license') or '',
+        abstract=abstract_text(work.get('abstract_inverted_index')),
+        source='openalex',
+        **biblio_of(work.get('biblio') or {}, work.get('type')),
+    )
+
+
+def biblio_of(b, kind=None):
+    """Volume, issue, pages and kind of an article (for citations), '' when unknown."""
+    first, last = str(b.get('first_page') or ''), str(b.get('last_page') or '')
+    return dict(volume=str(b.get('volume') or ''), issue=str(b.get('issue') or ''),
+                pages=first + ('-' + last if last and last != first else ''), kind=kind or 'article')
+
+
+# ---------- Author profiles, like Publish or Perish (Harzing): OpenAlex's author records and
+# works (CC0), the metrics computed here the way PoP defines them. No Google Scholar scraping.
+AUTHOR_ID = re.compile(r'A\d{1,12}')
+AUTHOR_WORKS_MAX = 1000          # 5 pages of 200, most cited first
+
+
+def openalex_get(path, params):
+    """OpenAlex JSON for an API path, with the site's key / mailto; cached a day."""
+    params = dict(params)
+    if os.environ.get('OPENALEX_API_KEY'):
+        params['api_key'] = os.environ['OPENALEX_API_KEY'].strip()
+    if os.environ.get('OPENALEX_MAILTO'):
+        params['mailto'] = os.environ['OPENALEX_MAILTO'].strip()
+    url = f'https://api.openalex.org/{path}?' + urlencode(params)
+    hit = JOURNAL_CACHE.get(url)
+    if hit and time.time() - hit[0] < JOURNAL_CACHE_SECONDS:
+        return hit[1]
+    data = ebook_get(url, 'OpenAlex')
+    if len(JOURNAL_CACHE) > 300:
+        JOURNAL_CACHE.clear()
+    JOURNAL_CACHE[url] = (time.time(), data)
+    return data
+
+
+def author_card(a):
+    inst = (a.get('last_known_institutions') or [{}])
+    inst = inst[0] if inst else {}
+    stats = a.get('summary_stats') or {}
+    return dict(id=str(a.get('id', '')).rsplit('/', 1)[-1], name=a.get('display_name') or '', works=a.get('works_count') or 0,
+                cited=a.get('cited_by_count') or 0, h=stats.get('h_index') or 0, i10=stats.get('i10_index') or 0,
+                institution=inst.get('display_name') or '', country=inst.get('country_code') or '',
+                orcid=str(a.get('orcid') or '').replace('https://orcid.org/', ''))
+
+
+def author_search(name):
+    """Authors whose name fits, most cited first: [author_card]."""
+    name = ' '.join(str(name or '').split())[:120]
+    if len(name) < 3:
+        raise ValueError('Tulis nama penulis minimal 3 huruf.')
+    data = openalex_get('authors', {'search': name, 'per-page': 15,
+                                    'select': 'id,display_name,works_count,cited_by_count,summary_stats,last_known_institutions,orcid'})
+    return [author_card(a) for a in data.get('results') or []]
+
+
+def h_of(values):
+    """h-index of a list of numbers: the largest h with h values of at least h."""
+    ranked = sorted(values, reverse=True)
+    return sum(1 for i, v in enumerate(ranked, 1) if v >= i)
+
+
+def citation_metrics(works, year_now=None):
+    """Publish or Perish's metrics for a list of works ({cited, year, authors count}):
+    papers, citations, years, cites/year, cites/paper, cites/author, papers/author, authors/paper,
+    h-index, g-index, i10-index, hI,norm, hI,annual, AWCR, AW-index."""
+    year_now = year_now or time.gmtime().tm_year
+    cites = [max(0, int(w.get('cited') or 0)) for w in works]
+    authors = [max(1, int(w.get('nAuthors') or 1)) for w in works]
+    years = [int(w['year']) for w in works if w.get('year')]
+    span = max(1, year_now - min(years) + 1) if years else 1
+    ranked, total, g = sorted(cites, reverse=True), 0, 0
+    for i, c in enumerate(ranked, 1):
+        total += c
+        if total >= i * i:
+            g = i
+    hi_norm = h_of([c / a for c, a in zip(cites, authors)])
+    awcr = sum(c / max(1, year_now - int(w['year']) + 1) for c, w in zip(cites, works) if w.get('year'))
+    n, citations = len(works), sum(cites)
+    r = lambda v: round(v, 2)
+    return dict(papers=n, citations=citations, years=span, citesPerYear=r(citations / span), citesPerPaper=r(citations / n) if n else 0,
+                citesPerAuthor=r(sum(c / a for c, a in zip(cites, authors))), papersPerAuthor=r(sum(1 / a for a in authors)),
+                authorsPerPaper=r(sum(authors) / n) if n else 0, h=h_of(cites), g=g, i10=sum(1 for c in cites if c >= 10),
+                hINorm=hi_norm, hIAnnual=r(hi_norm / span), awcr=r(awcr), awIndex=r(math.sqrt(awcr)), firstYear=min(years) if years else None)
+
+
+def author_profile(author_id):
+    """{author, metrics, byYear, works, complete} for one OpenAlex author (works most cited first)."""
+    if not AUTHOR_ID.fullmatch(author_id or ''):
+        raise ValueError('Penulis tidak dikenal.')
+    a = openalex_get(f'authors/{author_id}', {'select': 'id,display_name,works_count,cited_by_count,summary_stats,last_known_institutions,orcid,counts_by_year,display_name_alternatives'})
+    works, total = [], None
+    for page in range(1, AUTHOR_WORKS_MAX // 200 + 1):
+        data = openalex_get('works', {'filter': f'author.id:{author_id}', 'sort': 'cited_by_count:desc', 'per-page': 200, 'page': page, 'select': OPENALEX_FIELDS})
+        total = (data.get('meta') or {}).get('count') or 0
+        for w in data.get('results') or []:
+            item = openalex_article(w)
+            item['nAuthors'] = len(item['authors']) + item['moreAuthors'] or 1
+            item.pop('abstract', None)
+            works.append(item)
+        if len(works) >= total or not data.get('results'):
+            break
+    by_year = sorted(({'year': c['year'], 'works': c.get('works_count') or 0, 'cited': c.get('cited_by_count') or 0}
+                      for c in a.get('counts_by_year') or [] if c.get('year')), key=lambda c: c['year'])
+    return dict(author=dict(author_card(a), alternatives=(a.get('display_name_alternatives') or [])[:6]),
+                metrics=citation_metrics(works), byYear=by_year, works=works, complete=len(works) >= (total or 0), total=total or len(works))
+
+
+# ---------- A DOI typed in: that article (several DOIs, one per line or comma: each of them).
+DOI_MAX = 20
+
+
+def query_dois(query):
+    """The DOIs in a search (bare, doi:…, or doi.org links), in order, at most DOI_MAX."""
+    found = re.findall(r'10\.\d{4,9}/[^\s"<>,;]+', re.sub(r'https?://(dx\.)?doi\.org/', ' ', str(query or ''), flags=re.I))
+    return list(dict.fromkeys(d.rstrip('.)]') for d in found))[:DOI_MAX]
+
+
+def doi_article(doi):
+    """The article behind one DOI: OpenAlex's entry, or Crossref's details when OpenAlex doesn't
+    have it (its PDF is then looked up by the DOI); None when neither knows it."""
+    hit = JOURNAL_CACHE.get('doi:' + doi.lower())
+    if hit and time.time() - hit[0] < JOURNAL_CACHE_SECONDS:
+        return hit[1]
+    params = {'select': OPENALEX_FIELDS}
+    if os.environ.get('OPENALEX_MAILTO'):
+        params['mailto'] = os.environ['OPENALEX_MAILTO'].strip()
+    article = None
+    try:
+        article = openalex_article(ebook_get(f'https://api.openalex.org/works/doi:{quote(doi, safe="/")}?' + urlencode(params), 'OpenAlex'))
+    except RuntimeError:
+        try:
+            work = (ebook_get(f'https://api.crossref.org/works/{quote(doi, safe="/")}?mailto={quote(CONTACT_EMAIL)}', 'Crossref') or {}).get('message') or {}
+        except RuntimeError:
+            work = {}
+        if work.get('title'):
+            names = [' '.join(filter(None, [a.get('given'), a.get('family')])) or a.get('name') or '' for a in work.get('author') or []]
+            names = [n for n in names if n]
+            year = ((work.get('issued') or {}).get('date-parts') or [[None]])[0][0]
+            article = dict(id='', title=' '.join(str(work['title'][0]).split()), authors=names[:8], moreAuthors=max(0, len(names) - 8),
+                           journal=(work.get('container-title') or [''])[0], publisher=work.get('publisher') or '', year=year,
+                           cited=work.get('is-referenced-by-count') or 0, language=work.get('language') or '',
+                           doi='https://doi.org/' + doi, link='https://doi.org/' + doi, pdf='', oa=False,
+                           license=((work.get('license') or [{}])[0]).get('URL') or '', abstract=abstract_cut(re.sub(r'<[^>]+>', ' ', work.get('abstract') or '')),
+                           source='crossref', volume=str(work.get('volume') or ''), issue=str(work.get('issue') or ''),
+                           pages=str(work.get('page') or ''), kind='article')
+    if article:
+        if len(JOURNAL_CACHE) > 300:
+            JOURNAL_CACHE.clear()
+        JOURNAL_CACHE['doi:' + doi.lower()] = (time.time(), article)
+    return article
+
+
+def doi_search(dois):
+    """dict(total, page, results, dois, missing) for the DOIs typed in (looked up side by side)."""
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        found = list(pool.map(doi_article, dois))
+    return dict(total=sum(1 for a in found if a), page=1, results=[a for a in found if a], dois=len(dois),
+                missing=[d for d, a in zip(dois, found) if not a])
+
+
+# ---------- Semantic Scholar (api.semanticscholar.org), beside OpenAlex. The key
+# allows 1 request per second across every endpoint: one search call per query,
+# one shared slot at least S2_GAP apart, a day's cache. It also refuses now and then (429)
+# well inside the limit: one retry, and a longer pause only after several refusals in a row.
+# Its licence asks for attribution; abstracts/TLDRs may be CC BY-NC, so only
+# metadata, the citation count and the open-access PDF link are shown.
+S2_FIELDS = 'title,year,authors,venue,citationCount,isOpenAccess,openAccessPdf,externalIds,url,journal'
+S2_GAP, S2_WAIT, S2_PAUSE, S2_REFUSALS = 1.1, 2.0, 60, 3
+S2_CACHE, S2_CACHE_SECONDS = {}, 86400
+S2_LOCK = threading.Lock()
+S2_STATE = {'last': 0.0, 'pause_until': 0.0, 'refused': 0}
+S2_ID = re.compile(r'S2[0-9a-f]{40}')
+DOI_RE = re.compile(r'10\.\d{4,9}/[^\s"<>]{1,200}')
+
+
+def s2_slot(wait=S2_WAIT):
+    """True when this call may go to Semantic Scholar now (waits at most `wait` seconds)."""
+    deadline = time.time() + wait
+    while True:
+        with S2_LOCK:
+            now = time.time()
+            if now < S2_STATE['pause_until']:
+                return False
+            gap = S2_GAP - (now - S2_STATE['last'])
+            if gap <= 0:
+                S2_STATE['last'] = now
+                return True
+        if now + gap > deadline:
+            return False
+        time.sleep(min(gap, 0.25))
+
+
+def s2_licence(text):
+    """"CCBYSA" -> "cc-by-sa" (OpenAlex's spelling, shown the same way)."""
+    text = str(text or '').upper()
+    if not text.startswith('CC'):
+        return text.lower()
+    return 'cc-' + '-'.join(re.findall(r'BY|NC|ND|SA|0', text[2:])).lower() if len(text) > 2 else 'cc'
+
+
+def s2_search(query, page=1, oa=True, year_from=None, year_to=None):
+    """Semantic Scholar articles: dict(total, results=[...]); none without SEMANTIC_SCHOLAR_API_KEY."""
+    key = os.environ.get('SEMANTIC_SCHOLAR_API_KEY', '').strip()
+    if not key:
+        return dict(total=0, results=[])
+    params = {'query': query, 'offset': (page - 1) * 20, 'limit': 20, 'fields': S2_FIELDS}
+    if oa:
+        params['openAccessPdf'] = ''
+    if year_from or year_to:
+        params['year'] = f'{year_from or ""}-{year_to or ""}'
+    cache_key = json.dumps(params, sort_keys=True)
+    hit = S2_CACHE.get(cache_key)
+    if hit and time.time() - hit[0] < S2_CACHE_SECONDS:
+        return hit[1]
+    request = urllib.request.Request('https://api.semanticscholar.org/graph/v1/paper/search?' + urlencode(params),
+                                     headers={'x-api-key': key, 'User-Agent': 'MyFlipbook/1.0 (journal search)', 'Accept': 'application/json'})
+    data = None
+    for attempt in range(2):
+        if not s2_slot():
+            raise RuntimeError('Semantic Scholar sedang sibuk.')
+        try:
+            with urllib.request.urlopen(request, timeout=15) as response:
+                data = json.loads(response.read().decode('utf-8'))
+            with S2_LOCK:
+                S2_STATE['refused'] = 0
+            break
+        except urllib.error.HTTPError as cause:
+            if cause.code != 429:
+                raise RuntimeError(f'Semantic Scholar menolak permintaan ({cause.code}).') from cause
+            with S2_LOCK:
+                S2_STATE['refused'] += 1
+                if S2_STATE['refused'] >= S2_REFUSALS:
+                    S2_STATE['pause_until'] = time.time() + S2_PAUSE
+            if attempt:
+                raise RuntimeError('Semantic Scholar sedang sibuk.') from cause
+        except (urllib.error.URLError, TimeoutError, OSError, ValueError) as cause:
+            raise RuntimeError('Semantic Scholar tidak bisa dihubungi.') from cause
+    results = []
+    for paper in data.get('data') or []:
+        paper_id = str(paper.get('paperId') or '')
+        if not re.fullmatch(r'[0-9a-f]{40}', paper_id) or not paper.get('title'):
+            continue
+        doi = str((paper.get('externalIds') or {}).get('DOI') or '')
+        doi = 'https://doi.org/' + doi if DOI_RE.fullmatch(doi) else ''
+        pdf = (paper.get('openAccessPdf') or {})
+        pdf_url = str(pdf.get('url') or '')
+        names = [a.get('name') for a in paper.get('authors') or [] if a.get('name')]
+        results.append(dict(
+            id='S2' + paper_id, title=' '.join(str(paper['title']).split()), authors=names[:8], moreAuthors=max(0, len(names) - 8),
+            journal=str(paper.get('venue') or (paper.get('journal') or {}).get('name') or ''), publisher='',
+            year=paper.get('year'), cited=int(paper.get('citationCount') or 0), language='', doi=doi,
+            link=doi or str(paper.get('url') or ''), pdf=pdf_url if pdf_url.startswith(('http://', 'https://')) else '',
+            oa=bool(paper.get('isOpenAccess') or pdf_url), license=s2_licence(pdf.get('license')), abstract='', source='s2'))
+    out = dict(total=int(data.get('total') or 0), results=results)
+    if len(S2_CACHE) > 500:
+        S2_CACHE.clear()
+    S2_CACHE[cache_key] = (time.time(), out)
+    return out
+
+
+def article_key(article):
+    return (article.get('doi') or '').lower() or re.sub(r'[^a-z0-9]+', '', article['title'].lower())[:80]
+
+
+def journal_search(query, page=1, oa=True, year_from=None, year_to=None, lang=None, indonesia=False, sort='relevance'):
+    """Articles for a query: dict(total, page, results=[...]) from OpenAlex, with Semantic Scholar's
+    alongside when it can honour the filters (it has no language, country or sort filter)."""
+    dois = query_dois(query)
+    if dois:                   # a DOI typed in: those articles, whatever the filters (one page)
+        return doi_search(dois) if page == 1 else dict(total=0, page=page, results=[])
+    use_s2 = bool(os.environ.get('SEMANTIC_SCHOLAR_API_KEY', '').strip()) and sort == 'relevance' and not lang and not indonesia
+    if not use_s2:
+        return openalex_search(query, page, oa, year_from, year_to, lang, indonesia, sort)
+    with ThreadPoolExecutor(max_workers=2) as pool:
+        jobs = [pool.submit(openalex_search, query, page, oa, year_from, year_to, lang, indonesia, sort),
+                pool.submit(s2_search, query, page, oa, year_from, year_to)]
+        outs, errors = [], []
+        for job in jobs:
+            try:
+                outs.append(job.result())
+            except RuntimeError as cause:
+                outs.append(None)
+                errors.append(cause)
+    first, second = outs
+    if first is None and second is None:
+        raise errors[0]
+    if first is None:
+        return dict(total=second['total'], page=page, results=second['results'])
+    if second is None or not second['results']:
+        return first
+    # The same article once: OpenAlex's entry, with Semantic Scholar's PDF link when it has none.
+    found = {article_key(a): a for a in first['results']}
+    extra = []
+    for a in second['results']:
+        same = found.get(article_key(a))
+        if same:
+            if not same['pdf'] and a['pdf']:
+                same['pdf'] = a['pdf']
+                same['oa'] = True
+        else:
+            found[article_key(a)] = a
+            extra.append(a)
+    results = []
+    for i in range(max(len(first['results']), len(extra))):          # alternate the two sources
+        results += first['results'][i:i + 1] + extra[i:i + 1]
+    return dict(total=max(first['total'], second['total']), page=page, results=results)
 
 
 # ---------- The PDF behind a journal search result (for "Make a flipbook").
@@ -1311,13 +1874,15 @@ def pdf_links_in(html, base):
     return out[:6]
 
 
-def journal_candidates(work_id, hint=''):
+def journal_candidates(work_id, hint='', doi=''):
     pdfs, pages = ([hint] if hint else []), []
+    # A Semantic Scholar result is looked up in OpenAlex by its DOI (no S2 call: its rate limit is tight).
+    lookup = work_id if WORK_ID.fullmatch(work_id) else ('doi:' + doi if doi else '')    # S2 / DOI-only: OpenAlex by the DOI
     try:
         params = {'select': 'doi,ids,best_oa_location,locations'}
         if os.environ.get('OPENALEX_MAILTO'):
             params['mailto'] = os.environ['OPENALEX_MAILTO'].strip()
-        work = ebook_get(f'https://api.openalex.org/works/{work_id}?' + urlencode(params), 'OpenAlex')
+        work = ebook_get(f'https://api.openalex.org/works/{quote(lookup, safe=":/")}?' + urlencode(params), 'OpenAlex') if lookup else {}
     except RuntimeError:
         work = {}
     for loc in [work.get('best_oa_location') or {}] + list(work.get('locations') or []):
@@ -1325,7 +1890,7 @@ def journal_candidates(work_id, hint=''):
             pdfs.append(loc['pdf_url'])
         if loc.get('landing_page_url') and loc.get('is_oa', True):
             pages.append(loc['landing_page_url'])
-    doi = str(work.get('doi') or '').replace('https://doi.org/', '')
+    doi = str(work.get('doi') or '').replace('https://doi.org/', '') or doi
     if doi:
         try:
             oa = ebook_get(f'https://api.unpaywall.org/v2/{quote(doi)}?email={quote(CONTACT_EMAIL)}', 'Unpaywall')
@@ -1338,6 +1903,7 @@ def journal_candidates(work_id, hint=''):
             pass
         pages.append('https://doi.org/' + doi)
     pmcid = str((work.get('ids') or {}).get('pmcid') or '').rsplit('/', 1)[-1]
+    pmcid = 'PMC' + pmcid if pmcid.isdigit() else pmcid             # OpenAlex gives some without the prefix
     if re.fullmatch(r'PMC\d+', pmcid):
         pdfs.append(f'https://europepmc.org/articles/{pmcid}?pdf=render')
     pdfs = [OJS_VIEW.sub(r'\1download\2', u) for u in pdfs]
@@ -1365,19 +1931,21 @@ def journal_file_allowed(ip, now=None):
     return True
 
 
-def journal_file(work_id, hint=''):
+def journal_file(work_id, hint='', doi=''):
     """(bytes, filename) of an open-access article's PDF, found by journal_pdf; only real PDFs."""
-    found = journal_pdf(work_id, hint)
+    found = journal_pdf(work_id, hint, doi)
     if not found['pdf']:
         raise LookupError('PDF artikel ini tidak tersedia untuk umum. Buka artikelnya di situs penerbit.')
     data, name, ctype = fetch_source(found['pdf'], public_only=True)
     if not data.startswith(b'%PDF-'):
         raise LookupError('PDF artikel ini tidak tersedia untuk umum. Buka artikelnya di situs penerbit.')
-    return data, name if name.lower().endswith('.pdf') else work_id + '.pdf'
+    return data, name if name.lower().endswith('.pdf') else (work_id or re.sub(r'[^\w.-]+', '_', doi)[-80:] or 'artikel') + '.pdf'
 
 
 def ebook_file(source, identifier):
     """(bytes, filename) of a search result's book or magazine PDF (only real PDFs)."""
+    if source == 'gutenberg':
+        return gutenberg_pdf(identifier)
     found = ebook_pdf(source, identifier)
     if not found['pdf']:
         raise LookupError('Buku ini tidak punya berkas PDF.')
@@ -1387,16 +1955,23 @@ def ebook_file(source, identifier):
     return data, name if name.lower().endswith('.pdf') else re.sub(r'[^\w.-]+', '_', identifier)[-80:] + '.pdf'
 
 
-def journal_pdf(work_id, hint=''):
-    """{pdf, size} of an article's real PDF ('' when none is public)."""
-    if not WORK_ID.fullmatch(work_id or ''):
-        raise ValueError('Artikel tidak dikenal.')
+def journal_pdf(work_id, hint='', doi=''):
+    """{pdf, size} of an article's real PDF ('' when none is public). work_id: OpenAlex (W…) or
+    Semantic Scholar (S2…); doi helps find the latter's PDF."""
     hint = hint if hint.startswith(('http://', 'https://')) and len(hint) < 2000 else ''
+    doi = re.sub(r'^https?://(dx\.)?doi\.org/', '', str(doi or ''), flags=re.I)
+    doi = doi if DOI_RE.fullmatch(doi) else ''
+    if not (WORK_ID.fullmatch(work_id or '') or S2_ID.fullmatch(work_id or '') or (not work_id and doi)):
+        raise ValueError('Artikel tidak dikenal.')
+    work_id = work_id or 'doi:' + doi.lower()          # known only by its DOI (Crossref)
     hit = JOURNAL_PDF_CACHE.get(work_id)
     if hit and time.time() - hit[0] < JOURNAL_CACHE_SECONDS:
         return hit[1]
     found, tried, deadline = dict(pdf='', size=0), set(), time.time() + 40
-    queue = journal_candidates(work_id, hint)
+    queue = journal_candidates(work_id, hint, doi)
+    # Not fetched here, a listed open-access PDF may still open in the reader's own browser
+    # (publishers that refuse servers serve browsers): the first one is handed back as `open`.
+    listed = [u for u in queue if re.search(r'\.pdf(\?|$)|[/=?&]pdf([/=?&]|$)|/pdf/', u, flags=re.I)]
     while queue and time.time() < deadline and len(tried) < 12:
         url = queue.pop(0)
         if url in tried:
@@ -1408,6 +1983,8 @@ def journal_pdf(work_id, hint=''):
             break
         if html:
             queue[0:0] = [u for u in pdf_links_in(html, final) if u not in tried]
+    if not found['pdf'] and listed:
+        found['open'] = listed[0]
     if len(JOURNAL_PDF_CACHE) > 500:
         JOURNAL_PDF_CACHE.clear()
     JOURNAL_PDF_CACHE[work_id] = (time.time(), found)
@@ -1419,6 +1996,7 @@ def journal_pdf(work_id, hint=''):
 # Internet Archive — texts its uploader released under a licence (CC / public
 # domain), lending-only items excluded; the licence is the uploader's claim.
 EBOOK_PER_SOURCE = 10
+MAGAZINE_PER_PAGE = 30        # one source fills the whole shelf (and series group up)
 EBOOK_LANGS = {'id': ('Indonesian', 'ind'), 'en': ('English', 'eng'), 'ms': ('Malay', 'may')}
 IA_LANGS = {'ind': 'id', 'indonesian': 'id', 'eng': 'en', 'english': 'en', 'may': 'ms', 'msa': 'ms', 'malay': 'ms', 'jav': 'jv', 'javanese': 'jv', 'sun': 'su', 'sundanese': 'su'}
 
@@ -1433,11 +2011,14 @@ def abstract_cut(text, limit=700):
     return text if len(text) <= limit else text[:limit].rsplit(' ', 1)[0] + '…'
 
 
-def ebook_get(url, what):
-    request = urllib.request.Request(url, headers={'User-Agent': 'MyFlipbook/1.0 (ebook search)', 'Accept': 'application/json'})
+def ebook_get(url, what, timeout=25, text=False):
+    """The source's JSON answer (text=True: the body as text)."""
+    request = urllib.request.Request(url, headers={'User-Agent': 'MyFlipbook/1.0 (ebook search)',
+                                                   'Accept': '*/*' if text else 'application/json'})
     try:
-        with urllib.request.urlopen(request, timeout=25) as response:
-            return json.loads(response.read().decode('utf-8'))
+        with urllib.request.urlopen(request, timeout=timeout) as response:
+            body = response.read(8 << 20).decode('utf-8', 'replace')
+            return body if text else json.loads(body)
     except urllib.error.HTTPError as cause:
         raise RuntimeError(f'{what} menolak permintaan ({cause.code}).') from cause
     except (urllib.error.URLError, TimeoutError, OSError, ValueError) as cause:
@@ -1448,7 +2029,7 @@ OAPEN_HANDLE = re.compile(r'20\.500\.12657/\d{1,9}')
 ARCHIVE_ID = re.compile(r'[A-Za-z0-9][A-Za-z0-9._-]{0,120}')
 
 
-def oapen_books(terms, page, lang):
+def oapen_books(terms, page, lang, sort='relevance', category=''):
     # Metadata only: listing each book's files makes OAPEN ~10x slower, so the
     # PDF link is looked up when the reader asks for it (ebook_pdf).
     params = {'query': f'{terms} AND dc.type:book', 'expand': 'metadata', 'limit': EBOOK_PER_SOURCE,
@@ -1502,21 +2083,61 @@ def archive_rank(books, terms):
     return [b for _, b in sorted(enumerate(books), key=score)]
 
 
-def archive_books(terms, page, lang, magazines=False):
+# Magazine shelves (the Magazine tab's category chips): words matched in the subject or title.
+MAGAZINE_CATEGORIES = {
+    'teknologi': ('Teknologi & Komputer', 'computer OR computers OR computing OR technology OR software OR programming'),
+    'fotografi': ('Fotografi', 'photography OR photographic OR camera OR photo'),
+    'sains': ('Sains', 'science OR scientific OR physics OR astronomy OR chemistry'),
+    'desain': ('Desain & Seni', 'design OR art OR graphic OR typography OR illustration OR architecture'),
+    'elektronik': ('Radio & Elektronik', 'radio OR electronics OR electronic OR amateur'),
+    'otomotif': ('Otomotif', 'automobile OR automotive OR car OR cars OR motor OR motorcycle'),
+    'musik': ('Musik', 'music OR musical OR guitar OR jazz'),
+    'sejarah': ('Sejarah', 'history OR historical OR heritage'),
+    'gayahidup': ('Gaya Hidup', 'lifestyle OR fashion OR cooking OR home OR garden OR travel'),
+    'hobi': ('Game & Hobi', 'games OR gaming OR hobby OR hobbies OR model OR crafts'),
+}
+EBOOK_SORTS = ('relevance', 'popular', 'newest', 'oldest')
+ARCHIVE_SORTS = {'popular': 'downloads desc', 'newest': 'date desc', 'oldest': 'date asc'}
+SERIES_TAIL = re.compile(
+    r'(\s*[\[(].*$)|([\s_-]+(v|vol|volume|no|nr|n|issue|#)[\s._]*\d.*$)|([\s_,-]+(19|20)\d\d([\s_.-].*)?$)|'
+    r'([\s_,-]+(jan|feb|mar|apr|may|jun|jul|aug|sep|oct|nov|dec)[a-z]*\b.*$)|([\s_-]+\d+$)', re.I)
+
+
+def series_name(title):
+    """The magazine a title is an issue of: "The Popular Magazine v078 n04 [1925]" -> "The Popular Magazine"."""
+    name = str(title or '')
+    for _ in range(3):
+        cut = SERIES_TAIL.sub('', name).strip(' _-,.:')
+        if cut == name or len(cut) < 3:
+            break
+        name = cut
+    return ' '.join(name.replace('_', ' ').split()) or str(title or '')
+
+
+def archive_books(terms, page, lang, sort='relevance', category='', magazines=False):
     # Books leave the magazine shelf to the Magazine tab; that tab searches only it.
     shelf = 'collection:magazine_rack' if magazines else 'NOT collection:magazine_rack'
     base = (f'mediatype:texts AND {shelf} AND licenseurl:* AND NOT access-restricted-item:true '
             'AND format:("Text PDF" OR PDF OR "Additional Text PDF")')
     if lang in EBOOK_LANGS:
         base += f' AND language:({EBOOK_LANGS[lang][1]} OR {EBOOK_LANGS[lang][0]})'
-    fields = [('fl[]', f) for f in ('identifier', 'title', 'creator', 'year', 'date', 'language', 'licenseurl', 'description', 'publisher')]
+    if category in MAGAZINE_CATEGORIES:
+        words = MAGAZINE_CATEGORIES[category][1]
+        base += f' AND (subject:({words}) OR title:({words}))'
+    fields = [('fl[]', f) for f in ('identifier', 'title', 'creator', 'year', 'date', 'language', 'licenseurl', 'description',
+                                    'publisher', 'downloads')]
+    order = ARCHIVE_SORTS.get(sort) or ('downloads desc' if not terms else None)     # browsing: the most read first
+    rows = MAGAZINE_PER_PAGE if magazines else EBOOK_PER_SOURCE
     ask = lambda q: ebook_get('https://archive.org/advancedsearch.php?' + urlencode(
-        [('q', f'({q}) AND {base}'), ('rows', EBOOK_PER_SOURCE), ('page', page), ('output', 'json')] + fields),
-        'Internet Archive').get('response') or {}
-    data = ask(archive_title_query(terms))
-    if not data.get('numFound'):
-        # Nothing by title: the description, still with every word.
-        data = ask('description:(' + ' AND '.join(terms.split()) + ')')
+        [('q', f'({q}) AND {base}'), ('rows', rows), ('page', page), ('output', 'json')] + fields
+        + ([('sort[]', order)] if order else [])), 'Internet Archive').get('response') or {}
+    if not terms:
+        data = ask('*:*')
+    else:
+        data = ask(archive_title_query(terms))
+        if not data.get('numFound'):
+            # Nothing by title: the description, still with every word.
+            data = ask('description:(' + ' AND '.join(terms.split()) + ')')
     listed = lambda v: v if isinstance(v, list) else [v] if v else []
     books = []
     for doc in data.get('docs') or []:
@@ -1532,16 +2153,152 @@ def archive_books(terms, page, lang, magazines=False):
             year=str(doc.get('year') or doc.get('date') or '')[:4], language=language,
             publisher=', '.join(map(str, listed(doc.get('publisher'))))[:120], license=str(doc.get('licenseurl') or ''),
             licenseByUploader=True, abstract=abstract_cut(description),
-            link=f'https://archive.org/details/{identifier}', cover=f'https://archive.org/services/img/{identifier}', pages=''))
-    return archive_rank(books, terms), page * EBOOK_PER_SOURCE < (data.get('numFound') or 0)
+            link=f'https://archive.org/details/{identifier}', cover=f'https://archive.org/services/img/{identifier}', pages='',
+            downloads=int(doc.get('downloads') or 0), series=series_name(doc.get('title')) if magazines else ''))
+    books = [b for b in books if not adult(' '.join([b['title'], b['publisher'], b['abstract']]))]
+    return (archive_rank(books, terms) if terms and sort == 'relevance' else books), page * rows < (data.get('numFound') or 0)
 
 
-def archive_magazines(terms, page, lang):
-    return archive_books(terms, page, lang, magazines=True)
+def archive_magazines(terms, page, lang, sort='relevance', category=''):
+    return archive_books(terms, page, lang, sort=sort, category=category, magazines=True)
+
+
+# ---------- More free, legal books (v2)
+OL_LANGS = {'id': 'ind', 'en': 'eng', 'ms': 'may'}
+
+
+def openlibrary_books(terms, page, lang, sort='relevance', category=''):
+    """Open Library: books readable for free ("public" ebook access); the PDF is the Internet Archive scan."""
+    if not terms:
+        return [], False
+    params = {'q': terms + (f' language:{OL_LANGS[lang]}' if lang in OL_LANGS else ''), 'ebook_access': 'public',
+              'fields': 'key,title,subtitle,author_name,first_publish_year,language,cover_i,ia,publisher,number_of_pages_median,first_sentence',
+              'limit': EBOOK_PER_SOURCE, 'page': page}
+    if sort in ('newest', 'oldest'):
+        params['sort'] = 'new' if sort == 'newest' else 'old'
+    elif sort == 'popular':
+        params['sort'] = 'rating'
+    data = ebook_get('https://openlibrary.org/search.json?' + urlencode(params), 'Open Library')
+    books = []
+    for d in data.get('docs') or []:
+        ia = next((x for x in d.get('ia') or [] if ARCHIVE_ID.fullmatch(str(x))), '')
+        if not ia or not d.get('title'):
+            continue
+        title = d['title'] + (': ' + d['subtitle'] if d.get('subtitle') else '')
+        langs = d.get('language') or []
+        language = next((IA_LANGS[x] for x in langs if x in IA_LANGS), (langs or [''])[0])
+        books.append(dict(
+            source='openlibrary', id=ia, title=' '.join(title.split()), authors=(d.get('author_name') or [])[:6],
+            year=str(d.get('first_publish_year') or ''), language=language, publisher=', '.join((d.get('publisher') or [])[:2])[:120],
+            license='Akses terbuka (Open Library / Internet Archive)', licenseByUploader=False,
+            abstract=abstract_cut(' '.join(d.get('first_sentence') or [])), link='https://openlibrary.org' + str(d.get('key') or ''),
+            cover=f'https://covers.openlibrary.org/b/id/{d["cover_i"]}-M.jpg' if d.get('cover_i') else f'https://archive.org/services/img/{ia}',
+            pages=str(d.get('number_of_pages_median') or ''), downloads=0, series=''))
+    books = [b for b in books if not adult(b['title'])]
+    return books, page * EBOOK_PER_SOURCE < (data.get('numFound') or 0)
+
+
+GUTENBERG_PER_PAGE = 25      # Project Gutenberg's own catalogue feed (OPDS) pages by 25
+GUTENBERG_OPDS = 'https://www.gutenberg.org/ebooks/search.opds/?'
+GUTENBERG_ENTRY = re.compile(r'<entry>.*?<id>https://www\.gutenberg\.org/ebooks/(\d{1,7})\.opds</id>.*?<title>([^<]*)</title>'
+                             r'(?:\s*<content[^>]*>([^<]*)</content>)?', re.S)
+
+
+def gutenberg_books(terms, page, lang, sort='relevance', category=''):
+    """Project Gutenberg (public domain classics), from its own catalogue feed (Gutendex, the JSON
+    mirror, stalls on searches). No PDF there: the flipbook gets one made from the plain text
+    (text_pdf). Browsing without words lists the most downloaded."""
+    query = ' '.join(filter(None, [terms, f'l.{lang}' if lang in ('id', 'en', 'ms') else '']))
+    params = {'start_index': (page - 1) * GUTENBERG_PER_PAGE + 1}
+    if query:
+        params['query'] = query
+    if sort == 'popular' or not terms:
+        params['sort_order'] = 'downloads'
+    elif sort == 'newest':
+        params['sort_order'] = 'release_date'
+    feed = ebook_get(GUTENBERG_OPDS + urlencode(params), 'Project Gutenberg', timeout=10, text=True)
+    books = []
+    for book_id, title, author in GUTENBERG_ENTRY.findall(feed):
+        title, author = ' '.join(unescape(title).split()), ' '.join(unescape(author or '').split())
+        if re.fullmatch(r'[\d,.]+ downloads', author):          # no author listed: the feed shows the count
+            author = ''
+        books.append(dict(
+            source='gutenberg', id=book_id, title=title, authors=[author] if author else [],
+            year='', language=lang if lang in ('id', 'en', 'ms') else '', publisher='Project Gutenberg',
+            license='Domain publik (Project Gutenberg)', licenseByUploader=False, abstract='',
+            link=f'https://www.gutenberg.org/ebooks/{book_id}',
+            cover=f'https://www.gutenberg.org/cache/epub/{book_id}/pg{book_id}.cover.medium.jpg', pages='', downloads=0, series=''))
+    books = [b for b in books if not adult(b['title'])]
+    return books, len(books) >= GUTENBERG_PER_PAGE - 2
+
+
+def google_books(terms, page, lang, sort='relevance', category=''):
+    """Google Books: free e-books (metadata, covers, read online). Their PDF downloads only open in the
+    reader's own browser (Google refuses servers), so the result says so."""
+    key = os.environ.get('GOOGLE_BOOKS_API_KEY', '').strip()
+    if not key or not terms:
+        return [], False
+    params = {'q': terms, 'filter': 'free-ebooks', 'printType': 'books', 'maxResults': EBOOK_PER_SOURCE,
+              'startIndex': (page - 1) * EBOOK_PER_SOURCE, 'key': key}
+    if lang in ('id', 'en', 'ms'):
+        params['langRestrict'] = lang
+    if sort == 'newest':
+        params['orderBy'] = 'newest'
+    data = ebook_get('https://www.googleapis.com/books/v1/volumes?' + urlencode(params), 'Google Books')
+    books = []
+    for it in data.get('items') or []:
+        v, a = it.get('volumeInfo') or {}, it.get('accessInfo') or {}
+        if not v.get('title') or not re.fullmatch(r'[\w-]{6,24}', str(it.get('id') or '')):
+            continue
+        cover = ((v.get('imageLinks') or {}).get('thumbnail') or '').replace('http://', 'https://')
+        pdf = (a.get('pdf') or {}).get('downloadLink') if (a.get('pdf') or {}).get('isAvailable') else ''
+        books.append(dict(
+            source='google', id=it['id'], title=' '.join((v['title'] + (': ' + v['subtitle'] if v.get('subtitle') else '')).split()),
+            authors=(v.get('authors') or [])[:6], year=str(v.get('publishedDate') or '')[:4], language=v.get('language') or '',
+            publisher=str(v.get('publisher') or '')[:120], license='Gratis (Google Books)', licenseByUploader=False,
+            abstract=abstract_cut(re.sub(r'<[^>]+>', ' ', v.get('description') or '')), link=v.get('infoLink') or '',
+            cover=cover, pages=str(v.get('pageCount') or ''), downloads=0, series='',
+            readOnline=(a.get('webReaderLink') or '').replace('http://', 'https://'),
+            browserPdf=(pdf or '').replace('http://', 'https://')))
+    books = [b for b in books if not adult(b['title'])]
+    return books, (page * EBOOK_PER_SOURCE) < int(data.get('totalItems') or 0)
+
+
+GUTENBERG_PDF_CACHE = {}
+
+
+def gutenberg_pdf(book_id):
+    """(bytes, filename) of a Gutenberg book turned into a PDF from its plain text."""
+    if not re.fullmatch(r'\d{1,7}', book_id or ''):
+        raise ValueError('Buku tidak dikenal.')
+    if book_id in GUTENBERG_PDF_CACHE:
+        return GUTENBERG_PDF_CACHE[book_id]
+    try:
+        data, _, _ = fetch_source(f'https://www.gutenberg.org/cache/epub/{book_id}/pg{book_id}.txt', public_only=True)
+    except (ValueError, RuntimeError, OSError) as cause:
+        raise LookupError('Buku ini tidak punya teks yang bisa dijadikan flipbook.') from cause
+    text = data.decode('utf-8', 'replace')
+    head = text[:6000]                                # "Title: …" / "Author: …" lines before the book starts
+    field = lambda name: ' '.join((re.search(rf'^{name}:\s*(.+)$', head, re.M | re.I) or [None, ''])[1].split())
+    title = field('Title') or 'Buku'
+    pdf = text_pdf.build(text, title, field('Author'), f'Project Gutenberg #{book_id} - domain publik')
+    name = re.sub(r'[^\w.-]+', '_', title)[:80] + '.pdf'
+    if len(GUTENBERG_PDF_CACHE) > 20:
+        GUTENBERG_PDF_CACHE.clear()
+    GUTENBERG_PDF_CACHE[book_id] = (pdf, name)
+    return pdf, name
 
 
 def ebook_pdf(source, identifier):
     """{pdf, size} of one search result's book, looked up when it's opened."""
+    if source == 'openlibrary':
+        source = 'archive'                       # Open Library's readable books are Internet Archive scans
+    if source == 'gutenberg' and re.fullmatch(r'\d{1,7}', identifier or ''):
+        return dict(pdf='/api/ebooks/file?' + urlencode({'src': 'gutenberg', 'id': identifier}), size=0)
+    if source == 'doab':
+        raise LookupError('Buku DOAB dibuka di browser Anda: klik Buka PDF atau Baca di penerbit, lalu seret file-nya ke Flipbook.')
+    if source == 'google':
+        raise LookupError('Google Books hanya bisa diunduh lewat browser. Klik 📄 PDF, lalu seret file-nya ke Flipbook.')
     if source == 'oapen' and OAPEN_HANDLE.fullmatch(identifier or ''):
         item = ebook_get(f'https://library.oapen.org/rest/handle/{identifier}?expand=bitstreams', 'OAPEN')
         streams = item.get('bitstreams') or [] if isinstance(item, dict) else []
@@ -1560,21 +2317,96 @@ def ebook_pdf(source, identifier):
     return dict(pdf='', size=0)
 
 
-def ebook_search(query, page=1, lang=None, source='all'):
-    """Books with a PDF: dict(page, more, results=[...], errors=[...]). Sources
-    run side by side; one source failing still returns the other's books."""
-    terms = ebook_terms(query)
-    if len(terms) < 2:
-        raise RuntimeError('Tulis kata kunci 2-200 karakter.')
-    key = json.dumps(['ebook', terms.lower(), page, lang, source])
+# Safe search for books and magazines: campuses and schools use the site, and Internet
+# Archive uploads include adult magazines. Adult searches get no results; adult-looking
+# results are dropped (title, subject, publisher, description).
+ADULT_WORDS = re.compile(
+    r'\b(playboy|penthouse|hustler|xxx|porn\w*|porno|erotic\w*|erotik\w*|nude|nudes|nudity|naked|sex|sexy|seksi|bokep|'
+    r'telanjang|bugil|mesum|hentai|nsfw|onlyfans|fetish|lingerie|stripper|adult\s+(?:magazine|content|only)|dewasa\s*18)\b', re.I)
+
+
+class AdultSearch(ValueError):
+    pass
+
+
+def adult(text):
+    return bool(ADULT_WORDS.search(str(text or '')))
+
+
+# Words that ask for an order, not a title: "majalah populer fotografi", "buku terbaru".
+# Indonesian words only: English ones are often part of a title ("Popular Science", "Latest Fashions").
+SORT_WORDS = [(re.compile(r'\b(paling\s+)?(populer|terpopuler|terlaris|favorit)\b', re.I), 'popular'),
+              (re.compile(r'\b(terbaru|terkini)\b', re.I), 'newest'),
+              (re.compile(r'\b(terlama|terlawas|lawas)\b', re.I), 'oldest')]
+FILLER_WORDS = re.compile(r'\b(majalah|magazine|magazines|buku|ebook|e-book|books?)\b', re.I)
+def doab_books(terms, page, lang, sort='relevance', category=''):
+    """DOAB: open-access academic books (OAPEN's among them), from the local index that
+    doab_index.py harvests over OAI-PMH. Their PDFs open in the reader's browser (OAPEN's
+    anti-bot check refuses servers), so results carry links, not a server-made flipbook."""
+    if not terms:
+        return [], False
+    rows, total = doab_index.search(terms, page, lang if lang in ('id', 'en', 'ms') else None, sort, EBOOK_PER_SOURCE)
+    books = []
+    for r in rows:
+        books.append(dict(
+            source='doab', id=r['handle'], title=r['title'], authors=[a for a in r['authors'].split('; ') if a][:6], year=r['year'],
+            language=r['lang'], publisher=r['publisher'], license='Akses terbuka (DOAB)', licenseByUploader=False,
+            abstract=r['subjects'].replace('; ', ' · ')[:300], link=f'https://directory.doabooks.org/handle/{r["handle"]}',
+            cover='', pages='', downloads=0, series='', readOnline=r['link'], browserPdf=r['pdf'],
+            doi=('https://doi.org/' + r['doi']) if r['doi'] else ''))
+    books = [b for b in books if not adult(b['title'])]
+    return books, page * EBOOK_PER_SOURCE < total
+
+
+EBOOK_SOURCES = {'archive': archive_books, 'openlibrary': openlibrary_books, 'gutenberg': gutenberg_books, 'doab': doab_books,
+                 'google': google_books, 'oapen': oapen_books}
+EBOOK_DEFAULT = ('gutenberg', 'openlibrary', 'doab', 'archive', 'google')     # Gutenberg first: the same book wins as clean text; DOAB replaces OAPEN's REST (refuses servers)
+
+
+def read_intent(query, sort):
+    """(words left, sort): order words become the sort; "majalah"/"buku" alone add nothing."""
+    words = query
+    for pattern, order in SORT_WORDS:
+        if pattern.search(words):
+            words = pattern.sub(' ', words)
+            sort = order if sort == 'relevance' else sort
+    left = FILLER_WORDS.sub(' ', words)
+    return ' '.join((left if left.split() else words if not FILLER_WORDS.fullmatch(words.strip()) else '').split()), sort
+
+
+def title_key(book):
+    return re.sub(r'[^a-z0-9]+', '', book['title'].lower())[:60] + '|' + (re.sub(r'[^a-z]+', '', (book['authors'] or [''])[0].lower())[:12])
+
+
+def ebook_search(query, page=1, lang=None, source='all', sort='relevance', category=''):
+    """Books (or magazines) with a PDF: dict(page, more, results=[...], errors=[...]). Sources
+    run side by side; one source failing still returns the other's books. An empty query
+    browses (the most read first)."""
+    if adult(query):
+        raise AdultSearch('Konten dewasa tidak tersedia di MyFlipbook Pro. Coba kata kunci lain.')
+    sort = sort if sort in EBOOK_SORTS else 'relevance'
+    category = category if category in MAGAZINE_CATEGORIES else ''
+    cleaned = ebook_terms(query)
+    terms, sort = read_intent(cleaned, sort)
+    if (terms and len(terms) < 2) or (str(query or '').strip() and not cleaned):     # only symbols: not a browse
+        raise ValueError('Tulis kata kunci 2-200 karakter.')
+    key = json.dumps(['ebook', terms.lower(), page, lang, source, sort, category])
     hit = JOURNAL_CACHE.get(key)
     if hit and time.time() - hit[0] < JOURNAL_CACHE_SECONDS:
         return hit[1]
-    wanted = ([archive_magazines] if source == 'magazine' else
-              [fn for name, fn in (('oapen', oapen_books), ('archive', archive_books)) if source in ('all', name)])
+    if source == 'magazine':
+        wanted = [archive_magazines]
+    elif source in EBOOK_SOURCES:
+        wanted = [EBOOK_SOURCES[source]]
+    else:
+        wanted = [EBOOK_SOURCES[name] for name in EBOOK_DEFAULT]
+    if not terms:
+        # Browsing: Gutenberg's most read (curated, public domain) for books; Archive's open book
+        # collections mix in pirated uploads when sorted by downloads, so only its magazine shelf browses.
+        wanted = [fn for fn in wanted if fn in (archive_magazines, gutenberg_books)] or [gutenberg_books]
     lists, more, errors = [], False, []
-    with ThreadPoolExecutor(max_workers=2) as pool:
-        for job in [pool.submit(fn, terms, page, lang) for fn in wanted]:
+    with ThreadPoolExecutor(max_workers=4) as pool:
+        for job in [pool.submit(fn, terms, page, lang, sort, category) for fn in wanted]:
             try:
                 books, has_more = job.result()
                 lists.append(books)
@@ -1583,10 +2415,16 @@ def ebook_search(query, page=1, lang=None, source='all'):
                 errors.append(str(cause))
     if not lists:
         raise RuntimeError(' '.join(errors))
-    results = []
-    for i in range(max(map(len, lists))):          # alternate sources
-        results.extend(books[i] for books in lists if i < len(books))
-    out = dict(page=page, more=more, results=results, errors=errors, maxBytes=FETCH_MAX_BYTES)
+    results, seen = [], set()
+    for i in range(max(map(len, lists))):          # alternate sources; the same book once
+        for books in lists:
+            if i < len(books) and title_key(books[i]) not in seen:
+                seen.add(title_key(books[i]))
+                results.append(books[i])
+    if sort == 'popular':
+        results.sort(key=lambda b: -b.get('downloads', 0))
+    out = dict(page=page, more=more, results=results, errors=errors, maxBytes=FETCH_MAX_BYTES, sort=sort, browse=not terms,
+               categories={k: v[0] for k, v in MAGAZINE_CATEGORIES.items()} if source == 'magazine' else {})
     if not errors:
         if len(JOURNAL_CACHE) > 300:
             JOURNAL_CACHE.clear()
@@ -1638,14 +2476,27 @@ def send_mail(to, subject, text, html=None):
 def verification_mail(to, name, link):
     hello = f'Halo {name},' if name else 'Halo,'
     text = (f'{hello}\n\nTerima kasih sudah mendaftar di MyFlipbook. Klik link ini untuk memverifikasi email dan masuk:\n\n'
-            f'{link}\n\nLink berlaku 48 jam. Abaikan email ini bila kamu tidak mendaftar.\n\n— MyFlipbook')
+            f'{link}\n\nLink berlaku 48 jam. Abaikan email ini bila Anda tidak mendaftar.\n\n— MyFlipbook')
     html = (f'<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#1c1917">'
             f'<p>{hello}</p><p>Terima kasih sudah mendaftar di <b>MyFlipbook</b>. Klik tombol ini untuk memverifikasi email dan masuk:</p>'
             f'<p style="text-align:center;margin:28px 0"><a href="{link}" style="background:#1a3c34;color:#fff;padding:12px 22px;'
             f'border-radius:999px;text-decoration:none;font-weight:bold">Verifikasi email</a></p>'
-            f'<p style="font-size:12px;color:#78716c">Atau buka link ini: {link}<br>Link berlaku 48 jam. Abaikan email ini bila kamu tidak mendaftar.</p>'
+            f'<p style="font-size:12px;color:#78716c">Atau buka link ini: {link}<br>Link berlaku 48 jam. Abaikan email ini bila Anda tidak mendaftar.</p>'
             f'<p>— MyFlipbook</p></div>')
     return send_mail(to, 'Verifikasi email MyFlipbook', text, html)
+
+
+def reset_mail(to, name, link):
+    hello = f'Halo {name},' if name else 'Halo,'
+    text = (f'{hello}\n\nAda permintaan untuk mengganti password akun MyFlipbook Anda. Klik link ini untuk membuat password baru:\n\n'
+            f'{link}\n\nLink berlaku 1 jam dan hanya bisa dipakai sekali. Abaikan email ini bila Anda tidak memintanya; password Anda tetap sama.\n\n— MyFlipbook')
+    html = (f'<div style="font-family:Arial,sans-serif;max-width:480px;margin:auto;color:#1c1917">'
+            f'<p>{hello}</p><p>Ada permintaan untuk mengganti password akun <b>MyFlipbook</b> Anda. Klik tombol ini untuk membuat password baru:</p>'
+            f'<p style="text-align:center;margin:28px 0"><a href="{link}" style="background:#1a3c34;color:#fff;padding:12px 22px;'
+            f'border-radius:999px;text-decoration:none;font-weight:bold">Buat password baru</a></p>'
+            f'<p style="font-size:12px;color:#78716c">Atau buka link ini: {link}<br>Link berlaku 1 jam dan hanya bisa dipakai sekali. '
+            f'Abaikan email ini bila Anda tidak memintanya; password Anda tetap sama.</p><p>— MyFlipbook</p></div>')
+    return send_mail(to, 'Reset password MyFlipbook', text, html)
 
 
 # ---------- Sign in with Google: the browser gets an ID token from Google
@@ -2189,8 +3040,34 @@ class Handler(SimpleHTTPRequestHandler):
         if used + amount > limit:
             back = time.strftime('%H:%M', time.localtime((first or now) + window))
             raise accounts.AccountError(429, f'Jatah {QUOTA_LABELS[kind]} habis untuk sementara — terisi lagi pukul {back}. '
-                                             'Upgrade ke Pro atau Business untuk jatah lebih besar.')
+                                             'Upgrade ke Medium atau Pro untuk jatah lebih besar.')
         store.spend(user['id'], kind, amount, now)
+
+    def summary_words(self, user):
+        """{used, limit, resetAt} of the member's summary words this month."""
+        start, end = accounts.month_bounds()
+        used, _ = get_accounts().usage_in(user['id'], 'summary_words', start - 1)
+        return dict(used=used, limit=summary_words_limit(user), resetAt=end)
+
+    def summary_allowance(self):
+        """Raise 429 when the member's summary words for this month are used up (hosted only)."""
+        if not hosted():
+            return
+        user = self.current_user()
+        if not user:
+            return
+        words = self.summary_words(user)
+        if words['limit'] is not None and words['used'] >= words['limit']:
+            # the numbers are our own guide: the member hears that it is used up, when it refills, and where to go
+            upgrade = user['plan'] != 'pro'
+            raise accounts.AccountError(429, f'Kuota ringkasan bulan ini sudah habis — terisi lagi {month_label(words["resetAt"])}.'
+                                             + (' Upgrade ke Pro untuk kuota yang lebih besar.' if upgrade else ''), upgrade=upgrade)
+
+    def count_summary(self, text):
+        """Count the words of a summary just made against the member's month."""
+        user = self.current_user()
+        if user and text:
+            get_accounts().spend(user['id'], 'summary_words', len(str(text).split()))
 
     def usage_report(self, user):
         window, now = quota_window(), int(time.time())
@@ -2340,7 +3217,18 @@ class Handler(SimpleHTTPRequestHandler):
     def library_get(self, path):
         user, store = self.member(), get_library()
         if path == '/api/library':
-            self.send_json(200, {'books': store.books(user), 'usage': store.usage(user)})
+            self.send_json(200, {'books': store.books(user), 'usage': store.usage(user), 'folders': store.folders(user)})
+            return
+        if path == '/api/library/draft':                     # the PDF editor's autosave
+            data, name, saved_at = store.draft(user)
+            self.send_response(200)
+            self.send_header('Content-Type', 'application/octet-stream')
+            self.send_header('Cache-Control', 'private, no-store')
+            self.send_header('X-Draft-Name', quote(name))
+            self.send_header('X-Saved-At', str(saved_at))
+            self.send_header('Content-Length', str(len(data)))
+            self.end_headers()
+            self.wfile.write(data)
             return
         match = re.fullmatch(r'/api/library/([0-9a-f]{32})/(cover|project)', path)
         if match:
@@ -2360,9 +3248,39 @@ class Handler(SimpleHTTPRequestHandler):
 
     def library_post(self, path):
         user, store = self.member(), get_library()
-        if path == '/api/library/save':
+        if path == '/api/library/draft':
             if user.get('trialExpired'):
-                self.send_json(402, {'error': 'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.'})
+                self.send_json(402, {'error': 'Masa coba gratis 7 hari Anda sudah habis. Upgrade ke Medium atau Pro untuk memakai fitur ini.'})
+                return
+            saved_at = store.save_draft(user, self.read_raw(library.MAX_DRAFT), unquote(self.headers.get('X-Draft-Name', '')),
+                                        self.headers.get('X-Saved-At', ''))
+            self.send_json(200, {'savedAt': saved_at})
+            return
+        if path == '/api/library/draft/delete':
+            store.delete_draft(user)
+            self.send_json(200, {'ok': True})
+            return
+        # Folders: POST /api/library/folders {name}; /api/library/folders/<id>/rename {name}; …/<id>/delete;
+        # a book moves with POST /api/library/<book>/move {folder: id or null}.
+        if path == '/api/library/folders':
+            self.send_json(200, {'id': store.make_folder(user, self.read_json(self.read_raw(64 * 1024)).get('name')), 'folders': store.folders(user)})
+            return
+        match = re.fullmatch(r'/api/library/folders/([0-9a-f]{32})/(rename|delete)', path)
+        if match:
+            if match[2] == 'rename':
+                store.rename_folder(user, match[1], self.read_json(self.read_raw(64 * 1024)).get('name'))
+            else:
+                store.delete_folder(user, match[1])
+            self.send_json(200, {'folders': store.folders(user)})
+            return
+        match = re.fullmatch(r'/api/library/([0-9a-f]{32})/move', path)
+        if match:
+            store.move_book(user, match[1], self.read_json(self.read_raw(64 * 1024)).get('folder'))
+            self.send_json(200, {'ok': True})
+            return
+        if path == '/api/library/save':
+            if store.usage(user)['maxBooks'] == 0:     # Basic has no My Library (plans v2): before taking the upload
+                self.send_json(402, {'error': 'My Library butuh paket Medium atau Pro. Paket Basic tetap bisa membaca semua flipbook.'})
                 return
             data = self.read_raw(library.MAX_PROJECT)
             book_id = store.save_project(user, data, self.headers.get('X-Book-Id') or None)
@@ -2373,9 +3291,6 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(404, {'error': 'Tidak ditemukan.'})
             return
         book_id, action = match.groups()
-        if action in ('cover', 'export') and user.get('trialExpired'):
-            self.send_json(402, {'error': 'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.'})
-            return
         if action == 'cover':
             store.save_cover(user, book_id, self.read_raw(library.MAX_COVER))
         elif action == 'export':
@@ -2401,14 +3316,9 @@ class Handler(SimpleHTTPRequestHandler):
     def share_post(self, path):
         user, store = self.share_member(), get_share()
         if path == '/api/share':
-            # Publishing needs Pro — except a Free taster: the first
-            # SHARE_FREE links go through, then it is time to upgrade.
-            # (Trial-expired members only read books; they cannot publish.)
-            if user.get('trialExpired'):
-                self.send_json(402, {'error': 'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.'})
-                return
+            # Basic shares its first SHARE_FREE links (trial or not, plans v2); more need Medium or Pro.
             if 'export' not in user['entitlements'] and store.usage(user)['links'] >= accounts.SHARE_FREE:
-                self.send_json(402, {'error': 'Jatah 3 share gratis habis. Upgrade ke Pro untuk share tanpa batas.'})
+                self.send_json(402, {'error': 'Jatah 3 share gratis habis. Upgrade ke Medium atau Pro untuk share lebih banyak.'})
                 return
             if not secrets.compare_digest(self.headers.get('X-Build-Token', ''), TOKEN):
                 self.send_json(403, {'error': 'Sesi build tidak valid. Refresh halaman.'})
@@ -2568,6 +3478,21 @@ class Handler(SimpleHTTPRequestHandler):
                 store.record_signup(ip, user['id'])
             self.send_json(201, {'user': store.user_for(token)}, cookie=self.session_cookie(token))
             return
+        if path == '/api/auth/forgot':
+            found = store.reset_request(data.get('email'), self.client_ip())
+            if found:
+                user_id, token, name = found
+                try:
+                    # the token rides in the fragment: it never reaches a server, nor another site as a referrer
+                    reset_mail(str(data.get('email')).strip().lower(), name, self.base_url() + '/login.html#reset=' + token)
+                except RuntimeError as cause:
+                    raise accounts.AccountError(502, str(cause))
+            self.send_json(200, {'ok': True})     # the same answer whether or not the email is registered
+            return
+        if path == '/api/auth/reset':
+            token = store.reset_password(data.get('token'), data.get('password'))
+            self.send_json(200, {'user': store.user_for(token)}, cookie=self.session_cookie(token))
+            return
         if path == '/api/auth/resend':
             found = store.resend_verification(data.get('email'), self.client_ip())
             if found:
@@ -2614,7 +3539,7 @@ class Handler(SimpleHTTPRequestHandler):
         query = parse_qs(urlsplit(self.path).query)
         one = lambda name, default='': (query.get(name) or [default])[0].strip()
         q = ' '.join(one('q').split())
-        if not 2 <= len(q) <= 200:
+        if not 2 <= len(q) <= (DOI_MAX * 80 if query_dois(q) else 200):      # a list of DOIs may run longer
             self.send_json(400, {'error': 'Tulis kata kunci 2-200 karakter.'})
             return
         year = lambda v: int(v) if re.fullmatch(r'(19|20)\d\d', v) else None
@@ -2631,11 +3556,12 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(502, {'error': str(cause)})
 
     def ebooks_route(self):
-        """GET /api/ebooks?q=&page=&lang=&src=all|oapen|archive -> books with a PDF."""
+        """GET /api/ebooks?q=&page=&lang=&src=all|archive|openlibrary|gutenberg|google|oapen|magazine&sort=&cat=
+        -> books with a PDF. An empty q browses (the most read first)."""
         query = parse_qs(urlsplit(self.path).query)
         one = lambda name, default='': (query.get(name) or [default])[0].strip()
         q = ' '.join(one('q').split())
-        if not 2 <= len(q) <= 200:
+        if len(q) > 200 or len(q) == 1:
             self.send_json(400, {'error': 'Tulis kata kunci 2-200 karakter.'})
             return
         try:
@@ -2645,7 +3571,10 @@ class Handler(SimpleHTTPRequestHandler):
         source = one('src', 'all')
         try:
             self.send_json(200, ebook_search(q, page, lang=one('lang') or None,
-                                             source=source if source in ('all', 'oapen', 'archive', 'magazine') else 'all'))
+                                             source=source if source in EBOOK_SOURCES or source == 'magazine' else 'all',
+                                             sort=one('sort', 'relevance'), category=one('cat')))
+        except ValueError as cause:              # the query itself (adult, too short): the reader's to fix
+            self.send_json(400, {'error': str(cause)})
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
 
@@ -2670,13 +3599,66 @@ class Handler(SimpleHTTPRequestHandler):
             text = self.book_text(data)
             lang = data.get('lang') if data.get('lang') in TRANSLATE_LANGUAGES else 'id-ID'
             title = str(data.get('title') or 'Buku')[:200]
+            length = data.get('length') if data.get('length') in SUMMARY_LENGTHS else 'sedang'
+            focus = data.get('focus') if isinstance(data.get('focus'), str) else ''
+            # the PDF's chapters (its outline): [{title, page (index from 0)}]
+            chapters = [(' '.join(str(c['title']).split())[:200], c['page']) for c in (data.get('chapters') or [])[:120]
+                        if isinstance(c, dict) and isinstance(c.get('title'), str) and c['title'].strip()
+                        and type(c.get('page')) is int and 0 <= c['page'] < 100_000] if isinstance(data.get('chapters'), list) else []
         except (ValueError, UnicodeDecodeError) as cause:
             self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
             return
         try:
-            self.send_json(200, summarize_book(title, text, lang))
+            result = summarize_book(title, text, lang, length, focus, chapters)
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
+            return
+        self.count_summary(result.get('text'))
+        self.send_json(200, result)
+
+    def ask_route(self):
+        """POST {title, text: {page: [lines]}, question, history: [{role, text}]} -> {answer}."""
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 16 * 1024 * 1024:
+                raise ValueError('Teks dokumen kosong atau terlalu besar.')
+            data = json.loads(self.rfile.read(size).decode('utf-8'))
+            text = self.book_text(data)
+            history = data.get('history') if isinstance(data.get('history'), list) else []
+            answer = ask_document(str(data.get('title') or 'Dokumen')[:200], text, data.get('question'), history, data.get('work'))
+        except (ValueError, UnicodeDecodeError) as cause:
+            self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
+            return
+        except RuntimeError as cause:
+            self.send_json(502, {'error': str(cause)})
+            return
+        self.send_json(200, {'answer': answer})
+
+    def write_route(self):
+        """POST {kind: 'journal'|'slides', title, text: {page: [lines]}, lang, work, section | count}
+        -> {text} (one journal section) or {slides: [{title, points, notes}]}."""
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 16 * 1024 * 1024:
+                raise ValueError('Teks dokumen kosong atau terlalu besar.')
+            data = json.loads(self.rfile.read(size).decode('utf-8'))
+            if not isinstance(data, dict) or data.get('kind') not in ('journal', 'slides'):
+                raise ValueError('Permintaan tidak valid.')
+            text = self.book_text(data)
+            title = str(data.get('title') or 'Dokumen')[:200]
+            lang = data.get('lang') if data.get('lang') in TRANSLATE_LANGUAGES else 'id-ID'
+            if data['kind'] == 'journal':
+                result = {'text': write_journal(title, text, data.get('section'), lang, data.get('work'))}
+            else:
+                count = data.get('count') if type(data.get('count')) is int else 8
+                result = {'slides': make_slides(title, text, lang, count, data.get('work'))}
+        except (ValueError, UnicodeDecodeError) as cause:
+            self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
+            return
+        except RuntimeError as cause:
+            self.send_json(502, {'error': str(cause)})
+            return
+        self.send_json(200, result)
 
     def highlight_summary_route(self):
         """POST {text} (one highlighted passage) -> {summary}."""
@@ -2695,6 +3677,7 @@ class Handler(SimpleHTTPRequestHandler):
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
             return
+        self.count_summary(summary)
         self.send_json(200, {'summary': summary})
 
     def translate_route(self, free=False):
@@ -2778,17 +3761,20 @@ class Handler(SimpleHTTPRequestHandler):
         if not (hosted() if feature == 'office' else CONFIG['paywall']):
             return None
         user = self.current_user()
+        if feature == 'translate':                       # members only; no plan, no trial needed
+            return None if user else (401, 'Silakan masuk dulu untuk memakai fitur ini.')
         if not user:
             return 401, 'Silakan masuk dulu untuk memakai fitur ini.'
-        if user.get('trialExpired') and feature in ('office', 'ai'):
-            return 402, 'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.'
+        # Plans v2: after the 7-day trial Basic keeps every non-AI tool (Office to PDF within its allowance).
+        if user.get('trialExpired') and feature in ('ai', 'podcast'):
+            return 402, 'Masa coba gratis 7 hari Anda sudah habis. Upgrade ke Medium atau Pro untuk memakai fitur ini.'
         # Book translation runs on the free translator (no AI credit): only the allowance limits it.
-        if feature == 'ai' and not payments_live() and user['plan'] not in ('pro', 'business') and self.path != '/api/translate-free':
+        if feature in ('ai', 'podcast') and not payments_live() and user['plan'] not in accounts.PAID and self.path != '/api/translate-free':
             # No gateway yet: paid members (their plan already covers AI credit)
             # keep working; free waits until payments are set up.
             return 503, 'Fitur AI belum aktif di server ini (pembayaran belum disiapkan).'
         if feature not in user['entitlements']:
-            plan = 'Business' if feature == 'exe' else 'Pro atau Business'
+            plan = 'Pro' if feature in ('apk', 'exe', 'podcast') else 'Medium atau Pro'
             return 402, f'Fitur ini butuh paket {plan}. Upgrade di halaman Harga/Akun.'
         return None
 
@@ -2840,15 +3826,25 @@ class Handler(SimpleHTTPRequestHandler):
         if path == '/api/ebooks':
             self.ebooks_route()
             return
+        if path in ('/api/authors', '/api/authors/profile'):
+            query = parse_qs(urlsplit(self.path).query)
+            try:
+                self.send_json(200, {'authors': author_search((query.get('q') or [''])[0])} if path == '/api/authors'
+                               else author_profile((query.get('id') or [''])[0]))
+            except ValueError as cause:
+                self.send_json(400, {'error': str(cause)})
+            except RuntimeError as cause:
+                self.send_json(502, {'error': str(cause)})
+            return
         if path == '/api/journals/pdf':
             query = parse_qs(urlsplit(self.path).query)
             try:
-                found = journal_pdf((query.get('id') or [''])[0], (query.get('pdf') or [''])[0])
+                found = journal_pdf((query.get('id') or [''])[0], (query.get('pdf') or [''])[0], (query.get('doi') or [''])[0])
             except ValueError as cause:
                 self.send_json(400, {'error': str(cause)})
             else:
                 self.send_json(200 if found['pdf'] else 404, dict(found, maxBytes=FETCH_MAX_BYTES) if found['pdf'] else
-                               {'error': 'PDF artikel ini tidak tersedia untuk umum. Buka artikelnya di situs penerbit.'})
+                               {'error': 'PDF artikel ini tidak tersedia untuk umum. Buka artikelnya di situs penerbit.', 'open': found.get('open', '')})
             return
         if path == '/api/ebooks/file':
             query = parse_qs(urlsplit(self.path).query)
@@ -2876,7 +3872,7 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(429, {'error': 'Terlalu banyak artikel dalam satu jam. Coba lagi nanti.'})
                 return
             try:
-                data, name = journal_file((query.get('id') or [''])[0], (query.get('pdf') or [''])[0])
+                data, name = journal_file((query.get('id') or [''])[0], (query.get('pdf') or [''])[0], (query.get('doi') or [''])[0])
             except (ValueError, LookupError) as cause:
                 self.send_json(404 if isinstance(cause, LookupError) else 400, {'error': str(cause)})
                 return
@@ -2891,6 +3887,8 @@ class Handler(SimpleHTTPRequestHandler):
             query = parse_qs(urlsplit(self.path).query)
             try:
                 found = ebook_pdf((query.get('src') or [''])[0], (query.get('id') or [''])[0])
+            except LookupError as cause:
+                self.send_json(404, {'error': str(cause)})
             except ValueError as cause:
                 self.send_json(400, {'error': str(cause)})
             except RuntimeError as cause:
@@ -3149,7 +4147,10 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(cause.status, {'error': str(cause)})
             return
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
-        feature = 'office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'ai' if self.path in ('/api/podcast/script', '/api/translate', '/api/translate-free', '/api/summary', '/api/highlight-summary') else match[1] if match else None
+        # The whole-book translator is offline (no AI): every signed-in member, Free too (owner, 2026-10-19).
+        feature = ('office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'translate' if self.path == '/api/translate-free'
+                   else 'podcast' if self.path == '/api/podcast/script'
+                   else 'ai' if self.path in ('/api/translate', '/api/summary', '/api/highlight-summary', '/api/ask', '/api/write') else match[1] if match else None)
         denied = feature and self.entitlement_error(feature)
         if denied:
             self.send_json(denied[0], {'error': denied[1]})
@@ -3157,11 +4158,13 @@ class Handler(SimpleHTTPRequestHandler):
         if not secrets.compare_digest(self.headers.get('X-Build-Token', ''), TOKEN):
             self.send_json(403, {'error': 'Sesi build tidak valid. Refresh halaman.'})
             return
-        if feature in ('office', 'ai') and self.path != '/api/translate-free':      # book translation counts its text
+        if feature in ('office', 'ai', 'podcast') and self.path != '/api/translate-free':      # book translation counts its text
             try:
-                self.quota(feature)
+                if self.path in SUMMARY_ROUTES:
+                    self.summary_allowance()                                # the month's summary words first
+                self.quota('ai' if feature == 'podcast' else feature)      # the podcast spends the AI allowance too
             except accounts.AccountError as cause:
-                self.send_json(cause.status, {'error': str(cause)})
+                self.send_json(cause.status, {'error': str(cause), **({'upgrade': '/harga'} if cause.upgrade else {})})
                 return
         if self.path == '/api/convert/html-to-pdf':
             self.convert_html()
@@ -3183,6 +4186,12 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == '/api/highlight-summary':
             self.highlight_summary_route()
+            return
+        if self.path == '/api/ask':
+            self.ask_route()
+            return
+        if self.path == '/api/write':
+            self.write_route()
             return
         if self.path in OFFICE_ROUTES:
             self.convert_office()

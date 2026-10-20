@@ -34,3 +34,11 @@ from https://github.com/Nodlik/StPageFlip/blob/master/LICENSE.
 - OCR editor: Tesseract.js 5.1.1 and tesseract.js-core 5.1.1, unmodified npm distributions (Apache-2.0), under `ocr/`. Core .wasm.js distributions embed WASM, including SIMD/LSTM variants. Engine docs: https://github.com/naptha/tesseract.js/blob/v5.1.1/docs/api.md . Language data eng/ind/msa from tesseract-ocr/tessdata_fast tag 4.1.0 (Apache-2.0), gzip-compressed for local loading: https://github.com/tesseract-ocr/tessdata_fast/tree/4.1.0 . License files included. OCR does not upload documents or require CDN access.
 
 - @pdf-lib/fontkit 1.1.1: official npm distribution (dist/fontkit.umd.min.js), MIT license in FONTKIT-LICENSE.txt. Loaded by the PDF editor only when saving text in a PDF's own embedded font.
+
+## three.js
+
+three.js 0.160.0 (`three/three.module.min.js`, `three/RoomEnvironment.js` from
+`examples/jsm/environments/`) for the 3D hero, copied unchanged from the npm package
+https://registry.npmjs.org/three/-/three-0.160.0.tgz
+Upstream: https://github.com/mrdoob/three.js (MIT, `three/THREE-LICENSE.txt`).
+`RoomEnvironment.js` imports `'three'`: pages map it with an import map.

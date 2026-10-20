@@ -199,7 +199,7 @@
   // ---- page operations: the working PDF is rebuilt in the new order --------------------------------
   const same = () => st.pages.map(pg => ({ pg, index: pg.index }));
   async function restructure(list, focus) {
-    commitTyping(); closeMenu();
+    commitTyping(); closeMenu(); markDirty();
     status(L('Updating the pages…', 'Memperbarui halaman…'));
     const lib = PDFLib, out = await lib.PDFDocument.create();
     const cur = await lib.PDFDocument.load(st.bytes, { ignoreEncryption: true });
@@ -642,9 +642,12 @@
   }
   function statusBar() {
     const sb = $('#pe-sb'); if (!sb) return;
-    const words = st.pages.reduce((n, pg) => n + (pg.ready ? pg.elements.filter(e => e.type === 'text').reduce((a, e) => a + (String(e.text).match(/[\p{L}\p{N}]+/gu) || []).length, 0) : 0), 0);
+    const textOf = e => e.type === 'table' ? e.rows.flat().join(' ') : e.type === 'text' ? String(e.text) : '';
+    const words = st.pages.reduce((n, pg) => n + (pg.ready ? pg.elements.reduce((a, e) => a + (textOf(e).match(/[\p{L}\p{N}]+/gu) || []).length, 0) : 0), 0);
+    const saved = st.autosaved ? L(` · Saved automatically ${new Date(st.autosaved.at).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}${st.autosaved.account ? ' (account)' : ''}`,
+      ` · Tersimpan otomatis ${new Date(st.autosaved.at).toLocaleTimeString('id-ID', { hour: '2-digit', minute: '2-digit' })}${st.autosaved.account ? ' (akun)' : ''}`) : '';
     sb.textContent = L(`Page ${st.cur + 1} of ${st.pages.length} · ${words} words · Zoom ${Math.round(st.zoom * 100)}%`,
-      `Halaman ${st.cur + 1} dari ${st.pages.length} · ${words} kata · Zoom ${Math.round(st.zoom * 100)}%`);
+      `Halaman ${st.cur + 1} dari ${st.pages.length} · ${words} kata · Zoom ${Math.round(st.zoom * 100)}%`) + saved;
   }
   const stageH = () => $('#pe-stage').getBoundingClientRect().height || 1;
 
@@ -656,6 +659,8 @@
     for (const el of pg.elements) if (el.under) stage.append(build(el));
     const bg = document.createElement('img'); bg.className = 'pe-bg'; bg.src = pg.bg; bg.alt = ''; stage.append(bg);
     for (const el of pg.elements) if (!el.under) stage.append(build(el));
+    // Where its text may run, as the page first shows (before anything was typed).
+    if (!pg.band && !isTyped(pg) && !pg.spill) { pinFooters(pg); pg.band = bandOf(pg); }
     // A selected picture under the design keeps its place in the layers; its frame
     // and handles are drawn on top so it can still be resized and turned.
     const sel = find(st.sel);
@@ -666,12 +671,13 @@
       ghost.addEventListener('pointerdown', e => down(e, sel, ghost));
       stage.append(ghost);
     }
+    ruler(stage);
     toolbar();
   }
 
   function place(div, el) {
     div.style.left = el.x * 100 + '%'; div.style.top = el.y * 100 + '%'; div.style.width = el.w * 100 + '%';
-    if (el.type === 'text') div.style.minHeight = el.h * 100 + '%'; else div.style.height = el.h * 100 + '%';
+    if (el.type === 'text' || el.type === 'table') div.style.minHeight = el.h * 100 + '%'; else div.style.height = el.h * 100 + '%';
     div.style.transform = el.rotation ? `rotate(${el.rotation}deg)` : '';
   }
   function styleText(node, el, Hpx) {
@@ -688,6 +694,7 @@
       div.className = 'pe-el pe-' + el.type; place(div, el);
       const sH = () => sheetH;
       if (el.type === 'text') { const t = document.createElement('div'); t.className = 'pe-txt'; fillText(t, el); styleText(t, el, sheetH); div.append(t); }
+      else if (el.type === 'table') tableInto(div, el, sheetH, false);
       else if (el.type === 'image') { const img = document.createElement('img'); img.src = el.src; img.alt = ''; div.append(img); div.style.opacity = el.opacity ?? 1; }
       else shapeInto(div, el, sH());
       return div;
@@ -704,10 +711,16 @@
       t.addEventListener('focus', () => { select(el.id, false); h0 = t.getBoundingClientRect().height; });
       t.addEventListener('blur', commitTyping);
       t.addEventListener('input', () => {
+        if (replaying) return;
         syncText(el, t); touched(true); statusBar(); flowAfterTyping(el, t); clearTimeout(thumbTimer); thumbTimer = setTimeout(renderThumbs, 700);
         reflow(el, div, t, h0); h0 = t.getBoundingClientRect().height;
+        pdfFlowAfterTyping();
+      });
+      t.addEventListener('beforeinput', e => {
+        if (flowBusy && e.inputType === 'insertText' && e.data && e.cancelable) { e.preventDefault(); heldKeys.push(e.data); }
       });
       t.addEventListener('keydown', e => {
+        if (flowBusy && !e.ctrlKey && !e.metaKey && !e.altKey && (e.key.length === 1 || e.key === 'Enter' || e.key === 'Backspace')) { e.preventDefault(); heldKeys.push(e.key); return; }
         if ((e.ctrlKey || e.metaKey) && !e.shiftKey && /^[biu]$/i.test(e.key)) { e.preventDefault(); $({ b: '#pe-bold', i: '#pe-italic', u: '#pe-underline' }[e.key.toLowerCase()]).click(); return; }
         if (e.key === 'Enter') {
           e.preventDefault();
@@ -730,11 +743,13 @@
       });
       t.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData || window.clipboardData).getData('text/plain')); });
       t.addEventListener('dragstart', e => e.preventDefault());           // a drag from selected text selects on (no drag-and-drop)
+    } else if (el.type === 'table') {
+      tableEditing(div, el, tableInto(div, el, stageH(), true));
     } else if (el.type === 'image') {
       const img = document.createElement('img'); img.src = el.src; img.alt = ''; img.draggable = false; div.append(img);
       div.style.opacity = el.opacity ?? 1;
     } else shapeInto(div, el, stageH());
-    for (const h of ['nw', 'ne', 'sw', 'se'].concat(el.type === 'text' ? ['move'] : ['rot'])) {
+    for (const h of ['nw', 'ne', 'sw', 'se'].concat(el.type === 'text' || el.type === 'table' ? ['move'] : ['rot'])) {
       const hd = document.createElement('div'); hd.className = 'pe-h'; hd.dataset.h = h; div.append(hd);
     }
     div.addEventListener('pointerdown', e => down(e, el, div));
@@ -753,8 +768,306 @@
       div.style.border = el.stroke && el.strokeWidth ? `${sw(el.strokeWidth)}px solid ${el.stroke}` : 'none';
     }
   }
+  // ---- tables: an HTML table with the export's numbers (PageEditorCore.tableLayout) ----------------
+  function tableInto(div, el, H, editable) {
+    const tbl = document.createElement('table'); tbl.className = 'pe-tbl';
+    Object.assign(tbl.style, { fontFamily: CSS_FONT[el.family] || CSS_FONT.sans, fontSize: el.fontSize * H + 'px', lineHeight: String(C.TABLE_LINE), color: el.color || '#1c1917' });
+    const widths = C.colWidths(el), cg = document.createElement('colgroup');
+    for (const f of widths) { const col = document.createElement('col'); col.style.width = f * 100 + '%'; cg.append(col); }
+    tbl.append(cg);
+    const line = Math.max(1, (el.strokeWidth || 0.0012) * H) + 'px solid ' + (el.border || '#57534e');
+    el.rows.forEach((row, r) => {
+      const tr = document.createElement('tr');
+      widths.forEach((_, c) => {
+        const td = document.createElement('td'); td.className = 'pe-cell'; td.style.border = line; td.style.padding = C.TABLE_PAD + 'em';
+        if (el.header && r === 0) td.classList.add('pe-head');
+        td.textContent = row[c] || '';
+        if (editable) { td.contentEditable = 'true'; td.spellcheck = false; td.dataset.r = r; td.dataset.c = c; }
+        tr.append(td);
+      });
+      tbl.append(tr);
+    });
+    div.append(tbl);
+    return tbl;
+  }
+  // Typing in cells; Tab / Shift+Tab go to the next / previous cell (Tab in the last one adds a row).
+  function tableEditing(div, el, tbl) {
+    const cellOf = n => n && n.closest && n.closest('.pe-cell');
+    tbl.addEventListener('focusin', e => { const td = cellOf(e.target); if (!td) return; select(el.id, false); st.cell = { id: el.id, r: +td.dataset.r, c: +td.dataset.c }; tableBar(); });
+    tbl.addEventListener('focusout', commitTyping);
+    tbl.addEventListener('input', e => {
+      const td = cellOf(e.target); if (!td) return;
+      el.rows[+td.dataset.r][+td.dataset.c] = td.innerText.replace(/\n$/, '');
+      touched(true); grow(div, el); statusBar(); clearTimeout(thumbTimer); thumbTimer = setTimeout(renderThumbs, 700);
+    });
+    tbl.addEventListener('paste', e => { e.preventDefault(); document.execCommand('insertText', false, (e.clipboardData || window.clipboardData).getData('text/plain')); });
+    tbl.addEventListener('keydown', e => {
+      const td = cellOf(e.target); if (!td || e.key !== 'Tab') return;
+      e.preventDefault();
+      const cells = [...tbl.querySelectorAll('.pe-cell')], k = cells.indexOf(td) + (e.shiftKey ? -1 : 1);
+      if (k >= cells.length) { st.cell = { id: el.id, r: el.rows.length - 1, c: 0 }; tableOp('row+'); focusCell(el, el.rows.length - 1, 0); return; }
+      if (k >= 0) { cells[k].focus(); setCaret(cells[k], cells[k].innerText.length); }
+    });
+  }
+  function focusCell(el, r, c) {
+    const td = document.querySelector(`#pe-stage [data-id="${el.id}"] .pe-cell[data-r="${r}"][data-c="${c}"]`);
+    if (td) { td.focus(); setCaret(td, td.innerText.length); }
+  }
+  // A new table: under the typed text on a page being written, else in the middle.
+  function insertTable(rows, cols) {
+    const pg = page(); if (!pg || !pg.ready) return;
+    const el = C.newTable(rows, cols, pg.size[1]), body = bodyOf(pg);
+    if (body) { el.x = body.x; el.w = body.w; const below = body.y + body.h + 0.01; if (below < 0.8) el.y = below; }
+    add(el);
+    requestAnimationFrame(() => { const div = document.querySelector(`#pe-stage [data-id="${el.id}"]`); if (div) grow(div, el); focusCell(el, 0, 0); });
+    status(L('Type in the cells; Tab goes to the next cell (in the last cell it adds a row).', 'Ketik di sel; Tab ke sel berikutnya (di sel terakhir menambah baris).'));
+  }
+  function tableOp(kind) {
+    const el = find(st.sel); if (!el || el.type !== 'table') return;
+    const cols = C.colWidths(el).length, at = st.cell && st.cell.id === el.id ? st.cell : { r: el.rows.length - 1, c: cols - 1 };
+    change(o => {
+      if (o !== el) return;
+      const widths = C.colWidths(o);
+      if (kind === 'row+') o.rows.splice(at.r + 1, 0, Array(cols).fill(''));
+      if (kind === 'row-' && o.rows.length > 1) o.rows.splice(at.r, 1);
+      if (kind === 'col+') { o.rows.forEach(row => row.splice(at.c + 1, 0, '')); widths.splice(at.c + 1, 0, 1 / cols); o.colW = widths; }
+      if (kind === 'col-' && cols > 1) { o.rows.forEach(row => row.splice(at.c, 1)); widths.splice(at.c, 1); o.colW = widths; }
+      if (kind === 'header') o.header = !o.header;
+    });
+    requestAnimationFrame(() => { const div = document.querySelector(`#pe-stage [data-id="${el.id}"]`); if (div) { el.h = 0.01; grow(div, el); } });
+  }
+  function tableBar() {
+    const el = find(st.sel), on = !!(el && el.type === 'table'), bar = $('#pe-tbl-ops');
+    if (bar) bar.hidden = !on;
+    if (on) $('#pe-tbl-head').classList.toggle('on', !!el.header);
+  }
+
+  // ---- table of contents: every Heading 1-3 with its page, dot leaders to the number ---------
+  async function insertToc() {
+    commitTyping();
+    const entries = () => C.collectHeadings(st.pages.map(pg => ({ elements: pg.ready ? pg.elements : [] })));
+    if (!entries().length) {
+      status(L('No headings yet: set chapter titles with Paragraph style → Heading 1–3, then insert the table of contents.',
+        'Belum ada judul: atur judul bab dengan Gaya paragraf → Judul 1–3, lalu sisipkan daftar isi.'));
+      return;
+    }
+    let at = st.pages.findIndex(pg => pg.ready && pg.elements.some(e => e.toc));
+    if (at < 0) {
+      // Its own page, in front of the text being written (a typed run of pages stays one flow).
+      let before = st.cur;
+      while (before > 0 && isTyped(st.pages[before - 1])) before--;
+      if (!isTyped(st.pages[st.cur])) before = st.cur + 1;
+      await addBlank(before - 1);
+      at = st.cur;
+      const body = bodyOf(page()); delete body.ph; body.toc = true; body.lineHeight = 1.6;
+      const writing = st.pages.find(isTyped); if (writing) body.family = bodyOf(writing).family;     // in the document's own font
+    }
+    const pg = st.pages[at], el = pg.elements.find(e => e.toc), [W, H] = pg.size;
+    const g = document.createElement('canvas').getContext('2d');
+    g.font = `${el.fontSize * H}px ${CSS_FONT[el.family] || CSS_FONT.sans}`;
+    const lines = C.tocLines(entries(), t => g.measureText(t).width, el.w * W * 0.96);
+    snapshotPage(pg, () => {
+      el.html = `<span style="font-weight:bold;font-size:1.5em">${L('CONTENTS', 'DAFTAR ISI')}</span><br><br>` + lines.map(t => t.replace(/&/g, '&amp;').replace(/</g, '&lt;')).join('<br>');
+      el.text = C.plainRich(el.html);
+    });
+    if (st.cur !== at) await go(at); else render();
+    renderThumbs();
+    status(L('Table of contents updated. After changing headings or pages, press Contents again to refresh it.',
+      'Daftar isi diperbarui. Setelah judul atau halaman berubah, tekan Daftar isi lagi untuk memperbaruinya.'));
+  }
+  function snapshotPage(pg, fn) { if (pg === page()) { commitTyping(); snapshot(); } fn(); pg.edited = true; sheets.delete(pg); markDirty(); }
+
+  // ---- ruler: centimetres along the top and left of the page being edited --------------------
+  function ruler(stage) {
+    if (!st.ruler || !page() || !page().ready) return;
+    const pg = page(), [W, H] = pg.size, rect = stage.getBoundingClientRect(), sel = find(st.sel), typed = isTyped(pg);
+    const cm = 72 / 2.54, m = typed ? (st.margin || 72) : 0;
+    const draw = (horizontal) => {
+      const len = horizontal ? rect.width : rect.height, pts = horizontal ? W : H, k = len / pts, dpr = Math.min(2, devicePixelRatio || 1);
+      const c = document.createElement('canvas'); c.className = horizontal ? 'pe-ruler pe-ruler-h' : 'pe-ruler pe-ruler-v';
+      c.width = (horizontal ? len : 18) * dpr; c.height = (horizontal ? 18 : len) * dpr;
+      const g = c.getContext('2d'); g.scale(dpr, dpr);
+      const along = (a, b, color) => { g.fillStyle = color; horizontal ? g.fillRect(a * k, 0, (b - a) * k, 18) : g.fillRect(0, a * k, 18, (b - a) * k); };
+      along(0, pts, '#ffffff');
+      if (m) { along(0, m, '#e7e2d8'); along(pts - m, pts, '#e7e2d8'); }
+      if (sel) { const a = horizontal ? sel.x * W : sel.y * H, b = horizontal ? (sel.x + sel.w) * W : (sel.y + sel.h) * H; along(a, b, 'rgba(255,92,40,.18)'); }
+      g.fillStyle = '#78716c'; g.font = '9px sans-serif'; g.textAlign = 'center'; g.textBaseline = 'middle';
+      for (let i = 1; i * cm / 2 < pts; i++) {
+        const at = i * cm / 2 * k, whole = i % 2 === 0, size = whole ? 0 : 4;
+        if (whole) { horizontal ? g.fillText(String(i / 2), at, 9) : g.fillText(String(i / 2), 9, at); continue; }
+        horizontal ? g.fillRect(at, 18 - size - 2, 1, size) : g.fillRect(18 - size - 2, at, size, 1);
+      }
+      return c;
+    };
+    stage.append(draw(true), draw(false));
+    // The selected block's left and right edges can be dragged on the top ruler.
+    if (sel && sel.type !== 'line' && sel.type !== 'arrow') for (const side of ['l', 'r']) {
+      const mk = document.createElement('div'); mk.className = 'pe-ruler-mk'; mk.title = L('Drag to change the width', 'Seret untuk mengubah lebar');
+      mk.style.left = ((side === 'l' ? sel.x : sel.x + sel.w) * 100) + '%';
+      mk.addEventListener('pointerdown', e => {
+        e.preventDefault(); e.stopPropagation(); commitTyping(); snapshot();
+        const start = { x: sel.x, w: sel.w }, sx = e.clientX;
+        const move = ev => {
+          const dx = (ev.clientX - sx) / rect.width;
+          if (side === 'l') { const x = Math.min(start.x + start.w - 0.03, Math.max(0, start.x + dx)); sel.w = start.x + start.w - x; sel.x = x; }
+          else sel.w = Math.max(0.03, Math.min(1 - sel.x, start.w + dx));
+          document.querySelectorAll(`#pe-stage [data-id="${sel.id}"]`).forEach(n => place(n, sel));
+          mk.style.left = ((side === 'l' ? sel.x : sel.x + sel.w) * 100) + '%';
+        };
+        const up = () => { removeEventListener('pointermove', move); removeEventListener('pointerup', up); touched(); render(); };
+        addEventListener('pointermove', move); addEventListener('pointerup', up);
+      });
+      stage.append(mk);
+    }
+  }
+
+  // ---- Word (.docx) export -------------------------------------------------------------------
+  const script = src => new Promise((ok, fail) => { const s = Object.assign(document.createElement('script'), { src }); s.onload = ok; s.onerror = () => fail(Error(L('A part of the editor could not be loaded. Check the connection.', 'Sebagian editor gagal dimuat. Periksa koneksi.'))); document.head.append(s); });
+  async function saveDocx() {
+    commitTyping();
+    if (!(await mayTake(saveDocx))) return;
+    try {
+      for (const [i, pg] of st.pages.entries()) if (!pg.ready) { status(L(`Reading page ${i + 1} of ${st.pages.length}…`, `Membaca halaman ${i + 1} dari ${st.pages.length}…`)); await prepare(pg); }
+      status(L('Building the Word file…', 'Menyusun file Word…'));
+      if (!window.JSZip) await script('assets/vendor/jszip.min.js');
+      if (!window.EditorDocx) await script('assets/editor-docx.js');
+      const blob = await EditorDocx.build({ title: st.name.replace(/\.pdf$/i, ''), margin: st.margin || 72,
+        pages: st.pages.map(pg => ({ size: pg.size, elements: pg.elements })) }, JSZip);
+      const name = st.name.replace(/\.pdf$/i, '') + '.docx';
+      const a = Object.assign(document.createElement('a'), { href: URL.createObjectURL(blob), download: name });
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 60000);
+      status(L(`Saved: ${name}. Text, headings, tables and pictures are in it; the page backgrounds of a PDF are not.`,
+        `Tersimpan: ${name}. Teks, judul, tabel, dan gambar ikut; latar halaman PDF tidak ikut.`));
+    } catch (e) { status(L('Could not make the Word file: ', 'Gagal membuat file Word: ') + (e.message || e)); }
+  }
+
+  // ---- templates: skripsi, journal article, report -----------------------------------------
+  async function openTemplate(id) {
+    if (st.pages.some(p => p.edited) && !confirm(L('Start from a template? Changes not saved yet will be lost.', 'Mulai dari template? Perubahan yang belum disimpan akan hilang.'))) return;
+    if (!window.EditorTemplates) await script('assets/editor-templates.js');
+    const t = EditorTemplates.make(id, A4);
+    st.margin = t.margin; st.savedAs = false;
+    await open([], t.name);
+    const cover = page();
+    cover.elements = t.cover.map(e => ({ ...e, id: newId() })); cover.edited = true; sheets.delete(cover);
+    await addBlank(0);
+    const pg = page(), body = bodyOf(pg);
+    Object.assign(body, { family: t.family, lineHeight: t.lineHeight, html: t.body.html, text: C.plainRich(t.body.html) });
+    pg.edited = true; render();
+    await flowFrom(st.cur);
+    await go(0);
+    markDirty();
+    status(L('Template ready: click any text to replace it. Insert → Contents builds the table of contents from the headings.',
+      'Template siap: klik teks mana saja untuk menggantinya. Sisipkan → Daftar isi membuat daftar isi dari judul-judulnya.'));
+  }
+
+  // ---- autosave: this browser, and the member's account ----------------------------------
+  // The working PDF and every prepared page's pieces, packed into one gzip file:
+  // [4-byte length][JSON][PDF bytes]. Kept in IndexedDB, and on the server (sealed, one
+  // draft per member) when signed in. Opening the editor offers the newest one back.
+  const LOCAL_EVERY = 8000, SERVER_EVERY = 60000;
+  let dirty = 0, savedLocal = 0, savedServer = 0, serverOff = false, lastServer = 0;
+  function markDirty() { dirty++; }
+  const idb = () => new Promise((ok, fail) => { const r = indexedDB.open('pe-autosave', 1); r.onupgradeneeded = () => r.result.createObjectStore('d'); r.onsuccess = () => ok(r.result); r.onerror = () => fail(r.error); });
+  async function idbDo(mode, fn) {
+    const db = await idb();
+    return new Promise((ok, fail) => { const tx = db.transaction('d', mode), req = fn(tx.objectStore('d')); tx.oncomplete = () => { db.close(); ok(req && req.result); }; tx.onerror = () => { db.close(); fail(tx.error); }; });
+  }
+  async function pack() {
+    const head = { v: 1, name: st.name, margin: st.margin || 72, savedAs: !!st.savedAs, savedAt: Date.now(),
+      pages: st.pages.map(pg => pg.ready ? { size: pg.size, blank: !!pg.blank, auto: !!pg.auto, spill: !!pg.spill, pinned: !!pg.pinned, band: pg.band, ready: true, edited: !!pg.edited, layered: !!pg.layered,
+        elements: pg.elements, bg: pg.bg, original: pg.original, initial: pg.initial, initialBg: pg.initialBg } : { size: pg.size, blank: !!pg.blank }) };
+    const json = new TextEncoder().encode(JSON.stringify(head)), len = new Uint8Array(4);
+    new DataView(len.buffer).setUint32(0, json.length);
+    let blob = new Blob([len, json, st.bytes], { type: 'application/octet-stream' });
+    if (typeof CompressionStream !== 'undefined') blob = await new Response(blob.stream().pipeThrough(new CompressionStream('gzip'))).blob();
+    return { blob, savedAt: head.savedAt, name: st.name };
+  }
+  async function unpack(blob) {
+    let buf = new Uint8Array(await blob.arrayBuffer());
+    if (buf[0] === 0x1f && buf[1] === 0x8b) buf = new Uint8Array(await new Response(new Blob([buf]).stream().pipeThrough(new DecompressionStream('gzip'))).arrayBuffer());
+    const n = new DataView(buf.buffer, buf.byteOffset).getUint32(0);
+    return { head: JSON.parse(new TextDecoder().decode(buf.subarray(4, 4 + n))), bytes: buf.slice(4 + n) };
+  }
+  const when = t => new Date(t).toLocaleString(L('en-US', 'id-ID'), { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
+  async function autosave(force) {
+    if (!st.bytes || !st.pages.some(p => p.edited) || dirty === savedLocal && !force) return;
+    const mark = dirty;
+    try {
+      const d = await pack();
+      await idbDo('readwrite', s => s.put(d, 'draft'));
+      savedLocal = mark; st.autosaved = { at: d.savedAt, account: false };
+      if (!serverOff && window.MFAuth && (force || Date.now() - lastServer > SERVER_EVERY) && savedServer !== mark) {
+        const me = await MFAuth.me();
+        if (me && me.user && !me.offline) {
+          lastServer = Date.now();
+          const r = await fetch('/api/library/draft', { method: 'POST', credentials: 'same-origin', body: d.blob,
+            headers: { 'Content-Type': 'application/octet-stream', 'X-Draft-Name': encodeURIComponent(d.name), 'X-Saved-At': String(d.savedAt) } });
+          if (r.ok) { savedServer = mark; st.autosaved.account = true; }
+          else if ([401, 402, 413].includes(r.status)) serverOff = true;          // not for this account: the browser copy stays
+        }
+      } else if (savedServer === mark) st.autosaved.account = true;
+      statusBar();
+    } catch (e) {}
+  }
+  async function forgetDraft() {
+    try { await idbDo('readwrite', s => s.delete('draft')); } catch (e) {}
+    try { await fetch('/api/library/draft/delete', { method: 'POST', credentials: 'same-origin' }); } catch (e) {}
+  }
+  async function draftOffer() {
+    let local = null, server = null;
+    try { local = await idbDo('readonly', s => s.get('draft')); } catch (e) {}
+    try {
+      const me = window.MFAuth && await MFAuth.me();
+      if (me && me.user && !me.offline) {
+        const r = await fetch('/api/library/draft', { credentials: 'same-origin' });
+        if (r.ok) server = { savedAt: Number(r.headers.get('X-Saved-At')) || 0, name: decodeURIComponent(r.headers.get('X-Draft-Name') || ''), blob: await r.blob(), account: true };
+      }
+    } catch (e) {}
+    const best = [local, server].filter(Boolean).sort((a, b) => b.savedAt - a.savedAt)[0];
+    if (!best || $('.pe-draft')) return;
+    const bar = document.createElement('div'); bar.className = 'pe-draft';
+    const text = document.createElement('span');
+    text.textContent = L(`Your last document “${best.name}” was saved automatically (${when(best.savedAt)}${best.account ? ', in your account' : ''}).`,
+      `Dokumen terakhir “${best.name}” tersimpan otomatis (${when(best.savedAt)}${best.account ? ', di akun Anda' : ''}).`);
+    const go1 = Object.assign(document.createElement('button'), { type: 'button', className: 'pe-save', textContent: L('Continue', 'Lanjutkan') });
+    const drop = Object.assign(document.createElement('button'), { type: 'button', textContent: L('Discard', 'Buang') });
+    go1.onclick = async () => { bar.remove(); try { await restoreDraft(best.blob); } catch (e) { status(L('The saved document could not be opened: ', 'Dokumen tersimpan tidak bisa dibuka: ') + (e.message || e)); } };
+    drop.onclick = async () => { bar.remove(); await forgetDraft(); status(L('The saved document was discarded.', 'Dokumen tersimpan sudah dibuang.')); };
+    bar.append(text, go1, drop);
+    $('#pe-app').insertBefore(bar, $('#pe-status'));
+  }
+  async function restoreDraft(blob) {
+    const { head, bytes } = await unpack(blob);
+    status(L('Opening…', 'Membuka…'));
+    st.name = head.name || NEW_NAME(); st.margin = head.margin; st.savedAs = !!head.savedAs; st.fonts = {}; st.oldDocs = []; st.picked = new Set();
+    const pages = head.pages.map(pg => pg.ready ? { ...fresh(), ...pg } : { ...fresh(), blank: !!pg.blank });
+    let top = 0;
+    for (const pg of pages) for (const e of pg.elements || []) top = Math.max(top, Number(String(e.id).slice(1)) || 0);
+    uid = Math.max(uid, top + 1);
+    await useBytes(bytes, pages);
+    $('#pe-start').hidden = true; $('#pe-app').hidden = false;
+    document.title = st.name + ' — ' + L('PDF Editor', 'Editor PDF');
+    sheets.clear(); renderThumbs(); thumbsLazy();
+    dirty = savedLocal = savedServer = 0;
+    await go(0);
+  }
+  // Taking a file (PDF, Word) needs an account, as everywhere (any plan, plans v2).
+  async function mayTake(again) {
+    if (!window.MFAuth) return true;
+    try {
+      const data = await MFAuth.me();
+      if (!data.user && !data.offline) { MFAuth.loginPopup(() => again()); return false; }
+    } catch (e) {}
+    return true;
+  }
+
   // A block's words: plain text, or tidy html when some words carry their own styles.
-  function fillText(t, el) { if (el.html) t.innerHTML = el.html; else t.textContent = el.text; }
+  function fillText(t, el) {
+    if (el.html) t.innerHTML = el.html; else t.textContent = el.text;
+    // An empty last line shows only with a line break after it (syncText drops that one again).
+    if (/\n$/.test(el.text || '')) t.append(document.createElement('br'));
+  }
   function syncText(el, t) {
     el.text = t.innerText.replace(/\n$/, '');
     if (C.isRich(t.innerHTML)) el.html = C.tidyRich(t.innerHTML); else delete el.html;
@@ -849,13 +1162,28 @@
     pg.initial = JSON.stringify(pg.elements); pg.initialBg = pg.bg;
     return pg;
   }
-  let flowBusy = false, flowAgain = false;
+  let flowBusy = false, flowAgain = false, heldKeys = [], replaying = false;
   async function flowFrom(i) {
     if (flowBusy) { flowAgain = true; return; }
     flowBusy = true;
-    try { do { flowAgain = false; await flowOnce(i); i = st.cur; } while (flowAgain); }
+    try { do { flowAgain = false; if (isTyped(st.pages[i])) await flowOnce(i); else await flowPdf(i); i = st.cur; } while (flowAgain); }
     catch (e) { status(e.message || String(e)); }
-    finally { flowBusy = false; }
+    finally { flowBusy = false; replayKeys(); }
+  }
+  // What was typed while the text moved between pages, typed again where the caret is now.
+  function replayKeys() {
+    const keys = heldKeys; heldKeys = [];
+    const t = document.activeElement;
+    if (!keys.length || !t || !t.matches || !t.matches('#pe-stage .pe-txt')) return;
+    replaying = true;
+    try {
+      for (const k of keys) {
+        if (k === 'Enter') document.execCommand('insertLineBreak');
+        else if (k === 'Backspace') document.execCommand('delete');
+        else document.execCommand('insertText', false, k);
+      }
+    } finally { replaying = false; }
+    t.dispatchEvent(new Event('input'));
   }
   async function flowOnce(start) {
     while (start > 0 && isTyped(st.pages[start - 1])) start--;
@@ -866,16 +1194,23 @@
     const cur = page(), ci = chain.indexOf(cur), act = document.activeElement;
     const curBody = ci >= 0 && bodyOf(cur), curT = curBody && document.querySelector(`#pe-stage [data-id="${curBody.id}"] .pe-txt`);
     let caret = null;
-    if (curT && act === curT) { syncText(curBody, curT); caret = chain.slice(0, ci).reduce((n, pg) => n + C.plainOf(parasOf(bodyOf(pg))).length, 0) + textBefore(curT).length; }
-    let rest = chain.reduce((all, pg) => C.joinParas(all, parasOf(bodyOf(pg))), []);
+    // A page whose text starts a new line after the page before (el.brk) keeps that line
+    // break between them; otherwise its first line goes on with the last one before it.
+    const brk = (pg, j) => j > 0 && !!bodyOf(pg).brk;
+    if (curT && act === curT) { syncText(curBody, curT); caret = chain.slice(0, ci).reduce((n, pg, j) => n + C.plainOf(parasOf(bodyOf(pg))).length + (brk(chain[j + 1], j + 1) ? 1 : 0), 0) + textBefore(curT).length; }
+    let rest = chain.reduce((all, pg, j) => brk(pg, j) ? [...all.map(p => p.slice()), ...parasOf(bodyOf(pg))] : C.joinParas(all, parasOf(bodyOf(pg))), []);
     const out = [];
+    let cutAtBreak = false;
     for (let j = 0; j < chain.length || C.plainOf(rest).length; j++) {
       if (j >= chain.length) chain.push(typedPageAfter(chain[chain.length - 1]));
-      const pg = chain[j], el = bodyOf(pg), limit = measureFor(pg, el);
-      const k = C.plainOf(rest).length ? fitLength(rest, limit) : 0;
-      const [a, b] = C.splitParas(rest, k);
-      out.push({ pg, block: C.blockOf(a), len: C.plainOf(a).length });
-      rest = b;
+      const pg = chain[j], el = bodyOf(pg), limit = measureFor(pg, el), plain = C.plainOf(rest);
+      const k = plain.length ? fitLength(rest, limit) : 0;
+      let [a, b] = C.splitParas(rest, k), brkNext = false;
+      // Cut on a line break: the break stays between the pages, not as an empty line on either.
+      if (k < plain.length && plain[k - 1] === '\n' && a.length > 1 && !a[a.length - 1].length) { a = a.slice(0, -1); brkNext = true; }
+      else if (k > 0 && k < plain.length && plain[k] === '\n' && b.length > 1 && !b[0].length) { b = b.slice(1); brkNext = true; }
+      out.push({ pg, block: C.blockOf(a), len: C.plainOf(a).length, brk: j > 0 && cutAtBreak });
+      rest = b; cutAtBreak = brkNext;
     }
     // Pages the flow added that end up empty go again; pages you added yourself stay.
     let keep = out.length;
@@ -886,13 +1221,15 @@
     for (const o of out.slice(0, keep)) {
       const el = bodyOf(o.pg), before = JSON.stringify([el.text, el.html || '']);
       el.text = o.block.text; if (o.block.html) el.html = o.block.html; else delete el.html;
+      if (o.brk) el.brk = true; else delete el.brk;
       if (JSON.stringify([el.text, el.html || '']) !== before) { o.pg.edited = true; sheets.delete(o.pg); if (o.pg === cur) changedCur = true; }
     }
     // Where the caret lands: on the page holding that place in the text.
     let target = cur, off = 0;
     if (caret !== null) {
       let left = caret;
-      for (const o of out.slice(0, keep)) { target = o.pg; off = left; if (left <= o.len) break; left -= o.len; }
+      const kept = out.slice(0, keep);
+      for (const [j, o] of kept.entries()) { target = o.pg; off = left; if (left <= o.len) break; left -= o.len + (kept[j + 1] && kept[j + 1].brk ? 1 : 0); }
     }
     if (added.length || removed.length) {
       const list = same().filter(it => !removed.includes(it.pg));
@@ -906,6 +1243,171 @@
     if (page() !== target) await go(st.pages.indexOf(target));
     const t = document.querySelector(`#pe-stage [data-id="${bodyOf(target).id}"] .pe-txt`);
     if (t) { t.focus(); setCaret(t, off); const r = getSelection().rangeCount && getSelection().getRangeAt(0).getBoundingClientRect(); if (r && (r.bottom > innerHeight - 40 || r.top < 130)) scrollBy({ top: r.top - innerHeight / 2 }); }
+  }
+  // ---- PDF pages flow like Word too: what Enter (or a longer paragraph) pushes past the
+  // bottom of a page goes on to a page added after it (a "spill" page), and comes back
+  // when there is room again. Footers (a page number, a running line at the very bottom)
+  // stay where they are.
+  const isSpill = pg => !!(pg && pg.spill && pg.ready);
+  const flowing = e => !e.pin && !e.under;
+  function pinFooters(pg) {
+    if (!pg || pg.pinned || isTyped(pg) || pg.spill || !pg.ready) return;
+    pg.pinned = true;
+    let init = []; try { init = JSON.parse(pg.initial || '[]'); } catch (e) { /* keep none */ }
+    const foot = new Set(init.filter(e => e.y >= 0.92 && (e.type === 'text' ? e.fit || String(e.text).trim().split(/\s+/).length <= 8 : e.h < 0.06)).map(e => e.id));
+    for (const e of pg.elements) if (foot.has(e.id)) e.pin = true;
+  }
+  // Where a page's text may run: from its top margin down to the last line it had
+  // (at least as far down as its top margin is from the top), above any footer.
+  function liveH(pg, e) {
+    const d = pg === page() && document.querySelector(`#pe-stage [data-id="${e.id}"]`);
+    return d ? d.getBoundingClientRect().height / stageH() : e.h;
+  }
+  function bandOf(pg) {
+    const flow = pg.elements.filter(flowing), m = (st.margin || 72) / pg.size[1];
+    const top = flow.length ? Math.min(Math.max(Math.min(...flow.map(e => e.y)), 0.03), 0.2) : m;
+    const last = Math.max(0, ...flow.map(e => e.y + liveH(pg, e)));
+    let floor = 1 - top;
+    const pins = pg.elements.filter(e => e.pin);
+    if (pins.length) floor = Math.min(floor, Math.min(...pins.map(e => e.y)) - 0.008);
+    return { top, floor: Math.max(Math.min(floor, 0.985), last) };
+  }
+  function spillPageAfter(root) {
+    const pg = { ...fresh(), blank: true, spill: true, pinned: true, ready: true, edited: true, size: root.size.slice(), layered: false,
+      bg: whitePage(), original: whitePage(), elements: [], band: root.band };
+    pg.initial = '[]'; pg.initialBg = pg.bg;
+    return pg;
+  }
+  // A text block's height as the editor draws it (what it needs, at least its box).
+  function textH(pg, el) {
+    measureFor(pg, el); fillText(measurer, el);
+    return measurer.scrollHeight / (sheetWidth() * pg.size[1] / pg.size[0]);
+  }
+  const heightOf = (pg, el) => el.type === 'text' ? textH(pg, el) : el.h;
+  function pdfFlowAfterTyping() {
+    const pg = page(); if (!pg || !pg.ready || isTyped(pg)) return;
+    if (isSpill(pg) || isSpill(st.pages[st.cur + 1])) { flowFrom(st.cur); return; }
+    pinFooters(pg); const band = pg.band || (pg.band = bandOf(pg));
+    if (pg.elements.some(e => flowing(e) && e.y + liveH(pg, e) > band.floor + 0.003)) flowFrom(st.cur);
+  }
+  async function flowPdf(i) {
+    let r = i; while (r > 0 && isSpill(st.pages[r])) r--;
+    const root = st.pages[r]; if (!root || !root.ready || isTyped(root) || root.spill) return;
+    pinFooters(root);
+    const band = root.band || (root.band = bandOf(root));
+    const chain = [root]; for (let j = r + 1; isSpill(st.pages[j]); j++) chain.push(st.pages[j]);
+    const cur = page(), act = document.activeElement;
+    // The caret: which block, and where in its text.
+    let caret = null;
+    const host = act && act.matches && act.matches('#pe-stage .pe-txt') && act.closest('.pe-el');
+    if (host && chain.includes(cur)) { const e = cur.elements.find(x => x.id === host.dataset.id); if (e) { syncText(e, act); caret = { id: e.id, off: textBefore(act).length }; } }
+    const before = JSON.stringify(chain.map(pg => pg.elements));
+    const order = new Map(); chain.forEach(pg => pg.elements.forEach(e => order.set(e, order.size)));
+
+    // Rows (blocks that start on the same line go together), with the space above each.
+    const rows = [];
+    chain.forEach((pg, k) => {
+      const items = pg.elements.filter(flowing).map(e => ({ e, y: e.y, h: heightOf(pg, e) })).sort((a, b) => a.y - b.y || a.e.x - b.e.x);
+      let bottom = null;
+      for (const it of items) {
+        const row = rows.length && rows[rows.length - 1];
+        if (row && row.k === k && Math.abs(it.y - row.top) < 0.004) { row.items.push(it); continue; }
+        const gap = bottom === null ? (k === 0 ? it.y : (it.e.flowGap || 0)) : it.y - bottom;
+        rows.push({ k, top: it.y, gap, items: [it] });
+        bottom = Math.max(bottom === null ? -Infinity : bottom, ...rows.filter(x => x.k === k).flatMap(x => x.items.map(o => o.y + o.h)));
+      }
+    });
+    // A block's text cut over two pages becomes one block again (it is cut afresh below).
+    const pieceOf = new Map();
+    for (const row of rows) for (const it of row.items) pieceOf.set(it.e.id, it);
+    for (const row of rows) row.items = row.items.filter(it => {
+      const head = it.e.cont && pieceOf.get(it.e.cont);
+      if (!head || head === it) return true;
+      const a = parasOf(head.e), add = C.plainOf(a).length + (it.e.brk ? 1 : 0);
+      const b = C.blockOf(it.e.brk ? [...a, ...parasOf(it.e)] : C.joinParas(a, parasOf(it.e)));
+      head.e.text = b.text; if (b.html) head.e.html = b.html; else delete head.e.html;
+      head.h = textH(root, head.e);
+      if (caret && caret.id === it.e.id) caret = { id: head.e.id, off: add + caret.off };
+      pieceOf.set(it.e.id, head);
+      return false;
+    });
+    const queue = rows.filter(row => row.items.length);
+    for (const row of queue) { const t = Math.min(...row.items.map(o => o.y)); row.items.forEach(o => { o.dy = o.y - t; }); }
+
+    // Lay the rows out again, page after page.
+    const pages = chain.map(() => []);
+    const put = (k, it, y) => { it.e.y = Math.max(0, y + it.dy); if (it.e.type === 'text') it.e.h = Math.max(0.005, it.h); (pages[k] = pages[k] || []).push(it.e); };
+    let k = 0, cursor = 0, onPage = 0, guard = 0;
+    while (queue.length && guard++ < 5000) {
+      const row = queue.shift();
+      if (row.next) { k++; cursor = 0; onPage = 0; delete row.next; }
+      // the first row of a page added by the flow starts at its top margin
+      const y = onPage || k === 0 ? cursor + row.gap : band.top;
+      const rowH = Math.max(...row.items.map(o => o.dy + o.h));
+      const floor = band.floor + 0.003;
+      const place = () => { row.items.forEach(o => { if (onPage || k === 0) delete o.e.flowGap; else o.e.flowGap = row.gap; put(k, o, y); }); cursor = Math.max(cursor, y + rowH); onPage++; };
+      if (y + rowH <= floor) { place(); continue; }
+      // It runs past the bottom: a text block is cut where its lines stop fitting.
+      const Hpx = sheetWidth() * root.size[1] / root.size[0];
+      const crossing = row.items.filter(o => y + o.dy + o.h > floor);
+      const cuts = y < floor - 0.01 && crossing.every(o => o.e.type === 'text' && (!o.e.fit || String(o.e.text).includes('\n'))) ? crossing.map(o => {
+        const paras = parasOf(o.e), plain = C.plainOf(paras); measureFor(root, o.e);
+        const n = fitLength(paras, (band.floor - y - o.dy) * Hpx);
+        return n > 0 && n < plain.length && plain.slice(0, n).trim() ? { o, paras, plain, n } : null;
+      }) : [];
+      if (cuts.length && cuts.every(Boolean)) {
+        const rest = { k, top: 0, gap: 0, next: true, items: [] };
+        for (const { o, paras, plain, n } of cuts) {
+          let [a, b] = C.splitParas(paras, n), brk = false;
+          if (plain[n - 1] === '\n' && a.length > 1 && !a[a.length - 1].length) { a = a.slice(0, -1); brk = true; }
+          else if (plain[n] === '\n' && b.length > 1 && !b[0].length) { b = b.slice(1); brk = true; }
+          const A = C.blockOf(a), B = C.blockOf(b);
+          o.e.text = A.text; if (A.html) o.e.html = A.html; else delete o.e.html;
+          o.h = textH(root, o.e);
+          const piece = { ...o.e, id: newId(), text: B.text, cont: o.e.id }; delete piece.html; delete piece.flowGap; delete piece.brk;
+          if (B.html) piece.html = B.html; if (brk) piece.brk = true;
+          order.set(piece, order.get(o.e) + 0.5);
+          if (caret && caret.id === o.e.id && caret.off > A.text.length) caret = { id: piece.id, off: caret.off - A.text.length - (brk ? 1 : 0) };
+          rest.items.push({ e: piece, y: 0, dy: 0, h: textH(root, piece) });
+        }
+        row.items.forEach(o => { delete o.e.flowGap; put(k, o, y); });
+        cursor = Math.max(cursor, y + Math.max(...row.items.map(o => o.dy + o.h))); onPage++;
+        queue.unshift(rest);
+        continue;
+      }
+      // Too tall even for a page of its own (a big picture): it stays there.
+      if (!onPage && k > 0) { place(); continue; }
+      // Otherwise the whole row starts the next page (and keeps its space, should it come back).
+      row.items.forEach(o => { o.e.flowGap = row.gap; });
+      row.next = true; queue.unshift(row);
+    }
+    // Back onto the pages, in their drawing order; spill pages left empty go.
+    const out = pages.map((list, j) => {
+      const pg = chain[j] || spillPageAfter(root);
+      const stay = pg.elements.filter(e => !flowing(e));
+      pg.elements = [...stay, ...list].sort((a, b) => (order.get(a) ?? 0) - (order.get(b) ?? 0));
+      return pg;
+    });
+    const keep = out.filter((pg, j) => j === 0 || pg.elements.length);
+    for (const pg of out) if (!keep.includes(pg)) pg.elements = [];
+    const added = keep.filter(pg => !st.pages.includes(pg)), removed = chain.filter(pg => !keep.includes(pg));
+    if (!added.length && !removed.length && JSON.stringify(keep.map(pg => pg.elements)) === before) return;
+    for (const pg of keep) { pg.edited = true; sheets.delete(pg); }
+    if (keep.some(pg => pg !== cur)) { st.past = []; st.future = []; }      // the pages changed together: no undo of one alone
+    markDirty();
+    let target = cur;
+    if (caret) target = keep.find(pg => pg.elements.some(e => e.id === caret.id)) || cur;
+    if (added.length || removed.length) {
+      const list = same().filter(it => !removed.includes(it.pg));
+      const at = list.findIndex(it => it.pg === keep.filter(pg => st.pages.includes(pg)).pop());
+      list.splice(at + 1, 0, ...added.map(pg => ({ pg, blank: pg.size.slice() })));
+      await restructure(list, target);
+    } else if (keep.includes(cur)) render();
+    layoutDesk(); renderThumbs(); statusBar();
+    if (!caret) return;
+    if (page() !== target) await go(st.pages.indexOf(target));
+    const t = document.querySelector(`#pe-stage [data-id="${caret.id}"] .pe-txt`);
+    if (t) { t.focus(); setCaret(t, caret.off); const rr = getSelection().rangeCount && getSelection().getRangeAt(0).getBoundingClientRect(); if (rr && (rr.bottom > innerHeight - 40 || rr.top < 130)) scrollBy({ top: rr.top - innerHeight / 2 }); }
   }
   // After typing in a page's body: flow when it runs over, or when the next page could give some back.
   function flowAfterTyping(el, t) {
@@ -923,7 +1425,8 @@
   function reflow(el, div, t, h0) {
     const H = stageH(), d = (t.getBoundingClientRect().height - h0) / H;
     if (!h0 || Math.abs(d) < 0.5 / H) { grow(div, el); return; }
-    const bottom = el.y + h0 / H, below = els().filter(o => o !== el && o.y >= bottom - 0.002);
+    pinFooters(page());
+    const bottom = el.y + h0 / H, below = els().filter(o => o !== el && !o.pin && o.y >= bottom - 0.002);
     const apart = o => o.x >= el.x + el.w || o.x + o.w <= el.x;
     const beside = els().filter(p => p !== el && apart(p) && p.y < bottom && p.y + p.h > el.y);
     const parallel = o => apart(o) && beside.some(p => p.x < o.x + o.w && p.x + p.w > o.x);
@@ -961,7 +1464,7 @@
   function down(e, el, div) {
     if (cutting) return;                                                  // the desk handles the cut
     const handle = e.target.closest('.pe-h');
-    const onText = e.target.closest('.pe-txt');
+    const onText = e.target.closest('.pe-txt') || e.target.closest('.pe-cell');
     const field = document.activeElement;                                 // leave the toolbar's size box / menus
     if (field && /input|select/i.test(field.tagName)) field.blur();
     if (e.shiftKey) {                                                     // Shift+click adds / removes a block
@@ -1024,6 +1527,7 @@
   function snapshot() { st.past.push(state()); if (st.past.length > 60) st.past.shift(); st.future = []; }
   function touched(typing) {
     const pg = page(); if (!pg) return;
+    markDirty();
     if (typing) { if (!typingSnap) { typingSnap = true; snapshot(); } }
     if (!pg.edited) { pg.edited = true; renderThumbs(); }
   }
@@ -1057,6 +1561,8 @@
     $('#pe-undo').disabled = !st.past.length; $('#pe-redo').disabled = !st.future.length;
     $('#pe-zoom').textContent = Math.round(st.zoom * 100) + '%';
     $('#pe-reset').disabled = !(page() && page().edited);
+    if (el && el.type === 'table') { for (const id of ['#pe-size', '#pe-family']) $(id).disabled = false; fontSelect(el); $('#pe-size').value = Math.round(el.fontSize * H * 10) / 10; }
+    tableBar();
   }
   function change(fn) {
     const all = selected(), el = all[0]; if (!el) return;
@@ -1380,6 +1886,22 @@
     $('#pe-shapes').onclick = e => { const r = e.currentTarget.getBoundingClientRect(); showMenu(r.left, r.bottom + 4, [
       ['▢ ' + L('Rectangle', 'Kotak'), shape.rect], ['◯ ' + L('Ellipse', 'Elips'), shape.ellipse], ['╲ ' + L('Line', 'Garis'), shape.line],
       ['➝ ' + L('Arrow', 'Panah'), shape.arrow], ['△ ' + L('Triangle', 'Segitiga'), shape.triangle]]); };
+    $('#pe-table').onclick = e => { const r = e.currentTarget.getBoundingClientRect(); showMenu(r.left, r.bottom + 4, [
+      ['2 × 2', () => insertTable(2, 2)], ['3 × 3', () => insertTable(3, 3)], ['4 × 3', () => insertTable(4, 3)], ['5 × 4', () => insertTable(5, 4)],
+      [L('Other size…', 'Ukuran lain…'), () => {
+        const v = prompt(L('Rows × columns (e.g. 6x3):', 'Baris × kolom (mis. 6x3):'), '6x3'), m = /^\s*(\d+)\s*[x×*]\s*(\d+)\s*$/i.exec(v || '');
+        if (m) insertTable(Math.min(60, Math.max(1, +m[1])), Math.min(12, Math.max(1, +m[2])));
+      }]]); };
+    for (const [id, kind] of [['#pe-row-add', 'row+'], ['#pe-col-add', 'col+'], ['#pe-row-del', 'row-'], ['#pe-col-del', 'col-'], ['#pe-tbl-head', 'header']]) $(id).onclick = () => tableOp(kind);
+    $('#pe-toc').onclick = () => insertToc().catch(err => status(err.message || String(err)));
+    const rulerBtn = $('#pe-ruler');
+    try { st.ruler = localStorage.getItem('pe-ruler') === '1'; } catch (e) {}
+    rulerBtn.classList.toggle('on', !!st.ruler);
+    rulerBtn.onclick = () => { st.ruler = !st.ruler; rulerBtn.classList.toggle('on', st.ruler); try { localStorage.setItem('pe-ruler', st.ruler ? '1' : '0'); } catch (e) {} render(); };
+    $('#pe-tpl').onclick = e => { const r = e.currentTarget.getBoundingClientRect(); showMenu(r.left, r.bottom + 4, [
+      ['📘 ' + L('Thesis (skripsi)', 'Skripsi'), () => openTemplate('skripsi')], ['📰 ' + L('Journal article', 'Artikel jurnal'), () => openTemplate('jurnal')],
+      ['📋 ' + L('Report', 'Laporan'), () => openTemplate('laporan')]]); };
+    for (const b of document.querySelectorAll('[data-template]')) b.onclick = () => openTemplate(b.dataset.template).catch(err => status(err.message || String(err)));
     $('#pe-open-btn').onclick = () => $('#pe-open').click();
     $('#pe-file-menu').onclick = e => { const r = e.currentTarget.getBoundingClientRect(); showMenu(r.left, r.bottom + 4, [
       [L('New', 'Baru'), newDocument],
@@ -1389,6 +1911,11 @@
       [L('Save', 'Simpan'), () => save('download'), '', 'Ctrl+S'],
       [L('Save as…', 'Simpan sebagai…'), saveAs],
       [L('Save as flipbook', 'Simpan jadi flipbook'), () => save('flipbook')],
+      [L('Save as Word (.docx)', 'Simpan sebagai Word (.docx)'), saveDocx],
+      null,
+      [L('Template: thesis (skripsi)', 'Template: skripsi'), () => openTemplate('skripsi')],
+      [L('Template: journal article', 'Template: artikel jurnal'), () => openTemplate('jurnal')],
+      [L('Template: report', 'Template: laporan'), () => openTemplate('laporan')],
       null,
       [L('Page setup…', 'Pengaturan halaman…'), pageSetupDialog],
       [L('Print…', 'Cetak…'), printDoc, '', 'Ctrl+P']]); };
@@ -1459,7 +1986,11 @@
       else if (v.startsWith('f:')) key = v.slice(2);
       const face = key ? `"${key}"` : (CSS_FONT[v] || CSS_FONT.sans);
       if (inline(t => { document.execCommand('fontName', false, 'pe-mark'); restyle(t, '[style*="pe-mark"],font[face="pe-mark"]', n => { n.style.fontFamily = face; }); })) return;
-      change(textOnly(o => { if (key) { o.font = key; o.bold = false; o.italic = false; } else { o.family = v; delete o.font; } }));
+      change(o => {
+        if (o.type === 'table') { if (!key) o.family = v; return; }
+        if (o.type !== 'text') return;
+        if (key) { o.font = key; o.bold = false; o.italic = false; } else { o.family = v; delete o.font; }
+      });
     };
     $('#pe-size').onchange = e => {
       const v = Number(e.target.value); if (!(v > 0)) return;
@@ -1467,7 +1998,7 @@
         const ratio = Math.round(v / (el.fontSize * page().size[1]) * 1000) / 1000;
         document.execCommand('fontSize', false, '7'); restyle(t, '[style*="xxx-large"],font[size="7"]', n => { n.style.fontSize = ratio + 'em'; });
       })) return;
-      change(textOnly(el => { el.fontSize = v / page().size[1]; }));
+      change(el => { if (el.type === 'text' || el.type === 'table') el.fontSize = v / page().size[1]; });
     };
     // Bold/italic are standard-font styles: the text leaves the PDF's own font.
     // With several blocks, all follow the first one (all on, or all off).
@@ -1479,7 +2010,7 @@
     $('#pe-bold').onclick = () => { if (!inline(() => document.execCommand('bold'))) styled('bold'); };
     $('#pe-italic').onclick = () => { if (!inline(() => document.execCommand('italic'))) styled('italic'); };
     for (const a of ['left', 'center', 'right', 'justify']) $('#pe-align-' + a).onclick = () => change(textOnly(el => { el.align = a; }));
-    $('#pe-color').oninput = e => { if (inline(() => document.execCommand('foreColor', false, e.target.value))) return; change(el => { if (el.type === 'text') el.color = e.target.value; else el.stroke = e.target.value; }); };
+    $('#pe-color').oninput = e => { if (inline(() => document.execCommand('foreColor', false, e.target.value))) return; change(el => { if (el.type === 'text' || el.type === 'table') el.color = e.target.value; else el.stroke = e.target.value; }); };
     $('#pe-fill').oninput = e => change(el => { el.fill = e.target.value; });
     // Front: a picture under the design comes above it; Back: to the bottom of its layer, then under the design.
     $('#pe-front').onclick = () => change(el => { const a = els(); a.splice(a.indexOf(el), 1); if (el.under) delete el.under; a.push(el); });
@@ -1599,13 +2130,7 @@
   // where: 'download' | 'flipbook' | 'organize' (back to the Organize workspace with the edited PDF).
   async function save(where, opts = {}) {
     commitTyping();
-    if (window.MFAuth) {
-      try {
-        const data = await MFAuth.me();
-        if (data.user && !data.offline && MFAuth.trialWall(data.user)) return;
-        if (!data.user && !data.offline) { MFAuth.loginPopup(() => save(where, opts)); return; }
-      } catch (e) {}
-    }
+    if (!(await mayTake(() => save(where, opts)))) return;
     const btns = ['#pe-save', '#pe-download', '#pe-flipbook'].map(s => $(s)).filter(Boolean); btns.forEach(b => b.disabled = true);
     try {
       const { bytes, missing, edits } = await buildPdf({ order: opts.order, compress: true });
@@ -1677,8 +2202,10 @@
         if (entry) { await open(entry.blob, entry.name); await FlipbookTransfer.remove(id); history.replaceState(null, '', location.pathname); return; }
       } catch (e) { status(e.message || String(e)); }
     }
-    // Like Word: Edit PDF opens on a blank page with the caret ready.
-    if (!tool) await open([], NEW_NAME());
+    // Like Word: Edit PDF opens on a blank page with the caret ready (and offers the last document back).
+    if (!tool) { await open([], NEW_NAME()); draftOffer(); }
+    setInterval(() => autosave(false), LOCAL_EVERY);
+    addEventListener('pagehide', () => { autosave(true); });
   }
   // On a blank page whose body is still empty, the caret waits in it.
   function caretOnBlank() {
@@ -1687,5 +2214,5 @@
     const t = document.querySelector(`#pe-stage [data-id="${el.id}"] .pe-txt`); if (t) t.focus();
   }
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', boot); else boot();
-  globalThis.PageEditor = { open, state: st, go, save };
+  globalThis.PageEditor = { open, state: st, go, save, saveDocx, insertTable, insertToc, openTemplate, autosave, pack, unpack };
 })();

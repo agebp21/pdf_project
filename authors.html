@@ -1,0 +1,273 @@
+<!DOCTYPE html>
+<html lang="id" data-en-doc="Author Profiles — MyFlipbook">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="icon" type="image/png" href="assets/img/favicon.png?v=pro">
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=pro">
+<title>Profil Penulis — MyFlipbook</title>
+<link rel="stylesheet" href="assets/ui-clay.css">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<script src="assets/i18n.js"></script>
+<script defer src="/assets/site-header.js"></script>
+<script defer src="/assets/citations.js"></script>
+<script src="assets/auth.js" defer></script>
+<style>
+  *{box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+  body{margin:0;min-height:100dvh;background:#FBFAF7;color:#1C1917}
+  body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:-1;
+    background:radial-gradient(700px 420px at 50% 0%,#EDF3E4 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
+  .wrap{max-width:1100px;margin:0 auto;padding:12px 16px 56px}
+  h1{margin:32px 0 6px;font-size:32px}
+  .lead{margin:0 0 14px;color:#57534E;font-size:14px;max-width:760px}
+  .tabs{display:inline-flex;gap:4px;padding:4px;margin:0 0 12px;border-radius:999px;background:#F3EFE6;flex-wrap:wrap}
+  .tabs a{display:inline-block;padding:8px 18px;border-radius:999px;font-size:13px;font-weight:800;color:#57534E;text-decoration:none}
+  .tabs a:hover{color:#FF5C28}
+  .tabs a[aria-selected=true]{background:#1A3C34;color:#fff}
+  .search{padding:16px 18px}
+  .search-row{display:flex;gap:8px}
+  .search-row input{flex:1;min-width:0;padding:12px 16px;border:1.5px solid #1A3C34;border-radius:14px;font-size:15px;background:#fff}
+  .search-row button{flex:none;padding:12px 20px}
+  .hint{margin:10px 0 0;font-size:12px;color:#78716C}
+  .notice{margin:14px 0 0;padding:14px 16px;border-radius:16px;font-size:13px;background:#FEF2F2;border:1px solid #FECACA;color:#B91C1C}
+  .meta-line{margin:18px 2px 8px;font-size:13px;color:#57534E}
+  .people{display:grid;grid-template-columns:repeat(auto-fill,minmax(300px,1fr));gap:12px}
+  [hidden]{display:none!important}
+  .person{display:flex;flex-direction:column;gap:6px;padding:16px 18px;text-align:left;border:1.5px solid #E8E2D4;background:#fff;border-radius:20px;cursor:pointer;color:inherit;font:inherit;transition:transform .15s,box-shadow .15s}
+  .person:hover,.person:focus-visible{transform:translateY(-2px);box-shadow:0 10px 24px rgba(28,25,23,.1);border-color:#FF5C28}
+  .person b{font-size:16px}
+  .person .where{font-size:12.5px;color:#57534E}
+  .person .nums{display:flex;flex-wrap:wrap;gap:6px;margin-top:4px}
+  .pill{padding:3px 9px;border-radius:999px;font-size:11px;font-weight:800;background:#F3EFE6;color:#57534E}
+  .pill.h{background:#1A3C34;color:#fff}
+  .profile{margin-top:18px}
+  .who-head{padding:20px 22px;display:flex;flex-wrap:wrap;gap:8px 18px;align-items:baseline}
+  .who-head h2{margin:0;font:900 26px 'Fraunces',Georgia,serif}
+  .who-head .where{font-size:13px;color:#57534E}
+  .who-head a{color:#1A3C34;font-weight:700;font-size:12.5px}
+  .back{border:0;background:none;padding:0;margin:0 0 10px;color:#1A3C34;font-weight:800;font-size:13px;cursor:pointer}
+  .back:hover{color:#FF5C28}
+  .metrics{display:grid;grid-template-columns:repeat(auto-fill,minmax(130px,1fr));gap:10px;margin:14px 0}
+  .metric{padding:12px 14px;border-radius:16px;background:#fff;border:1.5px solid #E8E2D4}
+  .metric span{display:block;font-size:11px;font-weight:800;letter-spacing:.04em;color:#78716C;text-transform:uppercase}
+  .metric b{display:block;margin-top:2px;font:900 24px 'Fraunces',Georgia,serif;color:#1C1917}
+  .metric.key{background:#1A3C34;border-color:#1A3C34}.metric.key span{color:#CFE3D9}.metric.key b{color:#fff}
+  .note{font-size:11.5px;color:#78716C;line-height:1.6;margin:4px 2px 0}
+  .chart{padding:16px 18px;margin:12px 0}
+  .chart h3,.works h3{margin:0 0 10px;font-size:15px}
+  .chart svg{width:100%;height:auto;display:block}
+  .works{padding:16px 18px;margin:12px 0}
+  .tools{display:flex;flex-wrap:wrap;gap:6px;align-items:center;margin-bottom:10px;font-size:12.5px}
+  .tools input[type=search]{flex:1;min-width:180px;padding:8px 12px;border:1px solid #D6CFBF;border-radius:12px;font-size:13px}
+  .tools button{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:6px 12px;font:700 12px 'Plus Jakarta Sans',sans-serif;cursor:pointer;color:#1C1917}
+  .tools button:hover{background:#FF5C28;color:#fff;border-color:#E04E1F}
+  .tools .what{font-weight:700;color:#44403C}
+  .table{overflow-x:auto}
+  table{width:100%;border-collapse:collapse;font-size:13px}
+  th{text-align:left;font-size:11px;letter-spacing:.04em;text-transform:uppercase;color:#78716C;padding:8px 8px;border-bottom:1.5px solid #E8E2D4;white-space:nowrap}
+  th button{border:0;background:none;padding:0;font:inherit;color:inherit;letter-spacing:inherit;text-transform:inherit;cursor:pointer}
+  th button:hover{color:#FF5C28}
+  td{padding:9px 8px;border-bottom:1px solid #F1ECE2;vertical-align:top}
+  td.num{text-align:right;font-weight:800;white-space:nowrap}
+  td a{color:#1C1917;font-weight:700;text-decoration:none}
+  td a:hover{text-decoration:underline;color:#1A3C34}
+  td small{display:block;color:#78716C;margin-top:2px}
+  tr.hline td{border-bottom:2px dashed #FF5C28}
+  td.pick input{width:16px;height:16px;accent-color:#1A3C34}
+  .rights{margin:22px 2px 0;font-size:11.5px;color:#78716C;line-height:1.6}
+  @media (max-width:640px){h1{font-size:26px}.metric b{font-size:20px}td.src,th.src{display:none}}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <header data-site-header></header>
+
+  <h1 class="clay-h" data-en="👤 Author Profiles">👤 Profil Penulis</h1>
+  <p class="lead" data-en="Find a researcher and see their citation metrics, like Publish or Perish: h-index, g-index, i10-index, citations per year — then export their works as APA, BibTeX, RIS or CSV.">Cari peneliti dan lihat metrik sitasinya seperti Publish or Perish: h-index, g-index, i10-index, sitasi per tahun — lalu ekspor daftar karyanya ke APA, BibTeX, RIS, atau CSV.</p>
+  <nav class="tabs" aria-label="Jenis pencarian" data-en-aria="Search type">
+    <a href="journals.html" data-en="📄 Journals">📄 Jurnal</a>
+    <a href="journals.html?type=ebook">📚 Ebook</a>
+    <a href="journals.html?type=magazine" data-en="📰 Magazines">📰 Majalah</a>
+    <a href="authors.html" aria-selected="true" data-en="👤 Authors">👤 Penulis</a>
+  </nav>
+
+  <form id="search" class="clay-panel search" role="search">
+    <div class="search-row">
+      <input id="q" type="search" placeholder="Nama penulis — mis. Anne-Wil Harzing, Haryono" data-en-ph="Author name — e.g. Anne-Wil Harzing, Haryono" aria-label="Nama penulis" data-en-aria="Author name" autocomplete="off" maxlength="120">
+      <button class="clay-btn clay-btn-primary" type="submit" data-en="Search">Cari</button>
+    </div>
+    <p class="hint" data-en="Tip: write the full name as it appears on papers; pick the right person by their institution.">Tips: tulis nama lengkap seperti di artikelnya; pilih orang yang tepat dari institusinya.</p>
+  </form>
+
+  <div id="notice" class="notice" role="alert" hidden></div>
+  <p id="meta" class="meta-line" role="status"></p>
+  <div id="people" class="people"></div>
+
+  <section id="profile" class="profile" hidden>
+    <button type="button" id="back" class="back" data-en="← Back to the authors found">← Kembali ke daftar penulis</button>
+    <div class="clay-panel who-head" id="who"></div>
+    <div class="metrics" id="metrics"></div>
+    <p class="note" id="metrics-note"></p>
+    <div class="clay-panel chart"><h3 data-en="Citations per year">Sitasi per tahun</h3><div id="chart"></div></div>
+    <div class="clay-panel works">
+      <h3 id="works-title"></h3>
+      <div class="tools">
+        <input id="filter" type="search" placeholder="Saring judul atau jurnal…" data-en-ph="Filter by title or journal…" aria-label="Saring" data-en-aria="Filter">
+        <span class="what" id="cite-what"></span>
+        <button type="button" data-cite="apa" data-en="❝ Copy APA">❝ Salin APA</button><button type="button" data-cite="bib">BibTeX</button><button type="button" data-cite="ris">RIS</button><button type="button" data-cite="csv">CSV</button>
+      </div>
+      <div class="table"><table>
+        <thead><tr><th></th><th><button type="button" data-sort="cited" data-en="Cites">Sitasi</button></th><th><button type="button" data-sort="title" data-en="Title">Judul</button></th><th><button type="button" data-sort="year" data-en="Year">Tahun</button></th><th class="src" data-en="Source">Sumber</th></tr></thead>
+        <tbody id="rows"></tbody>
+      </table></div>
+    </div>
+  </section>
+
+  <p class="rights" data-en="Data from &lt;a href=&quot;https://openalex.org&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;OpenAlex&lt;/a&gt; (CC0). Metrics are computed the way &lt;a href=&quot;https://harzing.com/resources/publish-or-perish&quot; target=&quot;_blank&quot; rel=&quot;noopener noreferrer&quot;&gt;Publish or Perish&lt;/a&gt; defines them. Numbers can differ from Google Scholar, Scopus or SINTA — each counts its own set of papers and citations. People with the same name can be merged or split; check the institution and the papers.">Data dari <a href="https://openalex.org" target="_blank" rel="noopener noreferrer">OpenAlex</a> (CC0). Metrik dihitung seperti definisi <a href="https://harzing.com/resources/publish-or-perish" target="_blank" rel="noopener noreferrer">Publish or Perish</a>. Angkanya bisa berbeda dengan Google Scholar, Scopus, atau SINTA — masing-masing menghitung kumpulan artikel dan sitasinya sendiri. Penulis dengan nama sama bisa tergabung atau terpisah; cek institusi dan daftar artikelnya.</p>
+</div>
+<script>
+(() => {
+  const $ = s => document.querySelector(s);
+  const L = (en, id) => window.I18N ? I18N.pick(en, id) : id;
+  const el = (tag, props, ...children) => { const n = Object.assign(document.createElement(tag), props || {}); children.forEach(c => c != null && n.append(c)); return n; };
+  const num = v => Number(v || 0).toLocaleString(L('en-US', 'id-ID'), {maximumFractionDigits: 2});
+  function notice(text) { $('#notice').textContent = text || ''; $('#notice').hidden = !text; }
+  async function get(url) {
+    const r = await fetch(url, {headers: {Accept: 'application/json'}});
+    const data = await r.json().catch(() => ({}));
+    if (!r.ok) throw Error(data.error || L('The request failed.', 'Permintaan gagal.'));
+    return data;
+  }
+
+  // ---------- authors found
+  let found = [];
+  async function search(q) {
+    notice(''); $('#profile').hidden = true; $('#people').replaceChildren(); $('#meta').textContent = L('Searching…', 'Mencari…');
+    history.replaceState(null, '', '?' + new URLSearchParams({q}));
+    try {
+      found = (await get('/api/authors?' + new URLSearchParams({q}))).authors;
+      $('#meta').textContent = found.length ? L(`${found.length} authors found — pick the right one`, `${found.length} penulis ditemukan — pilih orang yang tepat`)
+                                            : L('No author with that name. Try the full name or another spelling.', 'Tidak ada penulis dengan nama itu. Coba nama lengkap atau ejaan lain.');
+      $('#people').replaceChildren(...found.map(person));
+    } catch (cause) { $('#meta').textContent = ''; notice(cause.message); }
+  }
+  function person(a) {
+    const where = [a.institution, a.country].filter(Boolean).join(' · ');
+    const b = el('button', {type: 'button', className: 'person'}, el('b', {textContent: a.name}),
+      el('span', {className: 'where', textContent: where || L('Institution unknown', 'Institusi tidak diketahui')}),
+      el('span', {className: 'nums'}, el('span', {className: 'pill h', textContent: 'h-index ' + a.h}), el('span', {className: 'pill', textContent: num(a.works) + L(' works', ' karya')}),
+        el('span', {className: 'pill', textContent: num(a.cited) + L(' citations', ' sitasi')}), a.orcid ? el('span', {className: 'pill', textContent: 'ORCID'}) : null));
+    b.onclick = () => open(a.id);
+    return b;
+  }
+  $('#search').addEventListener('submit', e => { e.preventDefault(); const q = $('#q').value.trim(); if (q.length >= 3) search(q); else notice(L('Type at least 3 letters of the name.', 'Tulis minimal 3 huruf nama.')); });
+  $('#back').addEventListener('click', () => {
+    $('#profile').hidden = true; $('#people').hidden = false;
+    history.replaceState(null, '', '?' + new URLSearchParams({q: $('#q').value.trim()}));
+    if (!found.length && $('#q').value.trim().length >= 3) search($('#q').value.trim());
+  });
+
+  // ---------- one author's profile
+  let works = [], sortBy = 'cited', sortUp = false, picked = new Map(), metrics = null;
+  async function open(id) {
+    notice(''); $('#people').hidden = true; $('#profile').hidden = false; $('#meta').textContent = L('Reading every work of this author…', 'Membaca semua karya penulis ini…');
+    $('#who').replaceChildren(); $('#metrics').replaceChildren(); $('#chart').replaceChildren(); $('#rows').replaceChildren(); $('#works-title').textContent = '';
+    history.replaceState(null, '', '?' + new URLSearchParams({id, q: $('#q').value.trim()}));
+    try {
+      const p = await get('/api/authors/profile?' + new URLSearchParams({id}));
+      $('#meta').textContent = '';
+      works = p.works; metrics = p.metrics; picked = new Map();
+      const a = p.author, where = [a.institution, a.country].filter(Boolean).join(' · ');
+      $('#who').replaceChildren(el('h2', {textContent: a.name}), where ? el('span', {className: 'where', textContent: where}) : null,
+        a.orcid ? el('a', {href: 'https://orcid.org/' + a.orcid, target: '_blank', rel: 'noopener noreferrer', textContent: 'ORCID ' + a.orcid}) : null,
+        el('a', {href: 'https://openalex.org/' + a.id, target: '_blank', rel: 'noopener noreferrer', textContent: 'OpenAlex ' + a.id}),
+        a.alternatives && a.alternatives.length ? el('span', {className: 'where', textContent: L('Also written as: ', 'Juga ditulis: ') + a.alternatives.join(' · ')}) : null);
+      showMetrics(p);
+      chart(p.byYear);
+      rows();
+    } catch (cause) { $('#meta').textContent = ''; notice(cause.message); }
+  }
+  function showMetrics(p) {
+    const m = p.metrics;
+    const tiles = [['h-index', m.h, true], ['g-index', m.g, true], ['i10-index', m.i10, true],
+      [L('Papers', 'Karya'), num(m.papers)], [L('Citations', 'Sitasi'), num(m.citations)], [L('Years', 'Tahun'), m.years],
+      [L('Cites / year', 'Sitasi / tahun'), num(m.citesPerYear)], [L('Cites / paper', 'Sitasi / karya'), num(m.citesPerPaper)],
+      [L('Authors / paper', 'Penulis / karya'), num(m.authorsPerPaper)], ['hI,norm', m.hINorm], ['hI,annual', num(m.hIAnnual)],
+      ['AWCR', num(m.awcr)], ['AW-index', num(m.awIndex)], [L('Cites / author', 'Sitasi / penulis'), num(m.citesPerAuthor)]];
+    $('#metrics').replaceChildren(...tiles.map(([k, v, key]) => el('div', {className: 'metric' + (key ? ' key' : '')}, el('span', {textContent: k}), el('b', {textContent: v}))));
+    $('#metrics-note').textContent = (p.complete ? '' : L(`Counted from the ${num(works.length)} most cited of ${num(p.total)} works. `, `Dihitung dari ${num(works.length)} karya yang paling banyak dikutip, dari total ${num(p.total)} karya. `))
+      + (m.firstYear ? L(`Years since the first work (${m.firstYear}). `, `Tahun dihitung sejak karya pertama (${m.firstYear}). `) : '')
+      + L('hI,norm: h-index with each paper\'s citations shared among its authors. AWCR: citations weighted by the paper\'s age.',
+          'hI,norm: h-index dengan sitasi tiap karya dibagi jumlah penulisnya. AWCR: sitasi yang dibobot menurut umur karya.');
+  }
+  // Citations per year as bars (works per year in small text above each bar).
+  function chart(byYear) {
+    const data = (byYear || []).filter(d => d.year);
+    if (!data.length) { $('#chart').textContent = L('No yearly data.', 'Belum ada data per tahun.'); return; }
+    const W = 900, H = 220, pad = 28, max = Math.max(1, ...data.map(d => d.cited)), bw = (W - pad * 2) / data.length;
+    const ns = 'http://www.w3.org/2000/svg', svg = document.createElementNS(ns, 'svg');
+    svg.setAttribute('viewBox', `0 0 ${W} ${H + 24}`); svg.setAttribute('role', 'img');
+    svg.setAttribute('aria-label', L('Citations per year', 'Sitasi per tahun'));
+    const add = (tag, attrs, text) => { const n = document.createElementNS(ns, tag); Object.entries(attrs).forEach(([k, v]) => n.setAttribute(k, v)); if (text != null) n.textContent = text; svg.append(n); return n; };
+    data.forEach((d, i) => {
+      const h = Math.max(1, (H - 30) * d.cited / max), x = pad + i * bw + bw * 0.15, w = bw * 0.7;
+      const bar = add('rect', {x, y: H - h, width: w, height: h, rx: 3, fill: '#1A3C34'});
+      bar.append(Object.assign(document.createElementNS(ns, 'title'), {textContent: `${d.year}: ${num(d.cited)} ${L('citations', 'sitasi')} · ${d.works} ${L('works', 'karya')}`}));
+      if (bw > 26 || i % Math.ceil(26 / bw) === 0) add('text', {x: x + w / 2, y: H + 16, 'text-anchor': 'middle', 'font-size': 11, fill: '#78716C'}, String(d.year));
+      if (bw > 34) add('text', {x: x + w / 2, y: H - h - 5, 'text-anchor': 'middle', 'font-size': 10, fill: '#57534E', 'font-weight': 700}, num(d.cited));
+    });
+    $('#chart').replaceChildren(svg);
+  }
+  const key = w => w.id || w.doi || w.title;
+  function rows() {
+    const f = $('#filter').value.trim().toLowerCase();
+    const list = works.filter(w => !f || (w.title + ' ' + w.journal).toLowerCase().includes(f));
+    const dir = sortUp ? 1 : -1;
+    list.sort((a, b) => sortBy === 'title' ? -dir * a.title.localeCompare(b.title) : dir * (((a[sortBy] || 0) - (b[sortBy] || 0)) || (b.cited - a.cited)));
+    // The h-core: the line under the h-th most cited work (when sorted by citations, unfiltered).
+    const hLine = sortBy === 'cited' && !sortUp && !f ? metrics.h : 0;
+    $('#works-title').textContent = L(`Works (${num(list.length)}${f ? ' of ' + num(works.length) : ''})`, `Karya (${num(list.length)}${f ? ' dari ' + num(works.length) : ''})`)
+      + (hLine ? L(` — the dashed line marks the h-core (${hLine})`, ` — garis putus-putus menandai h-core (${hLine})`) : '');
+    $('#rows').replaceChildren(...list.slice(0, 1000).map((w, i) => {
+      const box = el('input', {type: 'checkbox', checked: picked.has(key(w)), title: L('Pick for export', 'Pilih untuk ekspor')});
+      box.onchange = () => { if (box.checked) picked.set(key(w), w); else picked.delete(key(w)); citeWhat(); };
+      const doi = String(w.doi || '').replace(/^https?:\/\/(dx\.)?doi\.org\//i, '');
+      const authors = w.authors.join(', ') + (w.moreAuthors ? ` +${w.moreAuthors}` : '');
+      const title = el('a', {href: doi ? 'journals.html?' + new URLSearchParams({q: doi}) : (w.link || '#'), textContent: w.title, title: L('Open: PDF, flipbook, cite', 'Buka: PDF, flipbook, kutip')});
+      return el('tr', {className: hLine && i === hLine - 1 ? 'hline' : ''}, el('td', {className: 'pick'}, box), el('td', {className: 'num', textContent: num(w.cited)}),
+        el('td', null, title, el('small', {textContent: authors})), el('td', {textContent: w.year || ''}), el('td', {className: 'src', textContent: w.journal || ''}));
+    }));
+    citeWhat();
+  }
+  function citeWhat() {
+    $('#cite-what').textContent = picked.size ? L(`Export ${picked.size} picked:`, `Ekspor ${picked.size} terpilih:`) : L(`Export all ${num(works.length)}:`, `Ekspor semua ${num(works.length)}:`);
+  }
+  document.querySelectorAll('th [data-sort]').forEach(b => b.addEventListener('click', () => {
+    if (sortBy === b.dataset.sort) sortUp = !sortUp; else { sortBy = b.dataset.sort; sortUp = sortBy === 'title'; }
+    rows();
+  }));
+  $('#filter').addEventListener('input', rows);
+  document.querySelectorAll('[data-cite]').forEach(b => b.addEventListener('click', async () => {
+    const list = picked.size ? [...picked.values()] : works, name = ($('#who h2')?.textContent || 'penulis').replace(/[^\p{L}\p{N}]+/gu, '-').toLowerCase();
+    if (b.dataset.cite === 'apa') {
+      const text = list.map(Cite.apa).sort((x, y) => x.localeCompare(y)).join('\n\n');
+      try { await navigator.clipboard.writeText(text); $('#cite-what').textContent = L(`✓ ${list.length} copied`, `✓ ${list.length} disalin`); }
+      catch (e) { Cite.save(`${name}-apa.txt`, text); }
+      return;
+    }
+    const [ext, make, type] = {bib: ['bib', Cite.bibtex, 'application/x-bibtex'], ris: ['ris', Cite.ris, 'application/x-research-info-systems'], csv: ['csv', Cite.csv, 'text/csv;charset=utf-8']}[b.dataset.cite];
+    Cite.save(`${name}.${ext}`, make(list), type);
+  }));
+
+  // ?id=A… opens a profile; ?q=… searches.
+  window.addEventListener('DOMContentLoaded', () => {
+    const here = new URLSearchParams(location.search);
+    if (here.get('q')) $('#q').value = here.get('q');
+    if (/^A\d{1,12}$/.test(here.get('id') || '')) open(here.get('id'));
+    else if ((here.get('q') || '').trim().length >= 3) search(here.get('q').trim());
+  });
+})();
+</script>
+</body>
+</html>

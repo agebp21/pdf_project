@@ -90,7 +90,7 @@ def make_opener(status_code='01'):
                 {'paymentMethod': 'BC', 'paymentName': 'BCA Virtual Account', 'paymentImage': ''}]})
         if url.endswith('/api/merchant/transactionStatus'):
             return FakeResponse({'statusCode': status_code, 'merchantCode': 'D0001',
-                                 'merchantOrderId': 'x', 'amount': str(accounts.PLANS['pro']['monthly'])})
+                                 'merchantOrderId': 'x', 'amount': str(accounts.PLANS['medium']['monthly'])})
         return FakeResponse({'statusCode': '00', 'statusMessage': 'SUCCESS', 'merchantCode': 'D0001',
                              'reference': 'D0001TESTREF',
                              'paymentUrl': 'https://app-sandbox.duitku.com/redirect_checkout?reference=D0001TESTREF'})
@@ -123,7 +123,7 @@ class DuitkuTests(AccountsBase):
         client = Client(self.base)
         client.call('POST', '/api/auth/register', {'email': 'dui@b.co', 'password': 'rahasia-123', 'name': 'Dui'})
         self.assertEqual(client.call('GET', '/api/billing/plans')[1]['providers']['IDR'], 'duitku')
-        status, order = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})
+        status, order = client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly'})
         self.assertEqual(status, 200)
         self.assertTrue(order['redirectUrl'].startswith('https://app-sandbox.duitku.com/redirect_checkout?reference='))
         create = self.provider.opener.requests[-1]
@@ -134,8 +134,8 @@ class DuitkuTests(AccountsBase):
                             hashlib.sha256).hexdigest()
         self.assertEqual(request.get_header('X-duitku-signature'), expected)
         body = json.loads(request.data.decode())
-        price = str(accounts.PLANS['pro']['monthly'])
-        self.assertEqual((body['paymentAmount'], body['merchantOrderId']), (accounts.PLANS['pro']['monthly'], order['orderId']))
+        price = str(accounts.PLANS['medium']['monthly'])
+        self.assertEqual((body['paymentAmount'], body['merchantOrderId']), (accounts.PLANS['medium']['monthly'], order['orderId']))
         self.assertNotIn('paymentMethod', body, 'no method = Duitku shows every channel')
         self.assertTrue(body['callbackUrl'].endswith('/api/payment/duitku/callback'))
         self.assertIn(order['orderId'], body['returnUrl'])
@@ -146,9 +146,9 @@ class DuitkuTests(AccountsBase):
         methods = client.call('GET', '/api/billing/methods')[1]['methods']
         self.assertEqual([m['code'] for m in methods], ['SP', 'BC'])
         self.assertEqual(client.call('POST', '/api/billing/checkout',
-                                     {'plan': 'pro', 'cycle': 'monthly', 'method': 'BOGUS'})[0], 400)
+                                     {'plan': 'medium', 'cycle': 'monthly', 'method': 'BOGUS'})[0], 400)
         status, order = client.call('POST', '/api/billing/checkout',
-                                    {'plan': 'pro', 'cycle': 'monthly', 'method': 'SP'})
+                                    {'plan': 'medium', 'cycle': 'monthly', 'method': 'SP'})
         self.assertEqual(status, 200)
         body = json.loads(self.provider.opener.requests[-1].data.decode())
         self.assertEqual(body['paymentMethod'], 'SP')
@@ -156,21 +156,21 @@ class DuitkuTests(AccountsBase):
     def test_callback_marks_paid(self):
         client = Client(self.base)
         client.call('POST', '/api/auth/register', {'email': 'duic@b.co', 'password': 'rahasia-123'})
-        price = str(accounts.PLANS['pro']['monthly'])
-        _, order = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})
+        price = str(accounts.PLANS['medium']['monthly'])
+        _, order = client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly'})
         # Forged signature and a mismatched reference change nothing.
         self.assertEqual(self.post_form('/api/payment/duitku/callback',
                                         self.signed(order['orderId'], price, key='guess'))[0], 403)
         status, raw = self.post_form('/api/payment/duitku/callback',
                                      self.signed(order['orderId'], price, reference='OTHER'))
         self.assertEqual(status, 400)
-        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'free')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'basic')
         status, raw = self.post_form('/api/payment/duitku/callback', self.signed(order['orderId'], price))
         self.assertEqual(status, 200)
         self.assertEqual(raw, b'SUCCESS')
-        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'medium')
         # A failed payment on a second order is recorded, not activated.
-        _, order2 = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})
+        _, order2 = client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly'})
         status, raw = self.post_form('/api/payment/duitku/callback', self.signed(order2['orderId'], price, result='01'))
         self.assertEqual((status, raw), (200, b'SUCCESS'))
         orders = {o['id']: o['status'] for o in client.call('GET', '/api/billing/orders')[1]['orders']}
@@ -190,9 +190,9 @@ class DuitkuStatusTests(AccountsBase):
     def test_status_settles_pending(self):
         client = Client(self.base)
         client.call('POST', '/api/auth/register', {'email': 'duis@b.co', 'password': 'rahasia-123'})
-        _, order = client.call('POST', '/api/billing/checkout', {'plan': 'pro', 'cycle': 'monthly'})
+        _, order = client.call('POST', '/api/billing/checkout', {'plan': 'medium', 'cycle': 'monthly'})
         self.assertEqual(client.call('GET', '/api/billing/orders')[1]['orders'][0]['status'], 'paid')
-        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'pro')
+        self.assertEqual(client.call('GET', '/api/auth/me')[1]['user']['plan'], 'medium')
 
 
 class DuitkuUnpaidInvoiceTests(unittest.TestCase):

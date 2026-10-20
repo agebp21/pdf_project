@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="id" data-en-doc="3D hero (preview) — MyFlipbook Pro">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<meta name="robots" content="noindex">
+<title>Hero 3D (pratinjau) — MyFlipbook Pro</title>
+<link rel="icon" type="image/png" href="assets/img/favicon.png?v=pro">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@500;600;700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
+<script src="assets/i18n.js"></script>
+<script type="importmap">{"imports": {"three": "/assets/vendor/three/three.module.min.js"}}</script>
+<script type="module" src="assets/hero3d.js"></script>
+<style>
+  *{box-sizing:border-box}
+  body{margin:0;min-height:100dvh;font-family:'Plus Jakarta Sans',system-ui,sans-serif;color:#1C1917;
+    background:radial-gradient(900px 600px at 70% 40%,#eef4ec 0%,transparent 60%),linear-gradient(180deg,#fbfcfb,#f3f6f2)}
+  .hero{max-width:1320px;margin:0 auto;padding:48px 24px;display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.25fr);gap:24px;align-items:center;min-height:100dvh}
+  .brand img{height:64px;width:auto;display:block}
+  .tag{margin:10px 0 0;letter-spacing:.32em;font-size:13px;font-weight:600;color:#57534E}
+  h1{font:600 clamp(34px,4.4vw,58px)/1.12 'Montserrat',system-ui,sans-serif;margin:34px 0 22px;letter-spacing:-.5px}
+  h1 em{font-style:normal;color:#4f8a5b}
+  .lead{font-size:17px;line-height:1.65;color:#57534E;max-width:520px;margin:0}
+  .rule{width:46px;height:2px;background:#4f8a5b;opacity:.5;margin:28px 0 18px}
+  .words{display:flex;flex-wrap:wrap;gap:14px;font-size:13px;letter-spacing:.18em;color:#78716C;font-weight:600}
+  .words span+span::before{content:"/";margin-right:14px;color:#C8C3BA}
+  .cta{display:inline-block;margin-top:30px;background:linear-gradient(180deg,#FF7A45,#FF5C28);color:#fff;text-decoration:none;font-weight:700;
+    padding:14px 24px;border-radius:14px;border:1px solid #E04E1F;box-shadow:0 10px 22px rgba(255,92,40,.3)}
+  .stage{position:relative;min-height:600px;height:min(72vh,720px)}
+  [data-hero3d]{position:absolute;inset:0}
+  .hero3d-canvas{position:absolute;inset:0;width:100%!important;height:100%!important;opacity:0;transition:opacity .8s ease}
+  .hero3d-ready .hero3d-canvas{opacity:1}
+  @media (prefers-reduced-motion:reduce){.hero3d-canvas{transition:none}}
+  .pill{position:absolute;z-index:2;display:flex;align-items:center;gap:14px;background:rgba(255,255,255,.92);border:1px solid #E8E2D4;
+    border-radius:999px;padding:12px 22px 12px 12px;box-shadow:0 14px 34px rgba(28,25,23,.10);backdrop-filter:blur(6px)}
+  .pill i{width:44px;height:44px;border-radius:50%;display:grid;place-items:center;font-style:normal;font-size:20px;background:#E6F0E4;color:#2f6b45}
+  .pill b{display:block;font-size:16px}.pill small{color:#78716C;font-size:12.5px}
+  .pill.offline{left:2%;bottom:6%}.pill.free{right:2%;bottom:2%}
+  @media (max-width:900px){.hero{grid-template-columns:1fr;padding:28px 16px}.stage{min-height:460px;height:62vh}h1{margin-top:22px}
+    .pill{padding:8px 16px 8px 8px}.pill i{width:36px;height:36px}.pill b{font-size:14px}.pill small{display:none}}
+</style>
+</head>
+<body>
+<main class="hero">
+  <section>
+    <div class="brand"><img src="assets/img/logo.png?v=pro" alt="MyFlipbook Pro" width="261" height="64"></div>
+    <p class="tag" data-en="PDF TO FLIPBOOK &amp; MORE">PDF KE FLIPBOOK &amp; LAINNYA</p>
+    <h1 data-en="Turn Your Documents Into &lt;em&gt;Interactive&lt;/em&gt; Flipbooks">Ubah Dokumen Anda Jadi Flipbook <em>Interaktif</em></h1>
+    <p class="lead" data-en="Convert PDF, images, PPT and more into beautiful flipbooks. Merge, split, convert, and manage your files all in one place.">Ubah PDF, gambar, PPT, dan lainnya menjadi flipbook yang indah. Gabung, pisah, konversi, dan kelola file Anda di satu tempat.</p>
+    <div class="rule"></div>
+    <div class="words"><span data-en="SIMPLE">SIMPEL</span><span data-en="COMPLETE">LENGKAP</span><span>OFFLINE</span><span data-en="START FREE">MULAI GRATIS</span></div>
+    <a class="cta" href="flipbook.html" data-en="Try it free →">Coba gratis →</a>
+  </section>
+  <section class="stage">
+    <div data-hero3d></div>
+    <div class="pill offline"><i>📶</i><span><b data-en="Works offline">Bisa offline</b><small data-en="No internet? No problem.">Tanpa internet? Tetap jalan.</small></span></div>
+    <div class="pill free"><i>🎁</i><span><b data-en="Free to try">Gratis dicoba</b><small data-en="Start without a credit card.">Mulai tanpa kartu kredit.</small></span></div>
+  </section>
+</main>
+</body>
+</html>

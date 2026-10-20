@@ -51,43 +51,70 @@ EMAIL_RE = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$')
 
 # Entitlements the server enforces (see server.entitlement_error):
 #   office -> Word/Excel/PowerPoint to PDF via LibreOffice (login on a public host)
-#   ai     -> AI Summarizer: summary, translation, podcast (all plans, login required)
-#   export -> flipbook export (offline HTML package, also the animation editor)
-#   apk    -> Android build, exe -> Windows build
+#   ai      -> AI Summarizer: summary, translation, Ask the document
+#   export  -> flipbook export (offline HTML package, also the animation editor)
+#   apk     -> Android build, exe -> Windows build (Pro)
 # Browser tools and flipbook preview / project save stay free.
-# Free trial: new Free members get everything for TRIAL_DAYS days; afterwards
-# only the flipbook reader stays (share links keep the first SHARE_FREE
-# publishes, then need Pro).
+# Free trial: new Basic members try the AI (summary, translation, Ask) for
+# TRIAL_DAYS days; share links keep the first SHARE_FREE publishes.
 TRIAL_DAYS = 7
 SHARE_FREE = 3
+# Words of AI summaries a member may get per calendar month (Jakarta time) — our own usage
+# guide, not shown to members (owner, 2026-10-20); used up, the member is told to upgrade.
+# Basic members on their 7-day trial try Medium's allowance.
+SUMMARY_WORDS = {'medium': 35_000, 'pro': 60_000}
+WIB = 7 * 3600
+
+
+def words_id(n):
+    return f'{n:,}'.replace(',', '.')
+
+
+def month_bounds(now=None):
+    """(start, end) of the current calendar month in Jakarta time, as Unix times."""
+    import calendar
+    t = time.gmtime(int(now or time.time()) + WIB)
+    start = calendar.timegm((t.tm_year, t.tm_mon, 1, 0, 0, 0)) - WIB
+    y, m = (t.tm_year + 1, 1) if t.tm_mon == 12 else (t.tm_year, t.tm_mon + 1)
+    return start, calendar.timegm((y, m, 1, 0, 0, 0)) - WIB
+
+
+# Plans v2 (owner, 2026-10-19): Basic (free) · Medium · Pro. Yearly is paid up front, 20% off.
 PLANS = {
-    # AI Summarizer is a Pro feature; new Free members still try it during the trial (public_user).
-    'free': dict(name='Free', monthly=0, yearly=0, usd_monthly=0, usd_yearly=0, entitlements=['office'],
-                 features=dict(id=['Semua tool PDF di browser', 'PDF to Flipbook: baca & preview',
-                                   'Word/Excel/PPT ke PDF', '3 share link flipbook gratis', 'My Library: 3 buku, 100 MB'],
-                               en=['Every in-browser PDF tool', 'PDF to Flipbook: read & preview',
-                                   'Word/Excel/PPT to PDF', '3 free flipbook share links', 'My Library: 3 books, 100 MB'])),
-    'pro': dict(name='Pro', monthly=99_000, list_monthly=149_000, yearly=990_000, usd_monthly=999, usd_yearly=9_900,
-                entitlements=['office', 'ai', 'export', 'apk'],
-                features=dict(id=['Semua fitur Free', 'AI Summarizer: ringkasan, terjemahan, podcast', 'Ekspor flipbook: HTML offline',
-                                  '20 share link flipbook', 'My Library: 50 buku, 1 GB', 'Build aplikasi Android (APK)'],
-                              en=['Everything in Free', 'AI Summarizer: summary, translation, podcast', 'Flipbook export: offline HTML',
-                                  '20 flipbook share links', 'My Library: 50 books, 1 GB', 'Build Android apps (APK)'])),
-    'business': dict(name='Business', monthly=199_000, list_monthly=285_000, yearly=1_990_000, usd_monthly=1_999, usd_yearly=19_900,
-                     entitlements=['office', 'ai', 'export', 'apk', 'exe'],
-                     features=dict(id=['Semua fitur Pro', 'Build aplikasi Windows (EXE)', '100 share link flipbook', 'My Library: buku tanpa batas, 5 GB',
-                                       'Cocok untuk tim & instansi'],
-                                   en=['Everything in Pro', 'Build Windows apps (EXE)', '100 flipbook share links', 'My Library: unlimited books, 5 GB',
-                                       'Made for teams & institutions'])),
+    'basic': dict(name='Basic', monthly=0, yearly=0, usd_monthly=0, usd_yearly=0, entitlements=['office'],
+                  features=dict(id=['Semua tool PDF di browser', 'PDF to Flipbook: baca & preview', 'Word/Excel/PPT/gambar ke PDF',
+                                    'Share link flipbook', 'Cari jurnal, e-book, dan majalah'],
+                                en=['Every in-browser PDF tool', 'PDF to Flipbook: read & preview', 'Word/Excel/PPT/pictures to PDF',
+                                    'Flipbook share links', 'Search journals, e-books and magazines'])),
+    'medium': dict(name='Medium', monthly=89_500, yearly=859_200, usd_monthly=599, usd_yearly=5_749,
+                   entitlements=['office', 'ai', 'export'],
+                   features=dict(id=['Semua fitur Basic', 'AI Summarizer: ringkasan & terjemahan',
+                                     'Ekspor flipbook: HTML offline', 'My Library: 50 buku'],
+                                 en=['Everything in Basic', 'AI Summarizer: summary & translation',
+                                     'Flipbook export: offline HTML', 'My Library: 50 books'])),
+    'pro': dict(name='Pro', monthly=179_000, yearly=1_718_400, usd_monthly=1_199, usd_yearly=11_499,
+                entitlements=['office', 'ai', 'export', 'apk', 'exe'],     # the podcast was taken out (2026-10-20)
+                features=dict(id=['Semua fitur Medium', 'Kuota AI lebih besar', 'Build aplikasi Android (APK) & Windows (EXE)',
+                                  'My Library: 200 buku'],
+                              en=['Everything in Medium', 'A bigger AI allowance', 'Build Android (APK) & Windows (EXE) apps',
+                                  'My Library: 200 books'])),
 }
+PAID = ('medium', 'pro')
+FREE_PLAN = 'basic'
+
+
+def plan_key(plan):
+    """A stored plan name as a v2 key ('free' / 'business' written by old code count as basic / pro)."""
+    return plan if plan in PLANS else {'free': 'basic', 'business': 'pro'}.get(plan, 'basic')
 
 
 class AccountError(Exception):
     """Client-facing error: status code + Indonesian message."""
 
-    def __init__(self, status, message):
+    def __init__(self, status, message, upgrade=False):
         super().__init__(message)
         self.status = status
+        self.upgrade = upgrade         # the page offers the price list with it
 
 
 def hash_password(password, salt=None, iterations=PBKDF2_ITERATIONS):
@@ -274,7 +301,7 @@ class DuitkuProvider:
                 return self._methods
             try:
                 moment = time.strftime('%Y-%m-%d %H:%M:%S')
-                amount = str(PLANS['pro']['monthly'])
+                amount = str(PLANS['medium']['monthly'])
                 signature = hashlib.sha256((self.merchant_code + amount + moment + self.api_key).encode()).hexdigest()
                 data = self._call('/api/merchant/paymentmethod/getpaymentmethod',
                                   {'merchantCode': self.merchant_code, 'amount': amount,
@@ -478,7 +505,7 @@ class MidtransProvider:
         return fields[0], self._status(payload), fields[2]
 
 # Referrals: every REFERRAL_TARGET friends who sign up through a member's link
-# and pay for Pro or Business give that member REFERRAL_DAYS more days.
+# and pay for Medium or Pro give that member REFERRAL_DAYS more days.
 REFERRAL_TARGET = 10
 REFERRAL_DAYS = 30
 REF_ALPHABET = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789'      # no 0/O, 1/I
@@ -498,7 +525,7 @@ class Accounts:
             db.executescript('''
                 CREATE TABLE IF NOT EXISTS users(
                     id INTEGER PRIMARY KEY, email TEXT NOT NULL UNIQUE COLLATE NOCASE, name TEXT NOT NULL DEFAULT '',
-                    password_hash TEXT NOT NULL, plan TEXT NOT NULL DEFAULT 'free', plan_expires_at INTEGER,
+                    password_hash TEXT NOT NULL, plan TEXT NOT NULL DEFAULT 'basic', plan_expires_at INTEGER,
                     created_at INTEGER NOT NULL);
                 CREATE TABLE IF NOT EXISTS sessions(
                     token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -549,10 +576,21 @@ class Accounts:
                 CREATE TABLE IF NOT EXISTS email_tokens(
                     token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                     created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL);
+                CREATE TABLE IF NOT EXISTS reset_tokens(
+                    token_hash TEXT PRIMARY KEY, user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                    created_at INTEGER NOT NULL, expires_at INTEGER NOT NULL);
             ''')
             # Every member has a referral code (older accounts got one only on request).
             for row in db.execute('SELECT id FROM users WHERE ref_code IS NULL').fetchall():
                 self._give_code(db, row['id'])
+            # Plans v2, once (marked in meta, so the new 'pro' is never moved again): the old
+            # Free / Pro / Business members, orders and subscriptions become Basic / Medium / Pro.
+            db.execute('CREATE TABLE IF NOT EXISTS meta(key TEXT PRIMARY KEY, value TEXT NOT NULL)')
+            if not db.execute("SELECT 1 FROM meta WHERE key='plans_v2'").fetchone():
+                case = "CASE plan WHEN 'free' THEN 'basic' WHEN 'pro' THEN 'medium' WHEN 'business' THEN 'pro' ELSE plan END"
+                for table in ('users', 'orders', 'subscriptions'):
+                    db.execute(f'UPDATE {table} SET plan = {case}')
+                db.execute("INSERT INTO meta(key, value) VALUES('plans_v2', ?)", (str(int(time.time())),))
 
     @contextlib.contextmanager
     def connect(self):
@@ -569,19 +607,19 @@ class Accounts:
 
     # ---- users & sessions -------------------------------------------------
     def public_user(self, row):
-        plan, expires = row['plan'], row['plan_expires_at']
-        if plan != 'free' and (not expires or expires < time.time()):
-            plan = 'free'
+        plan, expires = plan_key(row['plan']), row['plan_expires_at']
+        if plan != FREE_PLAN and (not expires or expires < time.time()):
+            plan = FREE_PLAN
         created = row['created_at'] if 'created_at' in row.keys() else int(time.time())
         trial_left = min(TRIAL_DAYS, max(0, TRIAL_DAYS - (int(time.time()) - created) // 86400))
-        trial_expired = plan == 'free' and trial_left <= 0
+        trial_expired = plan == FREE_PLAN and trial_left <= 0
         return dict(id=row['id'], email=row['email'], name=row['name'], plan=plan,
                     verified=bool(row['verified']) if 'verified' in row.keys() else True,
                     google=bool(row['google_sub']) if 'google_sub' in row.keys() else False,
-                    planName=PLANS[plan]['name'], planExpiresAt=expires if plan != 'free' else None,
+                    planName=PLANS[plan]['name'], planExpiresAt=expires if plan != FREE_PLAN else None,
                     # the 7-day trial includes the AI Summarizer
-                    entitlements=PLANS[plan]['entitlements'] + (['ai'] if plan == 'free' and not trial_expired else []),
-                    trialDaysLeft=trial_left if plan == 'free' else None, trialExpired=trial_expired)
+                    entitlements=PLANS[plan]['entitlements'] + (['ai'] if plan == FREE_PLAN and not trial_expired else []),
+                    trialDaysLeft=trial_left if plan == FREE_PLAN else None, trialExpired=trial_expired)
 
     def register(self, email, password, name=''):
         email = (email or '').strip().lower()
@@ -592,7 +630,7 @@ class Accounts:
             raise AccountError(400, 'Password minimal 8 karakter.')
         try:
             with self.connect() as db:
-                cursor = db.execute('INSERT INTO users(email, name, password_hash, created_at) VALUES(?,?,?,?)',
+                cursor = db.execute('INSERT INTO users(email, name, password_hash, created_at, plan) VALUES(?,?,?,?,\'basic\')',
                                     (email, name, hash_password(password), int(time.time())))
                 user_id = cursor.lastrowid
                 self._give_code(db, user_id)
@@ -617,7 +655,7 @@ class Accounts:
                 db.execute('UPDATE users SET password_hash=?, name=? WHERE id=?', (hash_password(password), name, row['id']))
                 user_id = row['id']
             else:
-                user_id = db.execute('INSERT INTO users(email, name, password_hash, created_at, verified) VALUES(?,?,?,?,0)',
+                user_id = db.execute('INSERT INTO users(email, name, password_hash, created_at, verified, plan) VALUES(?,?,?,?,0,\'basic\')',
                                      (email, name, hash_password(password), int(time.time()))).lastrowid
                 self._give_code(db, user_id)
         return user_id, self.email_token(user_id)
@@ -641,6 +679,42 @@ class Accounts:
                 raise AccountError(400, 'Link verifikasi tidak valid atau sudah kedaluwarsa. Minta kirim ulang dari halaman masuk.')
             db.execute('UPDATE users SET verified=1 WHERE id=?', (row['user_id'],))
             db.execute('DELETE FROM email_tokens WHERE user_id=?', (row['user_id'],))
+        return self.start_session(row['user_id'])
+
+    # ---- forgotten password: a link by email (1 hour) sets a new one --------
+    RESET_HOURS = 1
+
+    def reset_request(self, email, client='?'):
+        """(user_id, token, name) to email a reset link to, else None (never says which)."""
+        email = (email or '').strip().lower()
+        key = ('reset', client, email)
+        if self._throttled(key):
+            raise AccountError(429, 'Terlalu sering. Coba lagi 15 menit lagi.')
+        self._record_failure(key)          # every request counts toward the limit
+        with self.connect() as db:
+            row = db.execute('SELECT id, name FROM users WHERE email=?', (email,)).fetchone()
+            if not row:
+                return None
+            token, now = secrets.token_urlsafe(32), int(time.time())
+            db.execute('DELETE FROM reset_tokens WHERE user_id=? OR expires_at<?', (row['id'], now))
+            db.execute('INSERT INTO reset_tokens VALUES(?,?,?,?)', (token_hash(token), row['id'], now, now + self.RESET_HOURS * 3600))
+        return row['id'], token, row['name']
+
+    def reset_password(self, token, password):
+        """The link in the reset email with a new password: sets it, signs out every other
+        session, confirms the email (the link proved it) and signs in."""
+        if not isinstance(password, str) or not 8 <= len(password) <= 256:
+            raise AccountError(400, 'Password minimal 8 karakter.')
+        if not isinstance(token, str) or not token or len(token) > 200:
+            raise AccountError(400, 'Link reset tidak valid.')
+        now = int(time.time())
+        with self.connect() as db:
+            row = db.execute('SELECT user_id FROM reset_tokens WHERE token_hash=? AND expires_at>?', (token_hash(token), now)).fetchone()
+            if not row:
+                raise AccountError(400, 'Link reset tidak valid atau sudah kedaluwarsa. Minta link baru dari halaman masuk.')
+            db.execute('UPDATE users SET password_hash=?, verified=1 WHERE id=?', (hash_password(password), row['user_id']))
+            db.execute('DELETE FROM reset_tokens WHERE user_id=?', (row['user_id'],))
+            db.execute('DELETE FROM sessions WHERE user_id=?', (row['user_id'],))
         return self.start_session(row['user_id'])
 
     def resend_verification(self, email, client='?'):
@@ -672,7 +746,7 @@ class Accounts:
             if row:
                 user_id = row['id']
             else:
-                user_id = db.execute('INSERT INTO users(email, name, password_hash, created_at, verified, google_sub) VALUES(?,?,?,?,1,?)',
+                user_id = db.execute('INSERT INTO users(email, name, password_hash, created_at, verified, google_sub, plan) VALUES(?,?,?,?,1,?,\'basic\')',
                                      (email, (name or '').strip()[:80], hash_password(secrets.token_urlsafe(32)), int(time.time()), sub)).lastrowid
                 self._give_code(db, user_id)
         return self.start_session(user_id)
@@ -734,7 +808,7 @@ class Accounts:
         return self.usd_provider if currency == 'USD' else self.provider
 
     def plans(self):
-        return [dict(id=key, name=p['name'], monthly=p['monthly'], yearly=p['yearly'], listMonthly=p.get('list_monthly') or 0,
+        return [dict(id=key, name=p['name'], monthly=p['monthly'], yearly=p['yearly'], listMonthly=p.get('list_monthly') or 0, free=key == FREE_PLAN,
                      usd=dict(monthly=p['usd_monthly'], yearly=p['usd_yearly']),
                      features=p['features'], entitlements=p['entitlements'])
                 for key, p in PLANS.items()]
@@ -784,7 +858,7 @@ class Accounts:
         return self.provider.methods() if hasattr(self.provider, 'methods') else []
 
     def checkout(self, user, plan, cycle, base_url='', method=None, currency='IDR'):
-        if plan not in PLANS or plan == 'free' or cycle not in CYCLE_SECONDS:
+        if plan not in PLANS or plan == FREE_PLAN or cycle not in CYCLE_SECONDS:
             raise AccountError(400, 'Paket atau periode tidak valid.')
         provider = self.provider_for(currency)
         amount = PLANS[plan]['usd_' + cycle] if currency == 'USD' else PLANS[plan][cycle]
@@ -829,7 +903,7 @@ class Accounts:
             db.execute('UPDATE users SET plan=?, plan_expires_at=? WHERE id=?',
                        (order['plan'], start + CYCLE_SECONDS[order['cycle']], user['id']))
             db.execute("UPDATE orders SET status='paid', paid_at=? WHERE id=?", (now, order_id))
-            if order['plan'] in ('pro', 'business') and user['referred_by']:
+            if order['plan'] in PAID and user['referred_by']:
                 self._reward_referrer(db, user['referred_by'], now)
         return True
 
@@ -845,7 +919,7 @@ class Accounts:
         now = int(now or time.time())
         with self.connect() as db:
             db.execute('INSERT INTO usage VALUES(?,?,?,?)', (user_id, kind, int(amount), now))
-            db.execute('DELETE FROM usage WHERE at<?', (now - 7 * 86400,))      # a week back is plenty
+            db.execute('DELETE FROM usage WHERE at<?', (now - 40 * 86400,))     # the summary allowance counts a calendar month
 
     # ---- one account per network (new sign-ups) ------------------------------
     def ip_hash(self, ip):
@@ -914,21 +988,21 @@ class Accounts:
     @staticmethod
     def _qualified(db, user_id):
         return db.execute("""SELECT COUNT(DISTINCT u.id) FROM users u JOIN orders o ON o.user_id = u.id
-                             WHERE u.referred_by=? AND o.status='paid' AND o.plan IN ('pro', 'business')""", (user_id,)).fetchone()[0]
+                             WHERE u.referred_by=? AND o.status='paid' AND o.plan IN ('medium', 'pro')""", (user_id,)).fetchone()[0]
 
     def _reward_referrer(self, db, referrer_id, now):
         """Every REFERRAL_TARGET paying friends: REFERRAL_DAYS more days — of the
-        member's running paid plan, else Pro. Each reward is given once."""
+        member's running paid plan, else Medium. Each reward is given once."""
         qualified = self._qualified(db, referrer_id)
         given = db.execute('SELECT COUNT(*) FROM referral_rewards WHERE user_id=?', (referrer_id,)).fetchone()[0]
         while qualified // REFERRAL_TARGET > given:
             ref = db.execute('SELECT plan, plan_expires_at FROM users WHERE id=?', (referrer_id,)).fetchone()
             if not ref:
                 return
-            if ref['plan'] != 'free' and (ref['plan_expires_at'] or 0) > now:
-                plan, until = ref['plan'], min(self.LIFETIME, ref['plan_expires_at'] + REFERRAL_DAYS * 86400)
+            if plan_key(ref['plan']) != FREE_PLAN and (ref['plan_expires_at'] or 0) > now:
+                plan, until = plan_key(ref['plan']), min(self.LIFETIME, ref['plan_expires_at'] + REFERRAL_DAYS * 86400)
             else:
-                plan, until = 'pro', now + REFERRAL_DAYS * 86400
+                plan, until = 'medium', now + REFERRAL_DAYS * 86400
             db.execute('UPDATE users SET plan=?, plan_expires_at=? WHERE id=?', (plan, until, referrer_id))
             given += 1
             db.execute('INSERT INTO referral_rewards(user_id, friends, days, granted_at) VALUES(?,?,?,?)',
@@ -957,7 +1031,7 @@ class Accounts:
             user = db.execute('SELECT * FROM users WHERE email=?', ((email or '').strip().lower(),)).fetchone()
             if not user:
                 raise AccountError(404, 'Member tidak ditemukan: ' + str(email))
-            if plan == 'free':
+            if plan == FREE_PLAN:
                 expires = None
             elif days is None:
                 expires = self.LIFETIME

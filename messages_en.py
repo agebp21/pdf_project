@@ -116,6 +116,7 @@ EXACT = {
     'Tulis kata kunci 2-200 karakter.': 'Type keywords of 2-200 characters.',
     'Buku ini tidak punya berkas PDF.': 'This book has no PDF file.',
     'Artikel tidak dikenal.': 'Unknown article.',
+    'Konten dewasa tidak tersedia di MyFlipbook Pro. Coba kata kunci lain.': 'Adult content is not available on MyFlipbook Pro. Try other keywords.',
     'Terlalu banyak artikel dalam satu jam. Coba lagi nanti.': 'Too many articles in one hour. Please try again later.',
     'PDF artikel ini tidak tersedia untuk umum. Buka artikelnya di situs penerbit.': "This article's PDF is not publicly available. Open the article on the publisher's site.",
     # --- requests
@@ -179,16 +180,33 @@ EXACT = {
     'File proyek tidak valid.': 'Invalid project file.',
     'Buku tidak ditemukan.': 'Book not found.',
     'File arsip tidak ditemukan.': 'Library file not found.',
-    'Buku tidak ditemukan di arsipmu.': 'Book not found in your library.',
+    'Buku tidak ditemukan di arsip Anda.': 'Book not found in your library.',
+    'Draf kosong.': 'The draft is empty.',
+    'Tulis nama penulis minimal 3 huruf.': 'Type at least 3 letters of the author\'s name.',
+    'Penulis tidak dikenal.': 'Unknown author.',
+    'Tulis pertanyaan Anda dulu.': 'Write your question first.',
+    'AI tidak menjawab. Coba lagi.': 'The AI did not answer. Try again.',
+    'Link reset tidak valid.': 'That reset link is not valid.',
+    'Link reset tidak valid atau sudah kedaluwarsa. Minta link baru dari halaman masuk.': 'That reset link is invalid or has expired. Ask for a new one from the log-in page.',
+    'Bagian jurnal tidak dikenal.': 'Unknown journal section.',
+    'AI tidak menghasilkan tulisan. Coba lagi.': 'The AI did not write anything. Try again.',
+    'AI tidak menghasilkan slide. Coba lagi.': 'The AI did not make any slides. Try again.',
+    'Teks dokumen kosong atau terlalu besar.': 'The document text is empty or too large.',
+    'Nama folder tidak boleh kosong.': 'A folder needs a name.',
+    'Folder tidak ditemukan.': 'Folder not found.',
+    'My Library butuh paket Medium atau Pro. Paket Basic tetap bisa membaca semua flipbook.':
+        'My Library needs the Medium or Pro plan. The Basic plan still reads every flipbook.',
+    'Draf terlalu besar untuk disimpan di akun (maks 60 MB). Draf tetap tersimpan di browser ini.':
+        'The draft is too big to keep in your account (max 60 MB). It is still saved in this browser.',
     'Proyek terlalu besar untuk arsip (maksimal 300 MB).': 'The project is too large for the library (max 300 MB).',
     'Sampul harus JPEG (maksimal 2 MB).': 'The cover must be a JPEG (max 2 MB).',
     'Jenis ekspor tidak dikenal.': 'Unknown export type.',
     'File ekspor terlalu besar untuk arsip.': 'The export file is too large for the library.',
     'Ekspor tidak ditemukan.': 'Export not found.',
-    'Masa coba gratis 7 harimu sudah habis. Upgrade ke Pro untuk memakai fitur ini.':
-        'Your 7-day free trial has ended. Upgrade to Pro to use this feature.',
-    'Jatah 3 share gratis habis. Upgrade ke Pro untuk share tanpa batas.':
-        'Your 3 free shares are used up. Upgrade to Pro for unlimited sharing.',
+    'Masa coba gratis 7 hari Anda sudah habis. Upgrade ke Medium atau Pro untuk memakai fitur ini.':
+        'Your 7-day free trial has ended. Upgrade to Medium or Pro to use this feature.',
+    'Jatah 3 share gratis habis. Upgrade ke Medium atau Pro untuk share lebih banyak.':
+        'Your 3 free shares are used up. Upgrade to Medium or Pro for more share links.',
     # --- Share link
     'Silakan masuk dulu untuk membagikan buku.': 'Please sign in to share a book.',
     'Batas tautan berbagi paket ini sudah penuh. Hapus tautan lama atau upgrade paket.':
@@ -199,13 +217,19 @@ EXACT = {
     'Tautan berbagi tidak ditemukan.': 'Share link not found.',
 }
 
+MONTHS_EN = dict(zip(['Januari', 'Februari', 'Maret', 'April', 'Mei', 'Juni', 'Juli', 'Agustus', 'September', 'Oktober', 'November', 'Desember'],
+                     ['January', 'February', 'March', 'April', 'May', 'June', 'July', 'August', 'September', 'October', 'November', 'December']))
+
 PATTERNS = [
-    (r'Jatah konversi habis untuk sementara — terisi lagi pukul (\d\d:\d\d)\. Upgrade ke Pro atau Business untuk jatah lebih besar\.',
-     r'Your conversion allowance is used up for now — it refills at \1. Upgrade to Pro or Business for a bigger allowance.'),
-    (r'Jatah AI habis untuk sementara — terisi lagi pukul (\d\d:\d\d)\. Upgrade ke Pro atau Business untuk jatah lebih besar\.',
-     r'Your AI allowance is used up for now — it refills at \1. Upgrade to Pro or Business for a bigger allowance.'),
-    (r'Jatah terjemahan buku habis untuk sementara — terisi lagi pukul (\d\d:\d\d)\. Upgrade ke Pro atau Business untuk jatah lebih besar\.',
-     r'Your book translation allowance is used up for now — it refills at \1. Upgrade to Pro or Business for a bigger allowance.'),
+    (r'Jatah konversi habis untuk sementara — terisi lagi pukul (\d\d:\d\d)\. Upgrade ke Medium atau Pro untuk jatah lebih besar\.',
+     r'Your conversion allowance is used up for now — it refills at \1. Upgrade to Medium or Pro for a bigger allowance.'),
+    (r'Jatah AI habis untuk sementara — terisi lagi pukul (\d\d:\d\d)\. Upgrade ke Medium atau Pro untuk jatah lebih besar\.',
+     r'Your AI allowance is used up for now — it refills at \1. Upgrade to Medium or Pro for a bigger allowance.'),
+    (r'Jatah terjemahan buku habis untuk sementara — terisi lagi pukul (\d\d:\d\d)\. Upgrade ke Medium atau Pro untuk jatah lebih besar\.',
+     r'Your book translation allowance is used up for now — it refills at \1. Upgrade to Medium or Pro for a bigger allowance.'),
+    (r'Kuota ringkasan bulan ini sudah habis — terisi lagi (\d+) (\w+) (\d{4})\.( Upgrade ke Pro untuk kuota yang lebih besar\.)?',
+     lambda m: f'This month\'s summary allowance is used up — it refills on {MONTHS_EN.get(m[2], m[2])} {m[1]}, {m[3]}.'
+               + (' Upgrade to Pro for a bigger allowance.' if m[4] else '')),
     (r'Layanan AI menolak permintaan \((\d+)\)\. ?(.*)', r'The AI service refused the request (\1). \2'),
     (r'Gambar halaman (\d+) bukan JPEG\.', r'Page image \1 is not a JPEG.'),
     (r'Layanan pencarian menolak permintaan \((\d+)\)\.', r'The search service refused the request (\1).'),
@@ -231,7 +255,7 @@ def english(text):
     for pattern, replacement in _PATTERNS:
         match = pattern.fullmatch(text)
         if match:
-            return match.expand(replacement)
+            return replacement(match) if callable(replacement) else match.expand(replacement)      # a function builds a message with numbers re-formatted
     # Several messages joined ("OAPEN tidak bisa dihubungi. Internet Archive …"): one by one.
     parts = re.split(r'(?<=\.) (?=[A-Z])', text)
     if len(parts) > 1:

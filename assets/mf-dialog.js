@@ -3,6 +3,7 @@
  *
  *   if (!await MFDialog.confirm({title: 'Hapus buku?', message: '…', ok: 'Hapus', danger: true})) return;
  *   await MFDialog.alert({title: 'Selesai', message: '…'});
+ *   const name = await MFDialog.prompt({title: 'Folder baru', value: '', placeholder: '…', ok: 'Buat'});   // text or null
  *
  * Esc / a click outside = cancel, Enter = the focused button. A dangerous
  * action starts on "Batal", so Enter alone never deletes anything.
@@ -27,6 +28,7 @@
     '.mfd-btn:hover{transform:translateY(-1px)}' +
     '.mfd-btn:focus-visible{outline:3px solid #A3C98A;outline-offset:2px}' +
     '.mfd-cancel{background:#F3EFE6;color:#44403C}' +
+    '.mfd-input{width:100%;box-sizing:border-box;margin:4px 0 16px;padding:11px 14px;border:1.5px solid #D6CFBF;border-radius:14px;font:600 14px "Plus Jakarta Sans",system-ui,sans-serif;color:#1C1917;background:#fff}.mfd-input:focus{outline:none;border-color:#1A3C34}' +
     '.mfd-ok{background:#1A3C34;color:#FFF7EA;box-shadow:0 6px 16px rgba(26,60,52,.25)}' +
     '.mfd-card.danger .mfd-ok{background:#DC2626;box-shadow:0 6px 16px rgba(220,38,38,.28)}' +
     '@keyframes mfd-fade{from{opacity:0}}@keyframes mfd-pop{from{opacity:0;transform:scale(.94) translateY(6px)}}' +
@@ -63,6 +65,13 @@
       card.setAttribute('aria-labelledby', title.id);
       card.append(el('div', 'mfd-icon', options.icon || (options.danger ? '🗑️' : withCancel ? '❓' : 'ℹ️')), title);
       if (options.message) card.append(el('p', 'mfd-msg', options.message));
+      var field = null;
+      if (options.input) {
+        field = document.createElement('input');
+        field.className = 'mfd-input'; field.type = 'text'; field.value = options.value || ''; field.maxLength = options.maxLength || 80;
+        field.placeholder = options.placeholder || ''; field.setAttribute('aria-labelledby', title.id);
+        card.append(field);
+      }
       var actions = el('div', 'mfd-actions');
       var ok = el('button', 'mfd-btn mfd-ok', options.ok || 'OK');
       ok.type = 'button';
@@ -84,24 +93,31 @@
       }
       function keys(event) {
         if (event.key === 'Escape') { event.preventDefault(); close(false); }
+        else if (event.key === 'Enter' && field && document.activeElement === field) { event.preventDefault(); ok.click(); }
         else if (event.key === 'Tab') {         // keep focus inside the box
-          var buttons = cancel ? [cancel, ok] : [ok];
+          var buttons = (field ? [field] : []).concat(cancel ? [cancel, ok] : [ok]);
           var i = buttons.indexOf(document.activeElement);
           event.preventDefault();
           buttons[(i + (event.shiftKey ? buttons.length - 1 : 1)) % buttons.length].focus();
         }
       }
-      ok.onclick = function () { close(true); };
+      ok.onclick = function () {
+        if (!field) { close(true); return; }
+        var text = field.value.trim();
+        if (!text) { field.focus(); return; }
+        close(text);
+      };
       if (cancel) cancel.onclick = function () { close(false); };
       back.addEventListener('mousedown', function (event) { if (event.target === back) close(false); });
       document.addEventListener('keydown', keys, true);
       document.body.appendChild(back);
-      (options.danger && cancel ? cancel : ok).focus();
+      if (field) { field.focus(); field.select(); } else (options.danger && cancel ? cancel : ok).focus();
     });
   }
 
   root.MFDialog = {
     confirm: function (options) { return open(options, true); },
     alert: function (options) { return open(options, false).then(function () {}); },
+    prompt: function (options) { return open(Object.assign({}, options, { input: true }), true).then(function (v) { return typeof v === 'string' ? v : null; }); },
   };
 })(typeof window !== 'undefined' ? window : globalThis);

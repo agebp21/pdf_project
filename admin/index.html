@@ -28,7 +28,7 @@
   th{color:var(--muted);font-weight:600;font-size:12px;white-space:nowrap}
   tr.click{cursor:pointer} tr.click:hover td{background:#f3ecdf}
   .tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#eee6d6;color:#5b5446}
-  .tag.pro,.tag.paid{background:#d3f9d8;color:#2b8a3e} .tag.business{background:#e5dbff;color:#5f3dc4}
+  .tag.medium,.tag.paid{background:#d3f9d8;color:#2b8a3e} .tag.pro{background:#e5dbff;color:#5f3dc4}
   .tag.pending{background:#fff3bf;color:#a76b00} .tag.failed,.tag.expired{background:#ffe3e3;color:#c92a2a}
   .row{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
   input[type=search],input[type=text],input[type=password]{border:1px solid var(--line);border-radius:10px;padding:9px 12px;font:inherit;background:#fff;min-width:240px}
@@ -119,7 +119,7 @@ const date = ts => ts >= 4102444800 ? 'tanpa batas' : ts ? new Date(ts * 1000).t
 const when = ts => ts ? new Date(ts * 1000).toLocaleString('id-ID', {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'}) : '—';
 const size = b => { b = Number(b || 0); return b >= 1e9 ? (b / 1e9).toFixed(2) + ' GB' : b >= 1e6 ? (b / 1e6).toFixed(1) + ' MB' : b >= 1e3 ? Math.round(b / 1e3) + ' KB' : b + ' B'; };
 const money = (cur, n) => cur === 'USD' ? '$' + (n / 100).toLocaleString('en-US', {minimumFractionDigits: 2}) : 'Rp ' + num(n);
-const PLAN = {free: 'Free', pro: 'Pro', business: 'Business'};
+const PLAN = {basic: 'Basic', medium: 'Medium', pro: 'Pro', free: 'Basic', business: 'Pro'};   // plans v2 (old names: before the move)
 
 async function api(path, options = {}) {
   // Relative to the page, so the panel also works under a path (nginx: /admin/ -> this server).
@@ -183,7 +183,7 @@ async function loadMembers(page) {
   $('#member-count').textContent = num(d.total) + ' member · halaman ' + d.page + ' dari ' + Math.max(1, Math.ceil(d.total / d.per));
   $('#member-table').innerHTML = `<tr><th>Email</th><th>Nama</th><th>Paket</th><th>Berlaku s/d</th><th>Verifikasi</th><th>Google</th><th>Buku</th><th>Arsip</th><th>Daftar</th></tr>` +
     (d.items.map(m => `<tr class="click" data-id="${m.id}"><td>${esc(m.email)}</td><td>${esc(m.name)}</td>
-      <td><span class="tag ${m.paid ? esc(m.plan) : ''}">${esc(m.paid ? PLAN[m.plan] || m.plan : 'Free')}</span></td><td>${m.paid ? date(m.planExpiresAt) : '—'}</td>
+      <td><span class="tag ${m.paid ? esc(m.plan) : ''}">${esc(m.paid ? PLAN[m.plan] || m.plan : 'Basic')}</span></td><td>${m.paid ? date(m.planExpiresAt) : '—'}</td>
       <td class="${m.verified ? 'yes' : 'no'}">${m.verified ? '✓' : '—'}</td><td class="${m.google ? 'yes' : 'no'}">${m.google ? '✓' : '—'}</td>
       <td>${num(m.books)}</td><td>${size(m.bytes)}</td><td>${date(m.createdAt)}</td></tr>`).join('') || '<tr><td colspan="9" class="muted">Tidak ada member.</td></tr>');
   document.querySelectorAll('#member-table tr.click').forEach(tr => {
@@ -200,11 +200,12 @@ async function showMember(id) {
   const r = m.referral;
   $('#detail-title').textContent = m.email;
   $('#detail-sub').textContent = m.name || '';
-  $('#detail-body').innerHTML = `<div class="grid">${card(esc(m.paid ? PLAN[m.plan] || m.plan : 'Free'), 'Paket' + (m.paid ? ' s/d ' + date(m.planExpiresAt) : ''))}
+  $('#detail-body').innerHTML = `<div class="grid">${card(esc(m.paid ? PLAN[m.plan] || m.plan : 'Basic'), 'Paket' + (m.paid ? ' s/d ' + date(m.planExpiresAt) : ''))}
       ${card(num(m.books.length), 'Buku di My Library')}${card(num(m.visits), 'Kunjungan (saat masuk)')}${card(esc(when(m.lastVisit)), 'Terakhir berkunjung')}</div>
     <div class="info">${info('Nama', esc(m.name) || '—')}${info('Daftar', date(m.createdAt))}
       ${info('Email', m.verified ? '✓ Terverifikasi' : 'Belum terverifikasi')}${info('Cara masuk', m.google ? 'Google' : 'Email & password')}
       ${info('Sesi aktif', num(m.sessions))}
+      ${m.summaryWords ? info('Hasil ringkasan bulan ini', num(m.summaryWords.used) + ' / ' + num(m.summaryWords.limit) + ' kata · terisi lagi ' + date(m.summaryWords.resetAt)) : ''}
       ${r ? info('Kode referral', esc(r.code || '—')) + info('Diundang oleh', esc(r.referredBy || '—'))
           + info('Mengundang', num(r.signups) + ' orang · ' + num(r.subscribed) + ' berlangganan') + info('Hadiah referral', num(r.rewards) + ' bulan') : ''}</div>
     ${m.places && m.places.length ? `<h3>Lokasi (perkiraan dari jaringan)</h3><table><tr><th>Tempat</th><th>Provider</th><th>Perangkat</th><th>Terakhir</th><th>Tampilan</th></tr>

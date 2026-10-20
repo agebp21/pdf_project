@@ -7,6 +7,7 @@
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=pro">
 <title data-i18n="meta.title">MyFlipbook — Every PDF task, done the chill way</title>
 <script src="assets/i18n.js"></script>
+<script defer src="/assets/site-header.js"></script>
 <script src="assets/auth.js" defer></script>
 <script src="https://cdn.tailwindcss.com"></script>
 <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -41,6 +42,7 @@
   .card{background:linear-gradient(180deg,rgba(255,255,255,.95),rgba(255,255,255,0) 38%),linear-gradient(180deg,#FFFFFF,#F8F4EA);border:1px solid #E9E2D4;border-radius:20px;box-shadow:0 14px 34px rgba(28,25,23,.10),inset 0 1px 0 #fff,inset 0 -3px 10px rgba(28,25,23,.05);transition:all .2s ease;position:relative}
   .card:hover{transform:translateY(-4px);box-shadow:0 24px 54px rgba(28,25,23,.14),inset 0 1px 0 #fff,inset 0 -3px 10px rgba(28,25,23,.05);border-color:#DCD3BE}
   .card.feat{border-radius:26px;overflow:hidden}
+  .crown{position:absolute;top:11px;right:50px;color:#F97316;line-height:0;filter:drop-shadow(0 1px 1px rgba(194,65,12,.35))}
   .sticker{position:absolute;top:12px;right:12px;font-size:10px;font-weight:800;letter-spacing:.06em;padding:4px 10px;border-radius:999px;box-shadow:0 4px 10px rgba(28,25,23,.12)}
   .icon-box{width:46px;height:46px;border-radius:13px;display:flex;align-items:center;justify-content:center;font-size:18px;font-weight:800;box-shadow:inset 0 2px 2px rgba(255,255,255,.6),inset 0 -4px 8px rgba(28,25,23,.12),0 8px 16px rgba(28,25,23,.14);flex-shrink:0}
   /* Clay white-clean showcase: soft light stage, serif headline, icon field */
@@ -91,33 +93,13 @@
 <body class="relative">
 <div class="grain"></div>
 
-<!-- NAV -->
-<div class="sticky top-3 z-50 max-w-[1440px] mx-auto px-4">
-  <nav class="nav-pill rounded-2xl px-3 py-2 flex items-center justify-between gap-3">
-    <a href="index.html" class="flex items-center gap-2.5">
-            <span class="leading-none"><img src="assets/img/logo.png?v=pro" alt="MyFlipbook Pro" width="147" height="36" class="block h-9 w-auto"><span class="text-[10px] font-bold tracking-[.18em] text-[#78716C]" data-i18n="nav.tag">SARVAMAYA • LOCAL VIBES</span></span>
-    </a>
-    <div class="hidden lg:flex items-center gap-2 text-[12px] font-bold">
-      <a href="#grid" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.all">✳ All tools</a>
-      <a href="flipbook.html" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.flip">▤ Flipbook</a>
-      <a href="journals.html" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.journals">🔎 Find Journal &amp; Ebook</a>
-      <a href="notebook.html" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.note">✦ AI Summarizer</a>
-      <a href="/harga" class="chip rounded-full px-3.5 py-1.5" data-i18n="nav.pricing">★ Pricing</a>
-    </div>
-    <div class="flex items-center gap-2">
-      <button type="button" data-lang-toggle title="Ganti bahasa / Switch language" class="rounded-full px-3 py-2 text-[12px] font-extrabold bg-[#E9E4FF] border border-[#E8E2D4] shadow-[0_4px_12px_rgba(28,25,23,0.08)] hover:-translate-y-0.5 transition">EN</button>
-      <span class="hidden xl:inline text-[10px] font-extrabold tracking-widest bg-[#E4F3C2] border border-[#E8E2D4] rounded-full px-2.5 py-1 rotate-2" data-i18n="nav.free">FREE TOOLS</span>
-      <span data-auth-slot></span>
-      <a href="/harga" class="lg:hidden chip rounded-full w-9 h-9 grid place-items-center text-[14px] font-extrabold" title="Pricing" aria-label="Pricing">★</a>
-      <a href="converter.html?tool=merge-pdf" class="hidden sm:inline-flex btn-tang rounded-full px-4 py-2 text-[12px] font-extrabold whitespace-nowrap" data-i18n="nav.cta">Let's convert →</a>
-    </div>
-  </nav>
-</div>
+<!-- NAV (assets/site-header.js: the same header on every page) -->
+<header data-site-header></header>
 
 <!-- SHOWCASE (Clay-style dark hero) -->
 <section class="showcase hero-image">
   <!-- The banner carries the headline visually; keep a real heading for search engines and screen readers. -->
-  <h1 class="sr-only">Buat Flipbook dari PDF &amp; Alat PDF Gratis Berbahasa Indonesia — MyFlipbook Pro</h1>
+  <h1 class="sr-only" data-en="Make Flipbooks from PDF &amp; Free PDF Tools in Indonesian — MyFlipbook Pro">Buat Flipbook dari PDF &amp; Alat PDF Gratis Berbahasa Indonesia — MyFlipbook Pro</h1>
   <picture id="heroPic">
     <!-- Phones: the left part of the banner (logo + headline) at a readable size.
          Indonesian banner by default; English mode swaps hero-id-* for hero-* (script below). -->
@@ -185,7 +167,7 @@
   </a>
   <p class="text-center text-[11px] text-[#A8A29E] mt-4 font-semibold" data-i18n="foot.note">MyFlipbook • Sarvamaya vibes • Made locally, for never-ending tasks ✳</p>
   <p class="text-center text-[11px] mt-2 font-bold"><a href="privacy.html" class="text-[#78716C] hover:text-[#1A3C34] underline" data-i18n="foot.privacy">Privacy Policy</a> <span class="text-[#D6CFBF]">·</span> <a href="terms.html" class="text-[#78716C] hover:text-[#1A3C34] underline" data-i18n="foot.terms">Terms of Service</a> <span class="text-[#D6CFBF]">·</span> <a href="mailto:cs@myflipbookpro.com" class="text-[#78716C] hover:text-[#1A3C34] underline">✉ cs@myflipbookpro.com</a></p>
-  <p class="text-center text-[11px] mt-2 text-[#78716C]" id="biz-address">📍 Sarvamaya — Jl. H. Khair No. 59, Ragunan, Ps. Minggu, Jakarta Selatan, DKI Jakarta 12550 · <a href="https://wa.me/6285286312477" target="_blank" rel="noopener" class="underline font-bold">WhatsApp 0852-8631-2477</a></p>
+  <p class="text-center text-[11px] mt-2 text-[#78716C]" id="biz-address">📍 Sarvamaya — Jl. H. Khair No. 59, Ragunan, Ps. Minggu, Jakarta Selatan, DKI Jakarta 12550 · 📞 <a href="tel:+6285286312477" class="underline font-bold">0852-8631-2477</a></p>
 </footer>
 
 <script>
@@ -196,10 +178,10 @@
   const catLabel = c => (window.I18N && I18N.get() === 'id' && CAT_ID[c]) || c;
 
   const tools = [
-    {id:"pdf-to-flipbook", title:"PDF to Flipbook", desc:"Open your PDF as a digital book and add animated number stats to any page.", cat:["Flipbook & AI"], color:"#1A3C34", icon:"▤", bg:"#E4F3C2", badge:"New!", href:"flipbook.html", feat:true},
-    {id:"journal-search", title:"Find Journal & Ebook", desc:"Find free journals & ebooks (Indonesian & international, open access) and turn any of them into a flipbook in one click.", cat:["Flipbook & AI"], color:"#1D4ED8", icon:"🔎", bg:"#DBEAFE", badge:"New!", href:"journals.html", feat:true},
-    {id:"notebook", title:"AI Summarizer", desc:"Upload a PDF → AI summary, page-by-page translation and a two-host podcast.", cat:["Flipbook & AI"], color:"#4C1D95", icon:"✦", bg:"#E9E4FF", badge:"AI", href:"notebook.html", feat:true},
-    {id:"organize-pdf", title:"Edit PDF", desc:"Edit text like Word and pictures like PowerPoint, add blank pages, merge, split and compress — scans and photos of documents too.", cat:["Edit & Organize"], color:"#7E22CE", icon:"✎", bg:"#FAE8FF", href:"editor.html", badge:"New!", feat:true},
+    {id:"pdf-to-flipbook", title:"Files to Flipbook", desc:"Open your files as a digital book and add animated number stats to any page.", cat:["Flipbook & AI"], color:"#1A3C34", icon:"▤", bg:"#E4F3C2", href:"flipbook.html", feat:true},
+    {id:"journal-search", title:"Find Journal & Ebook", desc:"Find free journals & ebooks (Indonesian & international, open access) and turn any of them into a flipbook in one click.", cat:["Flipbook & AI"], color:"#1D4ED8", icon:"🔎", bg:"#DBEAFE", href:"journals.html", feat:true},
+    {id:"notebook", paid:true, title:"AI Summarizer", desc:"Upload a PDF → AI summary chapter by chapter, page-by-page translation, and answers to your questions.", cat:["Flipbook & AI"], color:"#4C1D95", icon:"✦", bg:"#E9E4FF", badge:"AI", href:"notebook.html", feat:true},
+    {id:"organize-pdf", title:"Edit PDF", desc:"Edit text like Word and pictures like PowerPoint, add blank pages, merge, split and compress — scans and photos of documents too.", cat:["Edit & Organize"], color:"#7E22CE", icon:"✎", bg:"#FAE8FF", href:"editor.html", feat:true},
     {id:"utilities", title:"Utilities", desc:"Every converter and small PDF tool in one place: PDF ↔ Word, Excel, PowerPoint, JPG, HTML, Markdown, plus rotate, crop, page numbers, watermark, sign, redact, OCR and more.", cat:[], color:"#0E7490", icon:"🧰", bg:"#CFFAFE", feat:true, utilities:true},
     {id:"flipbook-animation", title:"Flipbook Animation", desc:"Try moving charts, animated stats, and interactive flows inside a digital book.", cat:["Flipbook & AI"], color:"#1A3C34", icon:"▶", bg:"#FFE3D9", badge:"Demo", href:"animation.html", feat:true},
     {id:"workflow", title:"Create a workflow", desc:"Create custom workflows with your favorite tools, automate tasks, and reuse them anytime.", cat:["Flipbook & AI"], color:"#9A3412", icon:"↗", bg:"#FFE3D9", workflow:true, soonCard:true, href:"workflow.html"},
@@ -224,15 +206,18 @@
     {id:"compare-pdf", title:"Compare PDF", desc:"Find what changed between two versions of a PDF, line by line.", cat:["Edit & Organize"], color:"#1E5A8A", icon:"◫", bg:"#DBEAFE"},
     {id:"redact-pdf", title:"Redact PDF", desc:"Permanently remove sensitive information from a PDF.", cat:["PDF Security"], color:"#1D4ED8", icon:"█", bg:"#DBEAFE"},
     {id:"crop-pdf", title:"Crop PDF", desc:"Crop margins or select specific areas, apply to one page or all.", cat:["Edit & Organize"], color:"#7E22CE", icon:"◧", bg:"#FAE8FF"},
-    {id:"pdf-forms", title:"PDF Forms", desc:"Fill in a fillable PDF form and save it — optionally locked.", cat:["Edit & Organize"], color:"#7E22CE", icon:"Ab", bg:"#FAE8FF", badge:"New!"},
+    {id:"pdf-forms", title:"PDF Forms", desc:"Fill in a fillable PDF form and save it — optionally locked.", cat:["Edit & Organize"], color:"#7E22CE", icon:"Ab", bg:"#FAE8FF"},
     {id:"translate-pdf", title:"Translate PDF", desc:"Translate PDF with AI. Keep fonts, layout, and formatting intact.", cat:["Flipbook & AI"], color:"#4C1D95", icon:"A", bg:"#E9E4FF", badge:"AI"},
-    {id:"pdf-to-md", title:"PDF to Markdown", desc:"Turn PDFs into Markdown. Perfect for notes, docs, and LLMs.", cat:["Convert PDF"], color:"#4C1D95", icon:"{ }", bg:"#E9E4FF", badge:"New!"},
+    {id:"pdf-to-md", title:"PDF to Markdown", desc:"Turn PDFs into Markdown. Perfect for notes, docs, and LLMs.", cat:["Convert PDF"], color:"#4C1D95", icon:"{ }", bg:"#E9E4FF"},
   ];
 
   // Catalog tools not built yet: shown as "Coming soon", not clickable.
   const SOON = new Set(["flipbook-animation","protect-pdf","pdf-to-pdfa","repair-pdf","translate-pdf"]);
   tools.forEach(t => { if (SOON.has(t.id)) t.soon = true; });
   const soonLabel = () => (window.I18N ? I18N.t('card.coming') : 'Coming soon');
+  // A paid feature (Medium / Pro): the orange crown, as on the flipbook's locked buttons.
+  const CROWN = '<svg viewBox="0 0 24 20" width="18" height="15" aria-hidden="true"><path fill="currentColor" d="M2.2 6.2 7 10l5-6.6L17 10l4.8-3.8-1.9 9.6H4.1z"/><rect x="4" y="16.6" width="16" height="2.6" rx="1.1" fill="currentColor"/><circle cx="2.2" cy="5.2" r="1.9" fill="currentColor"/><circle cx="12" cy="2.3" r="2" fill="currentColor"/><circle cx="21.8" cy="5.2" r="1.9" fill="currentColor"/></svg>';
+  const T_PAID = () => (window.I18N && I18N.get() === 'en' ? 'Paid feature (Medium / Pro)' : 'Fitur berbayar (Medium / Pro)');
 
   let active = "All";
   let query = "";
@@ -278,7 +263,7 @@
       const soon = !!t.soonCard, tag = soon ? 'div aria-disabled="true"' : `a href="${href}"`, end = soon ? 'div' : 'a';
       return `<${tag} class="card feat p-5 flex flex-col min-h-[170px] overflow-hidden" style="background:#1C1917;color:#FFF7EA;border-color:#1C1917${soon ? ';cursor:not-allowed' : ''}">
         <div class="absolute inset-0 opacity-20 pointer-events-none" style="background:radial-gradient(circle at 80% 20%, #FF5C28 1.5px, transparent 1.5px);background-size:22px 22px"></div>
-        <span class="sticker bg-[#FF5C28] text-white">${soon ? soonLabel() : 'New!'}</span>
+        ${soon ? `<span class="sticker bg-[#FF5C28] text-white">${soonLabel()}</span>` : ''}
         <div class="flex items-center gap-3 relative z-10">
           <div class="icon-box" style="background:#FF5C28;color:#fff;border-color:rgba(0,0,0,.4)">↗</div>
           <h3 class="text-[15px] font-extrabold serif relative z-10" style="color:#FFF7EA">${T(t)}</h3>
@@ -312,7 +297,7 @@
     const span = t.feat ? 'sm:col-span-2 lg:col-span-2' : '';
     const bgBadge = t.badge === 'AI' ? 'background:#4C1D95;color:#fff' : (t.badge === 'Demo' ? 'background:#1A3C34;color:#fff' : 'background:#FF5C28;color:#fff');
     return `<a href="${href}" class="card ${span} p-5 flex flex-col min-h-[170px] group">
-      ${t.badge?`<span class="sticker" style="${bgBadge}">${t.badge}</span>`:''}
+      ${t.badge?`<span class="sticker" style="${bgBadge}">${t.badge}</span>`:''}${t.paid?`<span class="crown" title="${T_PAID()}" aria-label="${T_PAID()}">${CROWN}</span>`:''}
       <div class="flex items-center gap-3">
         <div class="icon-box" style="background:${t.bg};color:${t.color}"><span class="text-[16px] leading-none">${t.icon}</span></div>
         <h3 class="text-[15px] font-extrabold leading-tight serif">${T(t)}</h3>

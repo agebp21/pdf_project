@@ -40,7 +40,7 @@
     return {
       id: uid(), type, isPdfZone: false,
       x:28, y:38, w: hot?28:44, h: hot?7:9, rotation: 0,
-      content: hot ? 'Klik di sini →' : 'Teks kamu',
+      content: hot ? 'Klik di sini →' : 'Teks Anda',
       style: { fontSize:18, color: hot?'#ffffff':'#1a1a1a', bold:hot, italic:false,
                align: hot?'center':'left', bgColor: hot?'#4a7c59':'', opacity:1 },
       animation: { type:'fadeIn', delay:0, duration:600 },
@@ -334,7 +334,7 @@
       page.cleanup();
 
       if (added === 0 && !extractedImages.length) {
-        extractionResults[pageIndex]={empty:true,message:`Halaman ${pageIndex + 1}: pemeriksaan selesai, tidak ada teks atau gambar terpisah yang didukung. Halaman gambar/scan memerlukan OCR untuk teks; OCR belum tersedia di editor ini. Kamu tetap bisa menambah teks atau tombol link.`};
+        extractionResults[pageIndex]={empty:true,message:`Halaman ${pageIndex + 1}: pemeriksaan selesai, tidak ada teks atau gambar terpisah yang didukung. Halaman gambar/scan memerlukan OCR untuk teks; OCR belum tersedia di editor ini. Anda tetap bisa menambah teks atau tombol link.`};
       } else {
         extractionResults[pageIndex]={empty:false,message:`Halaman ${pageIndex + 1}: ${added} teks dan ${extractedImages.length} gambar dipisahkan. Klik elemen untuk mengatur animasi. Grafis tanpa grup dan gambar yang menyatu dalam background belum dipisahkan.`};
       }
@@ -797,12 +797,12 @@
      EXPORT HTML ZIP
      ══════════════════════════════════════════════════════════ */
   // Paywall hint, loaded once so the save dialog still opens within the click.
-  // The server enforces it anyway (export templates need Pro/Business).
+  // The server enforces it anyway (export templates need Medium/Pro).
   let exportCaps=null;
   fetch('/api/capabilities',{cache:'no-store'}).then(r=>r.ok?r.json():null).then(c=>{exportCaps=c;}).catch(()=>{});
   async function exportHTML(){
     if(!pageCount||exporting||loading||importing||extracting)return;
-    if(exportCaps&&exportCaps.paywall&&!(exportCaps.entitlements||[]).includes('export')){setError('Export flipbook butuh paket Pro atau Business. Buka account.html untuk upgrade.');return;}
+    if(exportCaps&&exportCaps.paywall&&!(exportCaps.entitlements||[]).includes('export')){setError('Export flipbook butuh paket Medium atau Pro. Buka account.html untuk upgrade.');return;}
     exporting=true;updateButtons();setStatus('Menyiapkan export…');setError('');
     try{
       const title=($('#ae-title')?.value.trim()||sourceName.replace(/\.pdf$/i,'')||'Flipbook');

@@ -64,7 +64,7 @@ class AiPaidTests(unittest.TestCase):
         pro.call('POST', '/api/auth/register', {'email': 'pro-gw@b.co', 'password': 'rahasia-123'})
         server.ACCOUNTS.grant_plan('pro-gw@b.co', 'pro', 30)
         headers = {'X-Build-Token': server.TOKEN}
-        routes = ('/api/summary', '/api/podcast/script', '/api/highlight-summary', '/api/translate')
+        routes = ('/api/summary', '/api/podcast/script', '/api/highlight-summary', '/api/translate', '/api/ask')
         for route in routes:
             with self.subTest(route=route):
                 status, body = free.call('POST', route, {}, headers=headers)[:2]

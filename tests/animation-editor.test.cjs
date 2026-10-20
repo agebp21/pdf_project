@@ -9,7 +9,7 @@ async function main(){
  const dom=new JSDOM(fs.readFileSync('animation.html','utf8'),{url:'http://127.0.0.1:8080/animation.html',runScripts:'outside-only',pretendToBeVisual:true}),w=dom.window;
  const errors=[];w.addEventListener('error',e=>errors.push(e.error));
  const style=w.document.createElement('style');style.textContent=fs.readFileSync('assets/animation-editor.css','utf8');w.document.head.append(style);
- assert.equal(w.getComputedStyle(w.document.querySelector('.topbar')).display,'flex');
+ assert.ok(w.document.querySelector('header[data-site-header]'),'the shared site header (assets/site-header.js)');
  assert.equal(w.getComputedStyle(w.document.querySelector('.ae-inspector .ae-row')).display,'grid');
  assert.equal(w.document.querySelector('#ae-insp-style-sec').closest('.ae-row'),null);
  assert.equal(w.document.querySelectorAll('#ae-insp-style-sec').length,1);
