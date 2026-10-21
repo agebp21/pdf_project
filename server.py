@@ -848,20 +848,34 @@ def summarize_highlight(text):
 
 def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3):
     """One reply from Google's Gemini API (GEMINI_API_KEY in .env, paid tier: prompts are not
-    used to train models). Thinking models spend part of the output budget on thinking, so
-    the budget is doubled (capped)."""
+    used to train models). Thinking is kept low (GEMINI_THINKING, default "low"; empty = the
+    model's own): thought tokens are billed as output and a summary needs little of it. They
+    still share the output budget, so the budget is doubled (capped). A model that refuses
+    the thinking level is asked again without it."""
     key = os.environ.get('GEMINI_API_KEY', '').strip()
     if not key:
         raise RuntimeError('AI belum diatur di server (GEMINI_API_KEY di .env).')
     base = os.environ.get('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta').strip().rstrip('/')
-    body = json.dumps({'systemInstruction': {'parts': [{'text': system}]},
-                       'contents': [{'role': 'user', 'parts': [{'text': user}]}],
-                       'generationConfig': {'temperature': temperature, 'maxOutputTokens': min(65536, max_tokens * 2)}}).encode('utf-8')
-    request = urllib.request.Request(f'{base}/models/{quote(model, safe="-._")}:generateContent', data=body, method='POST',
-                                     headers={'x-goog-api-key': key, 'Content-Type': 'application/json'})
-    try:
+    thinking = os.environ.get('GEMINI_THINKING', 'low').strip().lower()
+
+    def ask(level):
+        config = {'temperature': temperature, 'maxOutputTokens': min(65536, max_tokens * 2)}
+        if level:
+            config['thinkingConfig'] = {'thinkingLevel': level}
+        body = json.dumps({'systemInstruction': {'parts': [{'text': system}]},
+                           'contents': [{'role': 'user', 'parts': [{'text': user}]}], 'generationConfig': config}).encode('utf-8')
+        request = urllib.request.Request(f'{base}/models/{quote(model, safe="-._")}:generateContent', data=body, method='POST',
+                                         headers={'x-goog-api-key': key, 'Content-Type': 'application/json'})
         with urllib.request.urlopen(request, timeout=300) as response:
-            data = json.loads(response.read().decode('utf-8'))
+            return json.loads(response.read().decode('utf-8'))
+    try:
+        try:
+            data = ask(thinking)
+        except urllib.error.HTTPError as cause:
+            detail = cause.read().decode('utf-8', 'replace')
+            if not (thinking and cause.code == 400 and 'thinking' in detail.lower()):
+                raise RuntimeError(f'Layanan AI menolak permintaan ({cause.code}). {detail[:300]}') from cause
+            data = ask('')                                  # this model sets its own thinking
     except urllib.error.HTTPError as cause:
         detail = cause.read().decode('utf-8', 'replace')[:300]
         raise RuntimeError(f'Layanan AI menolak permintaan ({cause.code}). {detail}') from cause

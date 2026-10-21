@@ -34,7 +34,17 @@ class Routing(unittest.TestCase):
         body = json.loads(request.data)
         self.assertEqual(body['systemInstruction']['parts'][0]['text'], 'Sistem.')
         self.assertEqual(body['contents'], [{'role': 'user', 'parts': [{'text': 'Teks buku.'}]}])
-        self.assertEqual(body['generationConfig'], {'temperature': 0.2, 'maxOutputTokens': 8000})
+        self.assertEqual(body['generationConfig'], {'temperature': 0.2, 'maxOutputTokens': 8000, 'thinkingConfig': {'thinkingLevel': 'low'}})
+
+    def test_thinking_level_refused_then_asked_without(self):
+        import io, urllib.error
+        refused = urllib.error.HTTPError('u', 400, 'Bad', {}, io.BytesIO(b'{"error": {"message": "Thinking level LOW is not supported for this model."}}'))
+        with mock.patch.dict(os.environ, {'GEMINI_API_KEY': 'g'}), mock.patch('urllib.request.urlopen', side_effect=[refused, reply(GEMINI_OK)]) as call:
+            self.assertEqual(server.ai_chat('S', 'U', 'gemini-2.5-flash'), 'Intisari buku.')
+        self.assertNotIn('thinkingConfig', json.loads(call.call_args[0][0].data)['generationConfig'])
+        with mock.patch.dict(os.environ, {'GEMINI_API_KEY': 'g', 'GEMINI_THINKING': ''}), mock.patch('urllib.request.urlopen', return_value=reply(GEMINI_OK)) as call:
+            server.ai_chat('S', 'U', 'gemini-3.8-flash')
+        self.assertNotIn('thinkingConfig', json.loads(call.call_args[0][0].data)['generationConfig'], 'empty = the model decides')
 
     def test_other_models_stay_on_sumopod(self):
         sumopod = {'choices': [{'message': {'content': 'Halo'}}]}
