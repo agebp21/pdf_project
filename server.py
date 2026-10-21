@@ -846,6 +846,21 @@ def summarize_highlight(text):
     return reply
 
 
+AI_UNAVAILABLE = 'Layanan AI sedang tidak tersedia untuk sementara. Coba lagi nanti.'
+AI_BUSY = 'Layanan AI sedang sibuk. Coba lagi beberapa saat lagi.'
+
+
+def ai_refused(provider, code, detail):
+    """A provider's refusal as words for the member (its details, which may name keys or
+    billing, go to the server log only)."""
+    print(f'[ai] {provider} refused ({code}): {" ".join(str(detail).split())[:400]}', flush=True)
+    if code == 429 or code >= 500:
+        return RuntimeError(AI_BUSY)
+    if code == 400:
+        return RuntimeError('AI tidak bisa memproses permintaan ini. Coba bagian dokumen yang lebih pendek.')
+    return RuntimeError(AI_UNAVAILABLE)            # 401/402/403: key, credits or billing — ours to fix
+
+
 def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3):
     """One reply from Google's Gemini API (GEMINI_API_KEY in .env, paid tier: prompts are not
     used to train models). Thinking is kept low (GEMINI_THINKING, default "low"; empty = the
@@ -874,11 +889,10 @@ def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3):
         except urllib.error.HTTPError as cause:
             detail = cause.read().decode('utf-8', 'replace')
             if not (thinking and cause.code == 400 and 'thinking' in detail.lower()):
-                raise RuntimeError(f'Layanan AI menolak permintaan ({cause.code}). {detail[:300]}') from cause
+                raise ai_refused('gemini', cause.code, detail) from cause
             data = ask('')                                  # this model sets its own thinking
     except urllib.error.HTTPError as cause:
-        detail = cause.read().decode('utf-8', 'replace')[:300]
-        raise RuntimeError(f'Layanan AI menolak permintaan ({cause.code}). {detail}') from cause
+        raise ai_refused('gemini', cause.code, cause.read().decode('utf-8', 'replace')) from cause
     except (urllib.error.URLError, TimeoutError, OSError) as cause:
         raise RuntimeError('Layanan AI tidak bisa dihubungi. Cek koneksi internet server.') from cause
     candidates = data.get('candidates') or []
@@ -906,8 +920,7 @@ def ai_chat(system, user, model, max_tokens=8000, temperature=0.3):
         with urllib.request.urlopen(request, timeout=300) as response:
             data = json.loads(response.read().decode('utf-8'))
     except urllib.error.HTTPError as cause:
-        detail = cause.read().decode('utf-8', 'replace')[:300]
-        raise RuntimeError(f'Layanan AI menolak permintaan ({cause.code}). {detail}') from cause
+        raise ai_refused('sumopod', cause.code, cause.read().decode('utf-8', 'replace')) from cause
     except (urllib.error.URLError, TimeoutError, OSError) as cause:
         raise RuntimeError('Layanan AI tidak bisa dihubungi. Cek koneksi internet server.') from cause
     return ((data.get('choices') or [{}])[0].get('message') or {}).get('content') or ''

@@ -738,9 +738,9 @@ window.addEventListener('DOMContentLoaded', () => {
   const pickedPages = () => Object.keys(picked()).map(Number).sort((a, b) => a - b);
   const pickedWords = () => Object.values(picked()).flat().join(' ').split(/\s+/).filter(Boolean).length;
   // Nothing marked yet: say how, and show the pages.
-  let askedForMarks = null;              // where the "highlight first" note shows (gone with the first mark)
+  const askedForMarks = new Set();       // where "highlight first" notes show (all gone with the first mark)
   function needMarks(where) {
-    askedForMarks = where;
+    askedForMarks.add(where);
     status(where, L('Highlight what matters first: select text on a page and press Highlight, or pick Whole page.',
                     'Stabilo dulu bagian yang penting: blok teks di halaman lalu tekan Stabilo, atau pilih Seluruh halaman.'), true);
     viewer.show('doc');
@@ -789,7 +789,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function marksChanged(pages) {
     pages.forEach(page => Object.values(translations).forEach(done => { delete done[page]; }));
     if (pages.length) showTranslation();
-    if (askedForMarks && marks().length) { status(askedForMarks, ''); askedForMarks = null; }
+    if (askedForMarks.size && marks().length) { askedForMarks.forEach(id => status(id, '')); askedForMarks.clear(); }
     drawAll(); hlInfo(); remember();
   }
   function toggleWhole(page) {

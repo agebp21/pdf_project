@@ -82,5 +82,26 @@ class Routing(unittest.TestCase):
         self.assertEqual(json.loads(call.call_args[0][0].data)['model'], 'claude-sonnet-5', 'Ask keeps its own model')
 
 
+
+class FriendlyErrors(unittest.TestCase):
+    def refusal(self, code, body):
+        import io, urllib.error
+        return urllib.error.HTTPError('u', code, 'x', {}, io.BytesIO(body.encode()))
+
+    def test_member_sees_plain_words_not_the_provider(self):
+        credits = '{"error": {"code": 402, "message": "Your prepayment credits are depleted.", "status": "RESOURCE_EXHAUSTED"}}'
+        token = '{"error": {"message": "Invalid proxy server token passed. Received API Key = sk-...CiyQ"}}'
+        cases = [('gemini-3.8-flash', 402, credits, server.AI_UNAVAILABLE), ('gemini-3.8-flash', 429, 'slow down', server.AI_BUSY),
+                 ('gemini-3.8-flash', 503, 'overloaded', server.AI_BUSY), ('gemini/gemini-3.8-flash', 401, token, server.AI_UNAVAILABLE)]
+        for model, code, body, words in cases:
+            with self.subTest(model=model, code=code), mock.patch.dict(os.environ, {'GEMINI_API_KEY': 'g', 'SUMOPOD_API_KEY': 's'}),                     mock.patch('urllib.request.urlopen', side_effect=self.refusal(code, body)), mock.patch('builtins.print') as log:
+                with self.assertRaises(RuntimeError) as caught:
+                    server.ai_chat('S', 'U', model)
+            self.assertEqual(str(caught.exception), words)
+            self.assertNotIn('sk-', str(caught.exception)); self.assertNotIn('prepayment', str(caught.exception))
+            self.assertIn(str(code), log.call_args[0][0], 'the details go to the server log')
+        self.assertEqual(messages_en.english(server.AI_UNAVAILABLE), 'The AI service is unavailable for now. Please try again later.')
+
+
 if __name__ == '__main__':
     unittest.main()
