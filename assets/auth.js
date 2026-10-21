@@ -67,29 +67,87 @@
       '.mf-auth-chip:hover{transform:translateY(-1px)}' +
       '.mf-auth-chip .mf-plan{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:999px;background:#E4F3C2;color:#1A3C34}' +
       '.mf-auth-chip .mf-plan.paid{background:#1A3C34;color:#FFF7EA}' +
-      '.mf-auth-chip .mf-name{overflow:hidden;text-overflow:ellipsis}';
+      '.mf-auth-chip .mf-name{overflow:hidden;text-overflow:ellipsis}' +
+      // the signed-in member's menu (account, library, log out)
+      '.mf-auth-wrap{position:relative;display:inline-flex}' +
+      'button.mf-auth-chip{cursor:pointer;font-family:"Plus Jakarta Sans",system-ui,sans-serif}' +
+      '.mf-auth-chip .mf-caret{font-size:9px;color:#78716C}' +
+      '.mf-auth-menu{position:absolute;right:0;top:calc(100% + 8px);z-index:60;min-width:230px;padding:6px;background:#fff;border:1px solid #E4DED0;' +
+      'border-radius:14px;box-shadow:0 14px 34px rgba(28,25,23,.14);font:600 13px/1.3 "Plus Jakarta Sans",system-ui,sans-serif}' +
+      '.mf-auth-menu[hidden]{display:none}' +
+      '.mf-auth-menu .mf-who{padding:8px 10px 10px;border-bottom:1px solid #F1ECE2;margin-bottom:4px;color:#78716C;font-size:12px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}' +
+      '.mf-auth-menu .mf-who b{display:block;color:#1C1917;font-size:13px;margin-bottom:2px}' +
+      '.mf-auth-menu a,.mf-auth-menu button{display:flex;align-items:center;gap:8px;width:100%;box-sizing:border-box;padding:9px 10px;border:0;border-radius:10px;' +
+      'background:none;color:#1C1917;text-decoration:none;font:inherit;cursor:pointer;text-align:left}' +
+      '.mf-auth-menu a:hover,.mf-auth-menu a:focus-visible,.mf-auth-menu button:hover,.mf-auth-menu button:focus-visible{background:#FAF4E8;outline:none}' +
+      '.mf-auth-menu .mf-out{color:#B91C1C;border-top:1px solid #F1ECE2;border-radius:0 0 10px 10px;margin-top:4px}' +
+      '.mf-auth-menu .mf-out:hover{background:#FEF2F2}';
     document.head.appendChild(style);
+  }
+
+  var EN = function (en, id) { return window.I18N && window.I18N.pick ? window.I18N.pick(en, id) : id; };
+  // Signed in: the name opens a small menu (account & plan, My Library, log out).
+  function memberMenu(slot, user) {
+    var wrap = document.createElement('span');
+    wrap.className = 'mf-auth-wrap';
+    var chip = document.createElement('button');
+    chip.type = 'button';
+    chip.className = 'mf-auth-chip';
+    chip.setAttribute('aria-haspopup', 'menu');
+    chip.setAttribute('aria-expanded', 'false');
+    chip.title = user.email + (user.verified ? ' · ' + T('auth.verified', 'verified') : '');
+    var name = document.createElement('span');
+    name.className = 'mf-name';
+    name.textContent = (user.verified ? '✓ ' : '') + (user.name || user.email.split('@')[0]);
+    var plan = document.createElement('span');
+    plan.className = 'mf-plan' + (user.plan !== 'basic' ? ' paid' : '');
+    plan.textContent = user.planName;
+    var caret = document.createElement('span');
+    caret.className = 'mf-caret'; caret.setAttribute('aria-hidden', 'true'); caret.textContent = '▾';
+    chip.append(name, plan, caret);
+
+    var menu = document.createElement('div');
+    menu.className = 'mf-auth-menu'; menu.setAttribute('role', 'menu'); menu.hidden = true;
+    var who = document.createElement('div');
+    who.className = 'mf-who';
+    var whoName = document.createElement('b'); whoName.textContent = user.name || user.email.split('@')[0];
+    who.append(whoName, document.createTextNode(user.email));
+    var item = function (label, href) {
+      var a = document.createElement('a'); a.href = href; a.setAttribute('role', 'menuitem'); a.textContent = label; return a;
+    };
+    var out = document.createElement('button');
+    out.type = 'button'; out.className = 'mf-out'; out.setAttribute('role', 'menuitem');
+    out.textContent = T('acct.logout', 'Log out');
+    out.addEventListener('click', function () {
+      out.disabled = true;
+      api('POST', '/api/auth/logout', {}).catch(function () {}).then(function () {
+        try { if (window.google && google.accounts && google.accounts.id) google.accounts.id.disableAutoSelect(); } catch (e) {}
+        cache = null;
+        location.href = '/';
+      });
+    });
+    menu.append(who, item(EN('Account & plan', 'Akun & paket'), 'account.html'), item('My Library', 'library.html'), out);
+
+    var open = function (show) {
+      menu.hidden = !show;
+      chip.setAttribute('aria-expanded', String(show));
+      if (show) { var first = menu.querySelector('a'); if (first) first.focus(); }
+    };
+    chip.addEventListener('click', function (e) { e.stopPropagation(); open(menu.hidden); });
+    document.addEventListener('click', function (e) { if (!wrap.contains(e.target)) open(false); });
+    document.addEventListener('keydown', function (e) { if (e.key === 'Escape' && !menu.hidden) { open(false); chip.focus(); } });
+    wrap.append(chip, menu);
+    slot.appendChild(wrap);
   }
 
   function render(slot, data) {
     slot.replaceChildren();
     if (data.offline) return;
+    if (data.user) { memberMenu(slot, data.user); return; }
     var link = document.createElement('a');
     link.className = 'mf-auth-chip';
-    if (data.user) {
-      link.href = 'account.html';
-      var name = document.createElement('span');
-      name.className = 'mf-name';
-      name.textContent = (data.user.verified ? '✓ ' : '') + (data.user.name || data.user.email.split('@')[0]);
-      link.title = data.user.email + (data.user.verified ? ' · ' + T('auth.verified', 'verified') : '');
-      var plan = document.createElement('span');
-      plan.className = 'mf-plan' + (data.user.plan !== 'basic' ? ' paid' : '');
-      plan.textContent = data.user.planName;
-      link.append(name, plan);
-    } else {
-      link.href = 'login.html?next=' + encodeURIComponent(location.pathname.replace(/^\//, '') + location.search);
-      link.textContent = T('auth.login', 'Log in');
-    }
+    link.href = 'login.html?next=' + encodeURIComponent(location.pathname.replace(/^\//, '') + location.search);
+    link.textContent = T('auth.login', 'Log in');
     slot.appendChild(link);
   }
 
