@@ -246,6 +246,12 @@
       });
       book.loadFromHTML(sheets);
       disposeLayout=FlipbookLayout.bind(book,$('#reader-stage'),ratio,{compact:true});
+      // The whole reader on the screen once the book is open (the page header above it scrolls away).
+      requestAnimationFrame(() => {
+        const box = document.querySelector('.preview'); if (!box || document.fullscreenElement) return;
+        const r = box.getBoundingClientRect();
+        if (r.top < 0 || r.bottom > innerHeight + 1) box.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', block: 'start'});
+      });
       FlipbookLayout.centerCover(book, container, reduced);
       curl = FlipbookCurl.bind(book, container, sheets, {reduced});
       if (!zoom) zoom = FlipbookZoom.bind($('#reader-stage'), zoomBox, {button: $('#zoom'),

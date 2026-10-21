@@ -102,7 +102,12 @@
         if(immersive) stage.style.height='';      // full screen: the stage fills the space between the title bar and the buttons (flipbook.css)
         else {
           const pages=book.getPageCount()===1||w<700||ratio>this.WIDE?1:2;
-          stage.style.height=(w/(ratio*pages))+'px';
+          // The title bar, the book and its buttons fit on the screen together (a short monitor
+          // needs no scrolling): the book gets the height left, never less than 320px.
+          const box=stage.closest('.preview');
+          const chrome=box?[...box.children].filter(el=>el!==stage&&el.offsetParent!==null).reduce((sum,el)=>sum+el.offsetHeight,0):0;
+          const room=Math.max(320,(window.innerHeight||0)-chrome-24);
+          stage.style.height=Math.min(w/(ratio*pages),room)+'px';
         }
       }
       const h=stage.clientHeight;
@@ -115,8 +120,9 @@
     const schedule=()=>{cancelAnimationFrame(frame);frame=requestAnimationFrame(fit)};
     const observer=new ResizeObserver(schedule);observer.observe(stage);
     document.addEventListener('fullscreenchange',schedule);
+    if(compact)window.addEventListener('resize',schedule);            // a taller or shorter window changes the room left
     book.on('flip',schedule);book.on('changeState',event=>{if(event.data==='read')schedule()});
-    schedule();return ()=>{observer.disconnect();cancelAnimationFrame(frame);document.removeEventListener('fullscreenchange',schedule)};
+    schedule();return ()=>{observer.disconnect();cancelAnimationFrame(frame);document.removeEventListener('fullscreenchange',schedule);window.removeEventListener('resize',schedule)};
   }
 };
 
