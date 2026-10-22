@@ -1,9 +1,10 @@
 'use strict';
 (typeof self!=='undefined'?self:global).FlipbookLayout = {
   motion(reduced) {
+    // A brisk turn (0.65 s, like Heyzine; owner 2026-10-22, was 1.15 s).
     // No corner fold on mouse hover: it got in the way of highlighting and
     // clicking; pages still turn by buttons, swipe, drag and corner click.
-    return {useMouseEvents:true,drawShadow:true,maxShadowOpacity:.38,flippingTime:reduced?1:1150,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true,swipeDistance:30};
+    return {useMouseEvents:true,drawShadow:true,maxShadowOpacity:.38,flippingTime:reduced?1:650,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true,swipeDistance:30};
   },
   decorate(pages) {
     pages.forEach((page,index)=>{
