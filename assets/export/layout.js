@@ -353,11 +353,32 @@
 // a page is still turning is queued, not dropped, and each turn runs as fast
 // as the requests come (the faster the clicks or the scroll, the quicker the
 // pages go, down to MIN ms), so a fast scroll riffles through the book.
-// `go(forward)` turns one page and returns false where it cannot (an end of
-// the book). PageFlip reads flippingTime when each turn starts.
+// A thick book is not read one spread at a time when scrolled hard: once
+// JUMP or more turns are waiting, the next turn takes them all in one sweep
+// (book.flip to the page that many spreads on). The queue holds up to a
+// quarter of the book, so a hard scroll crosses a 400-page book in a few turns.
+// `go(forward, steps)` turns `steps` spreads (1 = the normal next/prev) and
+// returns false where it cannot (an end of the book). PageFlip reads
+// flippingTime when each turn starts.
 // ES2018 only: exported books must run in old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookTurns = {
-  MIN: 200, MAX_QUEUE: 6,
+  MIN: 200, MAX_QUEUE: 6, JUMP: 3,
+  // Where a turn of `steps` spreads lands (cover and back cover stand alone).
+  target(book, forward, steps) {
+    const count = book.getPageCount(), index = book.getCurrentPageIndex();
+    const per = book.getOrientation() === 'landscape' ? 2 : 1;
+    return Math.max(0, Math.min(count - 1, index + (forward ? 1 : -1) * steps * per));
+  },
+  // Turns `steps` spreads with one sweep; false when the book is already at that end.
+  jump(book, forward, steps) {
+    const to = FlipbookTurns.target(book, forward, steps);
+    if (to === book.getCurrentPageIndex()) return false;
+    book.flip(to);
+  },
+  limit(book) {
+    let count = 0; try { count = book.getPageCount(); } catch (e) {}
+    return Math.max(FlipbookTurns.MAX_QUEUE, Math.ceil(count / 8));     // a quarter of the spreads
+  },
   bind(book, go) {
     const settings = book.getSettings(), base = settings.flippingTime;
     const MIN = Math.min(base, FlipbookTurns.MIN);
@@ -367,10 +388,11 @@
       clearTimeout(timer);
       if (!queue || !idle()) return;
       const forward = queue > 0, waiting = Math.abs(queue);
-      queue += forward ? -1 : 1;
+      const steps = waiting >= FlipbookTurns.JUMP ? waiting : 1;   // scrolled hard: sweep over them all at once
+      queue += (forward ? -1 : 1) * steps;
       // A lone click at reading pace gets the full turn; a burst gets shorter ones.
       settings.flippingTime = Math.round(Math.max(MIN, Math.min(base, gap * 0.9, base / waiting)));
-      if (go(forward) === false) { queue = 0; settings.flippingTime = base; return; }
+      if (go(forward, steps) === false) { queue = 0; settings.flippingTime = base; return; }
       // Nothing started (a page that cannot turn right now): try the rest shortly.
       if (idle()) timer = setTimeout(run, 60);
     }
@@ -384,7 +406,7 @@
         const now = Date.now();
         gap = last ? now - last : Infinity; last = now;
         if (queue && (queue > 0) !== forward) queue = 0;     // turning back cancels what was still waiting
-        const max = FlipbookTurns.MAX_QUEUE;
+        const max = FlipbookTurns.limit(book);
         queue = Math.max(-max, Math.min(max, queue + (forward ? 1 : -1)));
         run();
       },

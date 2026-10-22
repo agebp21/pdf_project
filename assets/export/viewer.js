@@ -176,7 +176,9 @@
     $('#home').onclick=()=>{zoom.snap();if(curl.busy()||curl.close())return;if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
     $('#end').onclick=()=>{zoom.snap();if(curl.busy()||book.getState()!=='read')return;book.turnToPage(sheets.length-1);update();animate()};
     // Clicks, keys and the wheel queue up while a page turns, and go faster the faster they come.
-    const turns=FlipbookTurns.bind(book,forward=>{if($(forward?'#next':'#prev').disabled)return false;if(forward)goNext();else goPrev()});
+    const turns=FlipbookTurns.bind(book,(forward,steps)=>{if($(forward?'#next':'#prev').disabled)return false;
+      if(steps>1&&book.getCurrentPageIndex()>0){zoom.snap();if(curl.busy())return;let ok;turn(()=>{ok=FlipbookTurns.jump(book,forward,steps)});return ok}
+      if(forward)goNext();else goPrev()});
     $('#prev').onclick=()=>turns.request(false);$('#next').onclick=()=>turns.request(true);
     FlipbookWheel.bind($('main'),{next:()=>turns.request(true),prev:()=>turns.request(false)});$('#replay').onclick=()=>animate(false);
     document.addEventListener('keydown',event=>{if(FlipbookNotes.typing(event))return;if(event.key==='ArrowRight')turns.request(true);if(event.key==='ArrowLeft')turns.request(false)});

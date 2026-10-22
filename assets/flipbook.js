@@ -241,8 +241,9 @@
       book = new St.PageFlip(container, {width, height:Math.round(width / ratio), size:'stretch', minWidth:230, maxWidth:500, minHeight:115, maxHeight:760, autoSize:true, usePortrait:true, startPage:0, showCover:true, ...FlipbookLayout.motion(reduced)});
       book.on('flip', updatePage); book.on('changeOrientation', () => { updatePage(); animate(true); });
       FlipbookSound.attach(book);
-      turns = FlipbookTurns.bind(book, forward => {
+      turns = FlipbookTurns.bind(book, (forward, steps) => {
         if ($(forward ? '#next' : '#prev').disabled) return false;
+        if (steps > 1 && book.getCurrentPageIndex() > 0) { zoom?.snap(); if (curl?.busy()) return; return FlipbookTurns.jump(book, forward, steps); }
         if (forward) goNext(); else goPrev();
       });
       book.on('changeState', event => {
