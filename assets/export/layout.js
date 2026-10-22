@@ -165,8 +165,9 @@
   }
 };
 
-// Paper page-turn sound: one real recording (assets/sounds/paper-flip.mp3,
-// 0.6 s mono), embedded so every exported reader plays it offline.
+// Paper page-turn sound: two real recordings, embedded so every exported
+// reader plays them offline: the thick cover (assets/sounds/paper-flip.mp3,
+// 0.6 s mono) and a thin inside page (assets/sounds/page-turn.mp3, 0.7 s).
 // Shared by the preview and every exported reader.
 // ES2018 only: exported books must run in old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookSound = (function () {
@@ -262,7 +263,111 @@
     'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
     'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo='
   ].join('');
-  let ctx = null, enabled = true, buffer = null, decoding = false, waiting = false;
+  // Inside pages: a thin sheet of newspaper (assets/sounds/page-turn.mp3, the owner's
+  // newspaper v1 recording, 0.80-1.50 s, mono, faded, peak -0.6 dB).
+  const MP3_PAGE = [
+    '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',
+    '1XXLCiVB0qnthrlvq6lHhGteKQGWOGMFZIkSCggQGKiEgCRa3G+h2annZbk2J938ddv/+3LE0QCN6Hs3h7Bwid6SZNWWIpAy1khUJyHqf6tjL3UDo6TISIsj',
+    'MNMolUl3oan7qeRknB7mkJY4uw25ohEQyH0DbE82KwZSHZymVUVvuqKioUECDkdv/VFVn/RexgoYEHIqKgMECOQ7P///VEW7OUMFBkOR2MUMgOfiop/+qkxB',
+    'TUUzLjEwMKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+    'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+    'qqqqqv/7cMTwA5MJhQ4NMHpCNTHaBZSKoKqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+    'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+    'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqq',
+    'qqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqqo='
+  ].join('');
+  const SOURCES = { cover: MP3, page: MP3_PAGE };
+  let ctx = null, enabled = true, waiting = null;
+  const buffers = {}, decoding = {};
   try { enabled = localStorage.getItem(KEY) !== 'off'; } catch (e) {}
   const buttons = [];
 
@@ -275,48 +380,40 @@
     decode(ctx);
     return ctx;
   }
-  // The recording, decoded once (callback form: old Safari has no promise).
-  function decode(c) {
-    if (buffer || decoding || !c.decodeAudioData) return;
-    decoding = true;
+  // Each recording, decoded once (callback form: old Safari has no promise).
+  function decode(c) { Object.keys(SOURCES).forEach(kind => decodeOne(c, kind)); }
+  function decodeOne(c, kind) {
+    if (buffers[kind] || decoding[kind] || !c.decodeAudioData) return;
+    decoding[kind] = true;
     let bytes;
     try {
-      const raw = atob(MP3);
+      const raw = atob(SOURCES[kind]);
       bytes = new Uint8Array(raw.length);
       for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
-    } catch (e) { decoding = false; return; }
-    const ok = decoded => { buffer = decoded; decoding = false; if (waiting) { const kind = waiting; waiting = false; play(kind); } };
-    const fail = () => { decoding = false; waiting = false; };
+    } catch (e) { decoding[kind] = false; return; }
+    const ok = decoded => { buffers[kind] = decoded; decoding[kind] = false; if (waiting === kind) { waiting = null; play(kind); } };
+    const fail = () => { decoding[kind] = false; if (waiting === kind) waiting = null; };
     try {
       const result = c.decodeAudioData(bytes.buffer, ok, fail);
       if (result && result.catch) result.catch(fail);
     } catch (e) { fail(); }
   }
-  // Two voices from the one recording (owner, 2026-10-22: the recording sounds
-  // like the thick cover): 'cover' plays it as recorded; 'page', an inside
-  // page, plays it as a thin sheet: higher and quicker (about 0.43 s), its low
-  // thump cut by a high-pass filter, a little softer.
+  // 'cover' (front or back cover turning) or 'page' (any inside page).
   // `target` lets tests use their own audio context.
   function play(kind, target) {
-    const thin = kind !== 'cover';
+    kind = kind === 'cover' ? 'cover' : 'page';
     if (!enabled) return false;
     const c = target || context();
     if (!c) return false;
-    if (!buffer) { waiting = kind || 'page'; decode(c); return false; }   // the first turn plays once it is decoded
+    const buffer = buffers[kind];
+    if (!buffer) { waiting = kind; decode(c); return false; }   // the first turn plays once it is decoded
     const source = c.createBufferSource();
     source.buffer = buffer;
-    const rate = (thin ? 1.4 : 1) * (0.96 + Math.random() * 0.08);   // no two turns quite alike
+    const rate = 0.96 + Math.random() * 0.08;                    // no two turns quite alike
     source.playbackRate.value = rate;
     const gain = c.createGain();
-    gain.gain.value = thin ? 0.3 : 0.35;                      // soft: the recording is loud
-    let first = gain, last = gain;
-    if (thin && c.createBiquadFilter) {
-      // Two passes of 1.4 kHz: a sheet of paper has no body to thump with.
-      const low = c.createBiquadFilter(), lower = c.createBiquadFilter();
-      low.type = lower.type = 'highpass';
-      low.frequency.value = lower.frequency.value = 1400;
-      low.connect(lower); lower.connect(gain); first = low;
-    }
+    gain.gain.value = kind === 'cover' ? 0.35 : 0.3;            // soft: the recordings are loud
+    let last = gain;
     // The sheet travels from the right-hand page to the left.
     if (c.createStereoPanner) {
       const pan = c.createStereoPanner(), t = c.currentTime;
@@ -324,7 +421,7 @@
       pan.pan.linearRampToValueAtTime(-0.35, t + (buffer.duration || 0.6) / rate);
       gain.connect(pan); last = pan;
     }
-    source.connect(first); last.connect(c.destination);
+    source.connect(gain); last.connect(c.destination);
     source.start();
     return true;
   }

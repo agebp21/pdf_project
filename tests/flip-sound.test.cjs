@@ -1,13 +1,14 @@
 // Page-turn sound: the one recorded paper sound (embedded MP3), when it
 // plays, when it must not, and the mute toggle.
 const assert = require('node:assert/strict');
-let sources = 0, decoded = null;
+let sources = 0;
+const decoded = [];
 const node = () => ({ connect() {}, gain: param(), frequency: param(), Q: { value: 0 }, playbackRate: { value: 1 },
   start() {}, stop() {}, type: '' });
 function param() { return { value: 0, setValueAtTime() {}, exponentialRampToValueAtTime() {} }; }
 class FakeAudioContext {
   constructor() { this.state = 'running'; this.currentTime = 0; this.sampleRate = 8000; this.destination = {}; }
-  decodeAudioData(bytes, ok) { decoded = new Uint8Array(bytes); ok({ duration: 0.6 }); }
+  decodeAudioData(bytes, ok) { decoded.push(Buffer.from(new Uint8Array(bytes))); ok({ duration: 0.6, size: bytes.byteLength }); }
   createBufferSource() { sources++; return node(); }
   createBiquadFilter() { return node(); }
   createGain() { return node(); }
@@ -33,8 +34,9 @@ state('fold_corner'); state('read');
 assert.equal(turns(), 0, 'peeking at a corner is silent');
 state('flipping'); state('read');
 assert.equal(turns(), 1, 'buttons/keys/swipes (flipping) play once');
-const mp3 = require('node:fs').readFileSync(require('node:path').join(__dirname, '../assets/sounds/paper-flip.mp3'));
-assert.ok(decoded && Buffer.from(decoded).equals(mp3), 'the embedded recording is assets/sounds/paper-flip.mp3');
+const file = name => require('node:fs').readFileSync(require('node:path').join(__dirname, '../assets/sounds/' + name));
+assert.ok(decoded.some(b => b.equals(file('paper-flip.mp3'))), 'the cover recording is assets/sounds/paper-flip.mp3');
+assert.ok(decoded.some(b => b.equals(file('page-turn.mp3'))), 'the inside-page recording is assets/sounds/page-turn.mp3');
 assert.equal(sound.styles, undefined, 'no synthesised styles any more');
 release();
 assert.equal(turns(), 1, 'a click release after a flip does not double the sound');
@@ -75,11 +77,9 @@ assert.equal(cover(24, 5, true, false), false, 'portrait: inside');
 const made = [];
 const ctx = { state: 'running', currentTime: 0, destination: {}, createGain: () => { const n = node(); made.push(['gain', n]); return n; },
   createBiquadFilter: () => { const n = node(); made.push(['filter', n]); return n; }, createBufferSource: () => { const n = node(); made.push(['source', n]); return n; } };
-sound.play('page', ctx);
-const thin = made.find(([k]) => k === 'source')[1].playbackRate.value;
-assert.ok(thin > 1.3 && thin < 1.5, 'a thin sheet plays higher and quicker: ' + thin);
-assert.equal(made.filter(([k, n]) => k === 'filter' && n.type === 'highpass').length, 2, 'its low thump is filtered out');
-made.length = 0; sound.play('cover', ctx);
-const rate = made.find(([k]) => k === 'source')[1].playbackRate.value;
-assert.ok(rate > 0.95 && rate < 1.05, 'the cover plays as recorded'); assert.equal(made.filter(([k]) => k === 'filter').length, 0);
-console.log('PASS flip sound voices: covers as recorded, inside pages thin');
+const played = kind => { made.length = 0; sound.play(kind, ctx); return made.find(([k]) => k === 'source')[1]; };
+assert.equal(played('page').buffer.size, file('page-turn.mp3').length, 'an inside page plays the thin newspaper recording');
+assert.equal(played('cover').buffer.size, file('paper-flip.mp3').length, 'a cover plays the thick recording');
+const rate = played('page').playbackRate.value;
+assert.ok(rate > 0.95 && rate < 1.05, 'both play as recorded'); assert.equal(made.filter(([k]) => k === 'filter').length, 0, 'no filters');
+console.log('PASS flip sound voices: covers thick recording, inside pages newspaper recording');
