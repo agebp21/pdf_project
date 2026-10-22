@@ -65,3 +65,7 @@ body.clay .preview:not(:fullscreen):not(.reading-fullscreen){background:transpar
 body.clay .preview:not(:fullscreen):not(.reading-fullscreen) .preview-top{background:transparent!important;color:#78716C!important;padding:0 2px 8px;font-size:11px}
 body.clay .preview:not(:fullscreen):not(.reading-fullscreen) .controls{border-top:0;padding:10px 0 0}
 body.clay .preview:not(:fullscreen):not(.reading-fullscreen) #reader-stage:has(#empty-book){border:1.5px dashed #D6CDBB;border-radius:22px;background:#FFFDF8}
+/* Full screen shows only the book and its buttons: no title bar with the file name and page (owner, 2026-10-22). */
+.preview:fullscreen .preview-top,.preview.reading-fullscreen .preview-top{display:none!important}
+.preview:fullscreen,.preview.reading-fullscreen{border:0!important;border-radius:0!important;box-shadow:none!important}
+.preview:fullscreen .controls,.preview.reading-fullscreen .controls{border-top:0!important}
