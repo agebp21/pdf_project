@@ -412,7 +412,7 @@
     const rate = 0.96 + Math.random() * 0.08;                    // no two turns quite alike
     source.playbackRate.value = rate;
     const gain = c.createGain();
-    gain.gain.value = kind === 'cover' ? 0.35 : 0.3;            // soft: the recordings are loud
+    gain.gain.value = kind === 'cover' ? 0.35 : 0.14;           // soft; an inside page softer still (owner: 0.3 was too loud)
     let last = gain;
     // The sheet travels from the right-hand page to the left.
     if (c.createStereoPanner) {

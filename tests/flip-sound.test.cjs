@@ -83,3 +83,7 @@ assert.equal(played('cover').buffer.size, file('paper-flip.mp3').length, 'a cove
 const rate = played('page').playbackRate.value;
 assert.ok(rate > 0.95 && rate < 1.05, 'both play as recorded'); assert.equal(made.filter(([k]) => k === 'filter').length, 0, 'no filters');
 console.log('PASS flip sound voices: covers thick recording, inside pages newspaper recording');
+made.length = 0; sound.play('page', ctx); const pageGain = made.find(([k]) => k === 'gain')[1].gain.value;
+made.length = 0; sound.play('cover', ctx); const coverGain = made.find(([k]) => k === 'gain')[1].gain.value;
+assert.ok(pageGain <= 0.15 && pageGain < coverGain, 'inside pages are soft (owner: 0.3 was too loud): ' + pageGain);
+console.log('PASS flip sound volume: inside pages softer than the cover');
