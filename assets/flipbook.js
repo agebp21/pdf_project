@@ -259,7 +259,7 @@
         if (r.top < 0 || r.bottom > innerHeight + 1) box.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', block: 'start'});
       });
       FlipbookLayout.centerCover(book, container, reduced);
-      curl = FlipbookCurl.bind(book, container, sheets, {reduced, onTurn: () => FlipbookSound.play()});
+      curl = FlipbookCurl.bind(book, container, sheets, {reduced, onTurn: () => FlipbookSound.play('cover')});
       if (!zoom) zoom = FlipbookZoom.bind($('#reader-stage'), zoomBox, {button: $('#zoom'),
         state: () => { try { return book && book.getState(); } catch (e) { return 'read'; } },
         // The pages on screen: pan no further than the book.

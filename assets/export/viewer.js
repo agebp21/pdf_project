@@ -141,7 +141,7 @@
     FlipbookSound.bindButton($('#sound'));
     FlipbookLayout.bind(book,$('#stage'),data.ratio);
     FlipbookLayout.centerCover(book, $('#book'), reduced);
-    const curl = FlipbookCurl.bind(book, $('#book'), sheets, {reduced, onTurn: () => FlipbookSound.play()});
+    const curl = FlipbookCurl.bind(book, $('#book'), sheets, {reduced, onTurn: () => FlipbookSound.play('cover')});
     $('#fullscreen').onclick=async()=>{
       try { if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen(); }
       catch(cause){$('#error').hidden=false;$('#error').textContent='Fullscreen is not available on this device.';}

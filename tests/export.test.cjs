@@ -10,7 +10,7 @@ FlipbookLayout.decorate(pages);
 // Covers bend like paper when turned (a rigid 'hard' plate looked stiff) but keep the board look.
 assert.deepEqual(pages.map(page=>page.dataset.density),Array(8).fill('soft'));
 assert.deepEqual(pages.map(page=>page.classes.includes('book-board')),[true,true,false,false,false,false,true,true]);
-assert.equal(FlipbookLayout.motion(false).flippingTime,650,'a brisk turn, like Heyzine');
+assert.equal(FlipbookLayout.motion(false).flippingTime,450,'a quick turn (owner: faster than Heyzine)');
 assert.equal(FlipbookLayout.motion(false).useMouseEvents,true);
 assert.equal(FlipbookLayout.motion(true).flippingTime,1);
 { // Closed covers sit centred and slide to the spread when opened.

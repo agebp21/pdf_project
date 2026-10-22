@@ -1,10 +1,10 @@
 'use strict';
 (typeof self!=='undefined'?self:global).FlipbookLayout = {
   motion(reduced) {
-    // A brisk turn (0.65 s, like Heyzine; owner 2026-10-22, was 1.15 s).
+    // A quick turn (0.45 s; owner 2026-10-22: 1.15 s, then 0.65 s, then faster still).
     // No corner fold on mouse hover: it got in the way of highlighting and
     // clicking; pages still turn by buttons, swipe, drag and corner click.
-    return {useMouseEvents:true,drawShadow:true,maxShadowOpacity:.38,flippingTime:reduced?1:650,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true,swipeDistance:30};
+    return {useMouseEvents:true,drawShadow:true,maxShadowOpacity:.38,flippingTime:reduced?1:450,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true,swipeDistance:30};
   },
   decorate(pages) {
     pages.forEach((page,index)=>{
@@ -285,33 +285,46 @@
       bytes = new Uint8Array(raw.length);
       for (let i = 0; i < raw.length; i++) bytes[i] = raw.charCodeAt(i);
     } catch (e) { decoding = false; return; }
-    const ok = decoded => { buffer = decoded; decoding = false; if (waiting) { waiting = false; play(); } };
+    const ok = decoded => { buffer = decoded; decoding = false; if (waiting) { const kind = waiting; waiting = false; play(kind); } };
     const fail = () => { decoding = false; waiting = false; };
     try {
       const result = c.decodeAudioData(bytes.buffer, ok, fail);
       if (result && result.catch) result.catch(fail);
     } catch (e) { fail(); }
   }
+  // Two voices from the one recording (owner, 2026-10-22: the recording sounds
+  // like the thick cover): 'cover' plays it as recorded; 'page', an inside
+  // page, plays it as a thin sheet: higher and quicker (about 0.43 s), its low
+  // thump cut by a high-pass filter, a little softer.
   // `target` lets tests use their own audio context.
-  function play(target) {
+  function play(kind, target) {
+    const thin = kind !== 'cover';
     if (!enabled) return false;
     const c = target || context();
     if (!c) return false;
-    if (!buffer) { waiting = true; decode(c); return false; }   // the first turn plays once it is decoded
+    if (!buffer) { waiting = kind || 'page'; decode(c); return false; }   // the first turn plays once it is decoded
     const source = c.createBufferSource();
     source.buffer = buffer;
-    source.playbackRate.value = 0.96 + Math.random() * 0.08;    // no two turns quite alike
+    const rate = (thin ? 1.4 : 1) * (0.96 + Math.random() * 0.08);   // no two turns quite alike
+    source.playbackRate.value = rate;
     const gain = c.createGain();
-    gain.gain.value = 0.35;                                   // soft: the recording is loud
-    let last = gain;
+    gain.gain.value = thin ? 0.3 : 0.35;                      // soft: the recording is loud
+    let first = gain, last = gain;
+    if (thin && c.createBiquadFilter) {
+      // Two passes of 1.4 kHz: a sheet of paper has no body to thump with.
+      const low = c.createBiquadFilter(), lower = c.createBiquadFilter();
+      low.type = lower.type = 'highpass';
+      low.frequency.value = lower.frequency.value = 1400;
+      low.connect(lower); lower.connect(gain); first = low;
+    }
     // The sheet travels from the right-hand page to the left.
     if (c.createStereoPanner) {
       const pan = c.createStereoPanner(), t = c.currentTime;
       pan.pan.setValueAtTime(0.35, t);
-      pan.pan.linearRampToValueAtTime(-0.35, t + (buffer.duration || 0.6));
+      pan.pan.linearRampToValueAtTime(-0.35, t + (buffer.duration || 0.6) / rate);
       gain.connect(pan); last = pan;
     }
-    source.connect(gain); last.connect(c.destination);
+    source.connect(first); last.connect(c.destination);
     source.start();
     return true;
   }
@@ -329,11 +342,27 @@
   // Buttons, keys and swipes put PageFlip in 'flipping'; a mouse/finger drag
   // only reports 'user_fold' and settles without 'flipping', so play when a
   // drag is released (paper sounds when let go, whether it turns or not).
+  // Is the sheet turning now a cover? Opening or closing the front cover, or
+  // turning onto or off the back cover (the outermost sheets, in either layout).
+  function coverTurn(book) {
+    try {
+      const count = book.getPageCount(), index = book.getCurrentPageIndex();
+      const back = book.getRender().getDirection() === 1, spread = book.getOrientation() === 'landscape';
+      if (count < 4) return true;
+      if (spread) {
+        // L: the first index of the last spread (the back cover, with the blank back sheet), as in centerCover.
+        const L = count % 2 === 0 ? count - 1 : count - 2;
+        return back ? index <= 2 || index >= L : index === 0 || index >= L - 2;
+      }
+      return back ? index <= 1 || index >= count - 2 : index === 0 || index >= count - 3;
+    } catch (e) { return false; }
+  }
   function attach(book) {
     let state = 'read';
-    book.on('changeState', event => { state = event.data; if (state === 'flipping') play(); });
+    const turn = () => play(coverTurn(book) ? 'cover' : 'page');
+    book.on('changeState', event => { state = event.data; if (state === 'flipping') turn(); });
     if (typeof document === 'undefined') return;
-    const release = () => { if (state === 'user_fold') { state = 'released'; play(); } };
+    const release = () => { if (state === 'user_fold') { state = 'released'; turn(); } };
     ['pointerup', 'mouseup', 'touchend'].forEach(name => document.addEventListener(name, release, true));
   }
   function bindButton(button) {
@@ -346,7 +375,7 @@
     const unlock = () => { if (enabled) context(); document.removeEventListener('pointerdown', unlock); document.removeEventListener('keydown', unlock); };
     document.addEventListener('pointerdown', unlock); document.addEventListener('keydown', unlock);
   }
-  return { play, attach, setEnabled, bindButton, isEnabled: () => enabled };
+  return { play, attach, coverTurn, setEnabled, bindButton, isEnabled: () => enabled };
 })();
 
 // Quick turns that keep up with the reader: a click, key or wheel notch while

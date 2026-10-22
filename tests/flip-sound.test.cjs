@@ -56,3 +56,30 @@ button.click();
 state('flipping');
 assert.equal(turns(), 3, 'unmuted again');
 console.log('PASS flip sound: embedded recording, flipping + drag release, silent corner peek and reading, mute toggle persisted');
+
+// Covers sound as recorded; inside pages as a thin sheet (higher, quicker, no low thump).
+const cover = (count, index, back, spread = true) => sound.coverTurn({ getPageCount: () => count, getCurrentPageIndex: () => index,
+  getRender: () => ({ getDirection: () => back ? 1 : 0 }), getOrientation: () => spread ? 'landscape' : 'portrait' });
+assert.equal(cover(24, 0, false), true, 'opening the front cover');
+assert.equal(cover(24, 1, true), true, 'closing the front cover');
+assert.equal(cover(24, 3, false), false, 'an inside page');
+assert.equal(cover(24, 3, true), false, 'an inside page turned back');
+// 24 PDF pages + the blank back sheet = 25: the last spread is [23 back cover, 24 blank].
+assert.equal(cover(25, 21, false), true, 'onto the back cover');
+assert.equal(cover(25, 19, false), false, 'not yet the back cover');
+assert.equal(cover(25, 23, true), true, 'off the back cover');
+assert.equal(cover(25, 21, true), false, 'an inside page turned back near the end');
+assert.equal(cover(26, 23, false), true, 'even count: onto the lone last page');
+assert.equal(cover(25, 22, false, false), true, 'portrait: onto the back cover');
+assert.equal(cover(24, 5, true, false), false, 'portrait: inside');
+const made = [];
+const ctx = { state: 'running', currentTime: 0, destination: {}, createGain: () => { const n = node(); made.push(['gain', n]); return n; },
+  createBiquadFilter: () => { const n = node(); made.push(['filter', n]); return n; }, createBufferSource: () => { const n = node(); made.push(['source', n]); return n; } };
+sound.play('page', ctx);
+const thin = made.find(([k]) => k === 'source')[1].playbackRate.value;
+assert.ok(thin > 1.3 && thin < 1.5, 'a thin sheet plays higher and quicker: ' + thin);
+assert.equal(made.filter(([k, n]) => k === 'filter' && n.type === 'highpass').length, 2, 'its low thump is filtered out');
+made.length = 0; sound.play('cover', ctx);
+const rate = made.find(([k]) => k === 'source')[1].playbackRate.value;
+assert.ok(rate > 0.95 && rate < 1.05, 'the cover plays as recorded'); assert.equal(made.filter(([k]) => k === 'filter').length, 0);
+console.log('PASS flip sound voices: covers as recorded, inside pages thin');
