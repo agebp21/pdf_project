@@ -240,6 +240,7 @@
       FlipbookLayout.decorate(sheets);
       book = new St.PageFlip(container, {width, height:Math.round(width / ratio), size:'stretch', minWidth:230, maxWidth:500, minHeight:115, maxHeight:760, autoSize:true, usePortrait:true, startPage:0, showCover:true, ...FlipbookLayout.motion(reduced)});
       book.on('flip', updatePage); book.on('changeOrientation', () => { updatePage(); animate(true); });
+      FlipbookSound.attach(book);
       book.on('changeState', event => {
         if (event.data === 'read') { updatePage(); animate(true); }
         else { stopAnimation(); $('#home').disabled = $('#end').disabled = $('#prev').disabled = $('#next').disabled = true; }
@@ -253,7 +254,7 @@
         if (r.top < 0 || r.bottom > innerHeight + 1) box.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', block: 'start'});
       });
       FlipbookLayout.centerCover(book, container, reduced);
-      curl = FlipbookCurl.bind(book, container, sheets, {reduced});
+      curl = FlipbookCurl.bind(book, container, sheets, {reduced, onTurn: () => FlipbookSound.play()});
       if (!zoom) zoom = FlipbookZoom.bind($('#reader-stage'), zoomBox, {button: $('#zoom'),
         state: () => { try { return book && book.getState(); } catch (e) { return 'read'; } },
         // The pages on screen: pan no further than the book.
@@ -841,6 +842,9 @@
   const goNext = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (!curl?.open()) book.flipNext(); };
   $('#prev').addEventListener('click', goPrev);
   $('#next').addEventListener('click', goNext);
+  FlipbookWheel.bind($('#reader-stage'), {enabled: () => !!book,
+    next: () => { if (!$('#next').disabled) goNext(); }, prev: () => { if (!$('#prev').disabled) goPrev(); }});
+  FlipbookSound.bindButton($('#sound'));
   $('#home').addEventListener('click', () => {
     zoom?.reset();
     if (!book || opening || curl?.busy()) return;

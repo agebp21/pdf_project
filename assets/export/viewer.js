@@ -77,6 +77,7 @@
       // doesn't turn it (double-tap zooms); swipes and corner taps still do.
       disableFlipByClick:matchMedia('(hover: none)').matches});
     book.on('flip',update);book.on('changeOrientation',()=>{update();animate()});
+    FlipbookSound.attach(book);
     // Skip pages already on screen; a hovered corner (fold_corner) may still flip.
     // Touch devices set disableFlipByClick (a tap on a page must not turn it),
     // but PageFlip applies that to flipNext/flipPrev/flip too: buttons, links
@@ -137,9 +138,10 @@
     // covers the bottom of a page (measured: the bar wraps on small phones).
     const reserveBar = () => { document.querySelector('main').style.bottom = ($('footer').offsetHeight + 16) + 'px'; };
     reserveBar(); addEventListener('resize', reserveBar);
+    FlipbookSound.bindButton($('#sound'));
     FlipbookLayout.bind(book,$('#stage'),data.ratio);
     FlipbookLayout.centerCover(book, $('#book'), reduced);
-    const curl = FlipbookCurl.bind(book, $('#book'), sheets, {reduced});
+    const curl = FlipbookCurl.bind(book, $('#book'), sheets, {reduced, onTurn: () => FlipbookSound.play()});
     $('#fullscreen').onclick=async()=>{
       try { if(document.fullscreenElement)await document.exitFullscreen();else if(document.documentElement.requestFullscreen)await document.documentElement.requestFullscreen(); }
       catch(cause){$('#error').hidden=false;$('#error').textContent='Fullscreen is not available on this device.';}
@@ -173,7 +175,8 @@
     const goNext=()=>{zoom.snap();if(curl.busy())return;if(!curl.open())turn(()=>book.flipNext())};
     $('#home').onclick=()=>{zoom.snap();if(curl.busy()||curl.close())return;if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
     $('#end').onclick=()=>{zoom.snap();if(curl.busy()||book.getState()!=='read')return;book.turnToPage(sheets.length-1);update();animate()};
-    $('#prev').onclick=goPrev;$('#next').onclick=goNext;$('#replay').onclick=()=>animate(false);
+    $('#prev').onclick=goPrev;$('#next').onclick=goNext;
+    FlipbookWheel.bind($('main'),{next:()=>{if(!$('#next').disabled)goNext()},prev:()=>{if(!$('#prev').disabled)goPrev()}});$('#replay').onclick=()=>animate(false);
     document.addEventListener('keydown',event=>{if(FlipbookNotes.typing(event))return;if(event.key==='ArrowRight'&&!$('#next').disabled)goNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)goPrev()});
     document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});}else animate()});
   } catch(cause) { $('#error').hidden=false;$('#error').textContent='The book could not be opened. '+cause.message; }
