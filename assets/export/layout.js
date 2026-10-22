@@ -351,12 +351,12 @@
 
 // Quick turns that keep up with the reader: a click, key or wheel notch while
 // a page is still turning is queued, not dropped, and each turn runs as fast
-// as the requests come (the faster the clicks or the scroll, the quicker the
-// pages go, down to MIN ms), so a fast scroll riffles through the book.
-// A thick book is not read one spread at a time when scrolled hard: once
+// as the requests come (the faster the clicks, the quicker the pages go,
+// down to MIN ms). The wheel asks for one turn per scroll (FlipbookWheel).
+// Clicked hard through a thick book: once
 // JUMP or more turns are waiting, the next turn takes them all in one sweep
 // (book.flip to the page that many spreads on). The queue holds up to a
-// quarter of the book, so a hard scroll crosses a 400-page book in a few turns.
+// quarter of the book.
 // `go(forward, steps)` turns `steps` spreads (1 = the normal next/prev) and
 // returns false where it cannot (an end of the book). PageFlip reads
 // flippingTime when each turn starts.
@@ -417,31 +417,32 @@
 };
 
 // Mouse wheel / two-finger trackpad scroll turns pages: down or right goes
-// forward, up or left goes back. Every mouse notch is a turn, so spinning
-// the wheel riffles through the book (FlipbookTurns queues and speeds them
-// up); a trackpad's stream of small deltas turns once per STEP of travel.
+// forward, up or left goes back. One scroll is one turn (owner, 2026-10-22:
+// a spin that riffled through many pages looked bad): the first notch or
+// STEP px of trackpad travel turns, the rest of that scroll (more notches,
+// a trackpad's inertia) is ignored until the wheel rests for REST ms.
 // Ctrl+wheel stays zoom, and a zoomed page pans (FlipbookZoom handles both
 // and marks the event as taken).
 // ES2018 only: exported books must run in old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookWheel = {
-  STEP: 120,
+  STEP: 40, REST: 250,
   bind(surface, options) {
-    let sum = 0, idle = null;
+    let sum = 0, armed = true, idle = null;
     const onWheel = event => {
       if (event.ctrlKey || event.defaultPrevented) return;
       if (options.enabled && !options.enabled()) return;
       if (event.cancelable) event.preventDefault();   // over the book the wheel turns pages, it does not scroll
       clearTimeout(idle);
-      idle = setTimeout(() => { sum = 0; }, 200);
+      idle = setTimeout(() => { sum = 0; armed = true; }, FlipbookWheel.REST);
+      if (!armed) return;
       const unit = event.deltaMode === 1 ? 33 : event.deltaMode === 2 ? 400 : 1;
       const d = (Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX) * unit;
       if (!d) return;
       if (sum && (sum > 0) !== (d > 0)) sum = 0;
-      // A mouse notch (a big delta) turns at once; trackpad deltas add up.
-      sum += Math.abs(d) >= 50 ? Math.sign(d) * FlipbookWheel.STEP : d;
+      sum += d;
       if (Math.abs(sum) < FlipbookWheel.STEP) return;
       const forward = sum > 0;
-      sum = 0;
+      sum = 0; armed = false;
       if (forward) options.next(); else options.prev();
     };
     surface.addEventListener('wheel', onWheel, { passive: false });
