@@ -57,3 +57,11 @@ body.clay #export-fields button:not(:disabled):hover,body.clay #export-fields bu
   .topbar>span{flex-wrap:wrap;justify-content:flex-end;gap:6px!important;margin-left:auto}
   .topbar .badge,.topbar .back-link{white-space:nowrap;padding:5px 10px!important;font-size:11.5px!important;box-shadow:2px 2px 0 var(--ink,#1C1917)!important}
 }
+
+/* Flipbook preview without a frame (owner, 2026-10-22): the book sits on the page itself,
+   so it gets the room the card's border, title bar and button strip used to take.
+   Full screen keeps its own dark backdrop (flipbook.css). */
+body.clay .preview:not(:fullscreen):not(.reading-fullscreen){background:transparent!important;border:0!important;border-radius:0!important;box-shadow:none!important}
+body.clay .preview:not(:fullscreen):not(.reading-fullscreen) .preview-top{background:transparent!important;color:#78716C!important;padding:0 2px 8px;font-size:11px}
+body.clay .preview:not(:fullscreen):not(.reading-fullscreen) .controls{border-top:0;padding:10px 0 0}
+body.clay .preview:not(:fullscreen):not(.reading-fullscreen) #reader-stage:has(#empty-book){border:1.5px dashed #D6CDBB;border-radius:22px;background:#FFFDF8}
