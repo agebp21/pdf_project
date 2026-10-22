@@ -349,29 +349,77 @@
   return { play, attach, setEnabled, bindButton, isEnabled: () => enabled };
 })();
 
+// Quick turns that keep up with the reader: a click, key or wheel notch while
+// a page is still turning is queued, not dropped, and each turn runs as fast
+// as the requests come (the faster the clicks or the scroll, the quicker the
+// pages go, down to MIN ms), so a fast scroll riffles through the book.
+// `go(forward)` turns one page and returns false where it cannot (an end of
+// the book). PageFlip reads flippingTime when each turn starts.
+// ES2018 only: exported books must run in old Android WebViews.
+(typeof self!=='undefined'?self:global).FlipbookTurns = {
+  MIN: 200, MAX_QUEUE: 6,
+  bind(book, go) {
+    const settings = book.getSettings(), base = settings.flippingTime;
+    const MIN = Math.min(base, FlipbookTurns.MIN);
+    let queue = 0, last = 0, gap = Infinity, timer = 0;
+    const idle = () => { try { return book.getState() === 'read'; } catch (e) { return true; } };
+    function run() {
+      clearTimeout(timer);
+      if (!queue || !idle()) return;
+      const forward = queue > 0, waiting = Math.abs(queue);
+      queue += forward ? -1 : 1;
+      // A lone click at reading pace gets the full turn; a burst gets shorter ones.
+      settings.flippingTime = Math.round(Math.max(MIN, Math.min(base, gap * 0.9, base / waiting)));
+      if (go(forward) === false) { queue = 0; settings.flippingTime = base; return; }
+      // Nothing started (a page that cannot turn right now): try the rest shortly.
+      if (idle()) timer = setTimeout(run, 60);
+    }
+    book.on('changeState', event => {
+      if (event.data !== 'read') return;
+      if (!queue) settings.flippingTime = base;
+      setTimeout(run, 0);
+    });
+    return {
+      request(forward) {
+        const now = Date.now();
+        gap = last ? now - last : Infinity; last = now;
+        if (queue && (queue > 0) !== forward) queue = 0;     // turning back cancels what was still waiting
+        const max = FlipbookTurns.MAX_QUEUE;
+        queue = Math.max(-max, Math.min(max, queue + (forward ? 1 : -1)));
+        run();
+      },
+      pending: () => queue,
+      clear() { queue = 0; clearTimeout(timer); settings.flippingTime = base; }
+    };
+  }
+};
+
 // Mouse wheel / two-finger trackpad scroll turns pages: down or right goes
-// forward, up or left goes back. One turn per gesture: a trackpad sends a
-// long burst of small deltas, so wait for the burst to settle (or the turn
-// to finish) before the next one. Ctrl+wheel stays zoom, and a zoomed page
-// pans (FlipbookZoom handles both and marks the event as taken).
+// forward, up or left goes back. Every mouse notch is a turn, so spinning
+// the wheel riffles through the book (FlipbookTurns queues and speeds them
+// up); a trackpad's stream of small deltas turns once per STEP of travel.
+// Ctrl+wheel stays zoom, and a zoomed page pans (FlipbookZoom handles both
+// and marks the event as taken).
 // ES2018 only: exported books must run in old Android WebViews.
 (typeof self!=='undefined'?self:global).FlipbookWheel = {
+  STEP: 120,
   bind(surface, options) {
-    let sum = 0, locked = 0, idle = null;
-    const now = () => Date.now();
+    let sum = 0, idle = null;
     const onWheel = event => {
       if (event.ctrlKey || event.defaultPrevented) return;
       if (options.enabled && !options.enabled()) return;
       if (event.cancelable) event.preventDefault();   // over the book the wheel turns pages, it does not scroll
       clearTimeout(idle);
-      idle = setTimeout(() => { sum = 0; locked = 0; }, 180);
-      if (locked > now()) return;
+      idle = setTimeout(() => { sum = 0; }, 200);
       const unit = event.deltaMode === 1 ? 33 : event.deltaMode === 2 ? 400 : 1;
-      const d = Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX;
-      sum += d * unit;
-      if (Math.abs(sum) < 40) return;
+      const d = (Math.abs(event.deltaY) >= Math.abs(event.deltaX) ? event.deltaY : event.deltaX) * unit;
+      if (!d) return;
+      if (sum && (sum > 0) !== (d > 0)) sum = 0;
+      // A mouse notch (a big delta) turns at once; trackpad deltas add up.
+      sum += Math.abs(d) >= 50 ? Math.sign(d) * FlipbookWheel.STEP : d;
+      if (Math.abs(sum) < FlipbookWheel.STEP) return;
       const forward = sum > 0;
-      sum = 0; locked = now() + (options.gap || 700);
+      sum = 0;
       if (forward) options.next(); else options.prev();
     };
     surface.addEventListener('wheel', onWheel, { passive: false });

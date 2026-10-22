@@ -85,7 +85,7 @@
     const turn = go => { const settings = book.getSettings(), was = settings.disableFlipByClick; settings.disableFlipByClick = false; try { go(); } finally { settings.disableFlipByClick = was; } };
     const goPage = target => { if (['read', 'fold_corner'].indexOf(book.getState()) >= 0 && visible().indexOf(target) < 0) { zoom.snap(); turn(() => book.flip(target, 'top')); } };
     Object.keys(data.links || {}).forEach(key => FlipbookLinks.mount(elements[Number(key)], data.links[key], goPage));
-    book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});$('#home').disabled=$('#end').disabled=$('#prev').disabled=$('#next').disabled=true}});
+    book.on('changeState',event=>{if(event.data==='read'){update();animate()}else{cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});$('#home').disabled=$('#end').disabled=true}});
     book.loadFromHTML(sheets);update();animate();
     // After loadFromHTML: PageFlip has no current page before that.
     const marks = FlipbookBookmarks.bind({key: FlipbookBookmarks.key(data.title, data.pageCount, data.ratio), pages: elements,
@@ -175,9 +175,11 @@
     const goNext=()=>{zoom.snap();if(curl.busy())return;if(!curl.open())turn(()=>book.flipNext())};
     $('#home').onclick=()=>{zoom.snap();if(curl.busy()||curl.close())return;if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
     $('#end').onclick=()=>{zoom.snap();if(curl.busy()||book.getState()!=='read')return;book.turnToPage(sheets.length-1);update();animate()};
-    $('#prev').onclick=goPrev;$('#next').onclick=goNext;
-    FlipbookWheel.bind($('main'),{next:()=>{if(!$('#next').disabled)goNext()},prev:()=>{if(!$('#prev').disabled)goPrev()}});$('#replay').onclick=()=>animate(false);
-    document.addEventListener('keydown',event=>{if(FlipbookNotes.typing(event))return;if(event.key==='ArrowRight'&&!$('#next').disabled)goNext();if(event.key==='ArrowLeft'&&!$('#prev').disabled)goPrev()});
+    // Clicks, keys and the wheel queue up while a page turns, and go faster the faster they come.
+    const turns=FlipbookTurns.bind(book,forward=>{if($(forward?'#next':'#prev').disabled)return false;if(forward)goNext();else goPrev()});
+    $('#prev').onclick=()=>turns.request(false);$('#next').onclick=()=>turns.request(true);
+    FlipbookWheel.bind($('main'),{next:()=>turns.request(true),prev:()=>turns.request(false)});$('#replay').onclick=()=>animate(false);
+    document.addEventListener('keydown',event=>{if(FlipbookNotes.typing(event))return;if(event.key==='ArrowRight')turns.request(true);if(event.key==='ArrowLeft')turns.request(false)});
     document.addEventListener('visibilitychange',()=>{if(document.hidden){cancelAnimationFrame(frame);players.forEach(p=>{if(p)p.stop();});}else animate()});
   } catch(cause) { $('#error').hidden=false;$('#error').textContent='The book could not be opened. '+cause.message; }
 })();
