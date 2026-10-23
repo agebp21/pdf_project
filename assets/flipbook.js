@@ -42,6 +42,21 @@
     $('#fullscreen').setAttribute('aria-pressed',String(on));$('#fullscreen').title=$('#fullscreen').textContent.slice(2);};
   // Esc / the browser leaving full screen: the preview goes back too.
   document.addEventListener('fullscreenchange',()=>{if(!document.fullscreenElement)$('.preview').classList.remove('reading-fullscreen');paintFullscreen();});paintFullscreen();
+  // A phone turned sideways with a book open reads in full screen (the window is too low for the
+  // page around it; owner, 2026-10-23); upright again it comes back, unless the reader chose full
+  // screen. Only a turn of the phone does this, so leaving full screen sideways is respected.
+  const sideways = () => matchMedia('(pointer: coarse)').matches && innerWidth > innerHeight && innerHeight <= 500;
+  let wasSideways = sideways(), autoFull = false;
+  const autoLandscape = (opened = false) => {
+    const preview = $('.preview'), now = sideways();
+    if (!preview || (!opened && now === wasSideways)) return;
+    wasSideways = now;
+    const on = preview.classList.contains('reading-fullscreen');
+    if (now && book && !on) { preview.classList.add('reading-fullscreen'); autoFull = true; paintFullscreen(); }
+    else if (!now && autoFull) { autoFull = false; if (on && !document.fullscreenElement) preview.classList.remove('reading-fullscreen'); paintFullscreen(); }
+  };
+  addEventListener('resize', () => autoLandscape()); addEventListener('orientationchange', () => setTimeout(autoLandscape, 250));
+  $('#fullscreen').addEventListener('click', () => { autoFull = false; });
   let sourcePdf = null, bookRatio = 1, exporting = false, buildConfig = null, bookLinks = {}, bookWords = {}, bookText = {}, bookPodcast = null, podcastView = null, bookTranslations = {}, translateView = null, bookLang = null, bookVersions = {}, bookVersionText = {}, bookVersionWords = {}, editions = null, bookChecked = {}, bookComplete = new Set(), stopTranslating = false, liveLang = null, bookSummary = null, summaryView = null, marks = null, notes = null, highlights = null, speech = null, curl = null, zoom = null, turns = null;
   // Zoom (🔍, double-tap, pinch, Ctrl+wheel) scales this wrapper, so it never
   // fights the book's own transforms (cover centring, curl); bound once.
@@ -252,6 +267,7 @@
       });
       book.loadFromHTML(sheets);
       disposeLayout=FlipbookLayout.bind(book,$('#reader-stage'),ratio,{compact:true});
+      autoLandscape(true);                                   // opened on a phone held sideways
       FlipbookLayout.centerCover(book, container, reduced);
       curl = FlipbookCurl.bind(book, container, sheets, {reduced, onTurn: () => FlipbookSound.play('cover')});
       if (!zoom) zoom = FlipbookZoom.bind($('#reader-stage'), zoomBox, {button: $('#zoom'),
