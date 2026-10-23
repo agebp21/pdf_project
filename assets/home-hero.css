@@ -95,3 +95,9 @@
 .hh-go-small{font-size:13px;padding:11px 18px;margin-left:10px;box-shadow:2px 2px 0 #1C1917}
 body.hh-demo-open{overflow:hidden}
 @media (max-width:640px){.hh-demo{padding:56px 10px 18px}.hh-demo-bar{flex-wrap:wrap;justify-content:center}.hh-go-small{margin-left:0}}
+/* PageFlip sets each page's display itself: lay the text out as blocks, not flex */
+.hh-in>small,.hh-in>strong,.hh-in>span{display:block;margin:0 0 14px}
+.hh-in>small{margin-bottom:12px}
+.hh-back{display:flex}
+.hh-back>small{margin-top:30%}
+.hh-list>span{display:block;margin:0 0 8px}
