@@ -110,3 +110,8 @@
 .hh-demo:fullscreen .hh-demo-tools{top:14px;right:16px}
 .hh-demo:fullscreen .hh-demo-stage{height:calc(100dvh - 150px);max-height:none;width:100%}
 .hh-demo-book{filter:drop-shadow(0 18px 28px rgba(28,25,23,.16))}
+/* the cover glides to the middle and back (FlipbookLayout.centerCover), as in every reader (book-effects.css) */
+.hh-demo-book.book-shift{transition:transform .45s cubic-bezier(.37,0,.63,1);will-change:transform}
+.hh-demo-book.book-shift-instant{transition:none}
+.hh-book.is-loading .hh-preview{animation:hh-wait .9s ease-in-out infinite alternate}
+@keyframes hh-wait{to{transform:scale(.93);opacity:.75}}

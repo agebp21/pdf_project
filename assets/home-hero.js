@@ -36,7 +36,13 @@
       autoSize: true, usePortrait: true, showCover: true, startPage: 0 }, motion));
     flip.loadFromHTML(pages);
     // Sized to the window like every reader: a spread that fits, one page on a phone held upright.
-    if (window.FlipbookLayout) { FlipbookLayout.bind(flip, demo.querySelector('.hh-demo-stage'), 450 / 625); FlipbookLayout.centerCover(flip, box, reduced); }
+    if (window.FlipbookLayout) {
+      FlipbookLayout.bind(flip, demo.querySelector('.hh-demo-stage'), 450 / 625);
+      // The closed cover starts in the middle at once; only opening it glides.
+      box.classList.add('book-shift-instant');
+      FlipbookLayout.centerCover(flip, box, reduced);
+      setTimeout(function () { if (!reduced) box.classList.remove('book-shift-instant'); }, 300);
+    }
     if (window.FlipbookSound) { FlipbookSound.attach(flip); FlipbookSound.bindButton(document.getElementById('hh-demo-sound')); }
     if (window.FlipbookTurns) FlipbookTurns.adopt(flip);
     flip.on('flip', status); flip.on('changeOrientation', status);
@@ -44,15 +50,23 @@
     status();
   }
   function open() {
+    if (!demo.hidden) return;
     opener = document.activeElement;
-    demo.hidden = false; hero.classList.add('is-preview');
-    document.getElementById('hh-demo-close').focus({preventScroll: true});
-    demo.scrollIntoView({block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+    book.classList.add('is-loading');
+    // The sample cover stays until the preview book is ready, then the hero switches in one step.
     engine().then(function () {
+      book.classList.remove('is-loading');
+      demo.hidden = false; hero.classList.add('is-preview');
       if (!flip) build();
-      setTimeout(function () { if (flip && flip.getCurrentPageIndex() === 0) flip.flipNext(); }, 450);   // it opens itself, like a reader would
-    }).catch(function () { document.getElementById('hh-demo-status').textContent = EN() ? 'The preview could not load.' : 'Pratinjau gagal dimuat.'; });
+      document.getElementById('hh-demo-close').focus({preventScroll: true});
+      demo.scrollIntoView({block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
+      setTimeout(function () { if (flip && flip.getCurrentPageIndex() === 0) flip.flipNext(); }, 500);   // it opens itself, like a reader would
+    }).catch(function () {
+      book.classList.remove('is-loading');
+      var hint = book.querySelector('.hh-preview span'); if (hint) hint.textContent = EN() ? 'Try again' : 'Coba lagi';
+    });
   }
+
   function close() {
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
     demo.hidden = true; hero.classList.remove('is-preview');
