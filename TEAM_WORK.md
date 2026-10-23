@@ -1,8 +1,10 @@
 # Koordinasi tim AI
 
-## 📌 Status terkini (diperbarui 2026-10-04 oleh Claude) — BACA DULU
+## 📌 Status terkini (diperbarui 2026-10-23 oleh Claude) — BACA DULU
 
-**Live (2026-10-20):** https://myflipbookpro.com = commit `e1457f6` — paket v2 (Basic/Medium/Pro), AI Ringkasan anyar, reset password; detail ndek DEPLOY.md → Log deploy. Sakdurunge: commit `f15e5b1` (deploy 2026-10-07: organize grid split/number/watermark/annotate + Edit PDF live; lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect). (deploy 2026-10-06 16:50: + header keamanan, HSTS, judul SEO; 16:35: + SEO `seo.py` landing /kompres-pdf dst., robots, sitemap; 16:12 lokasi pengunjung di admin via `geo.py`/DB-IP; sebelumnya `ddd61fd` gabungan usage-allowance + referral/signup-IP + trial/gates/share-3x/nudge, lihat DEPLOY.md → Log deploy).
+**Live (2026-10-23):** https://myflipbookpro.com = commit `7827ed6`. Ringkasan lengkap 20–23 Okt (flipbook: suara kertas 2 rekaman, belok 0,45 dtk, 1 scroll = 1 belokan, mundur melengkung, teks tajam; halaman flipbook tanpa bingkai & tanpa scroll; beranda: banner dwibahasa + hero + pratinjau prototipe; PWA; API pemantauan admin untuk AI lain): **[HANDOFF_2026-10-23.md](HANDOFF_2026-10-23.md)**. AI live MATI sampai kredit Gemini / kunci Sumopod tersedia (owner). Kunci API pemantauan `audit-ai` hanya di VPS `/root/myflipbook-monitor-api-key.txt` + lokal `.data/monitor-api-key.txt` — jangan ditampilkan.
+
+**Sebelumnya (2026-10-20):** commit `e1457f6` — paket v2 (Basic/Medium/Pro), AI Ringkasan anyar, reset password; detail ndek DEPLOY.md → Log deploy. Sakdurunge: commit `f15e5b1` (deploy 2026-10-07: organize grid split/number/watermark/annotate + Edit PDF live; lihat DEPLOY.md → Log deploy). Hanya alamat tanpa www (www di-redirect). (deploy 2026-10-06 16:50: + header keamanan, HSTS, judul SEO; 16:35: + SEO `seo.py` landing /kompres-pdf dst., robots, sitemap; 16:12 lokasi pengunjung di admin via `geo.py`/DB-IP; sebelumnya `ddd61fd` gabungan usage-allowance + referral/signup-IP + trial/gates/share-3x/nudge, lihat DEPLOY.md → Log deploy).
 **Disk VPS:** sempat 98% karena backup kode ikut `.build` (763 MB × 51). Backup sekarang `--exclude=pdf_project/.build`, simpan 3 terbaru saja (DEPLOY.md langkah 4) — WAJIB diikuti. Hanya alamat tanpa www (www di-redirect).
 **Build APK/EXE + Translate buku:** lewat PC build owner (`build_worker.py`, `start-build-worker.bat`); VPS hanya mengantrikan. PC mati = build menunggu.
 **Pembayaran: DIPAUSE** (`PAYMENTS_PAUSED=1` di `.env` live) — owner meng-update payment gateway malam 2026-10-04; nyalakan hanya setelah key gateway diisi dan dites.
@@ -16,7 +18,7 @@ Selesai & live (detail per fitur di PROJECT_HANDOFF.md, bagian bertanggal):
 - Buka buku cepat (6 halaman dulu, sisanya di belakang; proyek pakai teks tersimpan); progress bar merah di kotak status.
 - Semua tempat menambah file memakai jendela "Add source" yang sama (assets/add-source.js: link, upload, Google Drive tersaring jenis file alatnya, seret file) — flipbook masih punya salinan markupnya sendiri.
 - My Library hanya lewat tombol "💾 Save My Library" (awal "📚 Open My Library", kembali Open setelah simpan).
-- Nama fitur: "AI Summarizer" (notebook.html), "Find Journal & Ebook" (journals.html). Swara flip kertas dihapus.
+- Nama fitur: "AI Summarizer" (notebook.html), "Find Journal & Ebook" (journals.html). Swara flip kertas sempat dihapus 2 Okt, **dipasang lagi 22 Okt** (lihat HANDOFF_2026-10-23.md).
 - Admin: ringkasan, member, upload (metadata), pengunjung (visits.py, tanpa IP), server; `--grant EMAIL PLAN DAYS|lifetime`.
 - Member agungbp.online@gmail.com & wiyanjenarmahesa@gmail.com = Business lifetime (live + lokal).
 
