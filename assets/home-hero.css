@@ -66,14 +66,16 @@
 /* Preview: the sample book as a real flipbook in a window over the page (assets/home-hero.js) */
 .hh-book{cursor:pointer}
 .hh-book:focus-visible{outline:3px solid #FF5C28;outline-offset:8px}
-.hh-demo{position:fixed;inset:0;z-index:4000;background:rgba(20,26,23,.82);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:56px 20px 24px}
+.hh-demo{position:relative;grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:48px 0 0}
+.hh.is-preview>.hh-text,.hh.is-preview>.hh-book-wrap{display:none}
+.hh.is-preview{padding-top:20px;padding-bottom:28px}
 .hh-demo[hidden]{display:none}
-.hh-demo-tools{position:absolute;top:14px;right:16px;display:flex;gap:8px;z-index:2}
-.hh-demo-tools button{height:42px;min-width:42px;padding:0 12px;border-radius:999px;border:0;background:rgba(255,255,255,.14);color:#fff;font:700 13px/1 'Plus Jakarta Sans',system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
-.hh-demo-tools button:hover{background:rgba(255,255,255,.26)}
+.hh-demo-tools{position:absolute;top:0;right:0;display:flex;gap:8px;z-index:2}
+.hh-demo-tools button{height:42px;min-width:42px;padding:0 12px;border-radius:999px;border:1px solid #E4DED0;background:#fff;color:#1C1917;font:700 13px/1 'Plus Jakarta Sans',system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
+.hh-demo-tools button:hover{background:#FAF4E8}
 .hh-demo-tools svg{width:20px;height:20px}
 .hh-demo-stage{position:relative;overflow:hidden}
-.hh-demo-stage{width:min(1100px,100%);height:calc(100dvh - 160px);max-height:760px;display:flex;align-items:center;justify-content:center}
+.hh-demo-stage{width:min(1100px,100%);height:min(620px,calc(100dvh - 220px));min-height:340px;display:flex;align-items:center;justify-content:center}
 .hh-demo-book{margin:auto}
 .hh-page{position:relative;overflow:hidden;background:#FFFBF2;box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif;text-align:left}
 .hh-demo-book>.hh-page{display:none}                      /* until the flipbook takes them */
@@ -87,17 +89,22 @@
 .hh-back{background:linear-gradient(160deg,#21503F,#1A3C34 60%,#14302A);justify-content:center}
 .hh-back strong{color:#fff}.hh-back>span{color:rgba(255,255,255,.85)}
 .hh-back .hh-go{align-self:flex-start;margin-top:8px;font-size:14px;padding:12px 20px}
-.hh-demo-bar{display:flex;align-items:center;gap:12px;color:#fff;font:700 13px/1 'Plus Jakarta Sans',system-ui,sans-serif}
-.hh-demo-bar button{width:44px;height:44px;border-radius:50%;border:1px solid rgba(255,255,255,.4);background:rgba(255,255,255,.08);color:#fff;font-size:18px;cursor:pointer}
-.hh-demo-bar button:hover:not(:disabled){background:rgba(255,255,255,.22)}
+.hh-demo-bar{display:flex;align-items:center;gap:12px;color:#1C1917;font:700 13px/1 'Plus Jakarta Sans',system-ui,sans-serif}
+.hh-demo-bar button{width:44px;height:44px;border-radius:50%;border:1px solid #E4DED0;background:#fff;color:#1C1917;font-size:18px;cursor:pointer}
+.hh-demo-bar button:hover:not(:disabled){background:#FAF4E8}
 .hh-demo-bar button:disabled{opacity:.35;cursor:default}
 #hh-demo-status{min-width:110px;text-align:center;opacity:.85}
 .hh-go-small{font-size:13px;padding:11px 18px;margin-left:10px;box-shadow:2px 2px 0 #1C1917}
-body.hh-demo-open{overflow:hidden}
-@media (max-width:640px){.hh-demo{padding:56px 10px 18px}.hh-demo-bar{flex-wrap:wrap;justify-content:center}.hh-go-small{margin-left:0}}
+@media (max-width:640px){.hh-demo{padding:52px 0 0}.hh-demo-bar{flex-wrap:wrap;justify-content:center}.hh-go-small{margin-left:0}}
 /* PageFlip sets each page's display itself: lay the text out as blocks, not flex */
 .hh-in>small,.hh-in>strong,.hh-in>span{display:block;margin:0 0 14px}
 .hh-in>small{margin-bottom:12px}
 .hh-back{display:flex}
 .hh-back>small{margin-top:30%}
 .hh-list>span{display:block;margin:0 0 8px}
+
+/* full screen: the preview fills the screen on the page's cream */
+.hh-demo:fullscreen{background:#FAF7F0;padding:56px 20px 20px}
+.hh-demo:fullscreen .hh-demo-tools{top:14px;right:16px}
+.hh-demo:fullscreen .hh-demo-stage{height:calc(100dvh - 150px);max-height:none;width:100%}
+.hh-demo-book{filter:drop-shadow(0 18px 28px rgba(28,25,23,.16))}

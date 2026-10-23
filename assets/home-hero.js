@@ -1,10 +1,10 @@
-// Home hero preview (owner, 2026-10-23): Preview (or the sample cover) opens the sample book as a
-// real flipbook in a window over the page — a book opened to two pages, turned by click, swipe,
+// Home hero preview (owner, 2026-10-23, like Heyzine): Preview (or the sample cover) opens the sample
+// book in place of the hero as a real flipbook — a book opened to two pages, turned by click, swipe,
 // arrows or keys, with the paper sound. The flipbook engine loads on the first open only.
 (function () {
   var book = document.getElementById('hh-book'), demo = document.getElementById('hh-demo');
   if (!book || !demo) return;
-  document.body.appendChild(demo);              // out of the hero's stacking context: over everything on the page
+  var hero = demo.closest('.hh');
   var flip = null, loading = null, opener = null;
   var EN = function () { return window.I18N && I18N.get && I18N.get() === 'en'; };
   function load(src) {
@@ -45,8 +45,9 @@
   }
   function open() {
     opener = document.activeElement;
-    demo.hidden = false; document.body.classList.add('hh-demo-open');
-    document.getElementById('hh-demo-close').focus();
+    demo.hidden = false; hero.classList.add('is-preview');
+    document.getElementById('hh-demo-close').focus({preventScroll: true});
+    demo.scrollIntoView({block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
     engine().then(function () {
       if (!flip) build();
       setTimeout(function () { if (flip && flip.getCurrentPageIndex() === 0) flip.flipNext(); }, 450);   // it opens itself, like a reader would
@@ -54,7 +55,7 @@
   }
   function close() {
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
-    demo.hidden = true; document.body.classList.remove('hh-demo-open');
+    demo.hidden = true; hero.classList.remove('is-preview');
     if (opener && opener.focus) opener.focus();
   }
   book.addEventListener('click', open);
@@ -63,7 +64,6 @@
   document.getElementById('hh-demo-full').addEventListener('click', function () {
     try { if (document.fullscreenElement) document.exitFullscreen(); else if (demo.requestFullscreen) demo.requestFullscreen(); } catch (e) {}
   });
-  demo.addEventListener('click', function (e) { if (e.target === demo) close(); });
   document.getElementById('hh-demo-prev').addEventListener('click', function () { if (flip) flip.flipPrev(); });
   document.getElementById('hh-demo-next').addEventListener('click', function () { if (flip) flip.flipNext(); });
   document.addEventListener('keydown', function (e) {
