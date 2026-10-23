@@ -5,7 +5,7 @@
   var book = document.getElementById('hh-book'), demo = document.getElementById('hh-demo');
   if (!book || !demo) return;
   var hero = demo.closest('.hh');
-  var flip = null, loading = null, opener = null;
+  var flip = null, loading = null, opener = null, settle = null, busy = false;
   var EN = function () { return window.I18N && I18N.get && I18N.get() === 'en'; };
   function load(src) {
     return new Promise(function (resolve, reject) {
@@ -40,7 +40,7 @@
       FlipbookLayout.bind(flip, demo.querySelector('.hh-demo-stage'), 450 / 625);
       // The closed cover starts in the middle at once; only opening it glides.
       box.classList.add('book-shift-instant');
-      FlipbookLayout.centerCover(flip, box, reduced);
+      settle = FlipbookLayout.centerCover(flip, box, reduced);
       setTimeout(function () { if (!reduced) box.classList.remove('book-shift-instant'); }, 300);
     }
     if (window.FlipbookSound) { FlipbookSound.attach(flip); FlipbookSound.bindButton(document.getElementById('hh-demo-sound')); }
@@ -49,46 +49,102 @@
     flip.on('changeState', function (e) { if (e.data === 'read') status(); });
     status();
   }
-  // One smooth move, never a jump: the sample cover fades, the columns slide to make room
-  // (CSS transition on the grid), then the open book fades in and opens itself. Close plays it back.
+  // One move, nothing fades (owner, 2026-10-23): the columns slide to make room while the sample
+  // cover itself slides and grows to where the preview book's cover will be; there the real book
+  // (whose cover looks the same: both are drawn in units of their own height) takes over unseen
+  // and opens. Closing plays it back from the cover.
   var STILL = matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var FADE = STILL ? 0 : 200, SLIDE = STILL ? 0 : 460;
+  var MOVE = STILL ? 0 : 500;
+  var frame = function (fn) { requestAnimationFrame(function () { requestAnimationFrame(fn); }); };
+  var plain = function () { var was = book.style.transform; book.style.transform = 'none'; var r = book.getBoundingClientRect(); book.style.transform = was; return r; };
+  // The transform that puts the sample cover (laid out at `from`) over `to`.
+  var onto = function (from, to) {
+    return 'translate(' + (to.left + to.width / 2 - from.left - from.width / 2).toFixed(1) + 'px,' + (to.top + to.height / 2 - from.top - from.height / 2).toFixed(1) + 'px) scale(' + (to.height / from.height).toFixed(4) + ')';
+  };
+  // Put the cover somewhere at once (no transition), for the start of a move.
+  var place = function (transform) { book.style.transition = 'none'; book.style.transform = transform; void book.offsetWidth; book.style.transition = ''; };
+  var coverOf = function () { var c = document.querySelector('#hh-demo-book .hh-page-cover'); return c && c.getBoundingClientRect(); };
+  // Where the preview cover will sit, before the book exists: the middle of the book column, as
+  // tall as the stage allows (one page wide on narrow screens, two otherwise).
+  function predicted() {
+    var stage = demo.querySelector('.hh-demo-stage').getBoundingClientRect();
+    var ratio = 450 / 625, spread = stage.width >= 700 || stage.width > stage.height;
+    var h = Math.min(stage.height, stage.width / (spread ? 2 * ratio : ratio));
+    return {left: stage.left + stage.width / 2 - h * ratio / 2, top: stage.top + stage.height / 2 - h / 2, width: h * ratio, height: h};
+  }
   function open() {
-    if (!demo.hidden || book.classList.contains('is-loading')) return;
-    opener = document.activeElement;
+    if (busy || !demo.hidden) return;
+    busy = true; opener = document.activeElement;
     book.classList.add('is-loading');
-    // The sample cover stays until the preview book is ready.
     engine().then(function () {
       book.classList.remove('is-loading');
-      hero.classList.add('is-leaving');
+      var start = plain();
+      // The final layout, measured at once (no transitions), then back to the start to slide there.
+      hero.style.transition = 'none';
+      demo.classList.add('is-waiting'); demo.hidden = false;
+      hero.classList.add('is-preview', 'is-moving');
+      var end = plain(), target = flip ? coverOf() : predicted();
+      hero.classList.remove('is-preview');
+      void hero.offsetWidth;
+      hero.style.transition = '';
+      place('none');
+      book.classList.add('is-moving');
+      void book.offsetWidth;
+      // The layout slides the cover from `start` to `end`; the transform adds the rest of the way.
+      hero.classList.add('is-preview');
+      book.style.transform = 'translate(' + (target.left + target.width / 2 - end.left - end.width / 2).toFixed(1) + 'px,' +
+        (target.top + target.height / 2 - end.top - end.height / 2).toFixed(1) + 'px) scale(' + (target.height / end.height).toFixed(4) + ')';
+      demo.scrollIntoView({block: 'center', behavior: STILL ? 'auto' : 'smooth'});
       setTimeout(function () {
-        demo.classList.add('is-soft'); demo.hidden = false;
-        hero.classList.add('is-preview'); hero.classList.remove('is-leaving');
-        demo.scrollIntoView({block: 'center', behavior: STILL ? 'auto' : 'smooth'});
-        setTimeout(function () {
-          if (!flip) build();
-          requestAnimationFrame(function () { demo.classList.remove('is-soft'); });
+        if (!flip) build();
+        frame(function () {
+          var cover = coverOf();
+          book.classList.remove('is-moving');
+          if (cover) place(onto(plain(), cover));                 // the last pixel, unseen
+          hero.classList.add('is-shown'); demo.classList.remove('is-waiting');
+          place('');
+          hero.classList.remove('is-moving');
           document.getElementById('hh-demo-close').focus({preventScroll: true});
-          setTimeout(function () { if (flip && flip.getCurrentPageIndex() === 0) flip.flipNext(); }, STILL ? 0 : 550);   // it opens itself, like a reader would
-        }, SLIDE);
-      }, FADE);
+          busy = false;
+          setTimeout(function () { if (flip && flip.getCurrentPageIndex() === 0) flip.flipNext(); }, STILL ? 0 : 160);   // it opens itself, like a reader would
+        });
+      }, MOVE);
     }).catch(function () {
+      busy = false;
       book.classList.remove('is-loading');
       var hint = book.querySelector('.hh-preview span'); if (hint) hint.textContent = EN() ? 'Try again' : 'Coba lagi';
     });
   }
-
-
   function close() {
-    if (demo.hidden) return;
+    if (busy || demo.hidden) return;
+    busy = true;
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
-    demo.classList.add('is-soft');
-    setTimeout(function () {
-      demo.hidden = true;
-      hero.classList.add('is-leaving'); hero.classList.remove('is-preview');   // columns slide back, the cover waits
-      setTimeout(function () { hero.classList.remove('is-leaving'); }, SLIDE);
-      if (opener && opener.focus) opener.focus({preventScroll: true});
-    }, FADE + 100);
+    var box = document.getElementById('hh-demo-book');
+    // First the book closes the way a reader closes it (turned back to the cover, which glides to
+    // the middle), then the sample cover takes over from there and slides home.
+    var closed = function (then) {
+      if (!flip || flip.getCurrentPageIndex() === 0 || STILL) { if (flip && flip.getCurrentPageIndex() !== 0) { flip.turnToPage(0); if (settle) settle(); } frame(then); return; }
+      var turn = (flip.getSettings().flippingTime || 450) + 60;
+      flip.flip(0);
+      // The turn, then the cover's glide to the middle (0.45 s), then the slide home.
+      setTimeout(function () { if (flip.getCurrentPageIndex() !== 0) { flip.turnToPage(0); if (settle) settle(); } setTimeout(function () { frame(then); }, 480); }, turn);
+    };
+    closed(function () {
+      var cover = coverOf(), here = plain();
+      place(cover ? onto(here, cover) : '');
+      hero.classList.add('is-moving'); hero.classList.remove('is-shown'); demo.classList.add('is-waiting');
+      book.classList.add('is-moving');
+      void book.offsetWidth;
+      hero.classList.remove('is-preview');                    // the columns slide back, the cover rides home
+      book.style.transform = '';
+      setTimeout(function () {
+        demo.hidden = true; demo.classList.remove('is-waiting');
+        book.classList.remove('is-moving'); hero.classList.remove('is-moving');
+        if (!STILL) box.classList.remove('book-shift-instant');
+        if (opener && opener.focus) opener.focus({preventScroll: true});
+        busy = false;
+      }, MOVE);
+    });
   }
 
   book.addEventListener('click', open);

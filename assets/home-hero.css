@@ -23,18 +23,20 @@
 .hh-book:hover{transform:translateY(-4px) rotate(-1deg)}
 .hh-book::before{content:'';position:absolute;top:6px;bottom:6px;right:-9px;width:12px;border-radius:0 6px 6px 0;
   background:repeating-linear-gradient(90deg,#FBF8F1 0 2px,#E5DECF 2px 3px);box-shadow:inset -1px 0 0 #D8D0BF}
-.hh-cover{position:absolute;inset:0;overflow:hidden;background:#FFFBF2;display:flex;flex-direction:column;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
-.hh-cover-top{flex:0 0 60%;background:linear-gradient(160deg,#21503F,#1A3C34 60%,#14302A);color:#fff;padding:28px 26px 46px;display:flex;gap:18px}
+/* The cover is drawn in units of its own height (--u = 1/556 of it), so the sample cover and the
+   preview book's cover look the same at any size and one can stand in for the other while moving. */
+.hh-cover{position:absolute;inset:0;overflow:hidden;background:#FFFBF2;display:flex;flex-direction:column;font-family:'Plus Jakarta Sans',system-ui,sans-serif;container-type:size}
+.hh-cover-top{--u:calc(100cqh/556);flex:0 0 60%;background:linear-gradient(160deg,#21503F,#1A3C34 60%,#14302A);color:#fff;padding:calc(28*var(--u)) calc(26*var(--u)) calc(46*var(--u));display:flex;gap:calc(18*var(--u))}
 .hh-cover-title{flex:1;display:flex;flex-direction:column;justify-content:space-between}
-.hh-cover-brand{font-size:10px;font-weight:800;letter-spacing:.22em;opacity:.8}
-.hh-cover-title strong{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:.92;letter-spacing:-.03em;font-weight:900}
+.hh-cover-brand{font-size:calc(10*var(--u));font-weight:800;letter-spacing:.22em;opacity:.8}
+.hh-cover-title strong{font-family:'Fraunces',Georgia,serif;font-size:calc(44*var(--u));line-height:.92;letter-spacing:-.03em;font-weight:900}
 .hh-cover-title strong em{font-style:normal;color:#FFB37E}
-.hh-cover-list{list-style:none;margin:0;padding:0 0 0 16px;border-left:1px solid rgba(255,255,255,.3);font-size:10.5px;line-height:2.1;opacity:.9;white-space:nowrap}
-.hh-cover-bottom{position:relative;flex:1;margin-top:-26px;background:#FFFBF2;border-radius:30px 0 0 0;padding:30px 26px 52px;display:flex;align-items:flex-end}
-.hh-cover-note{display:block;margin:0;font-size:21px;line-height:1.3;color:#1C1917;max-width:250px}
+.hh-cover-list{list-style:none;margin:0;padding:0 0 0 calc(16*var(--u));border-left:1px solid rgba(255,255,255,.3);font-size:calc(10.5*var(--u));line-height:2.1;opacity:.9;white-space:nowrap}
+.hh-cover-bottom{--u:calc(100cqh/556);position:relative;flex:1;margin-top:calc(-26*var(--u));background:#FFFBF2;border-radius:calc(30*var(--u)) 0 0 0;padding:calc(30*var(--u)) calc(26*var(--u)) calc(52*var(--u));display:flex;align-items:flex-end}
+.hh-cover-note{display:block;margin:0;font-size:calc(21*var(--u));line-height:1.3;color:#1C1917;max-width:calc(250*var(--u))}
 .hh-cover-note b{font-weight:800}
-.hh-cover-mark{position:absolute;right:26px;top:-31px;width:62px;height:62px;border-radius:18px;background:#FFFBF2;display:grid;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.12)}
-.hh-cover-mark img{width:42px;height:42px}
+.hh-cover-mark{position:absolute;right:calc(26*var(--u));top:calc(-31*var(--u));width:calc(62*var(--u));height:calc(62*var(--u));border-radius:calc(18*var(--u));background:#FFFBF2;display:grid;place-items:center;box-shadow:0 calc(6*var(--u)) calc(16*var(--u)) rgba(0,0,0,.12)}
+.hh-cover-mark img{width:calc(42*var(--u));height:calc(42*var(--u))}
 .hh-corner{position:absolute;right:0;bottom:0;width:70px;height:70px;border-top-left-radius:100%;transform-origin:100% 100%;
   background:linear-gradient(135deg,rgba(28,25,23,0) 48%,rgba(28,25,23,.07) 50%,#EFE8DA 53%,#FFFFFF 100%);box-shadow:-3px -3px 7px rgba(28,25,23,.07);animation:hh-lift 3.2s ease-in-out infinite}
 .hh-book:hover .hh-corner{animation-duration:1.4s}
@@ -49,11 +51,6 @@
 @media (max-width:900px){
   .hh{grid-template-columns:1fr;gap:40px;padding:28px 20px 44px;text-align:left}
   .hh-book{width:min(290px,76vw)}
-  .hh-cover-top{padding:20px 18px 38px}
-  .hh-book .hh-cover-bottom{padding-bottom:44px}
-  .hh-cover-title strong{font-size:32px}
-  .hh-cover-list{font-size:9px;line-height:1.9}
-  .hh-cover-note{font-size:16px}
   .hh-preview{font-size:13px;padding:11px 18px;bottom:-20px}
   }
 
@@ -68,7 +65,6 @@
 .hh-demo{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:48px 0 0}
 /* open: the text stays on the left, the open book takes the sample cover's place (wider) */
 .hh.is-preview{grid-template-columns:minmax(0,.62fr) minmax(0,1.38fr);gap:40px}
-.hh.is-preview>.hh-book-wrap{display:none}
 @media (max-width:900px){.hh.is-preview{grid-template-columns:1fr}}
 .hh-demo[hidden]{display:none}
 .hh-demo-tools{position:absolute;top:0;right:0;display:flex;gap:8px;z-index:2}
@@ -114,13 +110,26 @@
 .hh-demo-book.book-shift-instant{transition:none}
 .hh-book.is-loading .hh-preview{animation:hh-wait .9s ease-in-out infinite alternate}
 @keyframes hh-wait{to{opacity:.6}}
-/* inside the preview book the cover needs no room for the button */
-.hh-page .hh-cover-bottom{padding-bottom:22px}
 
-/* the switch between the hero and its preview, smooth (assets/home-hero.js) */
-.hh{transition:grid-template-columns .46s cubic-bezier(.4,0,.2,1),gap .46s cubic-bezier(.4,0,.2,1)}
-.hh-book-wrap{transition:opacity .2s ease,transform .2s ease}
-.hh.is-leaving>.hh-book-wrap{opacity:0;transform:scale(.97)}
-.hh-demo{transition:opacity .32s ease,transform .32s cubic-bezier(.2,.8,.2,1)}
-.hh-demo.is-soft{opacity:0;transform:translateY(14px)}
-@media (prefers-reduced-motion:reduce){.hh,.hh-book-wrap,.hh-demo{transition:none}}
+/* the switch between the hero and its preview (assets/home-hero.js): the sample cover itself
+   slides and grows into the preview book's cover while the columns make room, then the real
+   book takes its place unseen and opens. Nothing fades. */
+.hh{transition:grid-template-columns .5s cubic-bezier(.4,0,.2,1),gap .5s cubic-bezier(.4,0,.2,1)}
+@media (min-width:901px){.hh-book-wrap,.hh-demo{grid-column:2;grid-row:1}}
+@media (max-width:900px){.hh-book-wrap,.hh-demo{grid-column:1;grid-row:2}}
+.hh-book-wrap{position:relative;z-index:1}
+.hh-book.is-moving{transition:transform .5s cubic-bezier(.4,0,.2,1)}
+.hh-book.is-moving:hover{transform:none}
+.hh.is-moving .hh-preview,.hh.is-preview .hh-preview{visibility:hidden}
+.hh.is-moving .hh-corner,.hh.is-preview .hh-corner{display:none}
+.hh-demo.is-waiting{visibility:hidden}
+.hh.is-shown>.hh-book-wrap{visibility:hidden}
+@media (prefers-reduced-motion:reduce){.hh,.hh-book.is-moving{transition:none}}
+/* The cover's cell is as tall as the preview (tools 48 + stage + gap 16 + arrows 44), so the hero
+   keeps its height when one replaces the other. Phones: a cover as big as the preview's page. */
+.hh-book-wrap{min-height:calc(max(320px,min(600px,100dvh - 220px)) + 108px);align-items:center}
+@media (max-width:900px){
+  .hh-book{width:min(350px,100%)}
+  .hh-demo-stage{height:calc(min(350px,100vw - 40px) / .72);min-height:0}
+  .hh-book-wrap{min-height:calc(min(350px,100vw - 40px) / .72 + 108px)}
+}
