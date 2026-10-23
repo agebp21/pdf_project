@@ -1,0 +1,59 @@
+/* Home hero (owner, 2026-10-23: like Heyzine's): the headline on the left, a sample flipbook on
+   the right; the book (or its Preview button) opens the flipbook tool. Replaces the banner image;
+   everything below it (category bar, tools) is unchanged. */
+.hh{text-align:left;max-width:1440px;margin:0 auto;padding:56px clamp(20px,5vw,80px) 64px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:56px;align-items:center;
+  background:radial-gradient(1200px 500px at 85% 20%,#EEF5EF 0,rgba(238,245,239,0) 60%)}
+.hh-text{max-width:640px}
+.hh-logo{display:flex;align-items:center;gap:12px;margin:0 0 26px}
+.hh-logo img{width:54px;height:54px}
+.hh-logo span{font:800 12px/1.3 'Plus Jakarta Sans',system-ui,sans-serif;letter-spacing:.3em;color:#57534E}
+.hh-title{font-family:'Plus Jakarta Sans',system-ui,sans-serif;font-weight:800;font-size:clamp(36px,4.4vw,62px);line-height:1.04;letter-spacing:-.03em;color:#1C1917;margin:0 0 20px}
+.hh-title em{font-style:normal;color:#2F6B4F}
+.hh-lead{font-size:clamp(15px,1.3vw,18px);line-height:1.65;color:#57534E;margin:0 0 30px;max-width:560px}
+.hh-cta{display:flex;flex-wrap:wrap;gap:12px;align-items:center}
+.hh-go{display:inline-flex;align-items:center;gap:10px;border:1.5px solid #1C1917;border-radius:999px;background:#FF5C28;color:#fff;text-decoration:none;
+  font:800 16px/1 'Plus Jakarta Sans',system-ui,sans-serif;padding:15px 26px;box-shadow:3px 3px 0 #1C1917;transition:transform .15s,box-shadow .15s}
+.hh-go:hover{transform:translateY(-1px);box-shadow:4px 4px 0 #1C1917}
+.hh-all{font:700 14px/1 'Plus Jakarta Sans',system-ui,sans-serif;color:#1A3C34;text-decoration:underline;text-underline-offset:4px;padding:10px 6px}
+.hh-tags{margin:28px 0 0;font:700 11px/1 'Plus Jakarta Sans',system-ui,sans-serif;letter-spacing:.24em;color:#A8A29E}
+
+/* the sample book: cover, page edges on the right, a corner that keeps lifting */
+.hh-book-wrap{display:flex;justify-content:center}
+.hh-book{position:relative;display:block;width:min(400px,100%);aspect-ratio:400/556;text-decoration:none;color:inherit;filter:drop-shadow(0 24px 32px rgba(28,25,23,.18));transition:transform .3s}
+.hh-book:hover{transform:translateY(-4px) rotate(-1deg)}
+.hh-book::before{content:'';position:absolute;top:6px;bottom:6px;right:-9px;width:12px;border-radius:0 6px 6px 0;
+  background:repeating-linear-gradient(90deg,#FBF8F1 0 2px,#E5DECF 2px 3px);box-shadow:inset -1px 0 0 #D8D0BF}
+.hh-cover{position:absolute;inset:0;overflow:hidden;background:#FFFBF2;display:flex;flex-direction:column;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
+.hh-cover-top{flex:0 0 60%;background:linear-gradient(160deg,#21503F,#1A3C34 60%,#14302A);color:#fff;padding:28px 26px 46px;display:flex;gap:18px}
+.hh-cover-title{flex:1;display:flex;flex-direction:column;justify-content:space-between}
+.hh-cover-brand{font-size:10px;font-weight:800;letter-spacing:.22em;opacity:.8}
+.hh-cover-title strong{font-family:'Fraunces',Georgia,serif;font-size:44px;line-height:.92;letter-spacing:-.03em;font-weight:900}
+.hh-cover-title strong em{font-style:normal;color:#FFB37E}
+.hh-cover-list{list-style:none;margin:0;padding:0 0 0 16px;border-left:1px solid rgba(255,255,255,.3);font-size:10.5px;line-height:2.1;opacity:.9;white-space:nowrap}
+.hh-cover-bottom{position:relative;flex:1;margin-top:-26px;background:#FFFBF2;border-radius:30px 0 0 0;padding:30px 26px 22px;display:flex;align-items:flex-end}
+.hh-cover-note{display:block;margin:0;font-size:21px;line-height:1.3;color:#1C1917;max-width:250px}
+.hh-cover-note b{font-weight:800}
+.hh-cover-mark{position:absolute;right:26px;top:-31px;width:62px;height:62px;border-radius:18px;background:#FFFBF2;display:grid;place-items:center;box-shadow:0 6px 16px rgba(0,0,0,.12)}
+.hh-cover-mark img{width:42px;height:42px}
+.hh-corner{position:absolute;right:0;bottom:0;width:70px;height:70px;border-top-left-radius:100%;transform-origin:100% 100%;
+  background:linear-gradient(135deg,rgba(28,25,23,0) 48%,rgba(28,25,23,.07) 50%,#EFE8DA 53%,#FFFFFF 100%);box-shadow:-3px -3px 7px rgba(28,25,23,.07);animation:hh-lift 3.2s ease-in-out infinite}
+.hh-book:hover .hh-corner{animation-duration:1.4s}
+@keyframes hh-lift{0%,100%{transform:scale(1)}50%{transform:scale(1.45)}}
+.hh-preview{position:absolute;left:-48px;top:60%;width:112px;height:112px;border-radius:50%;background:rgba(255,255,255,.95);color:#1C1917;
+  box-shadow:0 12px 30px rgba(28,25,23,.16);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:8px;
+  font:800 14px/1 'Plus Jakarta Sans',system-ui,sans-serif;z-index:2;transition:transform .2s}
+.hh-book:hover .hh-preview{transform:scale(1.06)}
+.hh-preview svg{width:22px;height:22px;color:#1A3C34}
+.hh-arrow{position:absolute;right:-46px;bottom:6px;width:34px;color:#44403C;opacity:.75}
+@media (prefers-reduced-motion:reduce){.hh-corner{animation:none}}
+
+@media (max-width:900px){
+  .hh{grid-template-columns:1fr;gap:40px;padding:28px 20px 44px;text-align:left}
+  .hh-book{width:min(290px,76vw)}
+  .hh-cover-top{padding:20px 18px 38px}
+  .hh-cover-title strong{font-size:32px}
+  .hh-cover-list{font-size:9px;line-height:1.9}
+  .hh-cover-note{font-size:16px}
+  .hh-preview{left:-28px;width:86px;height:86px;font-size:12px}
+  .hh-arrow{display:none}
+}
