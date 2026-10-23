@@ -58,6 +58,11 @@
   .hh-arrow{display:none}
 }
 
+/* the banner above the hero */
+.hh-banner{display:block;max-width:1440px;margin:0 auto}
+.hh-banner img{display:block;width:100%;height:auto}
+.hh-banner+.hh{padding-top:28px}
+
 /* Preview: the sample book as a real flipbook in a window over the page (assets/home-hero.js) */
 .hh-book{cursor:pointer}
 .hh-book:focus-visible{outline:3px solid #FF5C28;outline-offset:8px}
