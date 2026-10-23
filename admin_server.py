@@ -12,6 +12,7 @@ statistics written by server.py (visits.py).
 """
 import argparse
 import getpass
+import hashlib
 import hmac
 import json
 import os
@@ -428,6 +429,105 @@ def server_status():
                 database=size(folder / db_path().name), visitsDb=size(folder / 'visits.sqlite3'), library=library)
 
 
+# ---------- monitoring API keys ---------------------------------------------
+# Read-only keys for another program (an AI agent watching traffic, an audit
+# script) to read the numbers without the admin login (owner, 2026-10-23).
+# A key sends "Authorization: Bearer mfa_..." and may only GET MONITOR_PATHS:
+# no member list, member detail, uploads or visitor list (emails), and the
+# recent visits lose their member ids. Only a SHA-256 of each key is kept,
+# in .data/admin-api-keys.json; the key itself is shown once when made.
+MONITOR_PATHS = {'/api/overview', '/api/visits', '/api/server', '/api/report.csv'}
+KEY_PREFIX = 'mfa_'
+KEY_RATE = 60                                       # requests per key per minute
+KEY_HITS = {}                                       # key hash -> recent request times
+
+
+def keys_path():
+    return db_path().parent / 'admin-api-keys.json'
+
+
+def load_keys():
+    try:
+        return json.loads(keys_path().read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        return {}
+
+
+def save_keys(keys):
+    path = keys_path()
+    path.parent.mkdir(parents=True, exist_ok=True)
+    tmp = path.with_suffix('.tmp')
+    tmp.write_text(json.dumps(keys, indent=1), encoding='utf-8')
+    try:
+        os.chmod(tmp, 0o600)
+    except OSError:
+        pass
+    os.replace(tmp, path)
+
+
+def key_hash(key):
+    return hashlib.sha256(key.encode('utf-8')).hexdigest()
+
+
+def new_key(name):
+    """A new monitoring key for `name` (letters, digits, - and _). Returns the key; only its hash is stored."""
+    if not re.fullmatch(r'[A-Za-z0-9_-]{1,40}', name or ''):
+        raise ValueError('Name: 1-40 letters, digits, - or _.')
+    with LOCK:
+        keys = load_keys()
+        if any(k['name'] == name for k in keys.values()):
+            raise ValueError(f'A key named {name} already exists (revoke it first).')
+        key = KEY_PREFIX + secrets.token_urlsafe(32)
+        keys[key_hash(key)] = dict(name=name, created=int(time.time()), lastUsed=None, uses=0)
+        save_keys(keys)
+    log_admin(f'api key made: {name}')
+    return key
+
+
+def revoke_key(name):
+    with LOCK:
+        keys = load_keys()
+        gone = [h for h, k in keys.items() if k['name'] == name]
+        for h in gone:
+            del keys[h]
+        save_keys(keys)
+    if gone:
+        log_admin(f'api key revoked: {name}')
+    return bool(gone)
+
+
+def key_user(key):
+    """The key's record when `key` is a live monitoring key (and under its rate), else None / 'busy'."""
+    if not key.startswith(KEY_PREFIX) or len(key) > 100:
+        return None
+    digest = key_hash(key)
+    with LOCK:
+        keys = load_keys()
+        found = next((k for h, k in keys.items() if hmac.compare_digest(h, digest)), None)
+        if not found:
+            return None
+        now = time.time()
+        hits = [t for t in KEY_HITS.get(digest, []) if t > now - 60]
+        if len(hits) >= KEY_RATE:
+            KEY_HITS[digest] = hits
+            return 'busy'
+        KEY_HITS[digest] = hits + [now]
+        found['lastUsed'] = int(now); found['uses'] = found.get('uses', 0) + 1
+        save_keys(keys)
+    return found
+
+
+def for_key(path, payload):
+    """What a monitoring key may see of `payload`: recent visits without member ids or emails."""
+    if path == '/api/visits' and isinstance(payload, dict):
+        payload = dict(payload, recent=[{k: v for k, v in r.items() if k not in ('user_id', 'member')} for r in payload.get('recent', [])])
+    if path == '/api/overview' and isinstance(payload, dict) and isinstance(payload.get('visits'), dict):
+        visits_out = payload['visits']
+        payload = dict(payload, visits=dict(visits_out, recent=[{k: v for k, v in r.items() if k not in ('user_id', 'member')}
+                                                                for r in visits_out.get('recent', [])]))
+    return payload
+
+
 # ---------- HTTP -----------------------------------------------------------
 class AdminHandler(BaseHTTPRequestHandler):
     server_version = 'MyFlipbookAdmin'
@@ -467,6 +567,8 @@ class AdminHandler(BaseHTTPRequestHandler):
                                                     "img-src 'self' data:; connect-src 'self'; frame-ancestors 'none'; form-action 'self'")
 
     def send_json(self, status, payload, cookie=None):
+        if getattr(self, 'via_key', False):
+            payload = for_key(urlsplit(self.path).path, payload)
         body = json.dumps(payload).encode()
         self.send_response(status)
         self.send_header('Content-Type', 'application/json')
@@ -497,7 +599,21 @@ class AdminHandler(BaseHTTPRequestHandler):
         if not url.path.startswith('/api/'):
             self.send_json(404, {'error': 'Tidak ditemukan.'})
             return
-        if not self.signed_in():
+        bearer = self.headers.get('Authorization', '')
+        self.via_key = False
+        if bearer.lower().startswith('bearer '):
+            found = key_user(bearer[7:].strip())
+            if found == 'busy':
+                self.send_json(429, {'error': f'Too many requests: at most {KEY_RATE} a minute per key.'})
+                return
+            if not found:
+                self.send_json(401, {'error': 'Unknown or revoked API key.'})
+                return
+            if url.path not in MONITOR_PATHS:
+                self.send_json(403, {'error': 'This key may read only: ' + ', '.join(sorted(MONITOR_PATHS)) + '.'})
+                return
+            self.via_key = True
+        elif not self.signed_in():
             self.send_json(401, {'error': 'Masuk sebagai admin dulu.'})
             return
         q = parse_qs(url.query)
@@ -607,6 +723,9 @@ def main():
     parser.add_argument('--proxy', action='store_true', help='Behind nginx: trust X-Forwarded-For / X-Forwarded-Proto.')
     parser.add_argument('--secure', action='store_true', help='Always mark the cookie Secure (HTTPS).')
     parser.add_argument('--hash-password', action='store_true', help='Print ADMIN_PASSWORD_HASH=... for a new password.')
+    parser.add_argument('--new-api-key', metavar='NAME', help='Make a read-only monitoring key (printed once; only its hash is kept).')
+    parser.add_argument('--revoke-api-key', metavar='NAME', help='Revoke the monitoring key with this name.')
+    parser.add_argument('--list-api-keys', action='store_true', help='List the monitoring keys (names, dates, uses; never the keys).')
     parser.add_argument('--grant', nargs=3, metavar=('EMAIL', 'PLAN', 'DAYS'),
                         help='Give a member a plan (free/pro/business) for DAYS more days, or "lifetime", without payment.')
     args = parser.parse_args()
@@ -625,6 +744,20 @@ def main():
         with open(db_path().parent / 'admin.log', 'a', encoding='utf-8') as log:
             log.write(line + '\n')
         print(line)
+        return
+    if args.new_api_key or args.revoke_api_key or args.list_api_keys:
+        load_env(ROOT / '.env')
+        if args.new_api_key:
+            try:
+                print(new_key(args.new_api_key))
+            except ValueError as cause:
+                sys.exit(str(cause))
+        elif args.revoke_api_key:
+            print('revoked' if revoke_key(args.revoke_api_key) else 'no such key')
+        else:
+            for k in load_keys().values():
+                when = lambda t: time.strftime('%Y-%m-%d %H:%M', time.localtime(t)) if t else '-'
+                print(f"{k['name']}	made {when(k['created'])}	last used {when(k.get('lastUsed'))}	uses {k.get('uses', 0)}")
         return
     if args.hash_password:
         first = getpass.getpass('New admin password (at least 12 characters): ')

@@ -92,6 +92,38 @@ class AdminTests(unittest.TestCase):
             self.call('POST', '/api/login', {'username': 'boss', 'password': 'wrong'})
         self.assertEqual(self.call('POST', '/api/login', {'username': 'boss', 'password': 'very-long-admin-pass'})[0], 429, 'throttled')
 
+    def test_monitoring_key(self):
+        """A read-only key for another program (an AI agent, an audit script): numbers only, no personal data."""
+        admin_server.KEY_HITS.clear()
+        key = admin_server.new_key('audit-ai')
+        self.assertTrue(key.startswith('mfa_') and len(key) > 40)
+        stored = (Path(self.tmp.name) / 'admin-api-keys.json').read_text(encoding='utf-8')
+        self.assertNotIn(key, stored, 'only the hash is kept')
+        auth = {'Authorization': 'Bearer ' + key}
+        status, data, _ = self.call('GET', '/api/overview', headers=auth)
+        self.assertEqual(status, 200); self.assertEqual(data['members'], 2)
+        status, data, _ = self.call('GET', '/api/visits?days=7', headers=auth)
+        self.assertEqual(status, 200); self.assertTrue(data['recent'])
+        self.assertTrue(all('user_id' not in r and 'member' not in r for r in data['recent']), 'no member ids or emails')
+        self.assertNotIn('alice@example.com', json.dumps(data))
+        status, data, _ = self.call('GET', '/api/server', headers=auth)
+        self.assertEqual(status, 200); self.assertNotIn('sk-should-never-show', json.dumps(data))
+        status, data, _ = self.call('GET', '/api/report.csv', headers=auth)
+        self.assertEqual(status, 200); self.assertIn('tanggal,pengunjung', data)
+        for path in ('/api/members', '/api/members/1', '/api/uploads', '/api/visitors', '/api/report.pdf'):
+            self.assertEqual(self.call('GET', path, headers=auth)[0], 403, path + ': personal data stays behind the admin login')
+        self.assertEqual(self.call('POST', '/api/visitors/label', {'key': 'x', 'kind': 'team'}, auth)[0], 401, 'a key cannot write')
+        self.assertEqual(self.call('GET', '/api/overview', headers={'Authorization': 'Bearer mfa_wrong'})[0], 401)
+        self.assertEqual(admin_server.load_keys()[admin_server.key_hash(key)]['uses'], 9, 'every request with the key is counted, refused ones too')
+        for _ in range(admin_server.KEY_RATE):
+            self.call('GET', '/api/server', headers=auth)
+        self.assertEqual(self.call('GET', '/api/server', headers=auth)[0], 429, 'rate limited per key')
+        self.assertTrue(admin_server.revoke_key('audit-ai'))
+        admin_server.KEY_HITS.clear()
+        self.assertEqual(self.call('GET', '/api/overview', headers=auth)[0], 401, 'a revoked key stops working')
+        with self.assertRaises(ValueError):
+            admin_server.new_key('bad name!')
+
     def test_numbers(self):
         self.login()
         status, d, _ = self.call('GET', '/api/overview')
