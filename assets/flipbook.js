@@ -839,19 +839,35 @@
   // Ignore clicks while a cover turn is still animating.
   const goPrev = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; book.flipPrev(); };
   const goNext = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (!curl?.open()) book.flipNext(); };
-  // No scrolling on desktop (owner, 2026-10-23): the sidebar stops at the bottom of the window
-  // and scrolls inside itself, like the book fits itself (FlipbookLayout).
+  // No scrolling on desktop (owner, 2026-10-23): on a short or wide window the whole sidebar
+  // shrinks evenly (text, buttons, gaps) until it fits above the bottom of the window, like the
+  // book fits itself (FlipbookLayout). Below 70% it stays at 70% and scrolls inside itself.
   const fitAside = () => {
     const aside = document.querySelector('.workspace > aside');
     if (!aside) return;
-    if (innerWidth <= 1050) { aside.style.maxHeight = aside.style.overflowY = ''; return; }
-    const top = aside.getBoundingClientRect().top + scrollY;
-    aside.style.maxHeight = Math.max(320, innerHeight - top - 16) + 'px';
-    aside.style.overflowY = 'auto';
+    aside.style.zoom = aside.style.maxHeight = aside.style.overflowY = '';
+    if (innerWidth <= 1050) return;
+    const top = aside.getBoundingClientRect().top + scrollY, room = innerHeight - top - 20;
+    const shown = () => aside.getBoundingClientRect().height;
+    if (shown() <= room) return;
+    // Text re-wraps at a new size, so the height is not quite proportional: measure and correct.
+    let zoom = 1;
+    for (let i = 0; i < 4 && shown() > room && zoom > 0.7; i++) {
+      zoom = Math.max(0.7, zoom * room / shown() - 0.005);
+      aside.style.zoom = zoom.toFixed(3);
+    }
+    if (shown() > room) { aside.style.maxHeight = Math.floor(room / zoom) + 'px'; aside.style.overflowY = 'auto'; }
   };
   fitAside(); addEventListener('resize', fitAside); addEventListener('load', fitAside);
   // The page header steps aside once a document is open: the sidebar moves up, so fit again.
-  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fitAside).observe(document.querySelector('main'));
+  // So does the sidebar when its own content changes (status lines, the save buttons appearing).
+  if (typeof ResizeObserver !== 'undefined') {
+    let frame = 0;
+    const later = () => { cancelAnimationFrame(frame); frame = requestAnimationFrame(fitAside); };
+    const watch = new ResizeObserver(later);
+    watch.observe(document.querySelector('main'));
+    [...(document.querySelector('.workspace > aside')?.children || [])].forEach(child => watch.observe(child));
+  }
   $('#prev').addEventListener('click', () => { if (turns) turns.request(false); else goPrev(); });
   $('#next').addEventListener('click', () => { if (turns) turns.request(true); else goNext(); });
   FlipbookWheel.bind($('#reader-stage'), {enabled: () => !!book,
