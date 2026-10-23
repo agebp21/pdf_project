@@ -444,6 +444,7 @@ def head(title, description, path, extra=''):
 <meta name="twitter:card" content="summary_large_image"><meta name="twitter:title" content="{esc(title)}"><meta name="twitter:description" content="{esc(description)}">
 <link rel="icon" type="image/png" href="/assets/img/favicon.png?v=pro">
 <link rel="apple-touch-icon" href="/assets/img/apple-touch-icon.png?v=pro">
+{PWA_HEAD}
 <link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700&family=Plus+Jakarta+Sans:wght@400;600;700&display=swap" rel="stylesheet">
 <style>{STYLE}</style>
@@ -810,8 +811,19 @@ def verification():
     return out
 
 
+# Installable web app (owner, 2026-10-23): "Add to Home Screen" opens the site without the
+# browser's bars (iPhone Safari never lets a page hide them otherwise). Every page carries it.
+PWA_HEAD = ('<link rel="manifest" href="/assets/manifest.json"><meta name="theme-color" content="#1A3C34">'
+            '<meta name="mobile-web-app-capable" content="yes"><meta name="apple-mobile-web-app-capable" content="yes">'
+            '<meta name="apple-mobile-web-app-status-bar-style" content="default"><meta name="apple-mobile-web-app-title" content="MyFlipbook">')
+
+
 def app_head(page_name):
-    """Tags added to an app page's <head> (bytes), or b'' when it has none."""
+    """Tags added to an app page's <head> (bytes): the web-app tags, plus search tags where it has them."""
+    return PWA_HEAD.encode('utf-8') + _page_tags(page_name)
+
+
+def _page_tags(page_name):
     if page_name in NOINDEX:
         return b'<meta name="robots" content="noindex">'
     if page_name in APP_NOINDEX:
