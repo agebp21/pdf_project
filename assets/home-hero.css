@@ -67,7 +67,7 @@
 .hh-book:focus-visible{outline:3px solid #FF5C28;outline-offset:8px}
 .hh-demo{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:48px 0 0}
 /* open: the text stays on the left, the open book takes the sample cover's place (wider) */
-.hh.is-preview{grid-template-columns:minmax(0,.62fr) minmax(0,1.38fr);gap:40px;padding-top:20px;padding-bottom:28px}
+.hh.is-preview{grid-template-columns:minmax(0,.62fr) minmax(0,1.38fr);gap:40px}
 .hh.is-preview>.hh-book-wrap{display:none}
 @media (max-width:900px){.hh.is-preview{grid-template-columns:1fr}}
 .hh-demo[hidden]{display:none}
@@ -116,3 +116,11 @@
 @keyframes hh-wait{to{opacity:.6}}
 /* inside the preview book the cover needs no room for the button */
 .hh-page .hh-cover-bottom{padding-bottom:22px}
+
+/* the switch between the hero and its preview, smooth (assets/home-hero.js) */
+.hh{transition:grid-template-columns .46s cubic-bezier(.4,0,.2,1),gap .46s cubic-bezier(.4,0,.2,1)}
+.hh-book-wrap{transition:opacity .2s ease,transform .2s ease}
+.hh.is-leaving>.hh-book-wrap{opacity:0;transform:scale(.97)}
+.hh-demo{transition:opacity .32s ease,transform .32s cubic-bezier(.2,.8,.2,1)}
+.hh-demo.is-soft{opacity:0;transform:translateY(14px)}
+@media (prefers-reduced-motion:reduce){.hh,.hh-book-wrap,.hh-demo{transition:none}}

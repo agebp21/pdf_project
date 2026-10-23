@@ -49,29 +49,48 @@
     flip.on('changeState', function (e) { if (e.data === 'read') status(); });
     status();
   }
+  // One smooth move, never a jump: the sample cover fades, the columns slide to make room
+  // (CSS transition on the grid), then the open book fades in and opens itself. Close plays it back.
+  var STILL = matchMedia('(prefers-reduced-motion: reduce)').matches;
+  var FADE = STILL ? 0 : 200, SLIDE = STILL ? 0 : 460;
   function open() {
-    if (!demo.hidden) return;
+    if (!demo.hidden || book.classList.contains('is-loading')) return;
     opener = document.activeElement;
     book.classList.add('is-loading');
-    // The sample cover stays until the preview book is ready, then the hero switches in one step.
+    // The sample cover stays until the preview book is ready.
     engine().then(function () {
       book.classList.remove('is-loading');
-      demo.hidden = false; hero.classList.add('is-preview');
-      if (!flip) build();
-      document.getElementById('hh-demo-close').focus({preventScroll: true});
-      demo.scrollIntoView({block: 'center', behavior: matchMedia('(prefers-reduced-motion: reduce)').matches ? 'auto' : 'smooth'});
-      setTimeout(function () { if (flip && flip.getCurrentPageIndex() === 0) flip.flipNext(); }, 500);   // it opens itself, like a reader would
+      hero.classList.add('is-leaving');
+      setTimeout(function () {
+        demo.classList.add('is-soft'); demo.hidden = false;
+        hero.classList.add('is-preview'); hero.classList.remove('is-leaving');
+        demo.scrollIntoView({block: 'center', behavior: STILL ? 'auto' : 'smooth'});
+        setTimeout(function () {
+          if (!flip) build();
+          requestAnimationFrame(function () { demo.classList.remove('is-soft'); });
+          document.getElementById('hh-demo-close').focus({preventScroll: true});
+          setTimeout(function () { if (flip && flip.getCurrentPageIndex() === 0) flip.flipNext(); }, STILL ? 0 : 550);   // it opens itself, like a reader would
+        }, SLIDE);
+      }, FADE);
     }).catch(function () {
       book.classList.remove('is-loading');
       var hint = book.querySelector('.hh-preview span'); if (hint) hint.textContent = EN() ? 'Try again' : 'Coba lagi';
     });
   }
 
+
   function close() {
+    if (demo.hidden) return;
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
-    demo.hidden = true; hero.classList.remove('is-preview');
-    if (opener && opener.focus) opener.focus();
+    demo.classList.add('is-soft');
+    setTimeout(function () {
+      demo.hidden = true;
+      hero.classList.add('is-leaving'); hero.classList.remove('is-preview');   // columns slide back, the cover waits
+      setTimeout(function () { hero.classList.remove('is-leaving'); }, SLIDE);
+      if (opener && opener.focus) opener.focus({preventScroll: true});
+    }, FADE + 100);
   }
+
   book.addEventListener('click', open);
   book.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
   document.getElementById('hh-demo-close').addEventListener('click', close);
