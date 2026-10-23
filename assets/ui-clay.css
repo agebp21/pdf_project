@@ -69,3 +69,11 @@ body.clay .preview:not(:fullscreen):not(.reading-fullscreen) #reader-stage:has(#
 .preview:fullscreen .preview-top,.preview.reading-fullscreen .preview-top{display:none!important}
 .preview:fullscreen,.preview.reading-fullscreen{border:0!important;border-radius:0!important;box-shadow:none!important}
 .preview:fullscreen .controls,.preview.reading-fullscreen .controls{border-top:0!important}
+/* Flipbook page, desktop: a narrower, tighter sidebar and the whole window width, so the
+   book (whose height follows its width) grows down into the screen (owner, 2026-10-23). */
+@media (min-width:1051px){
+  body.clay main:has(#reader-stage){max-width:none;padding-left:24px;padding-right:24px}
+  body.clay .workspace:has(#reader-stage){grid-template-columns:240px minmax(0,1fr);gap:18px}
+  body.clay .workspace:has(#reader-stage)>aside{padding:16px 14px}
+  body.clay .workspace:has(#reader-stage)>aside .muted{margin:10px 0 12px}
+}
