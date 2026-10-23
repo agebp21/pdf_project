@@ -457,8 +457,9 @@
     } catch (e) { return false; }
   }
   function attach(book) {
-    let state = 'read';
-    const turn = () => play(coverTurn(book) ? 'cover' : 'page');
+    let state = 'read', last = 0;
+    // A released swipe and the turn it starts are one sound.
+    const turn = () => { const now = Date.now(); if (now - last < 200) return; last = now; play(coverTurn(book) ? 'cover' : 'page'); };
     book.on('changeState', event => { state = event.data; if (state === 'flipping') turn(); });
     if (typeof document === 'undefined') return;
     const release = () => { if (state === 'user_fold') { state = 'released'; turn(); } };
@@ -512,12 +513,24 @@
     const index = book.getCurrentPageIndex();
     if (to === undefined) to = index - 1;
     if (to < 0 || to >= index) return false;
+    const prev = () => (book.mfFlipPrev || book.flipPrev).call(book);
     let flip = null, rect = null;
-    try { if (book.getOrientation() === 'portrait' && book.getState() === 'read') { flip = book.getFlipController(); rect = book.getRender().getRect(); } } catch (e) { flip = null; }
-    if (!flip || !rect || !rect.pageWidth) { if (to === index - 1) book.flipPrev(); else book.flip(to); return; }
+    try {
+      if (book.getOrientation() === 'portrait') {
+        flip = book.getFlipController(); rect = book.getRender().getRect();
+        // A phone swipe has already started PageFlip's own fold under the finger: drop it.
+        if (flip.getState() === 'user_fold' || flip.getState() === 'fold_corner') {
+          const render = book.getRender();
+          render.setBottomPage(null); render.setFlippingPage(null); render.clearShadow();
+          flip.reset(); flip.setState('read');
+        }
+        if (book.getState() !== 'read') flip = null;
+      }
+    } catch (e) { flip = null; }
+    if (!flip || !rect || !rect.pageWidth) { if (to === index - 1) prev(); else book.flip(to); return; }
     book.turnToPage(to);
     // The same corner PageFlip's flipNext takes hold of.
-    if (!flip.start({ x: rect.left + 2 * rect.pageWidth - 10, y: 1 })) { book.turnToPage(index); book.flipPrev(); return; }
+    if (!flip.start({ x: rect.left + 2 * rect.pageWidth - 10, y: 1 })) { book.turnToPage(index); prev(); return; }
     // flipNext's own path, walked backwards: from turned right over to just inside the corner.
     const inset = rect.height / 10, from = { x: -rect.pageWidth + 1, y: 1 }, to2 = { x: rect.pageWidth - inset, y: inset };
     const calc = flip.getCalculation();
@@ -530,7 +543,15 @@
     let count = 0; try { count = book.getPageCount(); } catch (e) {}
     return Math.max(FlipbookTurns.MAX_QUEUE, Math.ceil(count / 8));     // a quarter of the spreads
   },
+  // Every way back goes through back(): buttons, keys, and PageFlip's own phone swipe (which
+  // calls book.flipPrev itself). PageFlip's original stays as book.mfFlipPrev.
+  adopt(book) {
+    if (book.mfFlipPrev) return;
+    book.mfFlipPrev = book.flipPrev;
+    book.flipPrev = function () { FlipbookTurns.back(book); };
+  },
   bind(book, go) {
+    FlipbookTurns.adopt(book);
     const settings = book.getSettings(), base = settings.flippingTime;
     const MIN = Math.min(base, FlipbookTurns.MIN);
     let queue = 0, last = 0, gap = Infinity, timer = 0;

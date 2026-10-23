@@ -19,6 +19,7 @@ global.window = { AudioContext: FakeAudioContext };
 global.atob = text => Buffer.from(text, 'base64').toString('binary');
 global.localStorage = { getItem: k => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); } };
 global.document = { addEventListener: (name, fn) => { (listeners[name] = listeners[name] || []).push(fn); }, removeEventListener() {} };
+let clock = 0; Date.now = () => (clock += 1000);   // each turn a second apart
 require('../assets/export/layout.js');
 const sound = global.FlipbookSound;
 const turns = () => sources; // one buffer source per page turn
@@ -45,6 +46,11 @@ assert.equal(turns(), 2, 'a drag plays when released');
 release();
 assert.equal(turns(), 2, 'no sound for releases while just reading');
 
+// A phone swipe: released (user_fold) and the turn it starts (flipping) in the same instant: one sound.
+const realNow = Date.now; clock += 1000; Date.now = () => clock;
+state('user_fold'); const before = turns(); release(); state('flipping'); state('read');
+assert.equal(turns(), before + 1, 'a released swipe and the turn it starts are one sound');
+Date.now = realNow; clock += 1000;
 const button = { textContent: '', title: '', attrs: {}, setAttribute(k, v) { this.attrs[k] = v; }, addEventListener(n, fn) { this.click = fn; } };
 sound.bindButton(button);
 assert.match(button.textContent, /Sound/);
@@ -53,10 +59,10 @@ assert.equal(store['mf-flip-sound'], 'off', 'mute is remembered');
 assert.match(button.textContent, /Muted/);
 assert.equal(button.attrs['aria-pressed'], 'false');
 state('flipping');
-assert.equal(turns(), 2, 'muted flips are silent');
+assert.equal(turns(), 3, 'muted flips are silent');
 button.click();
 state('flipping');
-assert.equal(turns(), 3, 'unmuted again');
+assert.equal(turns(), 4, 'unmuted again');
 console.log('PASS flip sound: embedded recording, flipping + drag release, silent corner peek and reading, mute toggle persisted');
 
 // Covers sound as recorded; inside pages as a thin sheet (higher, quicker, no low thump).
