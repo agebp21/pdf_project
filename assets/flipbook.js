@@ -230,7 +230,7 @@
       });
       if (book) { disposeLayout?.(); book.destroy(); book = null; }
       if (pdf) await pdf.destroy();
-      imageUrls.forEach(url => { if (!isBlank(url)) URL.revokeObjectURL(url); });
+      imageUrls.forEach(url => { if (!isBlank(url)) URL.revokeObjectURL(url); }); dropSharp();
       imageUrls = newUrls; blankPage = blank; pdf = newPdf; pageElements = newElements; overlays.clear(); installed = true; bookLinks = found.links; bookWords = words; bookText = text; bookPodcast = (project && project.podcast) || null; bookTranslations = (project && project.translations) || {}; bookSummary = (project && project.summary) || null;
       // Translated editions ("ID | EN"): the book's language and the pictures kept in the project.
       Object.values(bookVersions).forEach(pages => Object.values(pages).forEach(url => URL.revokeObjectURL(url)));
@@ -262,7 +262,7 @@
         if (forward) goNext(); else goPrev();
       });
       book.on('changeState', event => {
-        if (event.data === 'read') { updatePage(); animate(true); }
+        if (event.data === 'read') { updatePage(); animate(true); sharpen(); }
         else { stopAnimation(); $('#home').disabled = $('#end').disabled = true; }
       });
       book.loadFromHTML(sheets);
@@ -365,6 +365,7 @@
       // A new book goes into My Library only when the member presses 💾 Save My Library.
       archiveNote(libraryId ? L('☁ Opened from My Library', '☁ Dibuka dari My Library') : '');
       paintLibraryButton();
+      sharpen();                                               // the pages on screen, sharp for this screen
       pagesReady = drawRest(version);                          // the other pages, in the background
       pagesReady.then(() => readPictures(version));            // picture pages: their text by OCR, in the background
       return true;
@@ -640,18 +641,64 @@
     const out = await translatePages({0: text}, target);
     return out['0'] || out[0];
   }
-  // One page as a JPEG picture (object URL).
-  async function renderPageImage(page) {
-    const original = page.getViewport({scale:1});
-    const viewport = page.getViewport({scale: Math.min(1.5, 1100 / Math.max(original.width, original.height))});
+  // One page as a JPEG picture (object URL). The book's own pictures (also what exports and
+  // share links carry) have a 1100 px long side; `long` asks for a sharper one (sharpen()).
+  async function renderPageImage(page, long = 0, quality = 0.86) {
+    const original = page.getViewport({scale:1}), side = Math.max(original.width, original.height);
+    const viewport = page.getViewport({scale: long ? long / side : Math.min(1.5, 1100 / side)});
     const canvas = document.createElement('canvas'); canvas.width = Math.ceil(viewport.width); canvas.height = Math.ceil(viewport.height);
     try {
       await page.render({canvasContext:canvas.getContext('2d'), viewport}).promise;
-      const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.86));
+      const imageBlob = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', quality));
       if (!imageBlob) throw new Error('Could not render the page image.');
       return URL.createObjectURL(imageBlob);
     } finally { page.cleanup(); canvas.width = canvas.height = 0; }
   }
+  // Sharp pages on screen (owner, 2026-10-23: text looked soft once the book got big). The
+  // book's pictures are 1100 px; a page on screen gets a picture drawn from the PDF for its
+  // size there (times the screen's pixel ratio, zoom included), up to 3000 px. The last 8
+  // are kept; older ones go back to the book's picture. Exports keep the book's pictures.
+  const sharp = new Map();                                   // page index -> {url, px}
+  let sharpTimer = 0, sharpBusy = false, sharpAgain = false;
+  function sharpen() { clearTimeout(sharpTimer); sharpTimer = setTimeout(sharpenNow, 160); }
+  function dropSharp() { sharp.forEach(entry => URL.revokeObjectURL(entry.url)); sharp.clear(); }
+  async function sharpenNow() {
+    if (sharpBusy) { sharpAgain = true; return; }
+    if (!book || !pdf || (book.getState && book.getState() !== 'read')) return;
+    sharpBusy = true;
+    const doc = pdf, version = loadVersion;
+    try {
+      for (const index of visiblePages()) {
+        const element = pageElements[index], image = element && element.querySelector('img');
+        if (!image || isBlank(imageUrls[index])) continue;
+        const mine = sharp.get(index);
+        if (image.src !== imageUrls[index] && !(mine && image.src === mine.url)) continue;   // a translated edition is showing
+        const box = element.getBoundingClientRect();
+        const need = Math.min(3000, Math.ceil(Math.max(box.width, box.height) * (window.devicePixelRatio || 1)));
+        if (need <= Math.max(1100, mine ? mine.px : 0) * 1.08) continue;
+        const url = await renderPageImage(await doc.getPage(index + 1), need, 0.9);
+        if (version !== loadVersion || doc !== pdf) { URL.revokeObjectURL(url); return; }
+        sharp.delete(index); sharp.set(index, {url, px: need});
+        image.src = url;
+        if (mine) URL.revokeObjectURL(mine.url);
+        while (sharp.size > 8) {
+          const [old, entry] = sharp.entries().next().value;
+          sharp.delete(old);
+          const shown = pageElements[old] && pageElements[old].querySelector('img');
+          if (shown && shown.src === entry.url) shown.src = imageUrls[old];
+          URL.revokeObjectURL(entry.url);
+        }
+      }
+    } catch (cause) { console.warn('Sharp page skipped:', cause); }
+    finally { sharpBusy = false; if (sharpAgain) { sharpAgain = false; sharpen(); } }
+  }
+  addEventListener('resize', sharpen);
+  // Full screen and the fitted layout resize the book without resizing the window.
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(sharpen).observe($('#reader-stage'));
+  // Zoom (pinch, Ctrl+wheel, double tap, 🔍) changes a page's size on screen without a resize.
+  ['wheel', 'pointerup', 'touchend', 'transitionend'].forEach(type => $('#reader-stage').addEventListener(type, sharpen, {passive: true}));
+  $('#zoom').addEventListener('click', () => setTimeout(sharpen, 400));
+
   // The pages not drawn yet, after the book has opened: the ones on screen
   // first, then onward in order. A page showing its blank stand-in gets its
   // picture at once (a translated edition on screen keeps its own picture).
@@ -668,7 +715,7 @@
         const index = visiblePages().find(i => todo.includes(i)) ?? todo[0];
         const url = await renderPageImage(await doc.getPage(index + 1));
         if (gone()) { URL.revokeObjectURL(url); return; }
-        imageUrls[index] = url; done++;
+        imageUrls[index] = url; done++; sharpen();
         const image = pageElements[index] && pageElements[index].querySelector('img');
         if (image && image.src === blankPage) image.src = url;
         loading(L(`Preparing pages ${done} / ${total}…`, `Menyiapkan halaman ${done} / ${total}…`), done / total);
