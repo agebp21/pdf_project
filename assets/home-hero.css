@@ -66,16 +66,18 @@
 /* Preview: the sample book as a real flipbook in a window over the page (assets/home-hero.js) */
 .hh-book{cursor:pointer}
 .hh-book:focus-visible{outline:3px solid #FF5C28;outline-offset:8px}
-.hh-demo{position:relative;grid-column:1/-1;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:48px 0 0}
-.hh.is-preview>.hh-text,.hh.is-preview>.hh-book-wrap{display:none}
-.hh.is-preview{padding-top:20px;padding-bottom:28px}
+.hh-demo{position:relative;min-width:0;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:16px;padding:48px 0 0}
+/* open: the text stays on the left, the open book takes the sample cover's place (wider) */
+.hh.is-preview{grid-template-columns:minmax(0,.62fr) minmax(0,1.38fr);gap:40px;padding-top:20px;padding-bottom:28px}
+.hh.is-preview>.hh-book-wrap{display:none}
+@media (max-width:900px){.hh.is-preview{grid-template-columns:1fr}}
 .hh-demo[hidden]{display:none}
 .hh-demo-tools{position:absolute;top:0;right:0;display:flex;gap:8px;z-index:2}
 .hh-demo-tools button{height:42px;min-width:42px;padding:0 12px;border-radius:999px;border:1px solid #E4DED0;background:#fff;color:#1C1917;font:700 13px/1 'Plus Jakarta Sans',system-ui,sans-serif;cursor:pointer;display:inline-flex;align-items:center;justify-content:center}
 .hh-demo-tools button:hover{background:#FAF4E8}
 .hh-demo-tools svg{width:20px;height:20px}
 .hh-demo-stage{position:relative;overflow:hidden}
-.hh-demo-stage{width:min(1100px,100%);height:min(620px,calc(100dvh - 220px));min-height:340px;display:flex;align-items:center;justify-content:center}
+.hh-demo-stage{width:100%;height:min(600px,calc(100dvh - 220px));min-height:320px;display:flex;align-items:center;justify-content:center}
 .hh-demo-book{margin:auto}
 .hh-page{position:relative;overflow:hidden;background:#FFFBF2;box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif;text-align:left}
 .hh-demo-book>.hh-page{display:none}                      /* until the flipbook takes them */
