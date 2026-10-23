@@ -1,6 +1,28 @@
 # Koordinasi tim AI
 
+- HOME-LIVE (Codex, aktif atas permintaan owner): commit/push hanya hero + tes + handoff milik Codex, validasi paket commit terisolasi, backup dan deploy sesuai DEPLOY.md. File dirty agen lain tidak ikut paket.
+
+- HOME-CENTER (Codex, selesai lokal): toolbar demo rata tengah dengan `justify-content:safe center`; saat meluap di HP, tombol tetap bisa digeser tanpa terpotong di awal. CSS hero dan tes toolbar diperbarui. QA desktop/HP (termasuk assertion posisi tengah), seluruh interaksi toolbar, dan diff-check lulus. Belum commit/push/deploy.
+
+- HOME-COMPACT (Codex, selesai lokal): bar panah/status visual hero dihilangkan; pengumuman halaman tetap tersedia untuk pembaca layar. Toolbar demo diperkecil29→24px, font8.5px, ikon12px; ruang kosong bar lama dikurangi44px. QA hero desktop/HP/animasi normal dan seluruh interaksi toolbar desktop/HP lulus; syntax/diff bersih. Belum commit/push/deploy; perubahan agen lain tidak disentuh.
+
+### Perubahan lokal 2026-10-23 — Codex (hero saja)
+
+- HOME-TOOLS (Codex, selesai lokal): toolbar12tombol kecil29px di bawah pratinjau, lebar mengikuti buku/demo; HP bisa geser horizontal. Home/End/Open cover, zoom, Mark/list, notes/list, highlighter/marker, audio book, Translate ID/EN, Sound, Fullscreen. Close tetap di atas. Modul baru `assets/home-hero-tools.js`, hero/index/CSS, tes `qa-home-toolbar.cjs`; reuse `layout.js`+`book-effects.css` tanpa edit vendor/ekspor. Penanda/catatan/highlight disimpan browser dengan key demo terpisah; Translate hanya mengganti teks contoh ID/EN, tanpa AI/API. Audio memakai mesin suara browser bersama; tidak tersedia → tombol disabled dengan penjelasan, bukan tombol palsu.
+- QA HOME-TOOLS: syntax/diff lulus; browser desktop1280×900/HP390×844 lulus bounds/scroll, Home/End/Open, penanda, buat/simpan/baca catatan, zoom2x/reset, drag highlight, antrean audio dengan mock (bukan uji speaker), translate tanpa requestAI, fullscreen dan popover tetap di dalam fullscreen/tidak menutup toolbar, sound toggle, cleanup close. Regresi10halaman/logo/bahasa/buka ulang +320ms/reduced-motion juga lulus. Screenshot `.build/qa-home-hero/*-toolbar.png`. Belum commit/push/deploy; server8098 sebelumnya tetap dipakai, tidak dihentikan.
+
+- HOME-SPEED selesai lokal: Codex mengatur durasi belok pratinjau hero dari450ms ke320ms sesuai permintaan owner. File `assets/home-hero.js` dan tes hero; tidak menyentuh engine/vendor atau kecepatan reader/ekspor. Reduced-motion tetap1ms. Syntax/diff serta QA browser desktop/HP/animasi normal lulus, termasuk verifikasi konfigurasi engine320ms dan navigasi10halaman. Belum commit/push/deploy.
+
+- Koreksi HOME-10 dari owner: logo menggantikan tulisan MYFLIPBOOK PRO di atas sampul, bukan ikon badge. Logo resmi pada label atas kedua sampul dan label sampul belakang, dengan alas krem untuk kontras; badge bawah kembali ke ikon buku asli. Status koreksi: selesai lokal; QA desktop/HP/animasi normal diulang dan lulus, 10 halaman tetap. Tidak commit/push/deploy.
+
+- HOME-10: logo lengkap MyFlipbook Pro mengganti teks merek sampul + pratinjau 10 halaman total (sampul + 8 isi + belakang).
+- File: `index.html` bagian hero, `assets/home-hero.css`, `assets/home-hero.js`, `tests/qa-home-hero.cjs`, `PROJECT_HANDOFF.md`, dokumen ini. Status: selesai lokal; belum commit/push/deploy. Perubahan lokal agen lain tetap utuh.
+- Logo memakai `assets/img/logo.png` resmi yang sudah ada, mengganti teks merek di atas sampul; judul utama sampul tetap. Empat halaman tambahan dwibahasa (05–08), total10 termasuk sampul depan/belakang; status halaman sekarang memakai indeks fisik `/10` (bukan jumlah isi).
+- QA: `node --check` JS/tes, `git diff --check`, HTTP200 beranda/aset, Playwright desktop1280×900 dan HP390×844 plus desktop animasi normal: logo tidak terpotong, 10halaman, sampul/semua isi/halaman terakhir, maju/mundur, ID/EN, tutup/buka ulang tanpa duplikasi, nol pageerror/aset hero gagal. Screenshot `.build/qa-home-hero/` (ignored). Jalankan: `MF_PLAYWRIGHT_MODULE=<path playwright/index.mjs> node tests/qa-home-hero.cjs` dengan server lokal8098. Tidak mengubah vendor/ekspor/backend atau menjalankan seluruh suite Python.
+
 ## 📌 Status terkini (diperbarui 2026-10-23 oleh Claude) — BACA DULU
+
+**Tambahan lokal Codex 23 Okt — HOME-10 selesai:** tulisan merek di atas sampul diganti logo lengkap MyFlipbook Pro (badge bawah tetap ikon buku) dan prototipe hero menjadi10halaman total. Berkas dan QA ada pada catatan paling atas. **Belum commit/push/deploy; status live di bawah belum berubah.**
 
 **Live (2026-10-23):** https://myflipbookpro.com = commit `7827ed6`. Ringkasan lengkap 20–23 Okt (flipbook: suara kertas 2 rekaman, belok 0,45 dtk, 1 scroll = 1 belokan, mundur melengkung, teks tajam; halaman flipbook tanpa bingkai & tanpa scroll; beranda: banner dwibahasa + hero + pratinjau prototipe; PWA; API pemantauan admin untuk AI lain): **[HANDOFF_2026-10-23.md](HANDOFF_2026-10-23.md)**. AI live MATI sampai kredit Gemini / kunci Sumopod tersedia (owner). Kunci API pemantauan `audit-ai` hanya di VPS `/root/myflipbook-monitor-api-key.txt` + lokal `.data/monitor-api-key.txt` — jangan ditampilkan.
 

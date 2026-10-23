@@ -5,7 +5,7 @@
   var book = document.getElementById('hh-book'), demo = document.getElementById('hh-demo');
   if (!book || !demo) return;
   var hero = demo.closest('.hh');
-  var flip = null, loading = null, opener = null, settle = null, busy = false;
+  var flip = null, loading = null, opener = null, settle = null, busy = false, tools = null;
   var EN = function () { return window.I18N && I18N.get && I18N.get() === 'en'; };
   function load(src) {
     return new Promise(function (resolve, reject) {
@@ -15,23 +15,29 @@
     });
   }
   function engine() {
-    if (!loading) loading = load('assets/vendor/page-flip.browser.js?v=plain3').then(function () { return load('assets/export/layout.js?v=fs'); });
+    if (!loading) {
+      var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'assets/export/book-effects.css'; document.head.appendChild(css);
+      loading = load('assets/vendor/page-flip.browser.js?v=plain3').then(function () { return load('assets/export/layout.js?v=fs'); }).then(function () { return load('assets/home-hero-tools.js'); });
+    }
     return loading;
   }
   function status() {
     if (!flip) return;
     var i = flip.getCurrentPageIndex(), n = flip.getPageCount(), spread = flip.getOrientation() === 'landscape';
-    var text = i === 0 ? (EN() ? 'Cover' : 'Sampul') : i >= n - 1 ? (EN() ? 'Back cover' : 'Sampul belakang')
-      : (spread && i + 1 < n - 1 ? (i + 1) + '–' + (i + 2) : String(i + 1)) + ' / ' + (n - 2);
+    var text = i === 0 ? (EN() ? 'Cover' : 'Sampul') + ' · 1 / ' + n : i >= n - 1 ? (EN() ? 'Back cover' : 'Sampul belakang') + ' · ' + n + ' / ' + n
+      : (spread && i + 1 < n - 1 ? (i + 1) + '–' + (i + 2) : String(i + 1)) + ' / ' + n;
     document.getElementById('hh-demo-status').textContent = text;
     document.getElementById('hh-demo-prev').disabled = i === 0;
     document.getElementById('hh-demo-next').disabled = i >= n - (spread ? 2 : 1);
+    if (tools) tools.refresh();
   }
   function build() {
     var box = document.getElementById('hh-demo-book'), pages = [].slice.call(box.querySelectorAll('.hh-page'));
     pages.forEach(function (page) { page.style.display = ''; });
     var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     var motion = window.FlipbookLayout ? FlipbookLayout.motion(reduced) : {};
+    // Slightly quicker for the homepage sample; leave reader/export defaults alone.
+    motion.flippingTime = reduced ? 1 : 320;
     flip = new St.PageFlip(box, Object.assign({ width: 450, height: 625, size: 'stretch', minWidth: 160, maxWidth: 700, minHeight: 222, maxHeight: 972,
       autoSize: true, usePortrait: true, showCover: true, startPage: 0 }, motion));
     flip.loadFromHTML(pages);
@@ -45,6 +51,7 @@
     }
     if (window.FlipbookSound) { FlipbookSound.attach(flip); FlipbookSound.bindButton(document.getElementById('hh-demo-sound')); }
     if (window.FlipbookTurns) FlipbookTurns.adopt(flip);
+    tools = HomeHeroTools.bind({ flip: flip, pages: pages, demo: demo });
     flip.on('flip', status); flip.on('changeOrientation', status);
     flip.on('changeState', function (e) { if (e.data === 'read') status(); });
     status();
@@ -117,6 +124,7 @@
   }
   function close() {
     if (busy || demo.hidden) return;
+    if (tools) tools.pause();
     busy = true;
     try { if (document.fullscreenElement) document.exitFullscreen(); } catch (e) {}
     var box = document.getElementById('hh-demo-book');
@@ -124,7 +132,7 @@
     // the middle), then the sample cover takes over from there and slides home.
     var closed = function (then) {
       if (!flip || flip.getCurrentPageIndex() === 0 || STILL) { if (flip && flip.getCurrentPageIndex() !== 0) { flip.turnToPage(0); if (settle) settle(); } frame(then); return; }
-      var turn = (flip.getSettings().flippingTime || 450) + 60;
+      var turn = (flip.getSettings().flippingTime || 320) + 60;
       flip.flip(0);
       // The turn, then the cover's glide to the middle (0.45 s), then the slide home.
       setTimeout(function () { if (flip.getCurrentPageIndex() !== 0) { flip.turnToPage(0); if (settle) settle(); } setTimeout(function () { frame(then); }, 480); }, turn);
@@ -153,10 +161,11 @@
   document.getElementById('hh-demo-full').addEventListener('click', function () {
     try { if (document.fullscreenElement) document.exitFullscreen(); else if (demo.requestFullscreen) demo.requestFullscreen(); } catch (e) {}
   });
-  document.getElementById('hh-demo-prev').addEventListener('click', function () { if (flip) flip.flipPrev(); });
-  document.getElementById('hh-demo-next').addEventListener('click', function () { if (flip) flip.flipNext(); });
+  document.getElementById('hh-demo-prev').addEventListener('click', function () { if (tools) tools.pause(); if (flip) flip.flipPrev(); });
+  document.getElementById('hh-demo-next').addEventListener('click', function () { if (tools) tools.pause(); if (flip) flip.flipNext(); });
   document.addEventListener('keydown', function (e) {
     if (demo.hidden) return;
+    if (e.target.closest('input, textarea, select, [contenteditable]')) return;
     if (e.key === 'Escape') close();
     else if (e.key === 'ArrowRight' && flip) flip.flipNext();
     else if (e.key === 'ArrowLeft' && flip) flip.flipPrev();

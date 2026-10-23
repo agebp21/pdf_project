@@ -1,5 +1,19 @@
 # Handoff — PDF Project & Flipbook
 
+HOME-CENTER (23 Oktober, selesai lokal): toolbar demo diposisikan rata tengah; `safe center` mempertahankan akses scroll di HP ketika tombol melebihi lebar buku. QA toolbar desktop/HP serta pemeriksaan posisi tengah dan diff-check lulus. Belum commit/push/deploy.
+
+HOME-COMPACT (23 Oktober, selesai lokal): bar panah dan nomor halaman bawah demo dihapus secara visual; status aksesibel tetap ada. Toolbar demo kini24px (sebelumnya29px), font8.5px/ikon12px; reservasi tinggi hero dikurangi44px. Tes navigasi memakai toolbar/keyboard, dan memverifikasi panah lama tidak terlihat serta tombol maksimal24px. QA hero10halaman desktop/HP/animasi normal dan QA toolbar desktop/HP lulus, syntax/diff bersih. Belum commit/push/deploy.
+
+## Tambahan lokal 23 Oktober 2026 — logo sampul dan pratinjau10halaman
+
+HOME-TOOLS selesai lokal: toolbar kecil di bawah buku demo muncul setelah preview dibuka, lebar mengikuti area buku, mobile horizontal-scroll.12tombol sesuai referensi (Home, End, Open cover/Next, zoom, Mark/list, notes/list, pen/highlighter, audio book, Translate, Sound, Fullscreen). `assets/home-hero-tools.js` mengikat ulang modul reader bersama tanpa edit vendor/ekspor; `hh-demo-zoom` membungkus buku agar zoom tidak konflik dengan centerCover. Styles alat dimuat lazy dari book-effects.css. Translate demo adalahalihID/EN (bukan AI); audio via browser, pengujian antrean memakai mock. Anotasi demo lokal dan key terpisah. Pause/close membersihkan mode aktif, popover fullscreen direlokasi ke demo dan diposisikan di atas toolbar. QA UI desktop/HP lengkap + regresi hero lulus; detail TEAM_WORK HOME-TOOLS. Belum commit/push/deploy.
+
+Permintaan lanjutan HOME-SPEED: belokan pratinjau hero dipercepat450→320ms (~29% durasi lebih singkat), reduced-motion tetap1ms. Override lokal di `home-hero.js`, tidak mengubah default `export/layout.js` untuk reader/ekspor. QA browser desktop/HP/animasi normal lulus, termasuk konfigurasi engine320ms, maju/mundur10halaman dan buka ulang. Belum commit/push/deploy.
+
+Codex mengerjakan permintaan owner pada hero beranda saja: tulisan MYFLIPBOOK PRO di atas kedua sampul diganti logo lengkap `assets/img/logo.png` (juga label merek sampul belakang), dengan alas krem agar kontras. **Koreksi owner: bukan mengganti ikon badge bawah; badge dikembalikan ke ikon buku semula.** Empat halaman isi baru05–08 (ID/EN), total10 = sampul +8isi +belakang. `home-hero.js` memperbaiki indikator menjadi indeks fisik `/10`; desain/transisi slide, engine/vendor, reader editor dan ekspor tidak diubah. Detail dan kepemilikan di `TEAM_WORK.md` HOME-10.
+
+QA browser desktop/HP serta desktop animasi normal lulus: logo,10halaman, semua halaman sampai belakang, mundur, ID/EN, tutup/buka ulang, nol pageerror/aset hero gagal. Tes `tests/qa-home-hero.cjs`, screenshot ignored `.build/qa-home-hero/`; preview memakai server lokal yang sudah aktif `http://127.0.0.1:8098/`. **Selesai lokal, belum commit/push/deploy.** Catatan historis/live6halaman pada handoff23Okt milik Claude masih menggambarkan versi yang dipublikasikan.
+
 Terakhir diperbarui: 17 September 2026.
 
 Gaya bukaan terbaru: pencahayaan punggung dari template heyzine_dynamic diadaptasi di `assets/export/book-effects.css`; engine PageFlip tetap mengatur transformasi/lipatan dan bayangan bergerak. `FlipbookLayout.motion/decorate` dipakai preview dan ekspor: sampul beserta sisi belakangnya hard, halaman isi soft, durasi 950ms, shadow 0,38, mouse/drag/swipe serta sudut halaman aktif. Reduced motion meniadakan durasi panjang/sudut mengintip. Ukuran sampul tetap sama dengan halaman isi. Ini gaya pada engine proyek, bukan integrasi layanan Heyzine resmi.

@@ -28,7 +28,8 @@
 .hh-cover{position:absolute;inset:0;overflow:hidden;background:#FFFBF2;display:flex;flex-direction:column;font-family:'Plus Jakarta Sans',system-ui,sans-serif;container-type:size}
 .hh-cover-top{--u:calc(100cqh/556);flex:0 0 60%;background:linear-gradient(160deg,#21503F,#1A3C34 60%,#14302A);color:#fff;padding:calc(28*var(--u)) calc(26*var(--u)) calc(46*var(--u));display:flex;gap:calc(18*var(--u))}
 .hh-cover-title{flex:1;display:flex;flex-direction:column;justify-content:space-between}
-.hh-cover-brand{font-size:calc(10*var(--u));font-weight:800;letter-spacing:.22em;opacity:.8}
+.hh-cover-brand{display:block;width:calc(170*var(--u));max-width:100%;padding:calc(6*var(--u)) calc(8*var(--u));box-sizing:border-box;border-radius:calc(8*var(--u));background:#FFFBF2}
+.hh-cover-brand img{display:block;width:100%;height:auto;object-fit:contain}
 .hh-cover-title strong{font-family:'Fraunces',Georgia,serif;font-size:calc(44*var(--u));line-height:.92;letter-spacing:-.03em;font-weight:900}
 .hh-cover-title strong em{font:inherit;font-style:normal;color:#FFB37E}
 .hh-cover-list{list-style:none;margin:0;padding:0 0 0 calc(16*var(--u));border-left:1px solid rgba(255,255,255,.3);font-size:calc(10.5*var(--u));line-height:2.1;opacity:.9;white-space:nowrap}
@@ -36,7 +37,7 @@
 .hh-cover-note{display:block;margin:0;font-size:calc(21*var(--u));line-height:1.3;color:#1C1917;max-width:calc(250*var(--u))}
 .hh-cover-note b{font-weight:800}
 .hh-cover-mark{position:absolute;right:calc(26*var(--u));top:calc(-31*var(--u));width:calc(62*var(--u));height:calc(62*var(--u));border-radius:calc(18*var(--u));background:#FFFBF2;display:grid;place-items:center;box-shadow:0 calc(6*var(--u)) calc(16*var(--u)) rgba(0,0,0,.12)}
-.hh-cover-mark img{width:calc(42*var(--u));height:calc(42*var(--u))}
+.hh-cover-mark img{display:block;width:calc(42*var(--u));height:calc(42*var(--u));object-fit:contain}
 .hh-corner{position:absolute;right:0;bottom:0;width:70px;height:70px;border-top-left-radius:100%;transform-origin:100% 100%;
   background:linear-gradient(135deg,rgba(28,25,23,0) 48%,rgba(28,25,23,.07) 50%,#EFE8DA 53%,#FFFFFF 100%);box-shadow:-3px -3px 7px rgba(28,25,23,.07);animation:hh-lift 3.2s ease-in-out infinite}
 .hh-book:hover .hh-corner{animation-duration:1.4s}
@@ -82,6 +83,15 @@
 .hh-demo-stage{position:relative;overflow:hidden}
 .hh-demo-stage{width:100%;height:min(600px,calc(100dvh - 220px));min-height:320px;display:flex;align-items:center;justify-content:center}
 .hh-demo-book{margin:auto}
+.hh-demo-zoom{width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative}
+.hh-demo-toolbar{box-sizing:border-box;display:flex;align-items:center;justify-content:safe center;gap:4px;max-width:100%;min-width:0;padding:4px 2px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;white-space:nowrap}
+.hh-demo-toolbar button{flex:0 0 auto;height:24px;min-width:24px;padding:0 6px;border:1px solid #E4DED0;border-radius:999px;background:#FFFDFA;color:#375744;font:700 8.5px/1 'Plus Jakarta Sans',system-ui,sans-serif;cursor:pointer}
+.hh-demo-toolbar button:hover:not(:disabled){background:#F1F5EC;border-color:#a9bfa9}
+.hh-demo-toolbar button[aria-pressed=true]{background:#E4F3C2;border-color:#83a779}
+.hh-demo-toolbar button:disabled{opacity:.4;cursor:default}
+.hh-demo-toolbar button svg{width:12px;height:12px;vertical-align:middle}
+.hh-tool-notice{font:11px/1.5 system-ui;max-width:100%;margin:0;color:#57534E}
+.hh-tool-notice[hidden]{display:none}
 .hh-page{position:relative;overflow:hidden;background:#FFFBF2;box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif;text-align:left}
 .hh-demo-book>.hh-page{display:none}                      /* until the flipbook takes them */
 .hh-page .hh-cover{position:absolute;inset:0}
@@ -94,24 +104,23 @@
 .hh-back{background:linear-gradient(160deg,#21503F,#1A3C34 60%,#14302A);justify-content:center}
 .hh-back strong{color:#fff}.hh-back>span{color:rgba(255,255,255,.85)}
 .hh-back .hh-go{align-self:flex-start;margin-top:8px;font-size:14px;padding:12px 20px}
-.hh-demo-bar{display:flex;align-items:center;gap:12px;color:#1C1917;font:700 13px/1 'Plus Jakarta Sans',system-ui,sans-serif}
-.hh-demo-bar button{width:44px;height:44px;border-radius:50%;border:1px solid #E4DED0;background:#fff;color:#1C1917;font-size:18px;cursor:pointer}
-.hh-demo-bar button:hover:not(:disabled){background:#FAF4E8}
-.hh-demo-bar button:disabled{opacity:.35;cursor:default}
-#hh-demo-status{min-width:110px;text-align:center;opacity:.85}
+/* Keep live page announcements available to screen readers without a second navigation row. */
+.hh-demo-bar{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .hh-go-small{font-size:13px;padding:11px 18px;margin-left:10px;box-shadow:2px 2px 0 #1C1917}
-@media (max-width:640px){.hh-demo{padding:52px 0 0}.hh-demo-bar{flex-wrap:wrap;justify-content:center}.hh-go-small{margin-left:0}}
+@media (max-width:640px){.hh-demo{padding:52px 0 0}.hh-go-small{margin-left:0}}
 /* PageFlip sets each page's display itself: lay the text out as blocks, not flex */
 .hh-in>small,.hh-in>strong,.hh-in>span{display:block;margin:0 0 14px}
 .hh-in>small{margin-bottom:12px}
 .hh-back{display:flex}
 .hh-back>small{margin-top:30%}
+.hh-back-brand{width:68%;padding:8px 10px;box-sizing:border-box;border-radius:8px;background:#FFFBF2}
+.hh-back-brand img{display:block;width:100%;height:auto;object-fit:contain}
 .hh-list>span{display:block;margin:0 0 8px}
 
 /* full screen: the preview fills the screen on the page's cream */
 .hh-demo:fullscreen{background:#FAF7F0;padding:56px 20px 20px}
 .hh-demo:fullscreen .hh-demo-tools{top:14px;right:16px}
-.hh-demo:fullscreen .hh-demo-stage{height:calc(100dvh - 150px);max-height:none;width:100%}
+.hh-demo:fullscreen .hh-demo-stage{height:calc(100dvh - 200px);max-height:none;width:100%}
 .hh-demo-book{filter:drop-shadow(0 18px 28px rgba(28,25,23,.16))}
 /* the cover glides to the middle and back (FlipbookLayout.centerCover), as in every reader (book-effects.css) */
 .hh-demo-book.book-shift{transition:transform .45s cubic-bezier(.37,0,.63,1);will-change:transform}
@@ -133,11 +142,11 @@
 .hh-demo.is-waiting{visibility:hidden}
 .hh.is-shown>.hh-book-wrap{visibility:hidden}
 @media (prefers-reduced-motion:reduce){.hh,.hh-book.is-moving{transition:none}}
-/* The cover's cell is as tall as the preview (tools 48 + stage + gap 16 + arrows 44), so the hero
+/* The cover's cell is as tall as the preview (close tools + stage + gap + compact toolbar), so the hero
    keeps its height when one replaces the other. Phones: a cover as big as the preview's page. */
-.hh-book-wrap{min-height:calc(max(320px,min(600px,100dvh - 220px)) + 108px);align-items:center}
+.hh-book-wrap{min-height:calc(max(320px,min(600px,100dvh - 220px)) + 104px);align-items:center}
 @media (max-width:900px){
   .hh-book{width:min(350px,100%)}
   .hh-demo-stage{height:calc(min(350px,100vw - 40px) / .72);min-height:0}
-  .hh-book-wrap{min-height:calc(min(350px,100vw - 40px) / .72 + 108px)}
+  .hh-book-wrap{min-height:calc(min(350px,100vw - 40px) / .72 + 104px)}
 }
