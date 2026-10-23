@@ -171,7 +171,7 @@
       }});
     book.on('flip', () => zoom.reset());
     // The cover opens/closes with the curved turn; ignore clicks while it animates.
-    const goPrev=()=>{zoom.snap();if(curl.busy())return;if(book.getCurrentPageIndex()===1&&curl.close())return;turn(()=>book.flipPrev())};
+    const goPrev=()=>{zoom.snap();if(curl.busy())return;if(book.getCurrentPageIndex()===1&&curl.close())return;turn(()=>FlipbookTurns.back(book))};
     const goNext=()=>{zoom.snap();if(curl.busy())return;if(!curl.open())turn(()=>book.flipNext())};
     $('#home').onclick=()=>{zoom.snap();if(curl.busy()||curl.close())return;if(book.getState()!=='read')return;book.turnToPage(0);update();animate()};
     $('#end').onclick=()=>{zoom.snap();if(curl.busy()||book.getState()!=='read')return;book.turnToPage(sheets.length-1);update();animate()};

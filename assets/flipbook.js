@@ -837,7 +837,7 @@
   $('#add-dialog').addEventListener('drop', e => openSources(e.dataTransfer.files));
   // The cover opens/closes with the curved turn; other pages use PageFlip.
   // Ignore clicks while a cover turn is still animating.
-  const goPrev = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; book.flipPrev(); };
+  const goPrev = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; FlipbookTurns.back(book); };
   const goNext = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (!curl?.open()) book.flipNext(); };
   // No scrolling on desktop (owner, 2026-10-23): on a short or wide window the whole sidebar
   // shrinks evenly (text, buttons, gaps) until it fits above the bottom of the window, like the

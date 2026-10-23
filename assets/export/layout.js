@@ -501,7 +501,30 @@
   jump(book, forward, steps) {
     const to = FlipbookTurns.target(book, forward, steps);
     if (to === book.getCurrentPageIndex()) return false;
-    book.flip(to);
+    if (forward) book.flip(to); else FlipbookTurns.back(book, to);
+  },
+  // Turning back with one page on screen (portrait: landscape slides, phones). PageFlip
+  // slides the earlier page in flat from outside the book, which reads as a slide, not a
+  // turn (owner, 2026-10-23). Instead play the forward turn in reverse: go to the earlier
+  // page, show it folded right over (the current page underneath), and unfold it back to
+  // the right edge, the same curl and shadow as a turn forward. A spread turns as PageFlip does.
+  back(book, to) {
+    const index = book.getCurrentPageIndex();
+    if (to === undefined) to = index - 1;
+    if (to < 0 || to >= index) return false;
+    let flip = null, rect = null;
+    try { if (book.getOrientation() === 'portrait' && book.getState() === 'read') { flip = book.getFlipController(); rect = book.getRender().getRect(); } } catch (e) { flip = null; }
+    if (!flip || !rect || !rect.pageWidth) { if (to === index - 1) book.flipPrev(); else book.flip(to); return; }
+    book.turnToPage(to);
+    // The same corner PageFlip's flipNext takes hold of.
+    if (!flip.start({ x: rect.left + 2 * rect.pageWidth - 10, y: 1 })) { book.turnToPage(index); book.flipPrev(); return; }
+    // flipNext's own path, walked backwards: from turned right over to just inside the corner.
+    const inset = rect.height / 10, from = { x: -rect.pageWidth + 1, y: 1 }, to2 = { x: rect.pageWidth - inset, y: inset };
+    const calc = flip.getCalculation();
+    if (calc) calc.calc(to2);
+    flip.setState('flipping');
+    flip.do(from);                                              // folded over before the next paint: no flash of the flat page
+    flip.animateFlippingTo(from, to2, false);
   },
   limit(book) {
     let count = 0; try { count = book.getPageCount(); } catch (e) {}
