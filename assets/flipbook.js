@@ -175,7 +175,6 @@
   async function openPdfNow(blob, name, project = null, pictures = {}) {
     if (opening || exporting) return false;
     opening = true; $('#pdf-file').disabled = true; $('#add-file').disabled = true; $('#overlay-fields').disabled = true;
-    document.body.classList.remove('fb-start');               // the start screen gives way to the workspace
     $('#home').disabled = $('#end').disabled = $('#prev').disabled = $('#next').disabled = $('#replay').disabled = true;
     stopAnimation(); error('');
     exportState();
@@ -380,7 +379,6 @@
       error(L('Could not open this PDF. ', 'PDF ini tidak bisa dibuka. ') + (cause.message || L('Make sure the PDF is valid and not password-protected.', 'Pastikan PDF valid dan tidak dikunci kata sandi.')));
       loading(null);
       $('#load-status').textContent = L('Failed to load the PDF. Pick another file to try again.', 'PDF gagal dimuat. Pilih file lain untuk mencoba lagi.');
-      if (!book) startScreen(true, $('#reader-error').textContent);   // nothing open: back to the start screen, with the reason
       return false;
     } finally {
       opening = false; $('#pdf-file').disabled = false; $('#add-file').disabled = false;
@@ -904,42 +902,6 @@
   // Ignore clicks while a cover turn is still animating.
   const goPrev = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; FlipbookTurns.back(book); };
   const goNext = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (!curl?.open()) book.flipNext(); };
-  // Start screen (owner, 2026-10-23: a hero like Heyzine's) until a document opens: a drop
-  // zone on the left, a sample book on the right that Preview turns into a real flipbook.
-  function startScreen(on, problem = '') {
-    document.body.classList.toggle('fb-start', on);
-    const drop = $('#fb-drop'); if (!drop) return;
-    let note = drop.querySelector('.fb-problem');
-    if (!problem) { if (note) note.remove(); return; }
-    if (!note) { note = document.createElement('p'); note.className = 'fb-problem'; note.setAttribute('role', 'alert'); note.style.cssText = 'color:#B91C1C;font-size:13px;margin:12px 0 0'; drop.appendChild(note); }
-    note.textContent = problem;
-  }
-  startScreen(true);
-  if ($('#fb-drop')) {
-    const drop = $('#fb-drop');
-    $('#fb-upload').addEventListener('click', () => $('#pdf-file').click());
-    $('#fb-more').addEventListener('click', () => $('#add-file').click());
-    $('#fb-library').addEventListener('click', () => { location.href = 'library.html'; });
-    $('#fb-project').addEventListener('click', () => $('#open-project').click());
-    ['dragenter', 'dragover'].forEach(type => drop.addEventListener(type, event => { event.preventDefault(); drop.classList.add('is-over'); }));
-    ['dragleave', 'drop'].forEach(type => drop.addEventListener(type, event => { event.preventDefault(); if (type === 'drop' || !drop.contains(event.relatedTarget)) drop.classList.remove('is-over'); }));
-    drop.addEventListener('drop', event => { if (event.dataTransfer && event.dataTransfer.files.length) openSources(event.dataTransfer.files); });
-    let demo = null;
-    $('#fb-preview').addEventListener('click', () => {
-      $('#fb-preview').hidden = true; $('#fb-book').classList.add('is-live');
-      if (demo) return;
-      const box = $('#fb-demo'), pages = [...box.querySelectorAll('.fb-page')];
-      pages.forEach(page => { page.style.display = ''; });
-      try {
-        demo = new St.PageFlip(box, {width: 400, height: 556, size: 'stretch', minWidth: 260, maxWidth: 400, minHeight: 361, maxHeight: 556,
-          autoSize: true, usePortrait: true, showCover: true, ...FlipbookLayout.motion(reduced)});
-        demo.loadFromHTML(pages);
-        FlipbookSound.attach(demo);
-        FlipbookTurns.adopt(demo);
-        setTimeout(() => demo.flipNext(), 300);
-      } catch (cause) { console.warn('Preview book skipped:', cause); }
-    });
-  }
   // No scrolling on desktop (owner, 2026-10-23): on a short or wide window the whole sidebar
   // shrinks evenly (text, buttons, gaps) until it fits above the bottom of the window, like the
   // book fits itself (FlipbookLayout). Below 70% it stays at 70% and scrolls inside itself.

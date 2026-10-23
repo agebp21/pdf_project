@@ -10,7 +10,6 @@
   <link rel="stylesheet" href="assets/export/book-effects.css?v=plain3">
   <link rel="stylesheet" href="assets/theme-cream.css?v=fit">
   <link rel="stylesheet" href="assets/ui-clay.css">
-  <link rel="stylesheet" href="assets/flipbook-hero.css">
   <script defer src="assets/vendor/pdf.min.js"></script>
   <script defer src="assets/vendor/page-flip.browser.js?v=plain3"></script>
   <script src="assets/i18n.js"></script>
@@ -54,44 +53,6 @@
 <body class="clay">
   <header data-site-header data-static><button id="share-link-top" class="back-link badge" type="button">🔗 <span data-en="Share">Bagikan</span></button></header>
   <main>
-    <!-- Start screen until a document opens (flipbook-hero.css, body.fb-start in flipbook.js) -->
-    <section class="fb-hero" aria-labelledby="fb-hero-title">
-      <div class="fb-hero-text">
-        <p class="eyebrow" data-en="✦ PDF TO FLIPBOOK • INTERACTIVE">✦ PDF KE FLIPBOOK • INTERAKTIF</p>
-        <h1 id="fb-hero-title" data-en="Flipbook Maker">Pembuat Flipbook</h1>
-        <p class="fb-lead" data-en="Turn a PDF, Word or PowerPoint file into a flipbook whose pages turn like real paper — for ebooks, magazines, catalogs, brochures, reports, presentations and restaurant menus.">Ubah PDF, Word, atau PowerPoint menjadi flipbook yang halamannya berbalik seperti kertas sungguhan — untuk ebook, majalah, katalog, brosur, laporan, presentasi, dan menu restoran.</p>
-        <div id="fb-drop" class="fb-drop">
-          <p data-en="Drag and drop the PDF here to convert">Seret dan lepas PDF di sini untuk dikonversi</p>
-          <button id="fb-upload" class="fb-upload" type="button"><span data-en="Upload">Unggah</span><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 19V5M5 12l7-7 7 7"/><path d="M5 21h14"/></svg></button>
-          <p class="fb-alt"><button id="fb-more" type="button" data-en="From a link / Google Drive">Dari tautan / Google Drive</button><span>·</span><button id="fb-library" type="button" data-en="Open My Library">Buka My Library</button><span>·</span><button id="fb-project" type="button" data-en="Open project (.smflipbook)">Buka proyek (.smflipbook)</button></p>
-          <p class="fb-formats" data-en="PDF, Word, Excel, PowerPoint or images">PDF, Word, Excel, PowerPoint, atau gambar</p>
-        </div>
-          <div id="draft-box" hidden>
-            <p class="muted" id="draft-text"></p>
-            <div style="display:flex;gap:.5rem"><button id="draft-resume" class="secondary" type="button">Lanjutkan</button><button id="draft-discard" class="secondary" type="button" data-en="Discard">Buang</button></div>
-          </div>
-        <a class="numa-side" href="https://nusantaramahayatra.com" target="_blank" rel="noopener"><picture><source type="image/webp" srcset="assets/img/numa-banner-wide.webp?v=1"><img src="assets/img/numa-banner-wide.jpg?v=1" width="1400" height="202" decoding="async" alt="numa — Beda Kepala. Banyak Cerita. Ikut nimbrung di nusantaramahayatra.com"></picture></a>
-      </div>
-      <div class="fb-hero-book">
-        <div id="fb-book" class="fb-book">
-          <div id="fb-demo" class="fb-demo">
-            <div class="fb-page fb-cover" data-density="soft">
-              <div class="fb-cover-top">
-                <div class="fb-cover-title"><span class="fb-cover-brand">MYFLIPBOOK PRO</span><strong data-en="Books&lt;br&gt;that &lt;em&gt;live.&lt;/em&gt;">Buku<br>yang<br><em>hidup.</em></strong></div>
-                <ul class="fb-cover-list"><li>Ebook</li><li data-en="Magazines">Majalah</li><li data-en="Catalogs">Katalog</li><li data-en="Brochures">Brosur</li><li data-en="Reports">Laporan</li><li data-en="Presentations">Presentasi</li><li data-en="Booklets">Buklet</li><li data-en="Restaurant menus">Menu restoran</li></ul>
-              </div>
-              <div class="fb-cover-bottom"><span class="fb-cover-mark"><img src="assets/img/logo-icon.png" alt=""></span><p data-en="Online publications that &lt;b&gt;captivate&lt;/b&gt; your readers">Publikasi online yang <b>memikat</b> pembaca Anda</p></div>
-            </div>
-            <div class="fb-page fb-inside"><small>01</small><h3 data-en="Turns like paper">Berbalik seperti kertas</h3><p data-en="Every page curls and lands with a soft paper sound — forward and back, on a computer or a phone.">Setiap halaman melengkung dan mendarat dengan suara kertas yang lembut — maju maupun mundur, di komputer atau HP.</p></div>
-            <div class="fb-page fb-inside"><small>02</small><h3 data-en="Read it your way">Baca dengan nyaman</h3><ul><li data-en="Clickable links and table of contents">Tautan dan daftar isi bisa diklik</li><li data-en="Bookmarks, notes and highlighter">Penanda, catatan, dan stabilo</li><li data-en="Audio book and translation">Audio book dan terjemahan</li><li data-en="Full screen, sharp on any screen">Layar penuh, tajam di layar apa pun</li></ul></div>
-            <div class="fb-page fb-inside"><small>03</small><h3 data-en="Share and keep">Bagikan dan simpan</h3><p data-en="Save it to My Library, or export it as offline HTML, an Android app or a Windows program.">Simpan ke My Library, atau ekspor sebagai HTML offline, aplikasi Android, atau program Windows.</p></div>
-            <div class="fb-page fb-inside fb-back"><small>MYFLIPBOOK</small><h3 data-en="Your turn.">Giliran Anda.</h3><p data-en="Upload a PDF on the left — your book is ready in seconds.">Unggah PDF di sebelah kiri — buku Anda siap dalam hitungan detik.</p></div>
-          </div>
-          <button id="fb-preview" class="fb-preview" type="button"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linejoin="round" aria-hidden="true"><path d="M7 4.5v15L19.5 12z"/></svg><span data-en="Preview">Pratinjau</span></button>
-          <svg class="fb-hint" viewBox="0 0 40 30" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 26c2-10 10-16 22-16h8"/><path d="M28 4l7 6-7 6"/></svg>
-        </div>
-      </div>
-    </section>
     <div class="heading"><div><p class="eyebrow" data-en="✦ PDF TO FLIPBOOK • INTERACTIVE">✦ PDF KE FLIPBOOK • INTERAKTIF</p><h1 data-en="Your doc, turned into a living book.">Dokumen Anda, menjadi buku yang hidup.</h1><p data-en="Upload a PDF or continue straight from a convert result. Cover first, then the inside — just like a real book.">Unggah PDF atau lanjutkan langsung dari hasil konversi. Sampul dulu, lalu isinya — persis seperti buku sungguhan.</p></div><a class="numa-side" href="https://nusantaramahayatra.com" target="_blank" rel="noopener"><picture><source type="image/webp" srcset="assets/img/numa-banner-wide.webp?v=1"><img src="assets/img/numa-banner-wide.jpg?v=1" width="1400" height="202" decoding="async" alt="numa — Beda Kepala. Banyak Cerita. Ikut nimbrung di nusantaramahayatra.com"></picture></a></div>
     <div class="workspace">
       <aside>
@@ -100,6 +61,10 @@
         <input id="pdf-file" type="file" accept="application/pdf,.pdf,.docx,.doc,.xlsx,.xls,.csv,.pptx,.ppt,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,image/*" multiple hidden>
         <p class="muted" data-en="PDF, Word, Excel, PowerPoint or images — or a link / Google Drive.">PDF, Word, Excel, PowerPoint, atau gambar — atau tautan / Google Drive.</p>
         <p id="load-status" class="feedback" role="status"><span data-en="No document yet.">Belum ada dokumen.</span></p>
+        <div id="draft-box" hidden>
+          <p class="muted" id="draft-text"></p>
+          <div style="display:flex;gap:.5rem"><button id="draft-resume" class="secondary" type="button">Lanjutkan</button><button id="draft-discard" class="secondary" type="button" data-en="Discard">Buang</button></div>
+        </div>
         <p class="archive-line"><span id="archive-status" class="archive-status" role="status"></span></p>
         <button type="button" id="save-library" class="secondary archive-link">📚 Open My Library</button>
         <!-- Editor animasi disembunyikan sementara atas permintaan pengguna. -->
