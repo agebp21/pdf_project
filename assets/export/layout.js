@@ -105,11 +105,11 @@
           const pages=book.getPageCount()===1||w<700||ratio>this.WIDE?1:2;
           // No scrolling (owner, 2026-10-23): the book and its buttons fit between where the
           // book starts on the page (below the page header) and the bottom of the window, on
-          // any monitor; the book gets the height left, never less than 320px.
+          // any monitor; the book gets the height left, never less than 280px.
           const box=stage.closest('.preview');
           const below=box?[...box.children].slice([...box.children].indexOf(stage)+1).filter(el=>el.offsetParent!==null).reduce((sum,el)=>sum+el.offsetHeight,0):0;
           const top=stage.getBoundingClientRect().top+(window.scrollY||0);
-          const room=Math.max(320,(window.innerHeight||0)-top-below-16);
+          const room=Math.max(280,(window.innerHeight||0)-top-below-16);
           stage.style.height=Math.min(w/(ratio*pages),room)+'px';
         }
       }

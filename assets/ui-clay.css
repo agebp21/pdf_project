@@ -79,9 +79,17 @@ body.clay .preview:not(:fullscreen):not(.reading-fullscreen) #reader-stage:has(#
 }
 /* the sidebar scrolls inside itself when the window is short (flipbook.js fitAside) */
 body.clay .workspace:has(#reader-stage)>aside{scrollbar-width:thin}
-/* No scrolling (owner, 2026-10-23): with a document open the page header (title, banner) steps
-   aside so the book gets that height too; with no document it shows as before. */
+/* No scrolling (owner, 2026-10-23): tighter page margins; the page header (title, banner)
+   always stays, the book and the sidebar fit the height left (FlipbookLayout, fitAside). */
 @media (min-width:1051px){
   body.clay main:has(#reader-stage){padding-top:20px;padding-bottom:16px}
-  body.clay main:has(#reader-stage .stf__block) .heading{display:none}
+}
+/* Short windows (laptops, wide monitors): the page header stays, just lower, so the book keeps its height. */
+@media (min-width:1051px) and (max-height:900px){
+  body.clay main:has(#reader-stage) .heading{margin-bottom:12px;align-items:center}
+  body.clay main:has(#reader-stage) .heading .eyebrow{margin-bottom:4px;font-size:9px}
+  body.clay main:has(#reader-stage) .heading h1{font-size:24px;line-height:1.15}
+  body.clay main:has(#reader-stage) .heading p:last-child{margin-top:4px;font-size:12px;line-height:1.4}
+  body.clay main:has(#reader-stage) .numa-side{flex:0 1 420px;min-width:260px}
+  body.clay main:has(#reader-stage) .numa-side img{min-height:0;max-height:60px}
 }

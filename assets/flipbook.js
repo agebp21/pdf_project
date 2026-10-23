@@ -859,7 +859,7 @@
     if (shown() > room) { aside.style.maxHeight = Math.floor(room / zoom) + 'px'; aside.style.overflowY = 'auto'; }
   };
   fitAside(); addEventListener('resize', fitAside); addEventListener('load', fitAside);
-  // The page header steps aside once a document is open: the sidebar moves up, so fit again.
+  // The page can change height under the sidebar (fonts, banner image): fit again.
   // So does the sidebar when its own content changes (status lines, the save buttons appearing).
   if (typeof ResizeObserver !== 'undefined') {
     let frame = 0;
