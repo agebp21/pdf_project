@@ -55,8 +55,16 @@
   }
 
 /* the banner above the hero */
-.hh-banner{display:block;max-width:1440px;margin:0 auto}
+.hh-banner{position:relative;display:block;max-width:1440px;margin:0 auto;container-type:inline-size;text-decoration:none}
 .hh-banner img{display:block;width:100%;height:auto}
+/* the words over the picture, placed in units of the banner's width (cqw), so they sit where the
+   picture's own words were at any size (coordinates from the 2171 px original) */
+.hh-banner-title{position:absolute;left:5.05cqw;top:5.95cqw;font:800 4.95cqw/0.93 'Plus Jakarta Sans',system-ui,sans-serif;letter-spacing:-.025em;color:#0F172A;text-align:left;white-space:nowrap}
+.hh-banner-title em{font-style:normal;background:linear-gradient(90deg,#2F7D4F,#3F9A62 60%,#2E7A4C);-webkit-background-clip:text;background-clip:text;color:transparent}
+.hh-banner-chip{position:absolute;top:23.55cqw;font:600 1.5cqw/1 'Plus Jakarta Sans',system-ui,sans-serif;color:#1F2937}
+.hh-banner-long{font-size:1.4cqw;letter-spacing:-.01em}       /* Gambar is longer than Image: still clear of the divider */
+/* the label on the tilted card beside the laptop */
+.hh-banner-card{position:absolute;left:54.9cqw;top:21.25cqw;transform:translate(-50%,-50%) rotate(-8deg);font:600 1.3cqw/1 'Plus Jakarta Sans',system-ui,sans-serif;color:#1F2937;white-space:nowrap}
 .hh-banner+.hh{padding-top:28px}
 
 /* Preview: the sample book as a real flipbook in a window over the page (assets/home-hero.js) */
