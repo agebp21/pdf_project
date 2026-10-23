@@ -252,12 +252,6 @@
       });
       book.loadFromHTML(sheets);
       disposeLayout=FlipbookLayout.bind(book,$('#reader-stage'),ratio,{compact:true});
-      // The whole reader on the screen once the book is open (the page header above it scrolls away).
-      requestAnimationFrame(() => {
-        const box = document.querySelector('.preview'); if (!box || document.fullscreenElement) return;
-        const r = box.getBoundingClientRect();
-        if (r.top < 0 || r.bottom > innerHeight + 1) box.scrollIntoView({behavior: reduced ? 'auto' : 'smooth', block: 'start'});
-      });
       FlipbookLayout.centerCover(book, container, reduced);
       curl = FlipbookCurl.bind(book, container, sheets, {reduced, onTurn: () => FlipbookSound.play('cover')});
       if (!zoom) zoom = FlipbookZoom.bind($('#reader-stage'), zoomBox, {button: $('#zoom'),
@@ -845,6 +839,19 @@
   // Ignore clicks while a cover turn is still animating.
   const goPrev = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (book.getCurrentPageIndex() === 1 && curl?.close()) return; book.flipPrev(); };
   const goNext = () => { zoom?.snap(); if (!book || curl?.busy()) return; if (!curl?.open()) book.flipNext(); };
+  // No scrolling on desktop (owner, 2026-10-23): the sidebar stops at the bottom of the window
+  // and scrolls inside itself, like the book fits itself (FlipbookLayout).
+  const fitAside = () => {
+    const aside = document.querySelector('.workspace > aside');
+    if (!aside) return;
+    if (innerWidth <= 1050) { aside.style.maxHeight = aside.style.overflowY = ''; return; }
+    const top = aside.getBoundingClientRect().top + scrollY;
+    aside.style.maxHeight = Math.max(320, innerHeight - top - 16) + 'px';
+    aside.style.overflowY = 'auto';
+  };
+  fitAside(); addEventListener('resize', fitAside); addEventListener('load', fitAside);
+  // The page header steps aside once a document is open: the sidebar moves up, so fit again.
+  if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fitAside).observe(document.querySelector('main'));
   $('#prev').addEventListener('click', () => { if (turns) turns.request(false); else goPrev(); });
   $('#next').addEventListener('click', () => { if (turns) turns.request(true); else goNext(); });
   FlipbookWheel.bind($('#reader-stage'), {enabled: () => !!book,

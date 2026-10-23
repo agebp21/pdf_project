@@ -77,3 +77,11 @@ body.clay .preview:not(:fullscreen):not(.reading-fullscreen) #reader-stage:has(#
   body.clay .workspace:has(#reader-stage)>aside{padding:16px 14px}
   body.clay .workspace:has(#reader-stage)>aside .muted{margin:10px 0 12px}
 }
+/* the sidebar scrolls inside itself when the window is short (flipbook.js fitAside) */
+body.clay .workspace:has(#reader-stage)>aside{scrollbar-width:thin}
+/* No scrolling (owner, 2026-10-23): with a document open the page header (title, banner) steps
+   aside so the book gets that height too; with no document it shows as before. */
+@media (min-width:1051px){
+  body.clay main:has(#reader-stage){padding-top:20px;padding-bottom:16px}
+  body.clay main:has(#reader-stage .stf__block) .heading{display:none}
+}
