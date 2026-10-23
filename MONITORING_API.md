@@ -1,5 +1,7 @@
 # MyFlipbook Pro — monitoring API (read-only)
 
+Step-by-step setup for ChatGPT, Claude, Windows and n8n (in Indonesian): [PANDUAN_API_AI.md](PANDUAN_API_AI.md).
+
 For a program that watches MyFlipbook Pro's traffic and usage and writes audits
 (an AI agent, a dashboard, a script). It reads the same numbers as the admin
 panel, without the admin login, and cannot change anything.
