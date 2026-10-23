@@ -57,6 +57,7 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 
 | Tanggal | Commit live | Sing nglakoni | Cathetan |
 |---|---|---|---|
+| 2026-10-24 00:04 WIB | `88f3715` | Codex | Hero demo: logo resmi di label sampul,10halaman, belokan320ms, toolbar12tombol24px rata tengah, bar panah/status lama tidak terlihat (status aksesibel tetap). Paket git archive dari commit yang sudah di-push v2; file dirty agen lain tidak ikut. Validasi snapshot:56 suite JS/QA lulus (2 tes Office diulang setelah fixture lokal disalin), Python227 OK dengan Python sistem (venv awal kurang wordfreq). Backup `/root/pdf_project-code-backup-20261024a.tgz`, retensi3 terbaru (a/f/e; d dipangkas). Restart hanya myflipbook; capabilities/admin200, browser live desktop/HP:10halaman, toolbar/navigasi/tutup dan aset cocok kode, tanpa error. HTTP502 sesaat saat restart, sesudah startup200. |
 | 2026-10-03 | (overlay manual) | agen liya | Deploy awal + HTTPS certbot. |
 | 2026-10-04 11:18 | `1bf0565` | Claude | Kabeh fitur s/d panel admin; `myflipbook-admin.service` + nginx `/admin/`; backup `/root/pdf_project-code-backup-20261004.tgz`. **Owahan `index.html` (stiker "segera hadir" oranye) sing sadurunge wis live tanpa commit dadi ketimpa** — kudu di-commit dhisik banjur deploy maneh yen arep dibalekke. |
 | 2026-10-04 (siang) | `374657f` | Claude | `PAYMENTS_PAUSED=1` ditambah ke `.env` live (pembayaran sementara mati; owner update payment gateway malam ini). Backup `/root/pdf_project-code-backup-20261004b.tgz`, `.env` lama `/root/pdf_project-env-backup-20261004b`. |

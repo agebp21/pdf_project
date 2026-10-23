@@ -1,5 +1,9 @@
 # Handoff — PDF Project & Flipbook
 
+## Rilis live 24 Oktober 2026, 00:04 WIB
+
+**myflipbookpro.com =88f3715 (v2, pushed)**: seluruh perubahan hero Codex di bawah sudah live (logo,10halaman,320ms, toolbar24px rata tengah, tanpa pagination visual lama). Pernyataan "belum deploy" di catatan23Okt adalah riwayat. Paket bersih dari git archive; perubahan dirty agen lain tidak disertakan.56 suite JS/QA lulus setelah fixture Office lokal disiapkan; Python227 OK memakai Python sistem (venv awal kurang wordfreq). Backup kode `/root/pdf_project-code-backup-20261024a.tgz`, retensi3 terbaru. Hanya layanan utama direstart; capabilities/admin200 dan kedua layanan aktif. Browser live desktop/HP lulus tampilan/navigasi/tutup, aset cocok paket, tanpa error. Audio fisik tidak diuji. Detail DEPLOY.md dan TEAM_WORK.md HOME-LIVE.
+
 HOME-CENTER (23 Oktober, selesai lokal): toolbar demo diposisikan rata tengah; `safe center` mempertahankan akses scroll di HP ketika tombol melebihi lebar buku. QA toolbar desktop/HP serta pemeriksaan posisi tengah dan diff-check lulus. Belum commit/push/deploy.
 
 HOME-COMPACT (23 Oktober, selesai lokal): bar panah dan nomor halaman bawah demo dihapus secara visual; status aksesibel tetap ada. Toolbar demo kini24px (sebelumnya29px), font8.5px/ikon12px; reservasi tinggi hero dikurangi44px. Tes navigasi memakai toolbar/keyboard, dan memverifikasi panah lama tidak terlihat serta tombol maksimal24px. QA hero10halaman desktop/HP/animasi normal dan QA toolbar desktop/HP lulus, syntax/diff bersih. Belum commit/push/deploy.
