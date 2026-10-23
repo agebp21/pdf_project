@@ -23,6 +23,7 @@ const { pathToFileURL } = require('node:url');
       await page.locator('#hh-tool-home').click();
       await page.waitForFunction(() => document.getElementById('hh-demo-status').textContent.startsWith('Sampul ·'));
       assert.equal(await page.locator('#hh-demo-toolbar button').count(),12);
+      assert.equal(await page.locator('#hh-tool-pen').evaluate(el=>el.nextElementSibling.id),'hh-demo-full','Fullscreen immediately follows the highlighter');
       assert.equal(await page.locator('#hh-demo-prev').isVisible(),false);
       assert.equal(await page.locator('#hh-demo-next').isVisible(),false);
       assert(await page.locator('#hh-demo-toolbar button').evaluateAll(buttons => buttons.every(b => b.getBoundingClientRect().height <= 24)), 'Compact demo buttons are at most 24px tall');

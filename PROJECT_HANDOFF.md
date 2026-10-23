@@ -1,5 +1,7 @@
 # Handoff — PDF Project & Flipbook
 
+HOME-FULLSCREEN-ORDER (24 Oktober, selesai lokal): tombol fullscreen hero/demo dipindah tepat setelah stabilo, sebelum Audio book. Tes toolbar desktop/HP memverifikasi urutan dan fungsi fullscreen, seluruh interaksi lulus. Syntax/diff bersih. Belum commit/push/deploy; live tetap88f3715.
+
 ## Rilis live 24 Oktober 2026, 00:04 WIB
 
 **myflipbookpro.com =88f3715 (v2, pushed)**: seluruh perubahan hero Codex di bawah sudah live (logo,10halaman,320ms, toolbar24px rata tengah, tanpa pagination visual lama). Pernyataan "belum deploy" di catatan23Okt adalah riwayat. Paket bersih dari git archive; perubahan dirty agen lain tidak disertakan.56 suite JS/QA lulus setelah fixture Office lokal disiapkan; Python227 OK memakai Python sistem (venv awal kurang wordfreq). Backup kode `/root/pdf_project-code-backup-20261024a.tgz`, retensi3 terbaru. Hanya layanan utama direstart; capabilities/admin200 dan kedua layanan aktif. Browser live desktop/HP lulus tampilan/navigasi/tutup, aset cocok paket, tanpa error. Audio fisik tidak diuji. Detail DEPLOY.md dan TEAM_WORK.md HOME-LIVE.

@@ -1,5 +1,9 @@
 # Koordinasi tim AI
 
+- HOME-FULLSCREEN-DEPLOY (Codex, aktif): owner meminta rilis perubahan urutan tombol hero. Commit/push hanya index, tes toolbar, dan dokumen milik tugas ini; file dirty agen lain tidak disertakan. Backup baru memakai nama unik, bukan menimpa20261024a.
+
+- HOME-FULLSCREEN-ORDER (Codex, selesai lokal): tombol fullscreen demo tepat setelah stabilo, sebelum Audio book. Index dan tes toolbar diubah; QA desktop/HP termasuk urutan tombol, fullscreen dan interaksi toolbar lulus, syntax/diff bersih. Belum commit/push/deploy; live tetap88f3715.
+
 - HOME-LIVE (Codex, selesai 24 Oktober 00:04 WIB): **https://myflipbookpro.com sekarang commit88f3715** (v2, sudah di-push). Catatan HOME-10/SPEED/TOOLS/COMPACT/CENTER berstatus lokal di bawah adalah riwayat sebelum rilis ini. Paket commit terisolasi:56 suite JS/QA lulus (Office diulang setelah fixture tersedia), Python227 OK memakai Python sistem; venv pertama kurang wordfreq. Backup20261024a tervalidasi, retensi3 terbaru a/f/e; backup d dibuang sesuai prosedur (kode historis tetap di Git). Hanya myflipbook direstart; kedua layanan aktif, capabilities/admin200. Browser live desktop/HP lulus10halaman, toolbar24px rata tengah/scroll, panah lama tersembunyi, End/Home/Next/tutup, tanpa pageerror/aset gagal; isi aset sama dengan paket. README/Drive-picker/test_accounts/tts/gambar agen lain tetap tidak ikut commit/deploy. Log DEPLOY.md diperbarui.
 
 - HOME-CENTER (Codex, selesai lokal): toolbar demo rata tengah dengan `justify-content:safe center`; saat meluap di HP, tombol tetap bisa digeser tanpa terpotong di awal. CSS hero dan tes toolbar diperbarui. QA desktop/HP (termasuk assertion posisi tengah), seluruh interaksi toolbar, dan diff-check lulus. Belum commit/push/deploy.
