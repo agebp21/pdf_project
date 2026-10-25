@@ -37,6 +37,7 @@ SESSION_SECONDS = 12 * 3600
 MAX_FAILURES, FAILURE_WINDOW = 5, 15 * 60
 CONFIG = dict(secure=False, proxy=False)
 SESSIONS = {}                 # token -> expires_at (memory only: a restart logs the admin out)
+SESSION_USERS = {}            # token -> authenticated admin username
 FAILURES = {}                 # ip -> [failure times]
 LOCK = threading.Lock()
 
@@ -106,12 +107,28 @@ def admin_configured():
 
 
 def check_login(username, password):
-    user = os.environ.get('ADMIN_USERNAME', '').strip()
-    stored = os.environ.get('ADMIN_PASSWORD_HASH', '').strip()
-    if not user or not stored or not isinstance(username, str) or not isinstance(password, str):
+    if not isinstance(username, str) or not isinstance(password, str):
         return False
-    same_user = hmac.compare_digest(username.strip().lower().encode(), user.lower().encode())
-    return accounts.verify_password(password, stored) and same_user
+    for name_key, hash_key in admin_credentials():
+        user = os.environ.get(name_key, '').strip()
+        stored = os.environ.get(hash_key, '').strip()
+        if user and stored and hmac.compare_digest(username.strip().lower().encode(), user.lower().encode()):
+            return accounts.verify_password(password, stored)
+    return False
+
+
+def admin_credentials():
+    return (('ADMIN_USERNAME', 'ADMIN_PASSWORD_HASH'),
+            ('ADMIN_SECONDARY_USERNAME', 'ADMIN_SECONDARY_PASSWORD_HASH'))
+
+
+def admin_password_key(username):
+    for name_key, hash_key in admin_credentials():
+        if username.lower() == os.environ.get(name_key, '').strip().lower():
+            return hash_key
+    raise ValueError('Unknown admin')
+
+
 
 
 def throttled(ip, now=None):
@@ -721,12 +738,15 @@ class AdminHandler(BaseHTTPRequestHandler):
                 now = time.time()
                 for t in [t for t, e in SESSIONS.items() if e < now]:
                     SESSIONS.pop(t, None)
+                    SESSION_USERS.pop(t, None)
                 SESSIONS[token] = now + SESSION_SECONDS
+                SESSION_USERS[token] = body['username'].strip().lower()
             self.send_json(200, {'ok': True}, cookie=self.cookie(token, SESSION_SECONDS))
             return
         if url.path == '/api/logout':
             with LOCK:
                 SESSIONS.pop(self.token(), None)
+                SESSION_USERS.pop(self.token(), None)
             self.send_json(200, {'ok': True}, cookie=self.cookie('', 0))
             return
         if not self.signed_in():
@@ -744,7 +764,8 @@ class AdminHandler(BaseHTTPRequestHandler):
             if not all(isinstance(value, str) for value in (current, new, confirm)):
                 self.send_json(400, {'error': 'Data password tidak lengkap.'})
                 return
-            if not check_login(os.environ.get('ADMIN_USERNAME', ''), current):
+            username = SESSION_USERS.get(self.token(), '')
+            if not username or not check_login(username, current):
                 self.send_json(401, {'error': 'Password saat ini salah.'})
                 return
             if len(new) < 12:
@@ -758,17 +779,19 @@ class AdminHandler(BaseHTTPRequestHandler):
                 return
             try:
                 password_hash = accounts.hash_password(new)
-                set_env_value(ROOT / '.env', 'ADMIN_PASSWORD_HASH', password_hash)
-                os.environ['ADMIN_PASSWORD_HASH'] = password_hash
-                log_admin('admin password changed')
+                hash_key = admin_password_key(username)
+                set_env_value(ROOT / '.env', hash_key, password_hash)
+                os.environ[hash_key] = password_hash
+                log_admin('admin password changed: ' + username)
             except OSError as cause:
                 self.send_json(500, {'error': 'Password tidak bisa disimpan: ' + str(cause)})
                 return
             current_token = self.token()
             with LOCK:
                 for token in list(SESSIONS):
-                    if token != current_token:
+                    if token != current_token and SESSION_USERS.get(token) == username:
                         SESSIONS.pop(token, None)
+                        SESSION_USERS.pop(token, None)
                 SESSIONS[current_token] = time.time() + SESSION_SECONDS
             self.send_json(200, {'ok': True})
             return
