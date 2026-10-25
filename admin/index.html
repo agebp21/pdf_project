@@ -76,6 +76,7 @@
       <button data-tab="uploads">Upload</button>
       <button data-tab="visits">Pengunjung</button>
       <button data-tab="server">Server</button>
+      <button data-tab="password">Ganti password</button>
     </nav>
     <button class="out" id="logout">Keluar</button>
   </header>
@@ -106,6 +107,19 @@
       <div id="visit-view"></div>
     </section>
     <section data-view="server" hidden></section>
+    <section data-view="password" hidden>
+      <h2>Ganti password admin</h2>
+      <div class="panel" style="max-width:520px">
+        <p class="muted">Password minimal 12 karakter. Password asli tidak disimpan oleh panel.</p>
+        <form id="password-form">
+          <label>Password saat ini<input id="current-password" type="password" autocomplete="current-password" required></label>
+          <label>Password baru<input id="new-password" type="password" autocomplete="new-password" minlength="12" required></label>
+          <label>Ulangi password baru<input id="confirm-password" type="password" autocomplete="new-password" minlength="12" required></label>
+          <p class="err" id="password-error"></p><p class="yes" id="password-ok"></p>
+          <button class="btn" type="submit">Simpan password baru</button>
+        </form>
+      </div>
+    </section>
   </main>
 </div>
 
@@ -142,9 +156,21 @@ document.querySelectorAll('header nav button').forEach(b => b.onclick = () => op
 function open(tab) {
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.tab === tab)));
   document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== tab; });
-  ({overview: loadOverview, members: () => loadMembers(1), uploads: loadUploads, visits: () => loadVisits(30), server: loadServer})[tab]()
+  const loaders = {overview: loadOverview, members: () => loadMembers(1), uploads: loadUploads, visits: () => loadVisits(30), server: loadServer, password: async () => {}};
+  loaders[tab]()
     .catch(e => { document.querySelector(`[data-view="${tab}"]`).insertAdjacentHTML('afterbegin', `<p class="err">${esc(e.message)}</p>`); });
 }
+$('#password-form').onsubmit = async event => {
+  event.preventDefault(); $('#password-error').textContent = ''; $('#password-ok').textContent = '';
+  try {
+    await api('/api/change-password', {method: 'POST', body: JSON.stringify({
+      currentPassword: $('#current-password').value,
+      newPassword: $('#new-password').value,
+      confirmPassword: $('#confirm-password').value
+    })});
+    $('#password-form').reset(); $('#password-ok').textContent = 'Password berhasil diganti.';
+  } catch (e) { $('#password-error').textContent = e.message; }
+};
 const card = (n, l) => `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`;
 
 async function loadOverview() {

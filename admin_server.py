@@ -58,6 +58,35 @@ def load_env(path):
         os.environ.setdefault(key.strip(), value)
 
 
+def set_env_value(path, key, value):
+    """Update one .env key atomically while preserving other settings."""
+    path = Path(path)
+    try:
+        lines = path.read_text(encoding='utf-8').splitlines(keepends=True)
+    except FileNotFoundError:
+        lines = []
+    replacement = f'{key}={value}\n'
+    found = False
+    out = []
+    for line in lines:
+        raw = line.rstrip('\r\n')
+        if raw.strip() and not raw.lstrip().startswith('#') and '=' in raw:
+            name = raw.split('=', 1)[0].strip()
+            if name == key:
+                if not found:
+                    out.append(replacement)
+                    found = True
+                continue
+        out.append(line)
+    if not found:
+        if out and not out[-1].endswith(('\n', '\r')):
+            out.append('\n')
+        out.append(replacement)
+    tmp = path.with_name(path.name + '.tmp')
+    tmp.write_text(''.join(out), encoding='utf-8', newline='')
+    os.replace(tmp, path)
+
+
 def db_path():
     return Path(os.environ.get('MYFLIPBOOK_DB') or ROOT / '.data' / 'myflipbook.sqlite3')
 
@@ -702,6 +731,46 @@ class AdminHandler(BaseHTTPRequestHandler):
             return
         if not self.signed_in():
             self.send_json(401, {'error': 'Masuk sebagai admin dulu.'})
+            return
+        if url.path == '/api/change-password':
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                body = json.loads(self.rfile.read(size) if 0 < size <= 8192 else b'{}')
+            except (ValueError, json.JSONDecodeError):
+                body = {}
+            current = body.get('currentPassword') if isinstance(body, dict) else None
+            new = body.get('newPassword') if isinstance(body, dict) else None
+            confirm = body.get('confirmPassword') if isinstance(body, dict) else None
+            if not all(isinstance(value, str) for value in (current, new, confirm)):
+                self.send_json(400, {'error': 'Data password tidak lengkap.'})
+                return
+            if not check_login(os.environ.get('ADMIN_USERNAME', ''), current):
+                self.send_json(401, {'error': 'Password saat ini salah.'})
+                return
+            if len(new) < 12:
+                self.send_json(400, {'error': 'Password baru minimal 12 karakter.'})
+                return
+            if new != confirm:
+                self.send_json(400, {'error': 'Konfirmasi password baru tidak sama.'})
+                return
+            if new == current:
+                self.send_json(400, {'error': 'Password baru harus berbeda dari password saat ini.'})
+                return
+            try:
+                password_hash = accounts.hash_password(new)
+                set_env_value(ROOT / '.env', 'ADMIN_PASSWORD_HASH', password_hash)
+                os.environ['ADMIN_PASSWORD_HASH'] = password_hash
+                log_admin('admin password changed')
+            except OSError as cause:
+                self.send_json(500, {'error': 'Password tidak bisa disimpan: ' + str(cause)})
+                return
+            current_token = self.token()
+            with LOCK:
+                for token in list(SESSIONS):
+                    if token != current_token:
+                        SESSIONS.pop(token, None)
+                SESSIONS[current_token] = time.time() + SESSION_SECONDS
+            self.send_json(200, {'ok': True})
             return
         if url.path == '/api/visitors/label':
             try:
