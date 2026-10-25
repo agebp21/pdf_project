@@ -55,6 +55,8 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 
 ## 5. Log deploy
 
+25 Oktober 2026 — Codex: live `11eb012`. Card My Library tanpa ikon aksi bawah; tombol × pojok kanan atas untuk hapus dengan konfirmasi. Klik card, context menu pindah, dan draggable dipertahankan. Backup `/root/pdf_project-code-backup-20261025c-11eb012.tgz`; git archive pushed v2, restart myflipbook, dua service aktif. Syntax/diff lulus; HTML live diverifikasi tombol corner, tanpa toolbar bawah, handler klik kanan/drag; library/capabilities/admin HTTP200. Tidak melakukan uji visual browser.
+
 25 Oktober 2026 14:23 WIB — Codex: live `ccbd78f` (fitur `73823e0` + terjemahan validasi). My Library: card klik satu/cursor pointer, toolbar ikon, klik kanan buku/folder, subfolder dan pindah folder; teks kapasitas/paket disembunyikan. Backup kode `/root/pdf_project-code-backup-20261025b-73823e0.tgz`, backup SQLite konsisten `/root/myflipbook-db-20261025-73823e0.sqlite3` (600). Paket git archive pushed v2; restart hanya myflipbook. Library/capabilities/admin HTTP200, kedua service aktif. Semua suite JS lulus; Python229 pertama 1 gagal terjemahan baru, diperbaiki lalu tes terjemahan3 + Library5 lulus. Belum verifikasi visual browser live.
 
 | Tanggal | Commit live | Sing nglakoni | Cathetan |

@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- LIBRARY-CORNER (Codex, 25 Oktober): live `11eb012`, pushed v2. Semua aksi bawah card dihapus, × pojok kanan atas untuk delete dengan konfirmasi; klik/drag/klik kanan tetap. Syntax/diff dan HTML live + tiga endpoint HTTP200 diverifikasi. Backup `20261025c-11eb012`; restart myflipbook saja.
+
 - LIBRARY-NESTED (Codex, 25 Oktober): commit `73823e0` pushed v2. Card buku sekali klik membuka editor, cursor pointer, semua aksi satu baris ikon; klik kanan buku/folder untuk pindah atau keluarkan ke My Library. Subfolder memakai parent_id, ownership dan larangan siklus diperiksa server. Teks kapasitas GB/paket disembunyikan. File library.html/library.py/server.py dan tests/test_library_nested.py; tes Library4 + nested1 dan syntax/diff lulus. Backup kode/database disiapkan sebelum deploy. File dirty agen lain tidak ikut.
 
 - HOME-FULLSCREEN-DEPLOY (Codex, selesai 24 Oktober 01:24 WIB): **live542acb5**, pushed v2. Toolbar demo: stabilo → Full screen → Audio book. Snapshot commit terisolasi:56 suite JS/QA dan Python227 OK. Backup unik `/root/pdf_project-code-backup-20261024b-542acb5.tgz` tervalidasi (a tidak ditimpa), retensi3 terbaru b/a/f; e dipangkas, kode historis di Git. Restart hanya myflipbook; dua layanan aktif, capabilities/admin200. Browser live desktop/HP lulus urutan tombol, masuk/keluar fullscreen,10halaman/navigasi/tutup, nol pageerror/aset gagal. Perubahan dirty agen lain tidak ikut. Catatan lokal di bawah kini riwayat sebelum rilis ini.
