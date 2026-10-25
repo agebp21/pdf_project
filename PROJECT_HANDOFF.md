@@ -1,5 +1,7 @@
 # Handoff — PDF Project & Flipbook
 
+Update 25 Oktober 2026 (Codex): My Library mendukung subfolder dan pindah folder (parent_id), menu klik kanan buku/folder, card sekali klik membuka editor, cursor pointer, toolbar ikon satu baris. Keterangan kapasitas MB/GB dan paket disembunyikan; batas penyimpanan backend tetap. Penghapusan folder mempertahankan buku serta anak folder di root; pemindahan memeriksa kepemilikan dan siklus. Commit fitur `73823e0` pada v2.
+
 ## Rilis live 24 Oktober 2026, 01:24 WIB
 
 **myflipbookpro.com =542acb5 (v2, pushed)**. Tombol fullscreen hero/demo kini tepat setelah stabilo, sebelum Audio book. Validasi snapshot56 suite JS/QA dan Python227 OK; browser live desktop/HP memverifikasi urutan, masuk/keluar fullscreen, navigasi10halaman dan tutup tanpa error. Layanan utama/admin aktif, kedua endpoint200. Backup unik `/root/pdf_project-code-backup-20261024b-542acb5.tgz`, retensi3 terbaru b/a/f, tidak menimpa a. File dirty agen lain tidak disertakan. Catatan "selesai lokal" di bawah adalah riwayat sebelum deploy ini.
