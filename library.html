@@ -61,7 +61,9 @@
   .folder .ic{font-size:30px;line-height:1}
   .folder b{display:block;font-size:14px;overflow-wrap:anywhere}.folder small{color:#78716C;font-size:11.5px}
   .over{border-color:#FF5C28!important;background:#FFF7ED!important}
-  .book{cursor:pointer}
+  .book{cursor:pointer;position:relative}
+  .book .book-delete{position:absolute;top:6px;right:6px;z-index:2;width:30px;height:30px;padding:0;display:grid;place-items:center;border-radius:50%;font-size:23px;line-height:1;background:#fff;box-shadow:0 2px 8px #0002}
+  .book .book-delete:hover{background:#FEF2F2}
   .book.dragging{opacity:.45}
   .where{display:inline-flex;align-self:flex-start;font-size:11px;font-weight:700;color:#57534E;background:#F3EFE6;border-radius:999px;padding:3px 9px}
   .move{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:9px 12px;font-weight:800;font-size:12px;cursor:pointer}
@@ -268,21 +270,14 @@
   function card(book, searching) {
     const box = el('div', {className: 'cover', textContent: '\u{1F4D6}'});
     cover(book, box);
-    const actions = el('div', {className: 'actions'});
-    const exportIcon = {html: '\u{1F310}', apk: '\u{1F916}', exe: '\u{1FA9F}'};
-    book.exports.forEach(e => actions.append(el('a', {className: 'file icon-action', href: `/api/library/${book.id}/exports/${e.id}`, title: `${e.filename} · ${size(e.size)} · ${when(e.createdAt)}`, ariaLabel: `${e.filename} · ${size(e.size)}`, textContent: exportIcon[e.kind] || '\u{2B07}'})));
-    actions.append(el('a', {className: 'file icon-action', href: `/api/library/${book.id}/project`, title: L('Download project (.smflipbook)', 'Unduh proyek (.smflipbook)'), ariaLabel: L('Download project', 'Unduh proyek'), textContent: '\u{1F5C2}'}));
-    const remove = el('button', {type: 'button', className: 'delete icon-action', textContent: '\u{1F5D1}', title: L('Delete from My Library', 'Hapus dari My Library'), ariaLabel: L('Delete ', 'Hapus ') + book.title});
+    const remove = el('button', {type: 'button', className: 'delete book-delete', textContent: '×', title: L('Delete from My Library', 'Hapus dari My Library'), ariaLabel: L('Delete ', 'Hapus ') + book.title});
     remove.onclick = async () => {
       if (!await MFDialog.confirm({title: L(`Delete "${book.title}"?`, `Hapus "${book.title}"?`), message: L('This permanently removes the book, project, and exports.', 'Buku, proyek, dan semua hasil ekspor akan dihapus permanen.'), ok: L('Delete', 'Hapus'), cancel: L('Cancel', 'Batal'), danger: true})) return;
       remove.disabled = true;
       try { await api('POST', `/api/library/${book.id}/delete`); load(); } catch (e) { notice(e.message); remove.disabled = false; }
     };
-    const move = el('button', {type: 'button', className: 'move icon-action', textContent: '\u{1F4C1}', title: L('Move to a folder', 'Pindahkan ke folder'), ariaLabel: L('Move ', 'Pindahkan ') + book.title});
-    move.onclick = () => moveMenu(book, move);
-    actions.append(move, remove);
     const where = searching && book.folder && folderOf(book.folder) ? el('span', {className: 'where', textContent: '\u{1F4C1} ' + folderOf(book.folder).name}) : null;
-    const node = el('article', {className: 'clay-panel book', draggable: true, title: L('Click to open in MyFlipbook', 'Klik untuk membuka editor Flipbook')}, box, el('h3', {textContent: book.title}), where, el('div', {className: 'meta', textContent: L(`${book.pageCount || '?'} pages · ${size(book.size)} · changed ${when(book.updatedAt)}`, `${book.pageCount || '?'} halaman · ${size(book.size)} · diubah ${when(book.updatedAt)}`)}), actions);
+    const node = el('article', {className: 'clay-panel book', draggable: true, title: L('Click to open in MyFlipbook', 'Klik untuk membuka editor Flipbook')}, box, el('h3', {textContent: book.title}), where, el('div', {className: 'meta', textContent: L(`${book.pageCount || '?'} pages · ${size(book.size)} · changed ${when(book.updatedAt)}`, `${book.pageCount || '?'} halaman · ${size(book.size)} · diubah ${when(book.updatedAt)}`)}), remove);
     node.addEventListener('click', e => { if (!e.target.closest('a,button')) location.href = `flipbook.html?library=${book.id}`; });
     node.addEventListener('dragstart', e => { e.dataTransfer.setData('text/x-book', book.id); e.dataTransfer.effectAllowed = 'move'; node.classList.add('dragging'); });
     node.addEventListener('dragend', () => node.classList.remove('dragging'));
