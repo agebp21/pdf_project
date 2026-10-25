@@ -79,11 +79,11 @@
 <div class="wrap">
   <header data-site-header><a href="flipbook.html" class="clay-btn clay-btn-ghost" style="padding:8px 16px;font-size:12px" data-en="＋ New book">＋ Buku baru</a></header>
 
-  <h1 class="clay-h">📚 My Library</h1>
+  <h1 class="clay-h" data-en="📚 My Library">📚 Perpustakaan Saya</h1>
   <p class="lead" data-en="Every flipbook you make is saved here automatically — encrypted on the server, only you can open it.">Semua flipbook yang Anda buat tersimpan otomatis di sini — terenkripsi di server, hanya Anda yang bisa membukanya.</p>
 
   <div id="login" class="clay-panel empty" hidden>
-    <p data-en="Log in to see your library.">Masuk dulu untuk melihat My Library Anda.</p>
+    <p data-en="Log in to see your library.">Masuk untuk melihat Perpustakaan Saya.</p>
     <a class="clay-btn clay-btn-primary" href="login.html?next=library.html" data-en="Log in">Masuk</a>
   </div>
   <div id="usage" class="clay-panel usage" hidden>
@@ -91,11 +91,11 @@
     <a class="clay-btn clay-btn-ghost" href="account.html" style="padding:7px 14px;font-size:12px" id="upgrade" hidden data-en="More space">Tambah ruang</a>
   </div>
   <div id="tools" class="tools" hidden>
-    <input id="search" type="search" placeholder="Cari judul atau folder di My Library…" data-en-ph="Search titles or folders in My Library…" aria-label="Cari di My Library" data-en-aria="Search My Library" autocomplete="off">
+    <input id="search" type="search" placeholder="Cari judul atau folder di Perpustakaan Saya…" data-en-ph="Search titles or folders in My Library…" aria-label="Cari di Perpustakaan Saya" data-en-aria="Search My Library" autocomplete="off">
     <button type="button" id="new-folder" data-en="📁 New folder">📁 Folder baru</button>
   </div>
   <nav id="crumb" class="crumb" hidden aria-label="Folder">
-    <button type="button" id="back" class="drop" title="Seret buku ke sini untuk mengeluarkannya dari folder" data-en-title="Drop a book here to take it out of the folder" data-en="‹ My Library">‹ My Library</button>
+    <button type="button" id="back" class="drop" title="Seret buku ke sini untuk mengeluarkannya dari folder" data-en-title="Drop a book here to take it out of the folder" data-en="‹ My Library">‹ Perpustakaan Saya</button>
     <b id="crumb-name"></b>
     <button type="button" id="rename-folder" data-en="✎ Rename">✎ Ganti nama</button>
     <button type="button" id="delete-folder" data-en="🗑 Delete folder">🗑 Hapus folder</button>
@@ -148,7 +148,7 @@
     const r = anchor.getBoundingClientRect();
     menu = el('div', {className: 'menu', role: 'menu'});
     const item = (text, fn, on) => { const b = el('button', {type: 'button', textContent: text, className: on ? 'on' : ''}); b.onclick = fn; menu.append(b); };
-    item(L('Move out to My Library', 'Keluarkan ke My Library'), () => moveBook(book, null), !book.folder);
+    item(L('Move out to My Library', 'Keluarkan ke Perpustakaan Saya'), () => moveBook(book, null), !book.folder);
     const folderPath = folder => {
       const names = [], seen = new Set();
       while (folder && !seen.has(folder.id)) { seen.add(folder.id); names.unshift(folder.name); folder = folderOf(folder.parent); }
@@ -203,7 +203,7 @@
         };
         menu.append(button);
       };
-      item(L('Move out to My Library', 'Keluarkan ke My Library'), null);
+      item(L('Move out to My Library', 'Keluarkan ke Perpustakaan Saya'), null);
       folders.filter(folder => !isDescendant(folder)).forEach(folder => item(L('Move to: ', 'Pindahkan ke: ') + pathOf(folder), folder.id));
       document.body.append(menu);
       menu.style.left = Math.max(8, Math.min(event.clientX, innerWidth - menu.offsetWidth - 8)) + 'px';
@@ -270,7 +270,7 @@
   function card(book, searching) {
     const box = el('div', {className: 'cover', textContent: '\u{1F4D6}'});
     cover(book, box);
-    const remove = el('button', {type: 'button', className: 'delete book-delete', textContent: '×', title: L('Delete from My Library', 'Hapus dari My Library'), ariaLabel: L('Delete ', 'Hapus ') + book.title});
+    const remove = el('button', {type: 'button', className: 'delete book-delete', textContent: '×', title: L('Delete from My Library', 'Hapus dari Perpustakaan Saya'), ariaLabel: L('Delete ', 'Hapus ') + book.title});
     remove.onclick = async () => {
       if (!await MFDialog.confirm({title: L(`Delete "${book.title}"?`, `Hapus "${book.title}"?`), message: L('This permanently removes the book, project, and exports.', 'Buku, proyek, dan semua hasil ekspor akan dihapus permanen.'), ok: L('Delete', 'Hapus'), cancel: L('Cancel', 'Batal'), danger: true})) return;
       remove.disabled = true;
@@ -300,7 +300,7 @@
       notice('');
     } catch (e) {
       if (e.status === 401) { $('#login').hidden = false; $('#usage').hidden = true; return; }
-      notice(L('My Library could not be loaded: ', 'My Library tidak bisa dimuat: ') + e.message);
+      notice(L('My Library could not be loaded: ', 'Perpustakaan Saya tidak bisa dimuat: ') + e.message);
     }
   }
   // Search as you type; folders: open from the hash (a reload stays in the folder), rename, delete.
@@ -316,7 +316,7 @@
   $('#delete-folder').onclick = async () => {
     const f = folderOf(here); if (!f) return;
     if (!await MFDialog.confirm({title: L(`Delete the folder "${f.name}"?`, `Hapus folder "${f.name}"?`), danger: true,
-      message: L('Its books are kept: they go back to the top of My Library.', 'Bukunya tidak ikut terhapus: kembali ke halaman utama My Library.'),
+      message: L('Its books are kept: they go back to the top of My Library.', 'Bukunya tidak ikut terhapus: kembali ke halaman utama Perpustakaan Saya.'),
       ok: L('Delete folder', 'Hapus folder'), cancel: L('Cancel', 'Batal')})) return;
     try { await send(`/api/library/folders/${f.id}/delete`); here = null; openFolder(null); await load(); } catch (e) { notice(e.message); }
   };

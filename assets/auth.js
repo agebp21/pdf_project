@@ -126,7 +126,7 @@
         location.href = '/';
       });
     });
-    menu.append(who, item(EN('Account & plan', 'Akun & paket'), 'account.html'), item('My Library', 'library.html'), out);
+    menu.append(who, item(EN('Account & plan', 'Akun & paket'), 'account.html'), item(EN('My Library', 'Perpustakaan Saya'), 'library.html'), out);
 
     var open = function (show) {
       menu.hidden = !show;
