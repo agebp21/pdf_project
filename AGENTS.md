@@ -1,5 +1,7 @@
 # Panduan tim AI — PDF Project
 
+**Status terbaru25Oktober:** baca [HANDOFF_2026-10-25.md](HANDOFF_2026-10-25.md) terlebih dahulu; laporan23Oktober dan status live lama di dokumen lain bersifat historis.
+
 ## Mulai di sini
 
 1. Baca file ini, **laporan terbaru [HANDOFF_2026-10-23.md](HANDOFF_2026-10-23.md)** (status live, keputusan owner, jebakan teknis), dan [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md).

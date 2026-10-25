@@ -1,5 +1,7 @@
 # Handoff — PDF Project & Flipbook
 
+**Status terkini25Oktober2026:** lihat [HANDOFF_2026-10-25.md](HANDOFF_2026-10-25.md). Kode live terakhir a2b16c6; card final tanpa toolbar bawah, delete×dengan MFDialog; subfolder/klik kanan aktif; akun admin enginer akses penuh dan password terpisah. Password rak serta proteksi tambahan /admin belum dibuat. Catatan di bawah adalah riwayat.
+
 Update 25 Oktober 2026 (Codex): My Library mendukung subfolder dan pindah folder (parent_id), menu klik kanan buku/folder, card sekali klik membuka editor, cursor pointer, toolbar ikon satu baris. Keterangan kapasitas MB/GB dan paket disembunyikan; batas penyimpanan backend tetap. Penghapusan folder mempertahankan buku serta anak folder di root; pemindahan memeriksa kepemilikan dan siklus. Commit fitur `73823e0` pada v2.
 
 ## Rilis live 24 Oktober 2026, 01:24 WIB
