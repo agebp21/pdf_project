@@ -3323,12 +3323,15 @@ class Handler(SimpleHTTPRequestHandler):
         # Folders: POST /api/library/folders {name}; /api/library/folders/<id>/rename {name}; …/<id>/delete;
         # a book moves with POST /api/library/<book>/move {folder: id or null}.
         if path == '/api/library/folders':
-            self.send_json(200, {'id': store.make_folder(user, self.read_json(self.read_raw(64 * 1024)).get('name')), 'folders': store.folders(user)})
+            body = self.read_json(self.read_raw(64 * 1024))
+            self.send_json(200, {'id': store.make_folder(user, body.get('name'), body.get('parent')), 'folders': store.folders(user)})
             return
-        match = re.fullmatch(r'/api/library/folders/([0-9a-f]{32})/(rename|delete)', path)
+        match = re.fullmatch(r'/api/library/folders/([0-9a-f]{32})/(rename|delete|move)', path)
         if match:
             if match[2] == 'rename':
                 store.rename_folder(user, match[1], self.read_json(self.read_raw(64 * 1024)).get('name'))
+            elif match[2] == 'move':
+                store.move_folder(user, match[1], self.read_json(self.read_raw(64 * 1024)).get('parent'))
             else:
                 store.delete_folder(user, match[1])
             self.send_json(200, {'folders': store.folders(user)})

@@ -30,7 +30,7 @@
   .meter.full span{background:linear-gradient(90deg,#D31D24,#F0642A)}
   .usage small{color:#78716C}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(230px,1fr));gap:16px;margin-top:18px}
-  .book{display:flex;flex-direction:column;padding:12px;gap:10px}
+  .book{display:flex;flex-direction:column;padding:12px;gap:10px;cursor:pointer}
   .cover{aspect-ratio:3/4;border-radius:12px;background:#F3EFE6 center/cover no-repeat;border:1px solid #E9E2D4;display:grid;place-items:center;font-size:40px;color:#C9BFAA}
   .book h3{margin:0;font-size:15px;line-height:1.3;overflow-wrap:anywhere}
   .meta{font-size:11.5px;color:#78716C}
@@ -38,6 +38,9 @@
   .file{display:inline-flex;align-items:center;gap:4px;padding:5px 10px;border-radius:999px;border:1px solid #E4DED0;background:#fff;color:#1A3C34;font-weight:800;font-size:11.5px;text-decoration:none}
   .file:hover{background:#EFF6EC}
   .actions{display:flex;gap:6px;margin-top:auto}
+  .actions{overflow-x:auto;flex-wrap:nowrap}
+  .actions .icon-action{display:inline-flex;align-items:center;justify-content:center;width:36px;height:38px;padding:0;font-size:17px;flex:0 0 36px;text-decoration:none}
+  .actions .icon-action:first-child{margin-left:auto}
   .actions .clay-btn{flex:1;padding:9px 10px;font-size:12px;text-align:center}
   .delete{border:1px solid #F3D0D0;background:#fff;color:#B91C1C;border-radius:999px;padding:9px 12px;font-weight:800;font-size:12px;cursor:pointer}
   .delete:hover{background:#FEF2F2}
@@ -58,7 +61,7 @@
   .folder .ic{font-size:30px;line-height:1}
   .folder b{display:block;font-size:14px;overflow-wrap:anywhere}.folder small{color:#78716C;font-size:11.5px}
   .over{border-color:#FF5C28!important;background:#FFF7ED!important}
-  .book{cursor:default}
+  .book{cursor:pointer}
   .book.dragging{opacity:.45}
   .where{display:inline-flex;align-self:flex-start;font-size:11px;font-weight:700;color:#57534E;background:#F3EFE6;border-radius:999px;padding:3px 9px}
   .move{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:9px 12px;font-weight:800;font-size:12px;cursor:pointer}
@@ -95,7 +98,7 @@
     <button type="button" id="rename-folder" data-en="✎ Rename">✎ Ganti nama</button>
     <button type="button" id="delete-folder" data-en="🗑 Delete folder">🗑 Hapus folder</button>
   </nav>
-  <p id="hint" class="hint" hidden data-en="Tip: double-click a book to open it; drag a book onto a folder to move it.">Tips: klik 2× buku untuk membukanya; seret buku ke folder untuk memindahkannya.</p>
+  <p id="hint" class="hint" hidden data-en="Click a book to open it; right-click to move it, or drag it onto a folder.">Klik buku untuk membukanya; klik kanan untuk memindahkan, atau seret ke folder.</p>
   <div id="notice" class="notice" role="alert" hidden></div>
   <div id="folders" class="folders"></div>
   <div id="grid" class="grid"></div>
@@ -135,20 +138,29 @@
   async function newFolder(then) {
     const name = await MFDialog.prompt({title: L('New folder', 'Folder baru'), icon: '📁', placeholder: L('e.g. Thesis references', 'mis. Referensi skripsi'), ok: L('Make', 'Buat'), cancel: L('Cancel', 'Batal')});
     if (!name) return;
-    try { const {id} = await send('/api/library/folders', {name}); await load(); if (then) await then(id); }
+    try { const {id} = await send('/api/library/folders', {name, parent: here}); await load(); if (then) await then(id); }
     catch (e) { notice(e.message); }
   }
-  function moveMenu(book, anchor) {
+  function moveMenu(book, anchor, pointer) {
     closeMenu();
     const r = anchor.getBoundingClientRect();
     menu = el('div', {className: 'menu', role: 'menu'});
     const item = (text, fn, on) => { const b = el('button', {type: 'button', textContent: text, className: on ? 'on' : ''}); b.onclick = fn; menu.append(b); };
-    item(L('⌂ No folder (top)', '⌂ Tanpa folder (atas)'), () => moveBook(book, null), !book.folder);
-    folders.forEach(f => item('📁 ' + f.name, () => moveBook(book, f.id), book.folder === f.id));
+    item(L('Move out to My Library', 'Keluarkan ke My Library'), () => moveBook(book, null), !book.folder);
+    const folderPath = folder => {
+      const names = [], seen = new Set();
+      while (folder && !seen.has(folder.id)) { seen.add(folder.id); names.unshift(folder.name); folder = folderOf(folder.parent); }
+      return names.join(' / ');
+    };
+    folders.forEach(f => item(L('Move to: ', 'Pindahkan ke: ') + folderPath(f), () => moveBook(book, f.id), book.folder === f.id));
     item(L('＋ New folder…', '＋ Folder baru…'), () => { closeMenu(); newFolder(id => moveBook(book, id)); });
     document.body.append(menu);
     menu.style.left = Math.min(r.left, innerWidth - menu.offsetWidth - 12) + 'px';
     menu.style.top = (r.bottom + 6 + menu.offsetHeight > innerHeight ? r.top - menu.offsetHeight - 6 : r.bottom + 6) + 'px';
+    if (pointer) {
+      menu.style.left = Math.max(8, Math.min(pointer.clientX, innerWidth - menu.offsetWidth - 8)) + 'px';
+      menu.style.top = Math.max(8, Math.min(pointer.clientY, innerHeight - menu.offsetHeight - 8)) + 'px';
+    }
   }
   // A folder (or the way back) takes a book dropped on it.
   function dropTarget(node, folder) {
@@ -164,6 +176,38 @@
     const tile = el('button', {type: 'button', className: 'folder', title: L('Open the folder', 'Buka folder')},
       el('span', {className: 'ic', textContent: '📁'}), el('span', null, el('b', {textContent: f.name}), el('small', {textContent: L(`${f.books} book${f.books === 1 ? '' : 's'}`, `${f.books} buku`)})));
     tile.onclick = () => openFolder(f.id);
+    tile.addEventListener('contextmenu', event => {
+      event.preventDefault(); closeMenu();
+      menu = el('div', {className: 'menu', role: 'menu', ariaLabel: L('Move folder', 'Pindahkan folder')});
+      const pathOf = folder => {
+        const names = [], seen = new Set();
+        while (folder && !seen.has(folder.id)) { seen.add(folder.id); names.unshift(folder.name); folder = folderOf(folder.parent); }
+        return names.join(' / ');
+      };
+      const isDescendant = folder => {
+        const seen = new Set();
+        while (folder && !seen.has(folder.id)) {
+          if (folder.id === f.id) return true;
+          seen.add(folder.id); folder = folderOf(folder.parent);
+        }
+        return false;
+      };
+      const item = (label, parent) => {
+        const button = el('button', {type: 'button', textContent: label, role: 'menuitem'});
+        button.onclick = async () => {
+          closeMenu();
+          try { await send(`/api/library/folders/${f.id}/move`, {parent}); await load(); }
+          catch (error) { notice(error.message); }
+        };
+        menu.append(button);
+      };
+      item(L('Move out to My Library', 'Keluarkan ke My Library'), null);
+      folders.filter(folder => !isDescendant(folder)).forEach(folder => item(L('Move to: ', 'Pindahkan ke: ') + pathOf(folder), folder.id));
+      document.body.append(menu);
+      menu.style.left = Math.max(8, Math.min(event.clientX, innerWidth - menu.offsetWidth - 8)) + 'px';
+      menu.style.top = Math.max(8, Math.min(event.clientY, innerHeight - menu.offsetHeight - 8)) + 'px';
+      menu.querySelector('button').focus();
+    });
     dropTarget(tile, f.id);
     return tile;
   }
@@ -176,17 +220,22 @@
     covers.splice(0).forEach(url => URL.revokeObjectURL(url));
     if (here && !folderOf(here)) here = null;
     const q = query.toLowerCase(), searching = !!q;
-    const shownFolders = searching ? folders.filter(f => f.name.toLowerCase().includes(q)) : here ? [] : folders;
+    const shownFolders = searching ? folders.filter(f => f.name.toLowerCase().includes(q)) : folders.filter(f => (f.parent || null) === here);
     const shownBooks = searching ? books.filter(b => b.title.toLowerCase().includes(q) || ((folderOf(b.folder) || {}).name || '').toLowerCase().includes(q))
       : books.filter(b => (b.folder || null) === here);
     $('#folders').replaceChildren(...shownFolders.map(folderTile));
     $('#grid').replaceChildren(...shownBooks.map(b => card(b, searching)));
     const f = folderOf(here);
     $('#crumb').hidden = !f || searching;
-    if (f) $('#crumb-name').textContent = '📁 ' + f.name;
+    if (f) {
+      const names = []; const visited = new Set(); let current = f;
+      while (current && !visited.has(current.id)) { visited.add(current.id); names.unshift(current.name); current = folderOf(current.parent); }
+      $('#crumb-name').textContent = '📁 ' + names.join(' / ');
+      $('#back').textContent = L('‹ Back', '‹ Kembali');
+    }
     $('#empty').hidden = !!(books.length || folders.length) || searching;
     $('#none').hidden = !(searching && !shownBooks.length && !shownFolders.length);
-    $('#folder-empty').hidden = !(f && !searching && !shownBooks.length);
+    $('#folder-empty').hidden = !(f && !searching && !shownBooks.length && !shownFolders.length);
     $('#hint').hidden = !books.length;
   }
   function notice(text) { $('#notice').textContent = text || ''; $('#notice').hidden = !text; }
@@ -203,7 +252,7 @@
     $('#meter').firstElementChild.style.width = Math.min(100, Math.round(fraction * 100)) + '%';
     $('#meter').classList.toggle('full', fraction >= 0.9);
     const planName = u.planName || u.plan;   // the plan's name, as on the price list
-    $('#usage-bytes').textContent = L(`${size(u.bytes)} of ${size(u.maxBytes)} · ${planName} plan`, `${size(u.bytes)} dari ${size(u.maxBytes)} · paket ${planName}`);
+    $('#usage-bytes').hidden = true;
     $('#upgrade').hidden = u.plan === 'pro';      // the biggest plan
   }
   async function cover(book, box) {
@@ -215,34 +264,36 @@
       box.style.backgroundImage = `url("${url}")`; box.textContent = '';
     } catch (e) {}
   }
+  // Compact card actions: every download and management action stays in one icon row.
   function card(book, searching) {
-    const box = el('div', {className: 'cover', textContent: '📖'});
+    const box = el('div', {className: 'cover', textContent: '\u{1F4D6}'});
     cover(book, box);
-    const files = el('div', {className: 'files'});
-    book.exports.forEach(e => files.append(el('a', {className: 'file', href: `/api/library/${book.id}/exports/${e.id}`, title: `${e.filename} · ${size(e.size)} · ${when(e.createdAt)}`, textContent: KIND[e.kind] || e.kind})));
-    files.append(el('a', {className: 'file', href: `/api/library/${book.id}/project`, title: L('Project (.smflipbook) — can be edited again', 'Proyek (.smflipbook) — bisa diedit lagi'), textContent: L('🗂 Project', '🗂 Proyek')}));
-    const remove = el('button', {type: 'button', className: 'delete', textContent: '🗑', title: L('Delete from My Library', 'Hapus dari My Library'), ariaLabel: L('Delete ', 'Hapus ') + book.title});
+    const actions = el('div', {className: 'actions'});
+    const exportIcon = {html: '\u{1F310}', apk: '\u{1F916}', exe: '\u{1FA9F}'};
+    book.exports.forEach(e => actions.append(el('a', {className: 'file icon-action', href: `/api/library/${book.id}/exports/${e.id}`, title: `${e.filename} · ${size(e.size)} · ${when(e.createdAt)}`, ariaLabel: `${e.filename} · ${size(e.size)}`, textContent: exportIcon[e.kind] || '\u{2B07}'})));
+    actions.append(el('a', {className: 'file icon-action', href: `/api/library/${book.id}/project`, title: L('Download project (.smflipbook)', 'Unduh proyek (.smflipbook)'), ariaLabel: L('Download project', 'Unduh proyek'), textContent: '\u{1F5C2}'}));
+    const remove = el('button', {type: 'button', className: 'delete icon-action', textContent: '\u{1F5D1}', title: L('Delete from My Library', 'Hapus dari My Library'), ariaLabel: L('Delete ', 'Hapus ') + book.title});
     remove.onclick = async () => {
-      if (!await MFDialog.confirm({title: L(`Delete "${book.title}"?`, `Hapus "${book.title}"?`),
-        message: L('This book is removed from My Library, with its project and every export. This can\'t be undone.', 'Buku ini dihapus dari My Library, termasuk proyek dan semua hasil ekspornya. Tidak bisa dibatalkan.'),
-        ok: L('Delete', 'Hapus'), cancel: L('Cancel', 'Batal'), danger: true})) return;
+      if (!await MFDialog.confirm({title: L(`Delete "${book.title}"?`, `Hapus "${book.title}"?`), message: L('This permanently removes the book, project, and exports.', 'Buku, proyek, dan semua hasil ekspor akan dihapus permanen.'), ok: L('Delete', 'Hapus'), cancel: L('Cancel', 'Batal'), danger: true})) return;
       remove.disabled = true;
       try { await api('POST', `/api/library/${book.id}/delete`); load(); } catch (e) { notice(e.message); remove.disabled = false; }
     };
-    const move = el('button', {type: 'button', className: 'move', textContent: '📁', title: L('Move to a folder', 'Pindahkan ke folder'), ariaLabel: L('Move ', 'Pindahkan ') + book.title});
+    const move = el('button', {type: 'button', className: 'move icon-action', textContent: '\u{1F4C1}', title: L('Move to a folder', 'Pindahkan ke folder'), ariaLabel: L('Move ', 'Pindahkan ') + book.title});
     move.onclick = () => moveMenu(book, move);
-    const where = searching && book.folder && folderOf(book.folder) ? el('span', {className: 'where', textContent: '📁 ' + folderOf(book.folder).name}) : null;
-    const node = el('article', {className: 'clay-panel book', draggable: true, title: L('Double-click to open', 'Klik 2× untuk membuka')},
-      box, el('h3', {textContent: book.title}), where,
-      el('div', {className: 'meta', textContent: L(`${book.pageCount || '?'} pages · ${size(book.size)} · changed ${when(book.updatedAt)}`, `${book.pageCount || '?'} halaman · ${size(book.size)} · diubah ${when(book.updatedAt)}`)}),
-      files,
-      el('div', {className: 'actions'}, el('a', {className: 'clay-btn clay-btn-primary', href: `flipbook.html?library=${book.id}`, textContent: L('✎ Open in the editor', '✎ Buka di editor')}), move, remove));
-    // Double-click opens the book (not on its buttons and links).
-    node.addEventListener('dblclick', e => { if (!e.target.closest('a,button')) location.href = `flipbook.html?library=${book.id}`; });
+    actions.append(move, remove);
+    const where = searching && book.folder && folderOf(book.folder) ? el('span', {className: 'where', textContent: '\u{1F4C1} ' + folderOf(book.folder).name}) : null;
+    const node = el('article', {className: 'clay-panel book', draggable: true, title: L('Click to open in MyFlipbook', 'Klik untuk membuka editor Flipbook')}, box, el('h3', {textContent: book.title}), where, el('div', {className: 'meta', textContent: L(`${book.pageCount || '?'} pages · ${size(book.size)} · changed ${when(book.updatedAt)}`, `${book.pageCount || '?'} halaman · ${size(book.size)} · diubah ${when(book.updatedAt)}`)}), actions);
+    node.addEventListener('click', e => { if (!e.target.closest('a,button')) location.href = `flipbook.html?library=${book.id}`; });
     node.addEventListener('dragstart', e => { e.dataTransfer.setData('text/x-book', book.id); e.dataTransfer.effectAllowed = 'move'; node.classList.add('dragging'); });
     node.addEventListener('dragend', () => node.classList.remove('dragging'));
+    node.addEventListener('contextmenu', event => {
+      if (event.target.closest('a,button')) return;
+      event.preventDefault();
+      moveMenu(book, node, event);
+    });
     return node;
   }
+
   async function load() {
     covers.splice(0).forEach(url => URL.revokeObjectURL(url));
     try {
@@ -260,8 +311,7 @@
   // Search as you type; folders: open from the hash (a reload stays in the folder), rename, delete.
   $('#search').addEventListener('input', e => { query = e.target.value.trim(); render(); });
   $('#new-folder').onclick = () => newFolder();
-  $('#back').onclick = () => openFolder(null);
-  dropTarget($('#back'), null);
+  $('#back').onclick = () => openFolder((folderOf(here) || {}).parent || null);
   $('#rename-folder').onclick = async () => {
     const f = folderOf(here); if (!f) return;
     const name = await MFDialog.prompt({title: L('Rename folder', 'Ganti nama folder'), icon: '✎', value: f.name, ok: L('Save', 'Simpan'), cancel: L('Cancel', 'Batal')});

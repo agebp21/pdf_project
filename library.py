@@ -140,6 +140,8 @@ class Library:
             ''')
             if 'folder_id' not in [c[1] for c in db.execute('PRAGMA table_info(library_books)')]:
                 db.execute('ALTER TABLE library_books ADD COLUMN folder_id TEXT')
+            if 'parent_id' not in [c[1] for c in db.execute('PRAGMA table_info(library_folders)')]:
+                db.execute('ALTER TABLE library_folders ADD COLUMN parent_id TEXT')
 
     # ---- storage ---------------------------------------------------------
     def _dir(self, user_id, book_id):
@@ -205,13 +207,13 @@ class Library:
                      createdAt=r['created_at'], updatedAt=r['updated_at'], exports=by_book.get(r['id'], []), folder=r['folder_id'])
                 for r in rows]
 
-    # ---- folders: one level, a member's own; deleting one keeps its books (they go back to the top)
+    # ---- nested folders owned by the member; deletion preserves books and children at the top
     def folders(self, user):
         with self.store.connect() as db:
-            rows = db.execute('SELECT f.id, f.name, f.created_at, COUNT(b.id) AS books FROM library_folders f '
+            rows = db.execute('SELECT f.id, f.name, f.parent_id, f.created_at, COUNT(b.id) AS books FROM library_folders f '
                               'LEFT JOIN library_books b ON b.folder_id = f.id AND b.user_id = f.user_id '
                               'WHERE f.user_id=? GROUP BY f.id ORDER BY f.name COLLATE NOCASE', (user['id'],)).fetchall()
-        return [dict(id=r['id'], name=r['name'], createdAt=r['created_at'], books=r['books']) for r in rows]
+        return [dict(id=r['id'], name=r['name'], parent=r['parent_id'], createdAt=r['created_at'], books=r['books']) for r in rows]
 
     @staticmethod
     def _folder_name(name):
@@ -228,14 +230,28 @@ class Library:
             raise AccountError(404, 'Folder tidak ditemukan.')
         return row
 
-    def make_folder(self, user, name):
+    def make_folder(self, user, name, parent=None):
         name = self._folder_name(name)
         with self.store.connect() as db:
+            if parent is not None:
+                self._own_folder(db, user, parent)
             if db.execute('SELECT COUNT(*) FROM library_folders WHERE user_id=?', (user['id'],)).fetchone()[0] >= MAX_FOLDERS:
                 raise AccountError(400, f'Maksimal {MAX_FOLDERS} folder.')
             folder_id = secrets.token_hex(16)
-            db.execute('INSERT INTO library_folders(id, user_id, name, created_at) VALUES(?,?,?,?)', (folder_id, user['id'], name, int(time.time())))
+            db.execute('INSERT INTO library_folders(id, user_id, name, created_at, parent_id) VALUES(?,?,?,?,?)', (folder_id, user['id'], name, int(time.time()), parent))
         return folder_id
+
+    def move_folder(self, user, folder_id, parent=None):
+        with self.store.connect() as db:
+            self._own_folder(db, user, folder_id)
+            current = parent
+            seen = set()
+            while current is not None:
+                if current == folder_id or current in seen:
+                    raise AccountError(400, 'Folder tidak dapat dipindahkan ke dalam dirinya atau subfoldernya.')
+                seen.add(current)
+                current = self._own_folder(db, user, current)['parent_id']
+            db.execute('UPDATE library_folders SET parent_id=? WHERE id=? AND user_id=?', (parent, folder_id, user['id']))
 
     def rename_folder(self, user, folder_id, name):
         name = self._folder_name(name)
@@ -247,6 +263,7 @@ class Library:
         with self.store.connect() as db:
             self._own_folder(db, user, folder_id)
             db.execute('UPDATE library_books SET folder_id=NULL WHERE folder_id=? AND user_id=?', (folder_id, user['id']))
+            db.execute('UPDATE library_folders SET parent_id=NULL WHERE parent_id=? AND user_id=?', (folder_id, user['id']))
             db.execute('DELETE FROM library_folders WHERE id=?', (folder_id,))
 
     def move_book(self, user, book_id, folder_id):
