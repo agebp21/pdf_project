@@ -9,6 +9,7 @@ returned unchanged, so a missing entry shows Indonesian rather than nothing.
 import re
 
 EXACT = {
+    'Folder tidak dapat dipindahkan ke dalam dirinya atau subfoldernya.': 'A folder cannot be moved into itself or one of its subfolders.',
     # --- book data checks
     'Versi buku tidak valid.': 'Invalid book version.',
     'Judul atau jumlah halaman tidak valid.': 'Invalid title or page count.',
