@@ -55,6 +55,8 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 
 ## 5. Log deploy
 
+25 Oktober 2026 — Codex: live `cb4aa43`. Admin: form ganti password vertikal, input lebar penuh, tombol mata semua4isian password (termasuk login), reset kembali tersembunyi. Backup `/root/pdf_project-code-backup-20261025e-cb4aa43.tgz`; pushed archive v2, restart hanya myflipbook-admin. Syntax/diff lulus, layout/toggle ada di HTML live, admin/session/capabilities HTTP200; kedua service aktif. Belum uji visual browser.
+
 25 Oktober 2026 — Codex: live `27d9066`, label Indonesia Perpustakaan Saya pada halaman Library, pencarian/menu pindah/hapus, dan menu akun; EN tetap My Library. Backup `/root/pdf_project-code-backup-20261025d-27d9066.tgz`; pushed archive v2, restart myflipbook. Syntax/diff lulus, teks live HTML/auth.js diverifikasi, empat endpoint HTTP200; kedua service aktif.
 
 25 Oktober 2026 — Codex: live `11eb012`. Card My Library tanpa ikon aksi bawah; tombol × pojok kanan atas untuk hapus dengan konfirmasi. Klik card, context menu pindah, dan draggable dipertahankan. Backup `/root/pdf_project-code-backup-20261025c-11eb012.tgz`; git archive pushed v2, restart myflipbook, dua service aktif. Syntax/diff lulus; HTML live diverifikasi tombol corner, tanpa toolbar bawah, handler klik kanan/drag; library/capabilities/admin HTTP200. Tidak melakukan uji visual browser.

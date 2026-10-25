@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ADMIN-PASSWORD-UI (Codex, 25 Oktober): live `cb4aa43`, admin/index.html form password vertikal + tombol mata semua4field, aria-label/pressed, type button, reset menyembunyikan. Syntax/diff serta live HTML dan endpoint200 lulus; backup20261025e-cb4aa43; hanya admin direstart.
+
 - LIBRARY-ID (Codex, 25 Oktober): live `27d9066`, library.html + assets/auth.js memakai Perpustakaan Saya dalam ID dan My Library dalam EN. Syntax/diff dan empat endpoint live200 lulus; backup20261025d-27d9066.
 
 - LIBRARY-CORNER (Codex, 25 Oktober): live `11eb012`, pushed v2. Semua aksi bawah card dihapus, × pojok kanan atas untuk delete dengan konfirmasi; klik/drag/klik kanan tetap. Syntax/diff dan HTML live + tiga endpoint HTTP200 diverifikasi. Backup `20261025c-11eb012`; restart myflipbook saja.
