@@ -40,6 +40,9 @@
   th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:600;font-size:12px;white-space:nowrap}
   tr.click{cursor:pointer} tr.click:hover td{background:#f3ecdf}
+  tr.visitor-click-row{cursor:pointer}
+  tr.visitor-click-row:hover td,tr.visitor-click-row:focus-visible td{background:#f3ecdf}
+  tr.visitor-expanded td{background:#fffaf1;border-bottom:2px solid var(--accent)}
   .tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#eee6d6;color:#5b5446}
   .tag.medium,.tag.paid{background:#d3f9d8;color:#2b8a3e} .tag.pro{background:#e5dbff;color:#5f3dc4}
   .tag.pending{background:#fff3bf;color:#a76b00} .tag.failed,.tag.expired{background:#ffe3e3;color:#c92a2a}
@@ -437,7 +440,10 @@ $('#visit-reset-range').onclick = () => { visitRange = null; $('#visit-start').v
 $('#visit-search').oninput = () => filterVisitRows();
 function filterVisitRows() {
   const query = $('#visit-search').value.trim().toLowerCase();
-  document.querySelectorAll('#visit-view table tr').forEach(row => { row.hidden = !row.querySelector('th') && !row.textContent.toLowerCase().includes(query); });
+  document.querySelectorAll('#visit-view table tr').forEach(row => {
+    if (row.classList.contains('visitor-expanded')) { row.hidden = !row.previousElementSibling || row.previousElementSibling.hidden; return; }
+    row.hidden = !row.querySelector('th') && !row.textContent.toLowerCase().includes(query);
+  });
 }
 let visitData = null;
 function visitMetric(value, label, detail) {
@@ -506,7 +512,7 @@ async function loadVisitorDetail() {
       <button class="ghost" onclick="toggleTeamBrowser()" style="margin-left:auto">${on ? '✅ Browser ini tidak dihitung — hitung lagi' : '🚫 Jangan hitung browser ini'}</button>
     </div>
     <p class="muted" style="margin-top:0">Tim dan Mesin tidak masuk angka laporan. Klik "Jangan hitung browser ini" sekali di setiap browser/HP tim (berlaku di situs MyFlipbook di browser itu). Status bisa dikoreksi per baris.</p>
-    <p class="muted" style="margin-top:0">Tamu anonim tidak menyimpan alamat email. Tindak lanjut email tersedia untuk member yang login dan emailnya sudah terverifikasi.</p>
+    <p class="muted" style="margin-top:0">Klik baris pengunjung untuk membuka detail dan tindak lanjut. Email promo tersedia untuk member login yang sudah memverifikasi email; tamu tetap anonim.</p>
     <div style="overflow:auto"><table><tr><th>Pengunjung</th><th>Kapan</th><th>Halaman</th><th>Status</th><th>Tindak lanjuti</th><th>Tandai</th></tr>
     ${d.items.map(v => {
       const [icon, word, tag] = STATUS[v.status] || STATUS.human;
@@ -516,10 +522,34 @@ async function loadVisitorDetail() {
       const contacts = (v.memberContacts || []).map(contact => contact.verified
         ? `<a class="ghost" style="display:inline-block;padding:4px 8px;font-size:11px" href="${esc(followupLink(contact))}">Email promo · ${esc(contact.name || contact.email)}</a>`
         : `<span class="muted">${esc(contact.email)} · email belum terverifikasi</span>`).join('<br>') || '<span class="muted">Tamu anonim</span>';
-      return `<tr><td>${who}</td><td>${time}</td><td>${pages}</td>
+      return `<tr class="visitor-click-row" data-visitor-key="${esc(v.key)}" tabindex="0" aria-expanded="false" title="Klik untuk membuka detail tindak lanjut"><td>${who}</td><td>${time}</td><td>${pages}</td>
         <td><span class="tag ${tag}">${icon} ${word}</span>${v.reason ? '<br><span class="muted">' + esc(v.reason) + '</span>' : ''}</td>
         <td style="min-width:190px">${contacts}</td><td style="white-space:nowrap">${btn(v.key, 'human', 'Asli')} ${btn(v.key, 'team', 'Tim')} ${btn(v.key, 'bot', 'Mesin')}${v.reason === 'Ditandai admin' ? ' ' + btn(v.key, '', '↺') : ''}</td></tr>`;
     }).join('') || '<tr><td colspan="6" class="muted">Belum ada pengunjung.</td></tr>'}</table></div>`;
+  const closeVisitorDetails = () => {
+    box.querySelectorAll('tr.visitor-expanded').forEach(row => row.remove());
+    box.querySelectorAll('tr.visitor-click-row[aria-expanded="true"]').forEach(row => row.setAttribute('aria-expanded', 'false'));
+  };
+  const toggleVisitorDetails = (row, visitor) => {
+    const expanded = row.getAttribute('aria-expanded') === 'true';
+    closeVisitorDetails();
+    if (expanded) return;
+    row.setAttribute('aria-expanded', 'true');
+    const memberInfo = (visitor.memberContacts || []).map(contact => contact.verified
+      ? `<p><b>${esc(contact.name || contact.email)}</b> · ${esc(contact.email)} <a class="ghost" style="display:inline-block;padding:5px 10px" href="${esc(followupLink(contact))}">Tulis email promo</a></p>`
+      : `<p>${esc(contact.email)} · email belum diverifikasi sehingga belum dapat digunakan untuk tindak lanjut promo.</p>`).join('')
+      || '<p>Pengunjung tamu anonim; alamat email ora disimpen.</p>';
+    row.insertAdjacentHTML('afterend', `<tr class="visitor-expanded"><td colspan="6"><b>Detail tindak lanjut</b><p>${num(visitor.views)} tampilan · ${esc(visitor.pages.join(', '))}</p>${memberInfo}</td></tr>`);
+    filterVisitRows();
+  };
+  box.querySelectorAll('tr.visitor-click-row').forEach(row => {
+    const visitor = d.items.find(item => item.key === row.dataset.visitorKey);
+    if (!visitor) return;
+    row.onclick = event => { if (!event.target.closest('a,button')) toggleVisitorDetails(row, visitor); };
+    row.onkeydown = event => {
+      if ((event.key === 'Enter' || event.key === ' ') && !event.target.closest('a,button')) { event.preventDefault(); toggleVisitorDetails(row, visitor); }
+    };
+  });
   filterVisitRows();
 }
 async function loadVisits(days) {
