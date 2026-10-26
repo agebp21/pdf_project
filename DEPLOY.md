@@ -55,6 +55,8 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 
 ## 5. Log deploy
 
+26 Oktober2026 22:35WIB — Codex: live `f4c8420`. Mode Split ing Organize saiki ngganti tombol abang dadi “Pisah halaman pilihan”; klik utama langsung nglakokake ZIP lan rentang ing input diterapake otomatis. Dudu maneh ngundhuh PDF lengkap liwat aksi Organize. Backup `/root/pdf_project-code-backup-20261026g-f4c8420.tgz`; restart layanan utama, layanan loro-lorone aktif. `converter.html` lan capabilities HTTPS200; sumber live wis ngemot handler lan label Split.
+
 26 Oktober2026 21:54WIB — Codex: live `93b28ad`. Perbaikan drilldown: sakwise angka Pengunjung saben dina diklik, panel asil otomatis digawa mlebu tampilan; API tanggal sing dipilih lokal menehi200. Restart admin wae; loro layanan aktif. HTTPS `/admin/` HTTP200 lan HTML ngemot aksi auto-scroll. Backup `/root/pdf_project-code-backup-20261026f-93b28ad.tgz`.
 
 26 Oktober2026 21:42WIB — Codex: live `e52557f` (v2 pushed). Tabel Laporan harian: angka Pengunjung saben tanggal bisa diklik kanggo mbukak dhaptar pengunjung dina iku; baris pengunjung bisa dibukak nganggo mouse utawa Enter/Space kanggo ndeleng kaca sing dibukak lan draf email promo member terverifikasi. Tombol ing saben baris tetep bisa digunakake. Backup `/root/pdf_project-code-backup-20261026e-e52557f.tgz`; restart admin wae, layanan utama/admin aktif. Admin HTTP200; HTML ngemot day-drill lan row-click; session endpoint200.
