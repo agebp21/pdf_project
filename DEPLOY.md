@@ -53,7 +53,7 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 - Paywall ON; pembayaran **dipause** (`PAYMENTS_PAUSED=1` nang `.env`, key Midtrans/Tripay/Lemon durung diisi) — upgrade member saiki lewat `--grant`. Nguripke: isi key gateway, tes, banjur guwang/setel `PAYMENTS_PAUSED=0` + `systemctl restart myflipbook`.
 - Ojo ngganti password root / user lewat SSH; urusan kredensial domain-e owner.
 
-## 5. Log deploy
+$126 Oktober2026 23:26WIB � Codex: live `3fe4e93`. Beranda saiki duwe telung conto sing bisa diklik: Katalog Sekar Bumi, Buku, lan Majalah Grand Designs. Sampul majalah dioptimalake dadi WebP 64 KB; pilihan� ngganti sampul flipbook pratinjau. Backup `/root/pdf_project-code-backup-20261026225416.tgz`; `myflipbook` aktif, homepage lan sampul majalah HTTPS200.
 
 26 Oktober2026 23:15WIB — Codex: live `d9c5c82`. Split pilihan saiki nggabung kabeh kaca terpilih miturut urutan dadi siji PDF (`-selected-pages.pdf`); tombol Split utama nganggo alur padha. Kontrol Pisah saben N dicopot saka panel supaya ora mecah dadi pirang-pirang file. Mode per-N sing kapisah ora katon maneh. Backup `/root/pdf_project-code-backup-20261026j-d9c5c82.tgz`; restart layanan utama, loro layanan aktif; converter HTTPS200, tombol/function pilihan ana lan kontrol per-N ora ana.
 
