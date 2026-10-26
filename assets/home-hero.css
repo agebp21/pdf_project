@@ -6,14 +6,15 @@
 .hh-text{max-width:640px;align-self:start;padding-top:8px}
 .hh-samples{margin-top:30px}
 .hh-samples-label{font:700 10px/1.5 'Plus Jakarta Sans',sans-serif;letter-spacing:.12em;color:#78716c;margin:0 0 14px}
-.hh-sample-grid{display:grid;grid-template-columns:repeat(2,minmax(0,130px));gap:18px}
+.hh-sample-grid{display:grid;grid-template-columns:repeat(3,minmax(0,112px));gap:14px}
 .hh-sample{padding:0;border:0;background:transparent;text-align:left;cursor:pointer;min-width:0;color:#44403c}
 .hh-sample-cover{position:relative;display:flex;flex-direction:column;justify-content:space-between;aspect-ratio:3/4;padding:12px 8px;border-radius:3px 9px 9px 3px;font:900 clamp(12px,1.5vw,22px)/1 Georgia,serif;letter-spacing:-.04em;box-shadow:3px 4px 0 #d6cdbb,0 8px 20px #30251912;overflow:hidden;transition:transform .18s,outline .18s;isolation:isolate}
 .hh-sample-cover:before{content:'';position:absolute;z-index:-1;width:80%;height:55%;right:-12%;top:26%;border-radius:70% 0 0 0;background:#ffffff28;border:1px solid #ffffff45;transform:rotate(-15deg)}
 .hh-sample-cover span{font:700 7px/1.5 system-ui,sans-serif;letter-spacing:.12em}
 .hh-sample-cover:has(img){padding:0}
 .hh-sample-cover img{display:block;width:100%;height:100%;object-fit:cover}
-.hh-catalog-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;background:#fff}
+.hh-catalog-cover,.hh-magazine-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;background:#fff}
+.hh-magazine-cover{object-fit:cover}
 .hh-catalog-page{background:#fff;overflow:hidden}
 .hh-catalog-page img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .hh[data-sample=interior] #hh-demo-toolbar button:not(#hh-tool-home):not(#hh-tool-end):not(#hh-tool-open):not(#hh-demo-full):not(#hh-demo-sound){display:none}
@@ -26,6 +27,7 @@
 .hh[data-sample=interior]{--sample-color:#71604c;--sample-paper:#f3eadd}
 .hh[data-sample=fashion]{--sample-color:#34344d;--sample-paper:#f7e7e0}
 .hh[data-sample=travel]{--sample-color:#1f6258;--sample-paper:#edf1df}
+.hh[data-sample=magazine]{--sample-color:#e45a24;--sample-paper:#f3eee7}
 .hh[data-sample=learning]{--sample-color:#71492d;--sample-paper:#fff0d0}
 .hh[data-sample] .hh-cover-top{background:var(--sample-color)}
 .hh[data-sample] .hh-cover-bottom,.hh[data-sample] .hh-in{background:var(--sample-paper)}
@@ -76,6 +78,7 @@
 @media (prefers-reduced-motion:reduce){.hh-corner{animation:none}}
 
 @media (max-width:900px){
+  .hh-sample-grid{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;max-width:370px}
   .hh{grid-template-columns:1fr;gap:40px;padding:28px 20px 44px;text-align:left}
   .hh-book{width:min(290px,76vw)}
   .hh-preview{font-size:13px;padding:11px 18px;bottom:-20px}
