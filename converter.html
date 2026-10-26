@@ -581,7 +581,7 @@ function renderHeader(){
             <button onclick="orgCompress()">${L('Compress','Kompres')}</button>
           </div>
         </div>
-        <div class="org-foot"><div id="orgFootExtra"></div><button onclick="document.getElementById('convertBtn').click()" class="org-go">Organize <span aria-hidden="true">→</span></button></div>
+        <div class="org-foot"><div id="orgFootExtra"></div><button onclick="orgPrimaryAction()" class="org-go"><span id="orgGoText">Organize</span> <span aria-hidden="true">→</span></button></div>
       </aside>
     </div>`;
   }
@@ -651,6 +651,9 @@ window.orgModeSet = (mode) => {
   renderOrganizeGrid();
   log('Org mode ' + mode);
 };
+window.orgPrimaryAction = () => orgMode === 'split'
+  ? orgSplitZip()
+  : document.getElementById('convertBtn').click();
 function paintOrgMode() {
   document.querySelectorAll('.org-tabs button').forEach(b => b.classList.toggle('active', b.dataset.mode === orgMode));
   // The Merge/Split/Edit/Compress menu above the preview stays visible even
@@ -664,6 +667,8 @@ function paintOrgMode() {
   if (zoom) zoom.textContent = Math.round(orgZoom * 100) + '%';
   const split = document.getElementById('orgSplitTools');
   if (split) split.classList.toggle('is-hidden', !loaded || orgMode !== 'split');
+  const goText = document.getElementById('orgGoText');
+  if (goText) goText.textContent = orgMode === 'split' ? L('Split selected pages','Pisah halaman pilihan') : 'Organize';
   const compress = document.getElementById('orgCompressTools');
   if (compress) compress.classList.toggle('is-hidden', !loaded || orgMode !== 'compress');
 }
