@@ -560,6 +560,7 @@ async function loadVisitorDetail(focusDay = '') {
     };
   });
   filterVisitRows();
+  if (focusDay) box.scrollIntoView({behavior: 'smooth', block: 'center'});
 }
 async function loadVisits(days) {
   const d = await api('/api/visits?days=' + days + visitRangeQuery());
