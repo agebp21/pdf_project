@@ -55,6 +55,8 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 
 ## 5. Log deploy
 
+26 Oktober2026 23:15WIB — Codex: live `d9c5c82`. Split pilihan saiki nggabung kabeh kaca terpilih miturut urutan dadi siji PDF (`-selected-pages.pdf`); tombol Split utama nganggo alur padha. Kontrol Pisah saben N dicopot saka panel supaya ora mecah dadi pirang-pirang file. Mode per-N sing kapisah ora katon maneh. Backup `/root/pdf_project-code-backup-20261026j-d9c5c82.tgz`; restart layanan utama, loro layanan aktif; converter HTTPS200, tombol/function pilihan ana lan kontrol per-N ora ana.
+
 26 Oktober2026 23:00WIB — Codex: live `fd65830`. Kartu asil konversi saiki nuduhake tombol Unduh hasil/Konversi maneh sadurunge rincian lan preview file supaya CTA luwih katon. Backup `/root/pdf_project-code-backup-20261026i-fd65830.tgz`; restart layanan utama, layanan utama/admin aktif. `converter.html` HTTP200, urutan `resultActions` ana sadurunge `resultPreview`.
 
 26 Oktober2026 22:50WIB — Codex: live `92f3e9c`. Tombol utama Organize saiki manut mode: Gabung → gabung PDF, Pisah → ZIP pilihan, Kompres → kompres. Tab Edit dicopot kaya sing dijaluk; fitur editor PDF kapisah tetep bisa digunakake. Backup `/root/pdf_project-code-backup-20261026h-92f3e9c.tgz`; restart layanan utama, layanan utama/admin aktif. `converter.html` HTTP200, label Gabung/Pisah katon, tab Edit ora ana.
