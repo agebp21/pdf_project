@@ -55,6 +55,8 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 
 ## 5. Log deploy
 
+26Oktober2026 — Codex: live058080d, card Ringkasan admin menuju tab member/upload/pengunjung/order; pendapatan memfilter paid, status order memfilter status terkait. Card member menuju daftar member umum. Tombol native keyboard/cursor/hover tersedia. JS syntax/diff dan HTMLlive +3endpoint200 lulus; belum QA browser. Backup20261026b-058080d; restart admin saja. Split lokal tidak ikut.
+
 26 Oktober2026 — Codex: live `fd99193`, tab admin Order & Pembayaran + GET/api/orders untuk tracking nama/email, ID, paket/siklus, nominal, waktu/status/gateway/tanggal lunas. Filter status/member-tester, pencarian dan pagination50. Read-only, bearer monitoring tidak diberi akses data order. Tes admin8 + JS syntax/diff lulus; service aktif, HTML/admin/capabilities200, orders tanpa sesi401; query live4order (1member/3tester). Backup `/root/pdf_project-code-backup-20261026a-fd99193.tgz`; restart admin saja. Split lokal belum ikut.
 
 26 Oktober2026 — Codex, konfigurasi saja: kredensial Duitku production diganti sesuai owner (nilai rahasia tidak dicatat), DUITKU_PRODUCTION=1, PAYMENTS_PAUSED=0, allowlist tester dikosongkan. Backup .env privat `/root/pdf_project-env-20261026-before-production.env` (600), restart myflipbook; kedua layanan aktif. API plans200: IDR aktif, USD nonaktif, paused=false; methods/account/admin200. Metode API dapat memakai fallback; belum transaksi/invoice production nyata. Kode live tidak berubah, perubahan Split lokal belum ikut deploy.
