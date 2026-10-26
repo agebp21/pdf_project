@@ -43,6 +43,7 @@
   tr.visitor-click-row{cursor:pointer}
   tr.visitor-click-row:hover td,tr.visitor-click-row:focus-visible td{background:#f3ecdf}
   tr.visitor-expanded td{background:#fffaf1;border-bottom:2px solid var(--accent)}
+  .daily-visitor-link{padding:0 4px;font:inherit;font-weight:600}
   .tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#eee6d6;color:#5b5446}
   .tag.medium,.tag.paid{background:#d3f9d8;color:#2b8a3e} .tag.pro{background:#e5dbff;color:#5f3dc4}
   .tag.pending{background:#fff3bf;color:#a76b00} .tag.failed,.tag.expired{background:#ffe3e3;color:#c92a2a}
@@ -450,6 +451,8 @@ function visitMetric(value, label, detail) {
   return `<button type="button" class="card" data-visit-detail="${detail}" aria-label="${esc(label)}: lihat rincian"><div class="n">${num(value)}</div><div class="l">${esc(label)} →</div></button>`;
 }
 document.addEventListener('click', event => {
+  const dayButton = event.target.closest('[data-visitor-day]');
+  if (dayButton) { loadVisitorDetail(dayButton.dataset.visitorDay); return; }
   const button = event.target.closest('[data-visit-detail]');
   if (!button || !visitData) return;
   const kind = button.dataset.visitDetail, d = visitData;
@@ -496,16 +499,22 @@ async function labelVisitor(key, kind) {
   try { await api('/api/visitors/label', {method: 'POST', body: JSON.stringify({key, kind})}); loadVisits(visitorDays); }
   catch (e) { alert(e.message); }
 }
-async function loadVisitorDetail() {
+async function loadVisitorDetail(focusDay = '') {
   let box = $('#visitor-detail');
   if (!box) { box = document.createElement('div'); box.id = 'visitor-detail'; box.className = 'panel'; $('#visit-view').append(box); }
   box.innerHTML = '<p class="muted">Memuat detail pengunjung…</p>';
   let d;
-  try { d = await api('/api/visitors?days=' + visitorDays + visitRangeQuery()); } catch (e) { box.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; return; }
+  let query = visitRangeQuery(), rangeLabel = `${visitorDays} hari`;
+  if (focusDay) {
+    const start = Date.parse(focusDay + 'T00:00:00+07:00') / 1000;
+    query = '&start=' + start + '&end=' + (start + 86399);
+    rangeLabel = focusDay;
+  }
+  try { d = await api('/api/visitors?days=' + (focusDay ? 1 : visitorDays) + query); } catch (e) { box.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; return; }
   const c = d.counts || {};
   const on = teamBrowser();
   const btn = (key, kind, label) => `<button class="ghost" style="padding:2px 8px;font-size:11.5px" onclick="labelVisitor('${key}','${kind}')">${label}</button>`;
-  box.innerHTML = `<h3>Detail pengunjung <span class="muted" style="font-weight:400;font-size:13px">(${visitorDays} hari, per pengunjung per hari)</span></h3>
+  box.innerHTML = `<h3>Detail pengunjung <span class="muted" style="font-weight:400;font-size:13px">(${esc(rangeLabel)}, per pengunjung per hari)</span></h3>
     <div class="row">
       <span class="tag paid">✅ Asli ${num(c.human || 0)}</span><span class="tag pending">⚠️ Ragu ${num(c.unsure || 0)}</span>
       <span class="tag failed">❌ Tim ${num(c.team || 0)}</span><span class="tag failed">❌ Mesin ${num(c.bot || 0)}</span>
@@ -568,7 +577,7 @@ async function loadVisits(days) {
     <div id="visit-drilldown" class="panel" hidden></div>
     <div class="panel"><h3>Per hari</h3>${bars(d.daily)}</div>
     <div class="panel"><h3>Laporan harian</h3><table><tr><th>Tanggal</th><th>Pengunjung</th><th>Tampilan</th><th>Member baru</th><th>Konversi</th><th>AI</th><th>Huruf diterjemahkan</th><th>Buku disimpan</th></tr>
-      ${report.map(r => `<tr><td>${esc(r.day)}</td><td>${num(r.visitors)}</td><td>${num(r.views)}</td><td>${num(r.members)}</td><td>${num(r.office)}</td><td>${num(r.ai)}</td><td>${num(r.translate)}</td><td>${num(r.books)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Belum ada data.</td></tr>'}</table></div>
+      ${report.map(r => `<tr><td>${esc(r.day)}</td><td><button type="button" class="summary-link daily-visitor-link" data-visitor-day="${esc(r.day)}" aria-label="Lihat ${num(r.visitors)} pengunjung tanggal ${esc(r.day)}">${num(r.visitors)} ↓</button></td><td>${num(r.views)}</td><td>${num(r.members)}</td><td>${num(r.office)}</td><td>${num(r.ai)}</td><td>${num(r.translate)}</td><td>${num(r.books)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Belum ada data.</td></tr>'}</table></div>
     <div class="two">
       <div class="panel"><h3>Halaman</h3>${list(d.pages, n => n)}</div>
       <div class="panel"><h3>Datang dari</h3>${list(d.referrers, n => n)}</div>
