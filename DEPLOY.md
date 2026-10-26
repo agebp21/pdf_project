@@ -55,6 +55,8 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 
 ## 5. Log deploy
 
+26 Oktober2026 21:54WIB — Codex: live `93b28ad`. Perbaikan drilldown: sakwise angka Pengunjung saben dina diklik, panel asil otomatis digawa mlebu tampilan; API tanggal sing dipilih lokal menehi200. Restart admin wae; loro layanan aktif. HTTPS `/admin/` HTTP200 lan HTML ngemot aksi auto-scroll. Backup `/root/pdf_project-code-backup-20261026f-93b28ad.tgz`.
+
 26 Oktober2026 21:42WIB — Codex: live `e52557f` (v2 pushed). Tabel Laporan harian: angka Pengunjung saben tanggal bisa diklik kanggo mbukak dhaptar pengunjung dina iku; baris pengunjung bisa dibukak nganggo mouse utawa Enter/Space kanggo ndeleng kaca sing dibukak lan draf email promo member terverifikasi. Tombol ing saben baris tetep bisa digunakake. Backup `/root/pdf_project-code-backup-20261026e-e52557f.tgz`; restart admin wae, layanan utama/admin aktif. Admin HTTP200; HTML ngemot day-drill lan row-click; session endpoint200.
 
 26 Oktober2026 21:30WIB — Codex: live `c25e79b` (v2 pushed). Admin: menu ijo limang item, filter paket lan tanggal daftar member; Pengunjung nuduhake draf email promo kanggo member login sing email wis diverifikasi (tamu anonim tetep anonim). Organize: input nomer/rentang kaca lan ZIP kaca pilihan. Flipbook: tutorial, fullscreen luwih ditonjolke, klik/drag balik, lembar pungkasan tetep katon. Google Drive upload nahan parent folder. Tes Python233 lan kabeh54 `*.test.cjs` lulus; QA browser ora bisa mlaku amarga Playwright ora kasedhiya. Backup `/root/pdf_project-code-backup-20261026d-c25e79b.tgz`; layanan utama/admin aktif; homepage, admin, converter, flipbook, assets tutorial lan capabilities HTTP200; endpoint admin tanpa sesi401.
