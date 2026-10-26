@@ -3,7 +3,33 @@
    everything below it (category bar, tools) is unchanged. */
 .hh{text-align:left;max-width:1440px;margin:0 auto;padding:56px clamp(20px,5vw,80px) 64px;display:grid;grid-template-columns:minmax(0,1.1fr) minmax(0,.9fr);gap:56px;align-items:center;
   background:radial-gradient(1200px 500px at 85% 20%,#EEF5EF 0,rgba(238,245,239,0) 60%)}
-.hh-text{max-width:640px}
+.hh-text{max-width:640px;align-self:start;padding-top:8px}
+.hh-samples{margin-top:30px}
+.hh-samples-label{font:700 10px/1.5 'Plus Jakarta Sans',sans-serif;letter-spacing:.12em;color:#78716c;margin:0 0 14px}
+.hh-sample-grid{display:grid;grid-template-columns:repeat(2,minmax(0,130px));gap:18px}
+.hh-sample{padding:0;border:0;background:transparent;text-align:left;cursor:pointer;min-width:0;color:#44403c}
+.hh-sample-cover{position:relative;display:flex;flex-direction:column;justify-content:space-between;aspect-ratio:3/4;padding:12px 8px;border-radius:3px 9px 9px 3px;font:900 clamp(12px,1.5vw,22px)/1 Georgia,serif;letter-spacing:-.04em;box-shadow:3px 4px 0 #d6cdbb,0 8px 20px #30251912;overflow:hidden;transition:transform .18s,outline .18s;isolation:isolate}
+.hh-sample-cover:before{content:'';position:absolute;z-index:-1;width:80%;height:55%;right:-12%;top:26%;border-radius:70% 0 0 0;background:#ffffff28;border:1px solid #ffffff45;transform:rotate(-15deg)}
+.hh-sample-cover span{font:700 7px/1.5 system-ui,sans-serif;letter-spacing:.12em}
+.hh-sample-cover:has(img){padding:0}
+.hh-sample-cover img{display:block;width:100%;height:100%;object-fit:cover}
+.hh-catalog-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;background:#fff}
+.hh-catalog-page{background:#fff;overflow:hidden}
+.hh-catalog-page img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.hh[data-sample=interior] #hh-demo-toolbar button:not(#hh-tool-home):not(#hh-tool-end):not(#hh-tool-open):not(#hh-demo-full):not(#hh-demo-sound){display:none}
+.sample-interior{background:#d7c4a7;color:#3b332b}.sample-fashion{background:#34344d;color:#f5d8ce}.sample-travel{background:#1f6258;color:#e8e2b4}.sample-learning{background:#f2a445;color:#342b42}
+.hh-sample b{display:block;font:600 10px/1.5 'Plus Jakarta Sans',sans-serif;margin-top:10px}
+.hh-sample:hover .hh-sample-cover{transform:translateY(-4px)}
+.hh-sample[aria-pressed=true] .hh-sample-cover{outline:3px solid #ff5c28;outline-offset:3px}
+.hh-sample:focus-visible{outline:2px solid #1a3c34;outline-offset:7px;border-radius:8px}
+.hh-sample-notice{font:11px/1.5 system-ui,sans-serif;color:#78716c;margin:14px 0 0}
+.hh[data-sample=interior]{--sample-color:#71604c;--sample-paper:#f3eadd}
+.hh[data-sample=fashion]{--sample-color:#34344d;--sample-paper:#f7e7e0}
+.hh[data-sample=travel]{--sample-color:#1f6258;--sample-paper:#edf1df}
+.hh[data-sample=learning]{--sample-color:#71492d;--sample-paper:#fff0d0}
+.hh[data-sample] .hh-cover-top{background:var(--sample-color)}
+.hh[data-sample] .hh-cover-bottom,.hh[data-sample] .hh-in{background:var(--sample-paper)}
+@media(max-width:420px){.hh-sample-grid{gap:10px}.hh-sample-cover{padding:10px 6px}.hh-sample b{font-size:9px}}
 .hh-logo{display:flex;align-items:center;gap:12px;margin:0 0 26px}
 .hh-logo img{width:54px;height:54px}
 .hh-logo span{font:800 12px/1.3 'Plus Jakarta Sans',system-ui,sans-serif;letter-spacing:.3em;color:#57534E}

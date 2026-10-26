@@ -91,6 +91,7 @@
 </style>
 <link rel="stylesheet" href="assets/home-hero.css">
 <script defer src="assets/home-hero.js"></script>
+<script defer src="assets/home-samples.js"></script>
 </head>
 <body class="relative">
 <div class="grain"></div>
@@ -122,6 +123,14 @@
         <a class="hh-all" href="#grid" data-en="See all tools">Lihat semua alat</a>
       </div>
       <p class="hh-tags" data-en="SIMPLE / RELIABLE / OFFLINE / FREE">SIMPEL / ANDAL / OFFLINE / GRATIS</p>
+      <div class="hh-samples">
+        <p class="hh-samples-label" data-en="CHOOSE A SAMPLE · CLICK TO PREVIEW">PILIH CONTOH · KLIK UNTUK PRATINJAU</p>
+        <div class="hh-sample-grid" aria-label="Pilihan contoh buku">
+          <button type="button" class="hh-sample" data-sample="interior" aria-pressed="false"><span class="hh-sample-cover sample-interior" aria-hidden="true"><img src="assets/samples/sekar-bumi/page-01.webp" alt="" width="1100" height="1557" loading="lazy"></span><b data-en="Catalog">Katalog</b></button>
+          <button type="button" class="hh-sample" data-sample="travel" aria-pressed="false"><span class="hh-sample-cover sample-travel" aria-hidden="true">JELAJAH<span>NUSANTARA</span></span><b data-en="Book">Buku</b></button>
+        </div>
+        <p id="hh-sample-notice" class="hh-sample-notice" role="status" data-en="Select a cover to apply it to the preview book.">Pilih sampul untuk menerapkannya ke buku pratinjau.</p>
+      </div>
     </div>
     <div class="hh-book-wrap">
       <div class="hh-book" id="hh-book" role="button" tabindex="0" aria-haspopup="dialog" aria-label="Pratinjau contoh flipbook" data-en-aria="Preview a sample flipbook">

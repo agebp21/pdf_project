@@ -108,7 +108,7 @@ class Visits:
         return True
 
 
-def stats(db, days=30, now=None, exclude_users=(), skip_keys=(), keep_keys=()):
+def stats(db, days=30, now=None, exclude_users=(), skip_keys=(), keep_keys=(), start=None, end=None):
     """Numbers for the admin panel from an open visits database. exclude_users:
     member ids of the team — their visits, and every other visit from the same
     browser that day (the visitor code changes daily), are left out. Team
@@ -130,7 +130,8 @@ def stats(db, days=30, now=None, exclude_users=(), skip_keys=(), keep_keys=()):
         machine = ' OR '.join(['isp LIKE ?'] * len(DATACENTER))
         people = f"(visitor || day) NOT IN (SELECT visitor || day FROM visits WHERE day >= ? AND (kind != '' OR {machine}))"
         where += f' AND ({people}' + (' OR (visitor || day) IN (%s))' % marks(len(keep)) if keep else ')')
-    base = f'SELECT * FROM visits WHERE day >= ?{where}'
+    bounds = (' AND ts >= ' + str(int(start)) if start is not None else '') + (' AND ts <= ' + str(int(end)) if end is not None else '')
+    base = f'SELECT * FROM visits WHERE day >= ?{where}{bounds}'
     args = [since] + ids + skip
     if 'kind' in have and 'isp' in have:
         args += [since] + [f'%{name}%' for name in DATACENTER] + keep
@@ -166,7 +167,7 @@ def stats(db, days=30, now=None, exclude_users=(), skip_keys=(), keep_keys=()):
                 isps=places('isp') if located else [], recent=recent)
 
 
-def visitors(db, days=30, now=None, team_users=(), labels=None, limit=300):
+def visitors(db, days=30, now=None, team_users=(), labels=None, limit=300, start=None, end=None):
     """One row per visitor per day (the visitor code changes daily): where,
     which network and device, when, the pages in order — and whether it looks
     like a person, the team, a machine, or is unsure, with the reason.
@@ -181,6 +182,8 @@ def visitors(db, days=30, now=None, team_users=(), labels=None, limit=300):
     team_users = {int(u) for u in team_users}
     groups = {}
     for r in rows:
+        if (start is not None and r['ts'] < start) or (end is not None and r['ts'] > end):
+            continue
         r = dict(r)
         g = groups.setdefault(r['visitor'] + r['day'], dict(
             key=r['visitor'] + r['day'], day=r['day'], first=r['ts'], last=r['ts'], views=0, pages=[], hits=[], users=set(),

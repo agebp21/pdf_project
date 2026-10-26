@@ -6,6 +6,24 @@
   if (!book || !demo) return;
   var hero = demo.closest('.hh');
   var flip = null, loading = null, opener = null, settle = null, busy = false, tools = null;
+  var originalPages = null, catalogPages = null, showingCatalog = false;
+  function applySample() {
+    if (!flip || busy) return;
+    var catalog = hero.dataset.sample === 'interior';
+    if (catalog === showingCatalog) return;
+    if (tools) tools.pause();
+    if (catalog && !catalogPages) {
+      catalogPages = [];
+      for (var i=1; i<=19; i++) {
+        var page = document.createElement('div'); page.className = 'hh-page hh-catalog-page'; page.dataset.density = 'soft';
+        var image = document.createElement('img'); image.src = 'assets/samples/sekar-bumi/page-' + String(i).padStart(2,'0') + '.webp'; image.alt = 'Sekar Bumi · ' + i; image.decoding = 'async';
+        page.appendChild(image); catalogPages.push(page);
+      }
+    }
+    showingCatalog = catalog;
+    flip.updateFromHtml(catalog ? catalogPages : originalPages);
+    flip.turnToPage(0); if (settle) settle(); status();
+  }
   var EN = function () { return window.I18N && I18N.get && I18N.get() === 'en'; };
   function load(src) {
     return new Promise(function (resolve, reject) {
@@ -29,10 +47,17 @@
     document.getElementById('hh-demo-status').textContent = text;
     document.getElementById('hh-demo-prev').disabled = i === 0;
     document.getElementById('hh-demo-next').disabled = i >= n - (spread ? 2 : 1);
-    if (tools) tools.refresh();
+    if (showingCatalog) {
+      document.getElementById('hh-tool-home').disabled = i === 0;
+      document.getElementById('hh-tool-end').disabled = i >= n - (spread ? 2 : 1);
+      document.getElementById('hh-tool-open').disabled = document.getElementById('hh-demo-next').disabled;
+      document.getElementById('hh-tool-open').textContent = i === 0 ? (EN() ? 'Open cover →' : 'Buka sampul →') : (EN() ? 'Next →' : 'Berikutnya →');
+    }
+    if (tools && !showingCatalog) tools.refresh();
   }
   function build() {
     var box = document.getElementById('hh-demo-book'), pages = [].slice.call(box.querySelectorAll('.hh-page'));
+    originalPages = pages;
     pages.forEach(function (page) { page.style.display = ''; });
     var reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
     var motion = window.FlipbookLayout ? FlipbookLayout.motion(reduced) : {};
@@ -70,7 +95,7 @@
   };
   // Put the cover somewhere at once (no transition), for the start of a move.
   var place = function (transform) { book.style.transition = 'none'; book.style.transform = transform; void book.offsetWidth; book.style.transition = ''; };
-  var coverOf = function () { var c = document.querySelector('#hh-demo-book .hh-page-cover'); return c && c.getBoundingClientRect(); };
+  var coverOf = function () { var c = document.querySelector('#hh-demo-book .hh-page-cover, #hh-demo-book .hh-catalog-page'); return c && c.getBoundingClientRect(); };
   // Where the preview cover will sit, before the book exists: the middle of the book column, as
   // tall as the stage allows (one page wide on narrow screens, two otherwise).
   function predicted() {
@@ -90,7 +115,7 @@
       hero.style.transition = 'none';
       demo.classList.add('is-waiting'); demo.hidden = false;
       hero.classList.add('is-preview', 'is-moving');
-      var end = plain(), target = flip ? coverOf() : predicted();
+      var end = plain(), target = (flip && coverOf()) || predicted();
       hero.classList.remove('is-preview');
       void hero.offsetWidth;
       hero.style.transition = '';
@@ -113,6 +138,7 @@
           hero.classList.remove('is-moving');
           document.getElementById('hh-demo-close').focus({preventScroll: true});
           busy = false;
+          applySample();
           setTimeout(function () { if (flip && flip.getCurrentPageIndex() === 0) flip.flipNext(); }, STILL ? 0 : 160);   // it opens itself, like a reader would
         });
       }, MOVE);
@@ -156,6 +182,23 @@
   }
 
   book.addEventListener('click', open);
+  document.addEventListener('hh-sample-selected', function () {
+    if (busy) return;
+    if (flip) { if (tools) tools.pause(); flip.turnToPage(0); status(); }
+    if (demo.hidden) open();
+    else applySample();
+  });
+  document.getElementById('hh-demo-toolbar').addEventListener('click', function (event) {
+    if (!showingCatalog || !flip) return;
+    var target = event.target.closest('button'); if (!target) return;
+    if (target.id === 'hh-tool-home' || target.id === 'hh-tool-end' || target.id === 'hh-tool-open') {
+      event.preventDefault(); event.stopImmediatePropagation();
+      if (target.id === 'hh-tool-home') flip.turnToPage(0);
+      else if (target.id === 'hh-tool-end') flip.turnToPage(flip.getPageCount()-1);
+      else flip.flipNext();
+      status();
+    }
+  }, true);
   book.addEventListener('keydown', function (e) { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); open(); } });
   document.getElementById('hh-demo-close').addEventListener('click', close);
   document.getElementById('hh-demo-full').addEventListener('click', function () {

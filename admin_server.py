@@ -227,17 +227,21 @@ def member_row(r, now):
                 books=r['books'] if 'books' in r.keys() else 0, bytes=r['bytes'] if 'bytes' in r.keys() else 0)
 
 
-def members(q='', page=1, per=50, now=None):
+def members(q='', page=1, per=50, now=None, plan=''):
     now = int(now or time.time())
     db = read_only(db_path())
     if not db:
         return dict(total=0, items=[], page=1, per=per)
     with db:
         lib = has_table(db, 'library_books')
-        where, args = '', []
+        conditions, args = [], []
         if q:
-            where = 'WHERE u.email LIKE ? OR u.name LIKE ?'
+            conditions.append('(u.email LIKE ? OR u.name LIKE ?)')
             args = [f'%{q}%', f'%{q}%']
+        if plan in ('basic', 'medium', 'pro'):
+            conditions.append("(CASE WHEN u.plan NOT IN ('free','basic') AND u.plan_expires_at>? THEN u.plan ELSE 'basic' END)=?")
+            args.extend([now, plan])
+        where = 'WHERE ' + ' AND '.join(conditions) if conditions else ''
         total = db.execute(f'SELECT COUNT(*) FROM users u {where}', args).fetchone()[0]
         books = ('(SELECT COUNT(*) FROM library_books b WHERE b.user_id=u.id) AS books, '
                  '(SELECT COALESCE(SUM(size), 0) FROM library_books b WHERE b.user_id=u.id) AS bytes') if lib else '0 AS books, 0 AS bytes'
@@ -335,27 +339,29 @@ def day_of(ts):
     return time.strftime('%Y-%m-%d', time.localtime(ts))
 
 
-def growth(days, now=None):
+def growth(days, now=None, start=None, end=None):
     """Per day: new members, feature use (conversions, AI, translated characters)
     and books kept in My Library — without the team."""
     now = int(now or time.time())
     since_ts = int(time.mktime(time.strptime(day_of(now - (days - 1) * 86400), '%Y-%m-%d')))
+    since_ts = start if start is not None else since_ts
+    until_ts = end if end is not None else 32503680000
     team = set(team_ids())
     rows = {}
     db = read_only(db_path())
     if db:
         with db:
-            for r in db.execute('SELECT id, created_at FROM users WHERE created_at >= ?', (since_ts,)):
+            for r in db.execute('SELECT id, created_at FROM users WHERE created_at >= ? AND created_at <= ?', (since_ts, until_ts)):
                 if r['id'] not in team:
                     rows.setdefault(day_of(r['created_at']), {}).setdefault('members', 0)
                     rows[day_of(r['created_at'])]['members'] += 1
             if has_table(db, 'usage'):
-                for r in db.execute('SELECT user_id, kind, amount, at FROM usage WHERE at >= ?', (since_ts,)):
+                for r in db.execute('SELECT user_id, kind, amount, at FROM usage WHERE at >= ? AND at <= ?', (since_ts, until_ts)):
                     if r['user_id'] not in team:
                         day = rows.setdefault(day_of(r['at']), {})
                         day[r['kind']] = day.get(r['kind'], 0) + r['amount']
             if has_table(db, 'library_books'):
-                for r in db.execute('SELECT user_id, created_at FROM library_books WHERE created_at >= ?', (since_ts,)):
+                for r in db.execute('SELECT user_id, created_at FROM library_books WHERE created_at >= ? AND created_at <= ?', (since_ts, until_ts)):
                     if r['user_id'] not in team:
                         day = rows.setdefault(day_of(r['created_at']), {})
                         day['books'] = day.get('books', 0) + 1
@@ -410,13 +416,26 @@ def label_keys():
     return [k for k, v in labels.items() if v in ('team', 'bot')], [k for k, v in labels.items() if v == 'human']
 
 
-def visitor_list(days=30):
+def visitor_range(start, end, days):
+    if not start and not end:
+        return None, None, days
+    try:
+        start, end = int(start), int(end)
+        if start < 0 or end < start or end-start >= 365*86400:
+            raise ValueError()
+    except (ValueError, TypeError):
+        raise ValueError('Rentang tanggal tidak valid atau lebih dari 365 hari.')
+    count = int((time.mktime(time.strptime(day_of(end), '%Y-%m-%d')) - time.mktime(time.strptime(day_of(start), '%Y-%m-%d'))) / 86400) + 1
+    return start, end, count
+
+
+def visitor_list(days=30, start=None, end=None):
     v = read_only(db_path().parent / 'visits.sqlite3')
     items = []
     if v:
         with v:
             if has_table(v, 'visits'):
-                items = visits.visitors(v, days, None, team_ids(), get_labels())
+                items = visits.visitors(v, days, end, team_ids(), get_labels(), start=start, end=end)
         v.close()
     ids = {u for g in items for u in g['users']}
     db = read_only(db_path()) if ids else None
@@ -433,17 +452,17 @@ def visitor_list(days=30):
     return {'days': days, 'items': items, 'counts': counts}
 
 
-def visitor_stats(days=30):
+def visitor_stats(days=30, start=None, end=None):
     v = read_only(db_path().parent / 'visits.sqlite3')
     out = None
     if v:
         with v:
             skip, keep = label_keys()
-            out = visits.stats(v, days, None, team_ids(), skip, keep) if has_table(v, 'visits') else None
+            out = visits.stats(v, days, end, team_ids(), skip, keep, start=start, end=end) if has_table(v, 'visits') else None
         v.close()
     out = out or {'days': days, 'daily': [], 'pages': [], 'referrers': [], 'devices': [], 'countries': [], 'regions': [], 'cities': [],
                   'isps': [], 'recent': [], 'views': 0, 'visitors': 0, 'average': 0, 'members': 0, 'today': {}}
-    more = growth(days)
+    more = growth(days, end, start, end)
     for d in out['daily']:
         extra = more.get(d['day'], {})
         d.update(members=extra.get('members', 0), office=extra.get('office', 0), ai=extra.get('ai', 0),
@@ -703,7 +722,7 @@ class AdminHandler(BaseHTTPRequestHandler):
                 self.send_json(200, order_tracking(arg('q').strip()[:100], arg('status').strip()[:30], arg('audience'), page))
             elif url.path == '/api/members':
                 page = max(1, min(10000, int(arg('page', '1') or 1)))
-                self.send_json(200, members(arg('q').strip()[:100], page))
+                self.send_json(200, members(arg('q').strip()[:100], page, plan=arg('plan')))
             elif re.fullmatch(r'/api/members/\d{1,12}', url.path):
                 found = member(int(url.path.rsplit('/', 1)[1]))
                 self.send_json(200 if found else 404, found or {'error': 'Member tidak ditemukan.'})
@@ -711,10 +730,12 @@ class AdminHandler(BaseHTTPRequestHandler):
                 self.send_json(200, uploads(arg('q').strip()[:100]))
             elif url.path == '/api/visits':
                 days = max(1, min(365, int(arg('days', '30') or 30)))
-                self.send_json(200, visitor_stats(days))
+                start, end, days = visitor_range(arg('start'), arg('end'), days)
+                self.send_json(200, visitor_stats(days, start, end))
             elif url.path == '/api/visitors':
                 days = max(1, min(90, int(arg('days', '7') or 7)))
-                self.send_json(200, visitor_list(days))
+                start, end, days = visitor_range(arg('start'), arg('end'), days)
+                self.send_json(200, visitor_list(days, start, end))
             elif url.path == '/api/report.csv':
                 days = max(1, min(365, int(arg('days', '30') or 30)))
                 body = ('\ufeff' + report_csv(days)).encode('utf-8')        # BOM: Excel reads it as UTF-8

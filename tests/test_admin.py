@@ -92,6 +92,19 @@ class AdminTests(unittest.TestCase):
             self.call('POST', '/api/login', {'username': 'boss', 'password': 'wrong'})
         self.assertEqual(self.call('POST', '/api/login', {'username': 'boss', 'password': 'very-long-admin-pass'})[0], 429, 'throttled')
 
+    def test_member_plan_filters(self):
+        self.login()
+        medium = self.call('GET', '/api/members?plan=medium')[1]
+        self.assertEqual(medium['total'], 1)
+        self.assertEqual(medium['items'][0]['email'], 'alice@example.com')
+        self.assertEqual(self.call('GET', '/api/members?plan=medium&q=bob')[1]['total'], 0)
+        self.assertEqual(self.call('GET', '/api/members?plan=basic')[1]['total'], 1)
+        self.assertEqual(self.call('GET', '/api/members?plan=pro')[1]['total'], 0)
+        with sqlite3.connect(self.db) as db:
+            db.execute("UPDATE users SET plan_expires_at=1 WHERE id=?", (self.alice['id'],))
+        self.assertEqual(self.call('GET', '/api/members?plan=medium')[1]['total'], 0)
+        self.assertEqual(self.call('GET', '/api/members?plan=basic')[1]['total'], 2)
+
     def test_order_tracking(self):
         self.assertEqual(self.call('GET', '/api/orders')[0], 401)
         self.login()
