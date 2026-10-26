@@ -260,12 +260,12 @@
 
       <div id="result" class="hidden card p-6">
         <h3 class="font-bold text-[13px] mb-3 serif text-[16px]" data-en="✅ Convert result — nice!">✅ Hasil konversi — beres!</h3>
-        <div id="resultPreview" class="rounded-2xl border border-[#E8E2D4] bg-white p-4 text-xs text-gray-600 overflow-auto max-h-[420px]"></div>
         <div id="resultActions" class="flex flex-wrap gap-2 mt-4">
           <a id="downloadBtn" href="#" download class="clay-btn clay-btn-dark" data-en="⬇ Download result">⬇ Unduh hasil</a>
           <button id="makeFlipbook" hidden class="clay-btn" style="background:linear-gradient(180deg,#2A5248,#1A3C34);color:#fff;border-color:#1A3C34">Turn into Flipbook →</button>
           <button onclick="resetAll()" class="clay-btn clay-btn-ghost" data-en="Convert again">Konversi lagi</button>
         </div>
+        <div id="resultPreview" class="rounded-2xl border border-[#E8E2D4] bg-white p-4 text-xs text-gray-600 overflow-auto max-h-[420px] mt-4"></div>
       </div>
       </div><!-- /left -->
       <div class="space-y-4 min-w-0" id="colRight">
@@ -2167,7 +2167,7 @@ window.clearFiles=()=>{files=[]; updateFileUI(); $('#fileInput').value=''; log('
 // every other tool (and a reset) puts them back under the result preview.
 function resultActionsHome(){
   $('#resultNote')?.remove();
-  const box=$('#resultActions'); box.className='flex flex-wrap gap-2 mt-4'; $('#resultPreview').after(box);
+  const box=$('#resultActions'); box.className='flex flex-wrap gap-2 mt-4'; $('#resultPreview').before(box);
 }
 window.resetAll=()=>{resultActionsHome(); clearFiles(); $('#result').classList.add('hidden'); $('#progress').classList.add('hidden'); $('#error').classList.add('hidden');}
 const drop=$('#drop'), input=$('#fileInput'), pickBtn=$('#pickBtn');
