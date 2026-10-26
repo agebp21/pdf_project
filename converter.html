@@ -555,18 +555,14 @@ function renderHeader(){
           <p class="org-sel-count">${L('Split the arranged pages','Pisah halaman yang tersusun')}</p>
           <label for="orgSplitPages" style="display:block;font-weight:700;margin-bottom:6px">${L('Page range','Rentang halaman')}</label>
           <input id="orgSplitPages" type="text" placeholder="${L('Example: 1-5, 8, 10-12','Contoh: 1-5, 8, 10-12')}" aria-label="${L('Page range to split','Rentang halaman yang dipisahkan')}" style="display:block;width:100%;min-width:0;box-sizing:border-box;padding:10px 12px;margin-bottom:8px" oninput="this.setCustomValidity('')">
-          <p style="font-size:11px;margin:6px 0;color:#78716c">${L('Enter page numbers in the current order, or click page thumbnails. Each selected page becomes a separate PDF in a ZIP.','Isi nomor sesuai urutan halaman saat ini, atau klik thumbnail halaman. Setiap halaman pilihan menjadi PDF terpisah dalam ZIP.')}</p>
+          <p style="font-size:11px;margin:6px 0;color:#78716c">${L('Enter page numbers in the current order, or click page thumbnails. All selected pages stay together in one PDF.','Isi nomor sesuai urutan halaman saat ini, atau klik thumbnail. Semua halaman pilihan tetap digabung menjadi satu PDF.')}</p>
           <div class="org-sel-row">
             <button type="button" onclick="orgApplySplitPages()">${L('Select these pages','Pilih halaman ini')}</button>
             <button type="button" onclick="toggleAllOrg(true)">${L('Select all','Pilih semua')}</button>
             <button type="button" onclick="toggleAllOrg(false)">${L('Clear','Kosongkan')}</button>
           </div>
           <div class="org-sel-row">
-            <input id="orgSplitN" type="number" value="2" min="1" step="1" aria-label="${L('Pages per file','Halaman per file')}" oninput="orgSplitEveryLabel()">
-            <button id="orgSplitEveryButton" onclick="orgSplitEvery()">${L('Split every 2 pages','Pisah setiap 2 halaman')}</button>
-          </div>
-          <div class="org-sel-row">
-            <button onclick="orgSplitZip()">${L('Split selected → ZIP','Pisah pilihan → ZIP')}</button>
+            <button onclick="orgSplitSelected()">${L('Keep selected pages together → PDF','Gabungkan halaman pilihan → PDF')}</button>
           </div>
         </div>
         <div id="orgCompressTools" class="org-sel is-hidden">
@@ -651,7 +647,7 @@ window.orgModeSet = (mode) => {
   log('Org mode ' + mode);
 };
 window.orgPrimaryAction = () => {
-  if (orgMode === 'split') return orgSplitZip();
+  if (orgMode === 'split') return orgSplitSelected();
   if (orgMode === 'compress') return orgCompress();
   return organizePdf();
 };
@@ -2875,27 +2871,18 @@ window.orgApplySplitPages=()=>{
     return true;
   } catch(error) { showError(error.message); return false; }
 };
-window.orgSplitZip=async ()=>{
+window.orgSplitSelected=async ()=>{
   try{
     if(files.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
-    if(!window.JSZip) throw new Error(L('ZIP engine not loaded — reload the page','Mesin ZIP belum dimuat — muat ulang halaman'));
     if(($('#orgSplitPages')?.value||'').trim() && !orgApplySplitPages()) return;
     const codes=organizeOrder.filter(code=>organizeSelected.has(code));
     if(!codes.length) throw new Error(L('Tick pages first','Centang halaman dulu'));
-    const zip=new JSZip();
-    let i=0;
-    for(let pos=0;pos<organizeOrder.length;pos++){
-      const code=organizeOrder[pos];
-      if(!organizeSelected.has(code)) continue;
-      $('#progress').textContent=L(`Splitting ${++i}…`,`Split ${i}…`);
-      // Slice (not a fresh literal) so the order keeps one realm for pdf-lib.
-      const bytes=await buildOrganizePdf(organizeOrder.slice(pos,pos+1));
-      zip.file(`page-${pos+1}.pdf`, bytes);
-    }
-    const blob=await zip.generateAsync({type:'blob'});
-    downloadBlob(blob, orgBaseName()+'-split.zip');
-    orgNote(L(`<p class="text-center py-2">✅ Split ${codes.length} pages → ZIP</p>`,`<p class="text-center py-2">✅ Pisah ${codes.length} halaman → ZIP</p>`));
-    log('Org split zip '+codes.length+' pages');
+    $('#progress').textContent=L('Preparing selected pages…','Menyiapkan halaman pilihan…');
+    const pages=organizeOrder.filter(code=>organizeSelected.has(code));
+    const bytes=await buildOrganizePdf(pages);
+    downloadBlob(new Blob([bytes],{type:'application/pdf'}), orgBaseName()+'-selected-pages.pdf');
+    orgNote(L(`<p class="text-center py-2">✅ ${codes.length} selected pages kept together in one PDF</p>`,`<p class="text-center py-2">✅ ${codes.length} halaman pilihan digabung dalam satu PDF</p>`));
+    log('Org split selected '+codes.length+' pages into one PDF');
   }catch(e){ showError(e.message); }
 };
 // Split mode: the arranged pages in chunks of N per file, packed as a ZIP.

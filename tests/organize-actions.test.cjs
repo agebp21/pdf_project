@@ -151,18 +151,18 @@ async function main() {
   w.orgModeSet('merge');
   w.renderOrganizeGrid();
   assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'merge hides the box');
-  // Split ZIP: one PDF per selected page, in grid order.
+  // Split selected pages: keep them together in one PDF, in grid order.
   w.orgModeSet('split');
   w.qaSetup([0, 1, 2, 3], [3, 1]);
-  await w.orgSplitZip();
+  await w.orgSplitSelected();
   [file] = w.qaSaved().slice(-1);
-  assert.ok(file.name.endsWith('-split.zip'), file.name);
+  assert.ok(file.name.endsWith('-selected-pages.pdf'), file.name);
+  let first = await global.PDFLib.PDFDocument.load(await bufOf(file));
+  assert.equal(first.getPageCount(), 2, 'selected pages remain in one PDF');
+  assert.ok((await textOf(await bufOf(file)))[0].includes('Bravo 2'), 'first selected page first');
+  assert.ok((await textOf(await bufOf(file)))[1].includes('Delta 4'), 'second selected page follows in order');
   const JSZip = require('../.build/qa-runtime/node_modules/jszip');
-  let zip = await JSZip.loadAsync(await bufOf(file));
-  assert.deepEqual(Object.keys(zip.files).sort(), ['page-2.pdf', 'page-4.pdf']);
-  let first = await global.PDFLib.PDFDocument.load(await zip.file('page-2.pdf').async('uint8array'));
-  assert.equal(first.getPageCount(), 1);
-  assert.ok((await textOf(await zip.file('page-2.pdf').async('uint8array')))[0].includes('Bravo 2'), 'first selected page first');
+  let zip;
   // Split every N: chunks across the arranged order.
   w.qaSetup([3, 2, 1, 0], []);
   w.document.querySelector('#orgSplitN').value = '3';
