@@ -21,6 +21,10 @@
   .card{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:14px 16px}
   .card .n{font-size:26px;font-weight:700;color:var(--pine)}
   .card .l{color:var(--muted);font-size:12.5px}
+  button.card{font:inherit;text-align:left;cursor:pointer;width:100%;color:inherit;transition:border-color .15s,box-shadow .15s}
+  button.card:hover{border-color:var(--pine);box-shadow:0 3px 12px #1a3c3418}
+  button.card:focus-visible{outline:2px solid var(--pine);outline-offset:3px}
+  .summary-link{border:0;background:transparent;color:var(--pine);font:inherit;text-decoration:underline;cursor:pointer;padding:4px 0;text-align:left}
   .panel{background:var(--card);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:18px;overflow-x:auto}
   .panel h3{margin:0 0 10px;font-size:15px}
   table{border-collapse:collapse;width:100%;font-size:13px}
@@ -217,7 +221,21 @@ $('#password-form').onsubmit = async event => {
     $('#password-form').reset(); $('#password-ok').textContent = 'Password berhasil diganti.';
   } catch (e) { $('#password-error').textContent = e.message; }
 };
-const card = (n, l) => `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+const card = (n, l, target = '', status = '') => target
+  ? `<button type="button" class="card" data-summary-target="${esc(target)}" data-summary-status="${esc(status)}" aria-label="${esc(l)}: lihat rincian"><div class="n">${n}</div><div class="l">${l} →</div></button>`
+  : `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+document.addEventListener('click', event => {
+  const target = event.target.closest('[data-summary-target]');
+  if (!target) return;
+  const tab = target.dataset.summaryTarget;
+  if (tab === 'orders') {
+    $('#order-q').value = ''; $('#order-audience').value = '';
+    $('#order-status').value = target.dataset.summaryStatus || '';
+  }
+  if (tab === 'members') $('#member-q').value = '';
+  if (tab === 'uploads') $('#upload-q').value = '';
+  open(tab);
+});
 let orderPage = 1, orderRequest = 0;
 async function loadOrders(page = 1) {
   const request = ++orderRequest;
@@ -250,16 +268,16 @@ async function loadOverview() {
   const revenue = Object.entries(d.revenue).map(([cur, r]) => money(cur, r.total)).join(' · ') || 'Rp 0';
   $('[data-view="overview"]').innerHTML = `<h2>Ringkasan</h2>
     <div class="grid">
-      ${card(num(d.members), 'Member terdaftar')}${card(num(d.paid), 'Member berbayar aktif')}
-      ${card(num(d.new7) + ' / ' + num(d.new30), 'Member baru 7 / 30 hari')}${card(num(d.verified), 'Email terverifikasi')}
-      ${card(revenue, 'Pendapatan (order lunas)')}${card(num(v.today.visitors) + ' / ' + num(v.today.views), 'Pengunjung / tampilan hari ini')}
-      ${card(num(v.average || 0), 'Rata-rata pengunjung / hari')}${card(num(d.books), 'Buku di My Library')}
-      ${card(size(d.bookBytes), 'Ukuran arsip member')}${card(num(d.exports), 'Hasil ekspor tersimpan')}
+      ${card(num(d.members), 'Member terdaftar', 'members')}${card(num(d.paid), 'Member berbayar aktif', 'members')}
+      ${card(num(d.new7) + ' / ' + num(d.new30), 'Member baru 7 / 30 hari', 'members')}${card(num(d.verified), 'Email terverifikasi', 'members')}
+      ${card(revenue, 'Pendapatan (order lunas)', 'orders', 'paid')}${card(num(v.today.visitors) + ' / ' + num(v.today.views), 'Pengunjung / tampilan hari ini', 'visits')}
+      ${card(num(v.average || 0), 'Rata-rata pengunjung / hari', 'visits')}${card(num(d.books), 'Buku di My Library', 'uploads')}
+      ${card(size(d.bookBytes), 'Ukuran arsip member', 'uploads')}${card(num(d.exports), 'Hasil ekspor tersimpan', 'uploads')}
     </div>
     <div class="two">
       <div class="panel"><h3>Pengunjung 30 hari</h3>${bars(v.daily)}</div>
       <div class="panel"><h3>Paket member</h3><table>${Object.entries(d.plans).map(([p, n]) => `<tr><td><span class="tag ${esc(p)}">${esc(PLAN[p] || p)}</span></td><td>${num(n)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada member</td></tr>'}</table>
-        <h3 style="margin-top:14px">Order</h3><table>${Object.entries(d.orders).map(([s, n]) => `<tr><td><span class="tag ${esc(s)}">${esc(s)}</span></td><td>${num(n)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada order</td></tr>'}</table></div>
+        <h3 style="margin-top:14px">Order</h3><table>${Object.entries(d.orders).map(([s, n]) => `<tr><td><button type="button" class="summary-link" data-summary-target="orders" data-summary-status="${esc(s)}"><span class="tag ${esc(s)}">${esc(s)}</span> →</button></td><td>${num(n)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada order</td></tr>'}</table></div>
     </div>`;
 }
 function bars(daily) {
