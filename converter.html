@@ -468,7 +468,6 @@ function renderHeader(){
         <div class="org-tabs" id="orgTabs" role="tablist" aria-label="Organize modes">
           <button data-mode="merge" onclick="orgModeSet('merge')"><span class="ot-ic" style="background:#FFE3D9;color:#9A3412">↘↖</span><span class="ot-tx"><span class="ot-t">${L('Merge','Gabung')}</span><span class="ot-d">${L('Combine & reorder','Gabung & atur urutan')}</span></span></button>
           <button data-mode="split" onclick="orgModeSet('split')"><span class="ot-ic" style="background:#FFE3D9;color:#9A3412">↗↙</span><span class="ot-tx"><span class="ot-t">${L('Split','Pisah')}</span><span class="ot-d">${L('Take out pages','Pisahkan halaman')}</span></span></button>
-          <button data-mode="edit" onclick="orgModeSet('edit'); if(files.length) orgOpenEditor()"><span class="ot-ic" style="background:#FAE8FF;color:#7E22CE">✎</span><span class="ot-tx"><span class="ot-t">Edit</span><span class="ot-d">${L('Text, pictures, numbers','Teks, gambar, nomor')}</span></span></button>
           <button data-mode="compress" onclick="orgModeSet('compress')"><span class="ot-ic" style="background:#E4F3C2;color:#1A3C34">⇲</span><span class="ot-tx"><span class="ot-t">${L('Compress','Kompres')}</span><span class="ot-d">${L('Make the file smaller','Perkecil ukuran file')}</span></span></button>
         </div>
         <div id="orgEditTools" class="org-edittools is-hidden">
@@ -645,18 +644,20 @@ let orgMode = 'merge';
 // paintOrgMode can read them even on the very first render.
 let orgZoom = 1, orgHand = false;
 window.orgModeSet = (mode) => {
-  if (!['merge', 'split', 'edit', 'compress'].includes(mode)) return;
+  if (!['merge', 'split', 'compress'].includes(mode)) return;
   orgMode = mode;
   paintOrgMode();
   renderOrganizeGrid();
   log('Org mode ' + mode);
 };
-window.orgPrimaryAction = () => orgMode === 'split'
-  ? orgSplitZip()
-  : document.getElementById('convertBtn').click();
+window.orgPrimaryAction = () => {
+  if (orgMode === 'split') return orgSplitZip();
+  if (orgMode === 'compress') return orgCompress();
+  return organizePdf();
+};
 function paintOrgMode() {
   document.querySelectorAll('.org-tabs button').forEach(b => b.classList.toggle('active', b.dataset.mode === orgMode));
-  // The Merge/Split/Edit/Compress menu above the preview stays visible even
+  // The Merge/Split/Compress menu above the preview stays visible even
   // before a file is picked; only the mode toolboxes wait for pages.
   const loaded = files.length > 0;
   const editTools = document.getElementById('orgEditTools');
@@ -668,7 +669,8 @@ function paintOrgMode() {
   const split = document.getElementById('orgSplitTools');
   if (split) split.classList.toggle('is-hidden', !loaded || orgMode !== 'split');
   const goText = document.getElementById('orgGoText');
-  if (goText) goText.textContent = orgMode === 'split' ? L('Split selected pages','Pisah halaman pilihan') : 'Organize';
+  if (goText) goText.textContent = orgMode === 'split' ? L('Split selected pages','Pisah halaman pilihan')
+    : orgMode === 'compress' ? L('Compress PDF','Kompres PDF') : L('Merge PDFs','Gabungkan PDF');
   const compress = document.getElementById('orgCompressTools');
   if (compress) compress.classList.toggle('is-hidden', !loaded || orgMode !== 'compress');
 }
