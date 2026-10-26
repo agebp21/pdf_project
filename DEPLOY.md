@@ -55,6 +55,8 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 
 ## 5. Log deploy
 
+26 Oktober2026 — Codex, konfigurasi saja: kredensial Duitku production diganti sesuai owner (nilai rahasia tidak dicatat), DUITKU_PRODUCTION=1, PAYMENTS_PAUSED=0, allowlist tester dikosongkan. Backup .env privat `/root/pdf_project-env-20261026-before-production.env` (600), restart myflipbook; kedua layanan aktif. API plans200: IDR aktif, USD nonaktif, paused=false; methods/account/admin200. Metode API dapat memakai fallback; belum transaksi/invoice production nyata. Kode live tidak berubah, perubahan Split lokal belum ikut deploy.
+
 25 Oktober 2026 — Codex: live `a2b16c6`, akun admin kedua `enginer` akses penuh sesuai owner. Password terpisah via ADMIN_SECONDARY_USERNAME/HASH, perubahan password mengikuti identitas sesi; kredensial privat di VPS/root dan Desktop owner, tidak di repo/chat. Backup kode20261025f-a2b16c6. Tes admin7 dan isolasi kredensial lulus; login HTTPS dan overview enginer200, sesi verifikasi ditutup. Restart admin saja.
 
 25 Oktober 2026 — Codex: live `cb4aa43`. Admin: form ganti password vertikal, input lebar penuh, tombol mata semua4isian password (termasuk login), reset kembali tersembunyi. Backup `/root/pdf_project-code-backup-20261025e-cb4aa43.tgz`; pushed archive v2, restart hanya myflipbook-admin. Syntax/diff lulus, layout/toggle ada di HTML live, admin/session/capabilities HTTP200; kedua service aktif. Belum uji visual browser.
