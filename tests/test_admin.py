@@ -92,6 +92,18 @@ class AdminTests(unittest.TestCase):
             self.call('POST', '/api/login', {'username': 'boss', 'password': 'wrong'})
         self.assertEqual(self.call('POST', '/api/login', {'username': 'boss', 'password': 'very-long-admin-pass'})[0], 429, 'throttled')
 
+    def test_order_tracking(self):
+        self.assertEqual(self.call('GET', '/api/orders')[0], 401)
+        self.login()
+        status, data, _ = self.call('GET', '/api/orders?q=alice&status=paid&audience=member')
+        self.assertEqual(status, 200)
+        self.assertEqual(data['total'], 1)
+        self.assertEqual(data['items'][0]['email'], 'alice@example.com')
+        self.assertEqual(data['items'][0]['amount'], 49000)
+        self.assertFalse(data['items'][0]['tester'])
+        self.assertEqual(self.call('GET', '/api/orders?status=pending')[1]['total'], 0)
+        self.assertEqual(self.call('GET', '/api/orders?audience=tester')[1]['total'], 0)
+
     def test_monitoring_key(self):
         """A read-only key for another program (an AI agent, an audit script): numbers only, no personal data."""
         admin_server.KEY_HITS.clear()

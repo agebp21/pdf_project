@@ -190,6 +190,37 @@ def has_table(db, name):
     return bool(db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name=?", (name,)).fetchone())
 
 
+def order_tracking(q='', status='', audience='', page=1):
+    """Read-only order tracking with explicit tester classification."""
+    db = read_only(db_path())
+    if not db:
+        return dict(items=[], total=0, page=page, per=50, counts={})
+    where, args = [], []
+    if q:
+        where.append('(u.email LIKE ? OR u.name LIKE ? OR o.id LIKE ?)')
+        args.extend(['%' + q + '%'] * 3)
+    if status:
+        where.append('o.status=?'); args.append(status)
+    tester = "lower(u.email)='duitku-tester@myflipbookpro.com'"
+    if audience == 'tester':
+        where.append(tester)
+    elif audience == 'member':
+        where.append('NOT (' + tester + ')')
+    clause = ' WHERE ' + ' AND '.join(where) if where else ''
+    source = ' FROM orders o JOIN users u ON u.id=o.user_id'
+    try:
+        counts = {r['status']: r['n'] for r in db.execute('SELECT o.status,COUNT(*) AS n' + source + clause + ' GROUP BY o.status', args)}
+        rows = db.execute('SELECT o.id,o.user_id,u.name,u.email,o.plan,o.cycle,o.amount,o.currency,o.status,o.provider,o.created_at,o.paid_at' + source + clause + ' ORDER BY o.created_at DESC,o.id DESC LIMIT 50 OFFSET ?', args + [(page-1)*50]).fetchall()
+        items = []
+        for row in rows:
+            item = dict(row)
+            item['tester'] = item['email'].lower() == 'duitku-tester@myflipbookpro.com'
+            items.append(item)
+        return dict(items=items, total=sum(counts.values()), counts=counts, page=page, per=50)
+    finally:
+        db.close()
+
+
 def member_row(r, now):
     return dict(id=r['id'], email=r['email'], name=r['name'], plan=r['plan'], planExpiresAt=r['plan_expires_at'],
                 paid=paid_active(r, now), verified=bool(r['verified']), google=bool(r['google_sub']), createdAt=r['created_at'],
@@ -667,6 +698,9 @@ class AdminHandler(BaseHTTPRequestHandler):
         try:
             if url.path == '/api/overview':
                 self.send_json(200, overview())
+            elif url.path == '/api/orders':
+                page = max(1, min(10000, int(arg('page', '1') or 1)))
+                self.send_json(200, order_tracking(arg('q').strip()[:100], arg('status').strip()[:30], arg('audience'), page))
             elif url.path == '/api/members':
                 page = max(1, min(10000, int(arg('page', '1') or 1)))
                 self.send_json(200, members(arg('q').strip()[:100], page))

@@ -44,6 +44,7 @@
   #login{max-width:360px;margin:80px auto;background:var(--card);border:1px solid var(--line);border-radius:16px;padding:26px}
   #login h1{margin:0 0 4px;font-size:20px} #login input{width:100%;margin:6px 0 10px;min-width:0} #login button{width:100%}
   #password-form{display:grid;gap:18px;margin-top:20px}
+  #order-status,#order-audience{padding:9px 12px;border:1px solid var(--line);border-radius:10px;background:#fff;font:inherit;color:var(--ink)}
   #password-form label{display:flex;flex-direction:column;gap:7px;font-weight:600}
   #password-form input{display:block;width:100%;min-width:0;min-height:44px;font-weight:400}
   #password-form input:focus{outline:2px solid var(--pine);outline-offset:2px}
@@ -87,6 +88,7 @@
     <nav>
       <button data-tab="overview" aria-current="true">Ringkasan</button>
       <button data-tab="members">Member</button>
+      <button data-tab="orders">Order &amp; Pembayaran</button>
       <button data-tab="uploads">Upload</button>
       <button data-tab="visits">Pengunjung</button>
       <button data-tab="server">Server</button>
@@ -96,6 +98,19 @@
   </header>
   <main>
     <section data-view="overview"></section>
+    <section data-view="orders" hidden>
+      <h2>Order &amp; Pembayaran</h2>
+      <p class="muted">Pending berarti order dibuat, belum ada konfirmasi pembayaran lunas. Status mengikuti catatan pembayaran di sistem.</p>
+      <div class="row">
+        <input type="search" id="order-q" placeholder="Cari nama, email, atau nomor order" aria-label="Cari order">
+        <select id="order-status" aria-label="Status order"><option value="">Semua status</option><option value="pending">Pending</option><option value="paid">Lunas</option><option value="failed">Gagal</option><option value="expired">Kedaluwarsa</option></select>
+        <select id="order-audience" aria-label="Jenis akun"><option value="">Semua akun</option><option value="member">Member</option><option value="tester">Akun tester</option></select>
+        <button class="ghost" id="order-refresh">Perbarui</button>
+      </div>
+      <div id="order-summary" class="grid"></div>
+      <div class="panel"><table id="order-table"></table></div>
+      <div class="row"><button class="ghost" id="order-prev">← Sebelumnya</button><span class="muted" id="order-count" role="status"></span><button class="ghost" id="order-next">Berikutnya →</button></div>
+    </section>
     <section data-view="members" hidden>
       <h2>Member</h2>
       <div class="row"><input type="search" id="member-q" placeholder="Cari email atau nama…"><span class="muted" id="member-count"></span></div>
@@ -187,7 +202,7 @@ document.querySelectorAll('header nav button').forEach(b => b.onclick = () => op
 function open(tab) {
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.tab === tab)));
   document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== tab; });
-  const loaders = {overview: loadOverview, members: () => loadMembers(1), uploads: loadUploads, visits: () => loadVisits(30), server: loadServer, password: async () => {}};
+  const loaders = {overview: loadOverview, members: () => loadMembers(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(30), server: loadServer, password: async () => {}};
   loaders[tab]()
     .catch(e => { document.querySelector(`[data-view="${tab}"]`).insertAdjacentHTML('afterbegin', `<p class="err">${esc(e.message)}</p>`); });
 }
@@ -203,6 +218,32 @@ $('#password-form').onsubmit = async event => {
   } catch (e) { $('#password-error').textContent = e.message; }
 };
 const card = (n, l) => `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+let orderPage = 1, orderRequest = 0;
+async function loadOrders(page = 1) {
+  const request = ++orderRequest;
+  const query = new URLSearchParams({page, q: $('#order-q').value.trim(), status: $('#order-status').value, audience: $('#order-audience').value});
+  const data = await api('/api/orders?' + query);
+  if (request !== orderRequest) return;
+  orderPage = data.page;
+  const labels = {pending: 'Pending', paid: 'Lunas', failed: 'Gagal', expired: 'Kedaluwarsa'};
+  $('#order-summary').innerHTML = card(num(data.total), 'Jumlah order sesuai filter') + Object.entries(labels).map(([status,label]) => card(num(data.counts[status]), label)).join('');
+  $('#order-table').innerHTML = '<thead><tr><th>Order / Waktu</th><th>Member</th><th>Paket</th><th>Nominal</th><th>Status</th><th>Gateway</th><th>Dibayar</th></tr></thead><tbody>' + data.items.map(order => `<tr>
+    <td><b>${esc(order.id)}</b><br><span class="muted">${esc(when(order.created_at))}</span></td>
+    <td>${esc(order.name || 'Tanpa nama')} ${order.tester ? '<span class="tag">Tester</span>' : ''}<br>${esc(order.email)}</td>
+    <td>${esc(PLAN[order.plan] || order.plan)}<br><span class="muted">${esc(order.cycle === 'yearly' ? 'Tahunan' : 'Bulanan')}</span></td>
+    <td>${esc(money(order.currency, order.amount))}</td><td><span class="tag ${esc(order.status)}">${esc(labels[order.status] || order.status)}</span></td>
+    <td>${esc(order.provider)}</td><td>${esc(when(order.paid_at))}</td></tr>`).join('') + (data.items.length ? '' : '<tr><td colspan="7" class="muted">Tidak ada order yang sesuai.</td></tr>') + '</tbody>';
+  $('#order-count').textContent = `${num(data.total)} order · halaman ${data.page}`;
+  $('#order-prev').disabled = data.page <= 1;
+  $('#order-next').disabled = data.page * data.per >= data.total;
+}
+const refreshOrders = page => loadOrders(page).catch(error => { $('#order-count').textContent = error.message; });
+let orderSearchTimer;
+$('#order-q').oninput = () => { clearTimeout(orderSearchTimer); orderSearchTimer = setTimeout(() => refreshOrders(1), 250); };
+$('#order-status').onchange = $('#order-audience').onchange = () => refreshOrders(1);
+$('#order-refresh').onclick = () => refreshOrders(orderPage);
+$('#order-prev').onclick = () => refreshOrders(Math.max(1, orderPage - 1));
+$('#order-next').onclick = () => refreshOrders(orderPage + 1);
 
 async function loadOverview() {
   const d = await api('/api/overview'), v = d.visits || {today: {}, daily: []};
