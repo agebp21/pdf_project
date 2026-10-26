@@ -436,6 +436,24 @@ class PaywallTests(AccountsBase):
         # Logged out still needs login.
         self.assertEqual(guest.call('POST', '/api/summary', {}, headers=headers)[0], 401)
 
+    def test_ai_disabled_until_payments_exist(self):
+        store = server.ACCOUNTS
+        previous = (store.provider, store.usd_provider)
+        store.provider = accounts.DisabledProvider()
+        store.usd_provider = accounts.DisabledProvider()
+        try:
+            member = Client(self.base)
+            member.call('POST', '/api/auth/register', {'email': 'nogw@b.co', 'password': 'rahasia-123'})
+            headers = {'X-Build-Token': server.TOKEN}
+            # (Book translation uses the free translator: not gated on payments, only on the allowance.)
+            for route in ('/api/summary', '/api/podcast/script', '/api/highlight-summary', '/api/translate'):
+                with self.subTest(route=route):
+                    status, body, _ = member.call('POST', route, {}, headers=headers)
+                    self.assertEqual(status, 503)
+                    self.assertIn('pembayaran', body['error'])
+        finally:
+            store.provider, store.usd_provider = previous
+
     def test_unreleased_pages_show_coming_soon(self):
         for page, name in (('animation.html', 'Flipbook Animation'),):
             status, body, _ = Client(self.base).call('GET', '/' + page)

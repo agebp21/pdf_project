@@ -7,7 +7,7 @@
   <title>PDF to Flipbook — MyFlipbook</title>
   <link rel="stylesheet" href="assets/animation.css">
   <link rel="stylesheet" href="assets/flipbook.css?v=fs">
-  <link rel="stylesheet" href="assets/export/book-effects.css?v=plain3">
+  <link rel="stylesheet" href="assets/export/book-effects.css?v=back-paper7">
   <link rel="stylesheet" href="assets/theme-cream.css?v=fit">
   <link rel="stylesheet" href="assets/ui-clay.css">
   <script defer src="assets/vendor/pdf.min.js"></script>
@@ -16,7 +16,8 @@
   <script defer src="assets/flipbook-transfer.js"></script>
   <script defer src="assets/vendor/jszip.min.js"></script>
   <script defer src="assets/flipbook-export.js"></script>
-  <script defer src="assets/export/layout.js?v=fs"></script>
+  <script defer src="assets/export/layout.js?v=back-paper6"></script>
+  <script defer src="assets/flipbook-toolbar.js"></script>
   <script defer src="assets/export/book-seal.js"></script>
   <script defer src="assets/pdf-links.js"></script>
   <script defer src="assets/pdf-words.js"></script>
@@ -29,7 +30,12 @@
 <script defer src="assets/auth.js"></script>
   <script defer src="assets/drive-picker.js?v=folder"></script>
   <script defer src="assets/flipbook.js?v=fit"></script>
+  <link rel="stylesheet" href="assets/flipbook-guide.css?v=3">
+  <script defer src="assets/flipbook-guide.js?v=3"></script>
   <style>
+    body.clay .controls #fullscreen{background:linear-gradient(135deg,#ff7843,#ff4f1c);color:#fff;border:1.5px solid #d94519;font-weight:800;box-shadow:0 3px 0 #cf3a11,0 5px 16px #ff5c283b;padding-inline:16px}
+    body.clay .controls #fullscreen:hover{background:#e84516;box-shadow:0 4px 0 #b93512,0 7px 18px #ff5c2845}
+    body.clay .controls #fullscreen:focus-visible{outline:3px solid #1a3c34;outline-offset:3px}
     /* numa banner beside the page title (the empty right side of the heading) */
     .heading{flex-wrap:wrap}
     .heading>div:first-child{flex:1 1 420px;min-width:0}

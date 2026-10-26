@@ -53,6 +53,21 @@ class AdminTests(unittest.TestCase):
         threading.Thread(target=self.httpd.serve_forever, daemon=True).start()
         self.cookie = ''
 
+    def test_member_registration_date_range(self):
+        from datetime import datetime, timezone, timedelta
+        wib = timezone(timedelta(hours=7))
+        start = int(datetime(2026, 10, 24, tzinfo=wib).timestamp())
+        with sqlite3.connect(self.db) as db:
+            db.execute('UPDATE users SET created_at=? WHERE id=?', (start, self.alice['id']))
+            db.execute('UPDATE users SET created_at=? WHERE id=?', (start + 86400, self.bob['id']))
+        result = admin_server.members(start='2026-10-24', end='2026-10-24', per=1)
+        self.assertEqual(result['total'], 1)
+        self.assertEqual(result['items'][0]['email'], 'alice@example.com')
+        self.assertEqual(admin_server.members(start='2026-10-25')['total'], 1)
+        self.assertEqual(admin_server.members(end='2026-10-23')['total'], 0)
+        with self.assertRaises(ValueError):
+            admin_server.members(start='2026-10-25', end='2026-10-24')
+
     def tearDown(self):
         self.httpd.shutdown(); self.httpd.server_close(); self.env.stop(); self.tmp.cleanup()
 

@@ -554,9 +554,17 @@ function renderHeader(){
         </div>
         <div id="orgSplitTools" class="org-sel is-hidden">
           <p class="org-sel-count">${L('Split the arranged pages','Pisah halaman yang tersusun')}</p>
+          <label for="orgSplitPages" style="display:block;font-weight:700;margin-bottom:6px">${L('Page range','Rentang halaman')}</label>
+          <input id="orgSplitPages" type="text" placeholder="${L('Example: 1-5, 8, 10-12','Contoh: 1-5, 8, 10-12')}" aria-label="${L('Page range to split','Rentang halaman yang dipisahkan')}" style="display:block;width:100%;min-width:0;box-sizing:border-box;padding:10px 12px;margin-bottom:8px" oninput="this.setCustomValidity('')">
+          <p style="font-size:11px;margin:6px 0;color:#78716c">${L('Enter page numbers in the current order, or click page thumbnails. Each selected page becomes a separate PDF in a ZIP.','Isi nomor sesuai urutan halaman saat ini, atau klik thumbnail halaman. Setiap halaman pilihan menjadi PDF terpisah dalam ZIP.')}</p>
           <div class="org-sel-row">
-            <input id="orgSplitN" type="number" value="2" min="1" step="1" aria-label="${L('Pages per file','Halaman per file')}">
-            <button onclick="orgSplitEvery()">${L('Split every N','Pisah per N')}</button>
+            <button type="button" onclick="orgApplySplitPages()">${L('Select these pages','Pilih halaman ini')}</button>
+            <button type="button" onclick="toggleAllOrg(true)">${L('Select all','Pilih semua')}</button>
+            <button type="button" onclick="toggleAllOrg(false)">${L('Clear','Kosongkan')}</button>
+          </div>
+          <div class="org-sel-row">
+            <input id="orgSplitN" type="number" value="2" min="1" step="1" aria-label="${L('Pages per file','Halaman per file')}" oninput="orgSplitEveryLabel()">
+            <button id="orgSplitEveryButton" onclick="orgSplitEvery()">${L('Split every 2 pages','Pisah setiap 2 halaman')}</button>
           </div>
           <div class="org-sel-row">
             <button onclick="orgSplitZip()">${L('Split selected → ZIP','Pisah pilihan → ZIP')}</button>
@@ -1543,7 +1551,7 @@ function renderOrganizeGrid(){
   paintOrgFiles();
   const nSel=organizeSelected.size;
   const box=$('#orgSelBox');
-  if(box) box.classList.toggle('is-hidden',nSel===0||(orgMode!=='split'&&orgMode!=='edit'));
+  if(box) box.classList.toggle('is-hidden',nSel===0||orgMode!=='edit');
   const cnt=$('#orgSelCount');
   if(cnt) cnt.textContent=nSel;
   grid.innerHTML=organizeOrder.map((origIdx,pos)=>{
@@ -1963,8 +1971,8 @@ window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(at<0?organizeOrder.length:at+1,0,fresh); renderOrganizeGrid(); };
 window.orgInsertBlankAt=(at)=>{ at=Math.max(0,Math.min(organizeOrder.length,at)); organizeOrder.splice(at,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(at+1)); };
 window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(Date.now()-orgDragEnd<350) return; if(e.target.closest('button,input')) return; if(orgMode!=='merge'){ orgCheck(idx,!organizeSelected.has(idx)); } if(!orgHand) orgFlipTo(organizeOrder.indexOf(idx)); };
-window.orgCheck=(idx, on)=>{ if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
-window.toggleAllOrg=(on)=>{ if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
+window.orgCheck=(idx, on)=>{ const input=$('#orgSplitPages'); if(input) input.value=''; if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
+window.toggleAllOrg=(on)=>{ const input=$('#orgSplitPages'); if(input) input.value=''; if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
 window.orgDelete=()=>{ if(organizeSelected.size===0) return showError(L('Tick the pages to delete first','Centang dulu halaman yang mau dihapus')); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
 window.orgRotate=(deg)=>{ if(organizeSelected.size===0) return showError(L('Tick pages first','Centang halaman dulu')); for(const idx of organizeSelected) organizeRotations[idx]=(organizeRotations[idx]||0)+deg; renderOrganizeGrid(); }
 window.orgDuplicate=()=>{ if(organizeSelected.size===0) return showError(L('Tick pages first','Centang halaman dulu')); const sel=[...organizeSelected].sort((a,b)=>organizeOrder.indexOf(a)-organizeOrder.indexOf(b)); sel.forEach(idx=>{ const pos=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(pos+1,0,fresh); }); renderOrganizeGrid(); }
@@ -2842,10 +2850,29 @@ window.orgAnnPicked = async (inp) => {
   } catch (e) { showError(e.message); }
 };
 // Split mode: one PDF per selected page, packed as a ZIP.
+window.orgApplySplitPages=()=>{
+  try {
+    const input=$('#orgSplitPages');
+    const raw=(input?.value||'').trim().replace(/[–—]/g,'-');
+    if(!raw) throw new Error(L('Enter page numbers, for example 1, 3, 5-8.','Isi nomor halaman, misalnya 1, 3, 5-8.'));
+    const positions=new Set();
+    for(const part of raw.split(',')) {
+      const match=part.trim().match(/^(\d+)(?:\s*-\s*(\d+))?$/);
+      if(!match) throw new Error(L('Use page numbers and ranges, for example 1, 3, 5-8.','Gunakan nomor dan rentang halaman, misalnya 1, 3, 5-8.'));
+      const start=Number(match[1]),end=Number(match[2]||match[1]);
+      if(start<1||end<start||end>organizeOrder.length) throw new Error(L(`Pages must be between 1 and ${organizeOrder.length}.`,`Halaman harus antara 1 dan ${organizeOrder.length}.`));
+      for(let page=start;page<=end;page++) positions.add(page-1);
+    }
+    organizeSelected=new Set([...positions].map(pos=>organizeOrder[pos]));
+    renderOrganizeGrid();
+    return true;
+  } catch(error) { showError(error.message); return false; }
+};
 window.orgSplitZip=async ()=>{
   try{
     if(files.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
     if(!window.JSZip) throw new Error(L('ZIP engine not loaded — reload the page','Mesin ZIP belum dimuat — muat ulang halaman'));
+    if(($('#orgSplitPages')?.value||'').trim() && !orgApplySplitPages()) return;
     const codes=organizeOrder.filter(code=>organizeSelected.has(code));
     if(!codes.length) throw new Error(L('Tick pages first','Centang halaman dulu'));
     const zip=new JSZip();
@@ -2856,7 +2883,7 @@ window.orgSplitZip=async ()=>{
       $('#progress').textContent=L(`Splitting ${++i}…`,`Split ${i}…`);
       // Slice (not a fresh literal) so the order keeps one realm for pdf-lib.
       const bytes=await buildOrganizePdf(organizeOrder.slice(pos,pos+1));
-      zip.file(`page-${i}.pdf`, bytes);
+      zip.file(`page-${pos+1}.pdf`, bytes);
     }
     const blob=await zip.generateAsync({type:'blob'});
     downloadBlob(blob, orgBaseName()+'-split.zip');
@@ -2865,6 +2892,13 @@ window.orgSplitZip=async ()=>{
   }catch(e){ showError(e.message); }
 };
 // Split mode: the arranged pages in chunks of N per file, packed as a ZIP.
+window.orgSplitEveryLabel=()=>{
+  const n=Number($('#orgSplitN')?.value);
+  const button=$('#orgSplitEveryButton');
+  if(button) button.textContent=Number.isInteger(n)&&n>0
+    ? L(`Split every ${n} pages`,`Pisah setiap ${n} halaman`)
+    : L('Split by page count','Pisah berdasarkan jumlah halaman');
+};
 window.orgSplitEvery=async ()=>{
   try{
     if(files.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));

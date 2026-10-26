@@ -15,6 +15,15 @@
   header nav button{background:transparent;border:0;color:#cfe3dc;padding:8px 12px;border-radius:8px;cursor:pointer;font:inherit}
   header nav button[aria-current="true"]{background:#ffffff1f;color:#fff;font-weight:600}
   header .out{background:#ffffff1a;border:1px solid #ffffff33;color:#fff;border-radius:8px;padding:6px 12px;cursor:pointer;font:inherit}
+  #app>header{flex-wrap:wrap;background:var(--pine);color:#fff;border-bottom:1px solid #ffffff22}
+  #app>header>b{flex:0 0 auto}
+  #app>header nav{order:0;flex:1;display:flex;flex-wrap:wrap;gap:4px;margin-top:0}
+  #app>header nav button{min-height:40px;border-radius:8px;background:transparent;color:#cfe3dc;font-size:14px;line-height:1.5;font-weight:500;padding:8px 12px;white-space:nowrap}
+  #app>header nav button br{display:none}
+  #app>header nav button:hover{background:#ffffff1a;color:#fff}
+  #app>header nav button[aria-current=true]{background:#ffffff1f;box-shadow:none;font-weight:600;color:#fff}
+  #app>header .out{background:#ffffff1a;border:1px solid #ffffff33;color:#fff}
+  @media(max-width:600px){#app>header nav{flex-basis:100%;order:3}#app>header nav button{font-size:12px;min-height:36px;padding:7px 10px}}
   main{max-width:1200px;margin:0 auto;padding:24px 16px 60px}
   h2{margin:0 0 14px;font-size:20px}
   .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(180px,1fr));gap:12px;margin-bottom:22px}
@@ -42,7 +51,6 @@
   button[data-member-plan="basic"]{background:#929996;color:#fff}
   button[data-member-plan="medium"]{background:#ff741e;color:#fff}
   button[data-member-plan="pro"]{background:#ff3038;color:#fff}
-  button[data-member-plan=""]{background:#ebe5db;color:#524d45}
   button[data-member-plan][aria-pressed=true]{box-shadow:0 0 0 2px var(--card),0 0 0 4px var(--pine)}
   button[data-member-plan]:hover{transform:translateY(-1px)}
   button[data-member-plan]:focus-visible{outline:2px solid var(--pine);outline-offset:4px}
@@ -51,6 +59,15 @@
   .visit-date-row label{font-size:11px;color:var(--muted);display:grid;gap:4px}
   .visit-date-row input[type=date]{box-sizing:border-box;width:132px;min-width:0;height:32px;padding:4px 7px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:12px system-ui,sans-serif}
   .visit-date-row button{min-height:32px;padding:5px 11px;font-size:12px}
+  .member-toolbar{display:flex;flex-wrap:nowrap;gap:10px;align-items:center}
+  .member-toolbar>input[type=search]{flex:1 1 180px;min-width:140px;width:auto}
+  .member-toolbar>div[aria-label="Filter paket member"]{flex:0 0 auto;gap:8px}
+  .member-toolbar>#member-count{flex:1 1 auto;white-space:nowrap}
+  .member-date-row{flex:0 0 auto;margin:0;gap:6px}
+  .member-date-row label{font-size:10px;gap:2px}
+  .member-date-row input[type=date]{width:116px;height:30px;padding:3px 5px;font-size:11px}
+  .member-date-row button{height:30px;min-height:30px;padding:4px 9px}
+  @media(max-width:900px){.member-toolbar{flex-wrap:wrap}.member-toolbar>#member-count{flex:1 1 100%}.member-date-row{margin-left:auto}}
   .muted{color:var(--muted)} .err{color:#c92a2a;min-height:20px}
   .bars{display:flex;align-items:flex-end;gap:3px;height:150px;padding-top:8px}
   .bars div{flex:1;background:var(--accent);border-radius:3px 3px 0 0;min-height:1px;position:relative}
@@ -103,17 +120,21 @@
   <header>
     <b>MyFlipbook Admin</b>
     <nav>
-      <button data-tab="overview" aria-current="true">Ringkasan</button>
-      <button data-tab="members">Member</button>
-      <button data-tab="orders">Order &amp; Pembayaran</button>
-      <button data-tab="uploads">Upload</button>
+      <button data-tab="members" aria-current="true">Status Member</button>
       <button data-tab="visits">Pengunjung</button>
-      <button data-tab="server">Server</button>
-      <button data-tab="password">Ganti password</button>
+      <button data-tab="verified">Email terverifikasi</button>
+      <button data-tab="orders">Status Order</button>
+      <button data-tab="password">Ganti Password</button>
     </nav>
     <button class="out" id="logout">Keluar</button>
   </header>
   <main>
+    <section data-view="verified" hidden>
+      <h2>Email terverifikasi</h2>
+      <div class="row"><input type="search" id="verified-q" placeholder="Cari email atau nama…" aria-label="Cari email terverifikasi"><span class="muted" id="verified-count" role="status"></span></div>
+      <div class="panel"><table id="verified-table"></table></div>
+      <div class="row"><button class="ghost" id="verified-prev">← Sebelumnya</button><button class="ghost" id="verified-next">Berikutnya →</button></div>
+    </section>
     <section data-view="overview"></section>
     <section data-view="orders" hidden>
       <h2>Order &amp; Pembayaran</h2>
@@ -130,7 +151,7 @@
     </section>
     <section data-view="members" hidden>
       <h2>Member</h2>
-      <div class="row"><input type="search" id="member-q" placeholder="Cari email atau nama…"><div class="row" style="margin:0" aria-label="Filter paket member"><button type="button" class="ghost" data-member-plan="" aria-pressed="true">Semua</button><button type="button" class="ghost" data-member-plan="basic" aria-pressed="false">Basic</button><button type="button" class="ghost" data-member-plan="medium" aria-pressed="false">Medium</button><button type="button" class="ghost" data-member-plan="pro" aria-pressed="false">Pro</button></div><span class="muted" id="member-count"></span></div>
+      <div class="row member-toolbar"><input type="search" id="member-q" placeholder="Cari email atau nama…"><div class="row" style="margin:0" aria-label="Filter paket member"><button type="button" class="ghost" data-member-plan="basic" aria-pressed="false">Basic</button><button type="button" class="ghost" data-member-plan="medium" aria-pressed="false">Medium</button><button type="button" class="ghost" data-member-plan="pro" aria-pressed="false">Pro</button></div><span class="muted" id="member-count"></span><div class="row visit-date-row member-date-row"><label>Dari<input id="member-start" type="date"></label><label>Sampai<input id="member-end" type="date"></label><button type="button" class="ghost" id="member-reset-range">Reset</button></div><span id="member-range-error" class="err" role="status"></span></div>
       <div class="panel"><table id="member-table"></table></div>
       <div class="row"><button class="ghost" id="member-prev">← Sebelumnya</button><button class="ghost" id="member-next">Berikutnya →</button></div>
       <div class="panel" id="member-detail" hidden>
@@ -207,7 +228,7 @@ async function api(path, options = {}) {
   if (!r.ok) throw Error(data.error || 'Gagal (' + r.status + ').');
   return data;
 }
-function show(signedIn) { $('#login').hidden = signedIn; $('#app').hidden = !signedIn; if (signedIn) open(location.hash.slice(1) || 'overview', false); }
+function show(signedIn) { $('#login').hidden = signedIn; $('#app').hidden = !signedIn; if (signedIn) open(location.hash.slice(1) || 'members', false); }
 
 $('#login-form').onsubmit = async event => {
   event.preventDefault(); $('#login-error').textContent = '';
@@ -218,12 +239,12 @@ $('#logout').onclick = async () => { await api('/api/logout', {method: 'POST', b
 
 document.querySelectorAll('header nav button').forEach(b => b.onclick = () => open(b.dataset.tab));
 function open(tab, record = true) {
-  if (!['overview','members','orders','uploads','visits','server','password'].includes(tab)) tab = 'overview';
+  if (!['overview','members','verified','orders','uploads','visits','server','password'].includes(tab)) tab = 'members';
   if (record && location.hash !== '#' + tab) history.pushState({tab}, '', '#' + tab);
   else if (!record) history.replaceState({tab}, '', '#' + tab);
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.tab === tab)));
   document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== tab; });
-  const loaders = {overview: loadOverview, members: () => loadMembers(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(30), server: loadServer, password: async () => {}};
+  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(30), server: loadServer, password: async () => {}};
   loaders[tab]()
     .catch(e => { document.querySelector(`[data-view="${tab}"]`).insertAdjacentHTML('afterbegin', `<p class="err">${esc(e.message)}</p>`); });
 }
@@ -242,6 +263,21 @@ $('#password-form').onsubmit = async event => {
 const card = (n, l, target = '', status = '') => target
   ? `<button type="button" class="card" data-summary-target="${esc(target)}" data-summary-status="${esc(status)}" aria-label="${esc(l)}: lihat rincian"><div class="n">${n}</div><div class="l">${l} →</div></button>`
   : `<div class="card"><div class="n">${n}</div><div class="l">${l}</div></div>`;
+let verifiedPage = 1, verifiedRequest = 0, verifiedTimer;
+async function loadVerified(page) {
+  const request = ++verifiedRequest;
+  const data = await api('/api/members?verified=1&page=' + page + '&q=' + encodeURIComponent($('#verified-q').value.trim()));
+  if (request !== verifiedRequest) return;
+  verifiedPage = data.page;
+  $('#verified-count').textContent = num(data.total) + ' email terverifikasi';
+  $('#verified-table').innerHTML = '<tr><th>Nama</th><th>Email</th><th>Verifikasi</th><th>Cara masuk</th><th>Tanggal daftar</th></tr>' + data.items.map(member => `<tr><td>${esc(member.name)}</td><td>${esc(member.email)}</td><td class="yes">✓ Terverifikasi</td><td>${member.google ? 'Google' : 'Email &amp; password'}</td><td>${esc(date(member.createdAt))}</td></tr>`).join('') + (data.items.length ? '' : '<tr><td colspan="5" class="muted">Tidak ada email yang sesuai.</td></tr>');
+  $('#verified-prev').disabled = page <= 1;
+  $('#verified-next').disabled = page * data.per >= data.total;
+}
+const refreshVerified = page => loadVerified(page).catch(error => { $('#verified-count').textContent = error.message; });
+$('#verified-q').oninput = () => { clearTimeout(verifiedTimer); verifiedTimer = setTimeout(() => refreshVerified(1),250); };
+$('#verified-prev').onclick = () => refreshVerified(Math.max(1,verifiedPage-1));
+$('#verified-next').onclick = () => refreshVerified(verifiedPage+1);
 document.addEventListener('click', event => {
   const target = event.target.closest('[data-summary-target]');
   if (!target) return;
@@ -316,11 +352,18 @@ document.querySelectorAll('[data-member-plan]').forEach(button => {
   };
 });
 $('#member-q').oninput = () => { clearTimeout(memberTimer); memberTimer = setTimeout(() => loadMembers(1), 300); };
+for (const id of ['member-start', 'member-end']) $('#' + id).onchange = () => loadMembers(1).catch(error => { $('#member-range-error').textContent = error.message; });
+$('#member-reset-range').onclick = () => { $('#member-start').value = ''; $('#member-end').value = ''; loadMembers(1).catch(error => { $('#member-range-error').textContent = error.message; }); };
 $('#member-prev').onclick = () => memberPage > 1 && loadMembers(memberPage - 1);
 $('#member-next').onclick = () => loadMembers(memberPage + 1);
 async function loadMembers(page) {
   const request = ++memberRequest;
-  const d = await api('/api/members?page=' + page + '&q=' + encodeURIComponent($('#member-q').value.trim()) + '&plan=' + encodeURIComponent(memberPlan));
+  const start = $('#member-start').value, end = $('#member-end').value;
+  $('#member-end').min = start;
+  $('#member-start').max = end;
+  $('#member-range-error').textContent = '';
+  if (start && end && start > end) { $('#member-range-error').textContent = 'Tanggal sampai harus sama atau setelah tanggal dari.'; return; }
+  const d = await api('/api/members?page=' + page + '&q=' + encodeURIComponent($('#member-q').value.trim()) + '&plan=' + encodeURIComponent(memberPlan) + '&start=' + encodeURIComponent(start) + '&end=' + encodeURIComponent(end));
   if (request !== memberRequest) return;
   if (!d.items.length && page > 1) return;
   memberPage = d.page;
@@ -432,6 +475,11 @@ const place = p => [p.city, p.region, p.country].filter((x, i, all) => x && all.
 // are left out of every number above.
 let visitorDays = 30;
 const STATUS = {human: ['✅', 'Asli', 'paid'], team: ['❌', 'Tim', 'failed'], bot: ['❌', 'Mesin', 'failed'], unsure: ['⚠️', 'Ragu', 'pending']};
+function followupLink(contact) {
+  const greeting = contact.name ? `Halo ${contact.name},` : 'Halo,';
+  const body = `${greeting}\n\nKami ingin berbagi promo dan kabar terbaru MyFlipbook.\n\nSalam,\nTim MyFlipbook`;
+  return 'mailto:' + encodeURIComponent(contact.email) + '?subject=' + encodeURIComponent('Promo MyFlipbook') + '&body=' + encodeURIComponent(body);
+}
 const teamBrowser = () => document.cookie.split(';').some(c => c.trim() === 'mf_team=1');
 function toggleTeamBrowser() {
   const on = !teamBrowser();
@@ -458,16 +506,20 @@ async function loadVisitorDetail() {
       <button class="ghost" onclick="toggleTeamBrowser()" style="margin-left:auto">${on ? '✅ Browser ini tidak dihitung — hitung lagi' : '🚫 Jangan hitung browser ini'}</button>
     </div>
     <p class="muted" style="margin-top:0">Tim dan Mesin tidak masuk angka laporan. Klik "Jangan hitung browser ini" sekali di setiap browser/HP tim (berlaku di situs MyFlipbook di browser itu). Status bisa dikoreksi per baris.</p>
-    <div style="overflow:auto"><table><tr><th>Pengunjung</th><th>Kapan</th><th>Halaman</th><th>Status</th><th>Tandai</th></tr>
+    <p class="muted" style="margin-top:0">Tamu anonim tidak menyimpan alamat email. Tindak lanjut email tersedia untuk member yang login dan emailnya sudah terverifikasi.</p>
+    <div style="overflow:auto"><table><tr><th>Pengunjung</th><th>Kapan</th><th>Halaman</th><th>Status</th><th>Tindak lanjuti</th><th>Tandai</th></tr>
     ${d.items.map(v => {
       const [icon, word, tag] = STATUS[v.status] || STATUS.human;
       const who = `<b>${esc(place(v))}</b><br><span class="muted">${esc(v.isp || '—')} · ${esc(DEVICE[v.device] || v.device)}${v.members.length ? ' · member ' + v.members.map(esc).join(', ') : ' · tamu'}${v.ref ? ' · dari ' + esc(v.ref) : ''}</span>`;
       const time = esc(when(v.first)) + (v.last - v.first > 60 ? '<br><span class="muted">s/d ' + esc(when(v.last)) + '</span>' : '');
       const pages = `${num(v.views)} tampilan<br><span class="muted">${v.pages.slice(0, 6).map(esc).join(', ')}${v.pages.length > 6 ? ', …' : ''}</span>`;
+      const contacts = (v.memberContacts || []).map(contact => contact.verified
+        ? `<a class="ghost" style="display:inline-block;padding:4px 8px;font-size:11px" href="${esc(followupLink(contact))}">Email promo · ${esc(contact.name || contact.email)}</a>`
+        : `<span class="muted">${esc(contact.email)} · email belum terverifikasi</span>`).join('<br>') || '<span class="muted">Tamu anonim</span>';
       return `<tr><td>${who}</td><td>${time}</td><td>${pages}</td>
         <td><span class="tag ${tag}">${icon} ${word}</span>${v.reason ? '<br><span class="muted">' + esc(v.reason) + '</span>' : ''}</td>
-        <td style="white-space:nowrap">${btn(v.key, 'human', 'Asli')} ${btn(v.key, 'team', 'Tim')} ${btn(v.key, 'bot', 'Mesin')}${v.reason === 'Ditandai admin' ? ' ' + btn(v.key, '', '↺') : ''}</td></tr>`;
-    }).join('') || '<tr><td colspan="5" class="muted">Belum ada pengunjung.</td></tr>'}</table></div>`;
+        <td style="min-width:190px">${contacts}</td><td style="white-space:nowrap">${btn(v.key, 'human', 'Asli')} ${btn(v.key, 'team', 'Tim')} ${btn(v.key, 'bot', 'Mesin')}${v.reason === 'Ditandai admin' ? ' ' + btn(v.key, '', '↺') : ''}</td></tr>`;
+    }).join('') || '<tr><td colspan="6" class="muted">Belum ada pengunjung.</td></tr>'}</table></div>`;
   filterVisitRows();
 }
 async function loadVisits(days) {

@@ -1,5 +1,9 @@
 # Handoff — PDF Project & Flipbook
 
+26 Oktober2026 — rilis dina iki: menu admin ijo diringkes dadi Status Member, Pengunjung, Email terverifikasi, Status Order, Ganti Password; filter paket tanpa tombol Semua, tanggal daftar member, lan tindak lanjut email draf mung kanggo member login sing email wis diverifikasi. Pengunjung anonim tetep tanpa identitas.
+
+Organize PDF bisa misah nomer/rentang kaca tartamtu, milih kabeh/kosongake, lan jeneng ZIP manut posisi kaca. Flipbook nduwe tutorial langkah-langkah, fullscreen luwih cetha, reverse curl kanggo klik lan navigasi, drag tetep interaktif, lan lembar pungkasan katon. Kode wis live; QA tes otomatis lulus, visual QA browser kanggo flipbook durung ditindakake.
+
 **Status terkini25Oktober2026:** lihat [HANDOFF_2026-10-25.md](HANDOFF_2026-10-25.md). Kode live terakhir a2b16c6; card final tanpa toolbar bawah, delete×dengan MFDialog; subfolder/klik kanan aktif; akun admin enginer akses penuh dan password terpisah. Password rak serta proteksi tambahan /admin belum dibuat. Catatan di bawah adalah riwayat.
 
 Update 25 Oktober 2026 (Codex): My Library mendukung subfolder dan pindah folder (parent_id), menu klik kanan buku/folder, card sekali klik membuka editor, cursor pointer, toolbar ikon satu baris. Keterangan kapasitas MB/GB dan paket disembunyikan; batas penyimpanan backend tetap. Penghapusan folder mempertahankan buku serta anak folder di root; pemindahan memeriksa kepemilikan dan siklus. Commit fitur `73823e0` pada v2.

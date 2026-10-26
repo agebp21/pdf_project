@@ -96,10 +96,10 @@ const config = {clientId: 'client-1', apiKey: 'key-1', appId: '123456'};
   // so Drive previews it natively and one click reaches the player.
   let posted = null;
   const docFetch = async (url, opts) => { posted = [url, opts]; return { ok: true, status: 200,
-    json: async () => ({ id: 'doc9', name: 'Grand Designs', webViewLink: 'https://docs.google.com/x', mimeType: 'application/vnd.google-apps.document' }) }; };
+    json: async () => ({ id: 'doc9', name: 'Grand Designs', webViewLink: 'https://docs.google.com/x', mimeType: 'application/vnd.google-apps.document', parents: ['root'] }) }; };
   const docSaid = [];
   const doc = await DrivePicker.createDoc(config, 'Grand <Designs>', 'https://myflipbookpro.com/s/abc', t => docSaid.push(t), docFetch);
-  assert.deepEqual(doc, { id: 'doc9', name: 'Grand Designs', url: 'https://docs.google.com/x' });
+  assert.deepEqual(doc, { id: 'doc9', name: 'Grand Designs', url: 'https://docs.google.com/x', parentId: 'root' });
   assert.ok(posted[0].startsWith('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart'), 'multipart upload');
   assert.equal(posted[1].method, 'POST');
   assert.ok(posted[1].headers.Authorization.startsWith('Bearer '), 'user token, not a server key');

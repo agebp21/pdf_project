@@ -1,0 +1,23 @@
+.fg-focus{position:fixed;pointer-events:none;border:2px solid #ff5c28;border-radius:14px;z-index:5000;box-shadow:0 0 0 5px #fff9,0 0 0 9px #ff5c2825;box-sizing:border-box}
+.fg-popup{position:fixed;z-index:5001;width:min(380px,calc(100vw - 24px));box-sizing:border-box;padding:26px;border:1px solid #ffffff;border-radius:25px;background:radial-gradient(ellipse at 100% 0%,#ffe1cb 0,transparent 55%),#fffdf8;color:#1c1917;box-shadow:0 24px 65px #392a172d,0 4px 12px #392a1710;font:14px/1.65 'Plus Jakarta Sans',system-ui,sans-serif;max-height:calc(100dvh - 24px);overflow:auto;animation:fg-enter .22s ease-out}
+.fg-popup h2{font:700 26px/1.2 'Fraunces',Georgia,serif;letter-spacing:-.6px;margin:18px 0 12px}
+.fg-popup p{margin:0 0 22px;color:#686058;font-size:13px;line-height:1.8}
+.fg-progress{display:flex;align-items:center;gap:8px;font-size:10px;font-weight:800;text-transform:uppercase;letter-spacing:1.4px;color:#a14c27}
+.fg-progress::before{content:'✦';display:grid;place-items:center;width:27px;height:27px;border-radius:9px;color:#ff5c28;background:#ff5c2815;font-size:18px}
+.fg-track{display:flex;gap:5px;margin-top:14px}
+.fg-track span{height:4px;flex:1;border-radius:4px;background:#e9e1d7}
+.fg-track span.fg-done{background:#ff723f}
+.fg-actions{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+.fg-actions{padding-top:16px;border-top:1px solid #e9e1d7}
+.fg-actions button{font:700 11px system-ui,sans-serif;padding:10px 12px;border-radius:999px;border:1px solid #e4dccb;background:transparent;color:#625a52;cursor:pointer;min-height:40px;transition:background .15s,transform .15s}
+.fg-actions button:nth-child(2){border-color:transparent}
+.fg-actions button:last-child{background:#ff5c28;border-color:#ff5c28;color:white;margin-left:auto;box-shadow:0 4px 0 #d64016,0 6px 15px #ff5c2825}
+.fg-actions button:last-child::after{content:' →';margin-left:5px}
+.fg-actions button:hover:not(:disabled){transform:translateY(-1px);background:#f5eee4}
+.fg-actions button:last-child:hover{background:#ed4c1a}
+.fg-actions button:disabled{opacity:.45;cursor:default}
+.fg-actions button:focus-visible{outline:2px solid #ff5c28;outline-offset:2px}
+.fg-preference{display:flex;align-items:flex-start;gap:9px;margin-top:20px;color:#78716c;font:12px/1.5 system-ui,sans-serif;cursor:pointer}
+.fg-preference input{width:16px;min-width:16px;height:16px;margin:1px 0 0;padding:0;accent-color:#ff5c28;cursor:pointer}
+@keyframes fg-enter{from{opacity:0;transform:translateY(7px)}to{opacity:1;transform:translateY(0)}}
+@media(prefers-reduced-motion:reduce){.fg-popup{animation:none}.fg-actions button{transition:none}}

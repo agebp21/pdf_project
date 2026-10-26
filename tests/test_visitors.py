@@ -84,6 +84,9 @@ class VisitorList(unittest.TestCase):
         self.assertEqual(v['Jakarta']['status'], 'unsure')
         self.assertEqual(v['Kediri']['status'], 'human'); self.assertEqual(v['Kediri']['ref'], 'www.google.com')
         self.assertEqual(v['Malang']['status'], 'human'); self.assertEqual(v['Malang']['members'], ['member@example.com'])
+        self.assertEqual(v['Malang']['memberContacts'][0]['email'], 'member@example.com')
+        self.assertTrue(v['Malang']['memberContacts'][0]['verified'])
+        self.assertEqual(v['Kediri']['memberContacts'], [])
         self.assertEqual(v['Indonesia']['status'], 'team'); self.assertIn('akun tim', v['Indonesia']['reason'])
         self.assertEqual(d['counts'], {'team': 2, 'unsure': 1, 'bot': 1, 'human': 2})
         # Numbers: team browsers, team accounts and machines are out; the unsure one is still counted.

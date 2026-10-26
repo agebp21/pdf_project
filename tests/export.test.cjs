@@ -16,7 +16,7 @@ assert.equal(FlipbookLayout.motion(true).flippingTime,1);
 { // Closed covers sit centred and slide to the spread when opened.
   const handlers={},state={index:0,orientation:'landscape',dir:0};
   const book={getPageCount:()=>12,getOrientation:()=>state.orientation,getCurrentPageIndex:()=>state.index,getBoundsRect:()=>({pageWidth:400}),getRender:()=>({getDirection:()=>state.dir}),on:(n,f)=>{(handlers[n]=handlers[n]||[]).push(f)}};
-  const root={style:{},classList:{add(){}}};
+  const root={style:{},classList:{add(){},toggle(){}}};
   const emit=(n,d)=>(handlers[n]||[]).forEach(f=>f({data:d}));
   FlipbookLayout.centerCover(book,root,false);
   assert.equal(root.style.transform,'translateX(-200.0px)','front cover centred');
@@ -30,7 +30,7 @@ assert.equal(FlipbookLayout.motion(true).flippingTime,1);
   // turning away slides back during the turn — never off-centre, no glide.
   const handlers={},state={index:9,orientation:'landscape',dir:0};
   const book={getPageCount:()=>13,getOrientation:()=>state.orientation,getCurrentPageIndex:()=>state.index,getBoundsRect:()=>({pageWidth:400}),getRender:()=>({getDirection:()=>state.dir}),on:(n,f)=>{(handlers[n]=handlers[n]||[]).push(f)}};
-  const root={style:{},classList:{add(){}}};
+  const root={style:{},classList:{add(){},toggle(){}}};
   const emit=(n,d)=>(handlers[n]||[]).forEach(f=>f({data:d}));
   FlipbookLayout.centerCover(book,root,false);
   assert.equal(root.style.transform||'','','second-to-last spread is not shifted');

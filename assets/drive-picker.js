@@ -176,7 +176,7 @@
       .then(function () { status('Signing in to Google…'); return accessToken(config); })
       .then(function (oauth) {
         var part = multipart(clean, html);
-        return send('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,mimeType',
+        return send('https://www.googleapis.com/upload/drive/v3/files?uploadType=multipart&fields=id,name,webViewLink,mimeType,parents',
           { method: 'POST', headers: { Authorization: 'Bearer ' + oauth, 'Content-Type': part.type }, body: part.body });
       })
       .then(function (response) {
@@ -187,7 +187,8 @@
           throw new Error('Google Drive refused the document (' + response.status + (error.message ? ': ' + error.message : '') + ').');
         });
       })
-      .then(function (file) { return { id: file.id, name: file.name, url: file.webViewLink }; })
+      .then(function (file) { return { id: file.id, name: file.name, url: file.webViewLink,
+        parentId: ((file.parents || [])[0] || 'root') }; })
       .catch(function (cause) {
         if (cause && cause.message === 'cancelled') { status(''); return null; }
         throw cause;

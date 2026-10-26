@@ -145,7 +145,9 @@ async function main() {
   assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'no selection yet, box hidden');
   w.orgCardClick({ target: { closest: () => null } }, 2);
   assert.ok(w.document.querySelector('#organizeGrid').innerHTML.includes(' sel'), 'split click selects');
-  assert.ok(!w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'box opens on selection');
+  assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'split hides unrelated editing tools even with selection');
+  w.orgModeSet('edit');
+  assert.ok(!w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'editing tools remain available in edit');
   w.orgModeSet('merge');
   w.renderOrganizeGrid();
   assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'merge hides the box');
@@ -157,10 +159,10 @@ async function main() {
   assert.ok(file.name.endsWith('-split.zip'), file.name);
   const JSZip = require('../.build/qa-runtime/node_modules/jszip');
   let zip = await JSZip.loadAsync(await bufOf(file));
-  assert.deepEqual(Object.keys(zip.files).sort(), ['page-1.pdf', 'page-2.pdf']);
-  let first = await global.PDFLib.PDFDocument.load(await zip.file('page-1.pdf').async('uint8array'));
+  assert.deepEqual(Object.keys(zip.files).sort(), ['page-2.pdf', 'page-4.pdf']);
+  let first = await global.PDFLib.PDFDocument.load(await zip.file('page-2.pdf').async('uint8array'));
   assert.equal(first.getPageCount(), 1);
-  assert.ok((await textOf(await zip.file('page-1.pdf').async('uint8array')))[0].includes('Bravo 2'), 'first selected page first');
+  assert.ok((await textOf(await zip.file('page-2.pdf').async('uint8array')))[0].includes('Bravo 2'), 'first selected page first');
   // Split every N: chunks across the arranged order.
   w.qaSetup([3, 2, 1, 0], []);
   w.document.querySelector('#orgSplitN').value = '3';

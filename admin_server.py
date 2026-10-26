@@ -11,6 +11,7 @@ Library (titles, sizes, exports — never the books' contents) and the visitor
 statistics written by server.py (visits.py).
 """
 import argparse
+from datetime import date, datetime, time as datetime_time, timedelta, timezone
 import getpass
 import hashlib
 import hmac
@@ -227,7 +228,12 @@ def member_row(r, now):
                 books=r['books'] if 'books' in r.keys() else 0, bytes=r['bytes'] if 'bytes' in r.keys() else 0)
 
 
-def members(q='', page=1, per=50, now=None, plan=''):
+def members(q='', page=1, per=50, now=None, plan='', verified='', start='', end=''):
+    wib = timezone(timedelta(hours=7))
+    first = datetime.combine(date.fromisoformat(start), datetime_time.min, wib).timestamp() if start else None
+    last = datetime.combine(date.fromisoformat(end) + timedelta(days=1), datetime_time.min, wib).timestamp() if end else None
+    if first is not None and last is not None and first >= last:
+        raise ValueError('Tanggal sampai harus sama atau setelah tanggal dari.')
     now = int(now or time.time())
     db = read_only(db_path())
     if not db:
@@ -241,6 +247,12 @@ def members(q='', page=1, per=50, now=None, plan=''):
         if plan in ('basic', 'medium', 'pro'):
             conditions.append("(CASE WHEN u.plan NOT IN ('free','basic') AND u.plan_expires_at>? THEN u.plan ELSE 'basic' END)=?")
             args.extend([now, plan])
+        if verified in ('0', '1'):
+            conditions.append('u.verified=?'); args.append(int(verified))
+        if first is not None:
+            conditions.append('u.created_at>=?'); args.append(first)
+        if last is not None:
+            conditions.append('u.created_at<?'); args.append(last)
         where = 'WHERE ' + ' AND '.join(conditions) if conditions else ''
         total = db.execute(f'SELECT COUNT(*) FROM users u {where}', args).fetchone()[0]
         books = ('(SELECT COUNT(*) FROM library_books b WHERE b.user_id=u.id) AS books, '
@@ -439,13 +451,15 @@ def visitor_list(days=30, start=None, end=None):
         v.close()
     ids = {u for g in items for u in g['users']}
     db = read_only(db_path()) if ids else None
-    emails = {}
+    contacts = {}
     if db:
         with db:
-            emails = {r['id']: r['email'] for r in db.execute('SELECT id, email FROM users WHERE id IN (%s)' % ','.join('?' * len(ids)), list(ids))}
+            contacts = {r['id']: dict(email=r['email'], name=r['name'], verified=bool(r['verified']))
+                        for r in db.execute('SELECT id, email, name, verified FROM users WHERE id IN (%s)' % ','.join('?' * len(ids)), list(ids))}
         db.close()
     for g in items:
-        g['members'] = [emails.get(u, f'#{u}') for u in g.pop('users')]
+        g['members'] = [contacts.get(u, {}).get('email', f'#{u}') for u in g['users']]
+        g['memberContacts'] = [dict(id=u, **contacts[u]) for u in g.pop('users') if u in contacts]
     counts = {}
     for g in items:
         counts[g['status']] = counts.get(g['status'], 0) + 1
@@ -722,7 +736,7 @@ class AdminHandler(BaseHTTPRequestHandler):
                 self.send_json(200, order_tracking(arg('q').strip()[:100], arg('status').strip()[:30], arg('audience'), page))
             elif url.path == '/api/members':
                 page = max(1, min(10000, int(arg('page', '1') or 1)))
-                self.send_json(200, members(arg('q').strip()[:100], page, plan=arg('plan')))
+                self.send_json(200, members(arg('q').strip()[:100], page, plan=arg('plan'), verified=arg('verified'), start=arg('start'), end=arg('end')))
             elif re.fullmatch(r'/api/members/\d{1,12}', url.path):
                 found = member(int(url.path.rsplit('/', 1)[1]))
                 self.send_json(200 if found else 404, found or {'error': 'Member tidak ditemukan.'})

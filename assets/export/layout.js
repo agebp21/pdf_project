@@ -69,7 +69,10 @@
       return 0;
     };
     const apply = x => { root.style.transform = x ? 'translateX(' + x.toFixed(1) + 'px)' : ''; };
-    const settle = () => apply(closedShift());
+    const settle = () => {
+      root.classList.toggle('book-single-page', book.getOrientation() === 'portrait');
+      apply(closedShift());
+    };
     root.classList.add('book-shift');
     if (reduced) root.classList.add('book-shift-instant');
     book.on('changeState', event => {
@@ -548,7 +551,25 @@
   adopt(book) {
     if (book.mfFlipPrev) return;
     book.mfFlipPrev = book.flipPrev;
-    book.flipPrev = function () { FlipbookTurns.back(book); };
+    book.flipPrev = function () {
+      if (book.mfRequestTurn && !book.mfRunningTurn) return book.mfRequestTurn(false);
+      FlipbookTurns.back(book);
+    };
+    try {
+      const controller = book.getFlipController(), nativeFlip = controller.flip, nativeStop = controller.stopMove;
+      const clearFold = () => {
+        const render = book.getRender();
+        render.finishAnimation(); render.setBottomPage(null); render.setFlippingPage(null); render.clearShadow();
+        controller.reset(); controller.setState('read');
+      };
+      if (typeof nativeFlip === 'function') controller.flip = function (point) {
+        if (book.mfRequestTurn && !book.mfRunningTurn) {
+          const forward = this.getDirectionByPoint(book.getRender().convertToBook(point)) === 0;
+          clearFold(); return book.mfRequestTurn(forward);
+        }
+        return nativeFlip.apply(this, arguments);
+      };
+    } catch (e) { /* Engines without controller access keep their native input. */ }
   },
   bind(book, go) {
     FlipbookTurns.adopt(book);
@@ -564,7 +585,10 @@
       queue += (forward ? -1 : 1) * steps;
       // A lone click at reading pace gets the full turn; a burst gets shorter ones.
       settings.flippingTime = Math.round(Math.max(MIN, Math.min(base, gap * 0.9, base / waiting)));
-      if (go(forward, steps) === false) { queue = 0; settings.flippingTime = base; return; }
+      let result;
+      book.mfRunningTurn = true;
+      try { result = go(forward, steps); } finally { book.mfRunningTurn = false; }
+      if (result === false) { queue = 0; settings.flippingTime = base; return; }
       // Nothing started (a page that cannot turn right now): try the rest shortly.
       if (idle()) timer = setTimeout(run, 60);
     }
@@ -573,7 +597,7 @@
       if (!queue) settings.flippingTime = base;
       setTimeout(run, 0);
     });
-    return {
+    const controls = {
       request(forward) {
         const now = Date.now();
         gap = last ? now - last : Infinity; last = now;
@@ -585,6 +609,8 @@
       pending: () => queue,
       clear() { queue = 0; clearTimeout(timer); settings.flippingTime = base; }
     };
+    book.mfRequestTurn = forward => controls.request(forward);
+    return controls;
   }
 };
 
