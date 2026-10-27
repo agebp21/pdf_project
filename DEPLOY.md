@@ -1,5 +1,9 @@
 # Deploy & Update myflipbookpro.com — prosedur siji kanggo kabeh agen AI
 
+## Log terbaru
+
+- 27 Oktober 2026 16:30 WIB — live `141c13d`: Admin Pengunjung ditata dengan tab, default hari ini, pagination detail dan kunjungan terbaru, kartu lokasi bisa dibuka. Backup `/root/pdf_project-code-backup-202610271630-admin.tgz`; layanan aktif; `/admin/`, `/admin/api/session`, dan `/api/capabilities` HTTPS 200. Tes admin 10/10 lulus; suite penuh punya 5 kegagalan JS dan 1 Python di area lain. Owner meminta deploy langsung.
+
 > Wajib diwaca sakdurunge ndemek VPS. Salah login = ke-ban fail2ban.
 > Saben deploy **kudu** dicatet nang "Log deploy" nang ngisor, ben agen liyane ngerti kode live iku commit endi.
 

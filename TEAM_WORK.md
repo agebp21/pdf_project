@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ADMIN-PENGUNJUNG (27 Okt, Codex): `141c13d` live. Tab Pengunjung ditata ringkas, default hari ini, detail dan kunjungan terbaru berpaginasi, kartu lokasi dapat dibuka. Backup dan verifikasi tercatat di `DEPLOY.md`. Tes admin 10/10 lulus; suite penuh masih punya kegagalan di area lain, owner meminta deploy langsung.
+
 - ADMIN/VISITOR-FOLLOWUP + SPLIT + FLIPBOOK (26Okt, Codex): dirilis live ing `DEPLOY.md`. Admin nampilake 5 menu ijo, filter member Basic/Medium/Pro lan tanggal daftar; tab Pengunjung menehi draf email promo (`mailto`) mung kanggo member login kanthi email terverifikasi. Tamu tetep anonim. Organize ndhukung rentang kaca lan pilihan thumbnail. Tutorial, tombol fullscreen, input klik/drag flipbook, lan kertas halaman pungkasan dianyari. Tes suite lulus; QA visual flipbook durung ditindakake.
 
 - HOME-CATALOG (26Okt,Codex,lokal belum deploy): sample katalog memakai PDF SekarBumi owner dari Downloads,19halaman dirender ke assets/samples/sekar-bumi/*.webp (±2.47MB total), sampul asli. Buku mempertahankan sample HTML sebelumnya. Engine hero updateFromHtml mengganti katalog19halaman/original10halaman; katalog menampilkan navigasi/fullscreen/sound, advanced text tools disembunyikan karena gambar. scripts/render-home-catalog.py untuk render ulang. Cover/halaman19 diperiksa visual; syntax/diff dan aset lokal200 lulus. Belum QA pergantian engine di browser.
