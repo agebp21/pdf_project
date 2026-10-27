@@ -2,6 +2,7 @@
 
 ## Log terbaru
 
+- 27 Oktober 2026 — live `a385f43`: tombol Reset Member menghapus pencarian, rentang tanggal, dan filter paket sekaligus, lalu memuat semua member dari halaman pertama. Tes browser query kosong, JS 59/59, Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261027-member-reset-all-a385f43.tgz`; kedua layanan aktif; admin/sesi/capabilities HTTPS 200.
 - 27 Oktober 2026 — live `6ae46d1`: permintaan owner, default filter tanggal Member dikembalikan kosong; Reset juga mengosongkan Dari/Sampai. Tes browser nilai awal/Reset, JS 59/59 dan Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261027-member-date-revert-6ae46d1.tgz`; kedua layanan aktif; admin/sesi/capabilities HTTPS 200.
 - 27 Oktober 2026 — live `4b79ac3`: dua paragraf petunjuk panjang pada Detail pengunjung dihapus. JS 59/59 dan Python 233/233 lulus; backup `/root/pdf_project-code-backup-20261027-visitor-copy-4b79ac3.tgz`; kedua layanan aktif; admin/sesi/capabilities HTTPS 200 dan teks sudah tidak ada di HTML live.
 - 27 Oktober 2026 — live `0321407`: filter tanggal Member “Dari” dan “Sampai” default hari ini (WIB); Reset kembali ke hari ini. Tes browser nilai awal/Reset, JS 59/59, Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261027-member-date-0321407.tgz`; kedua layanan aktif; admin/sesi/capabilities HTTPS 200.
