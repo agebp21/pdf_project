@@ -3,7 +3,8 @@ const fs = require('node:fs');
 const vm = require('node:vm');
 const html = fs.readFileSync('converter.html', 'utf8');
 const start = html.indexOf('window.orgApplySplitPages=');
-const end = html.indexOf('window.orgSplitZip=', start);
+const end = html.indexOf('window.orgSplitSelected=', start);
+assert.ok(start >= 0 && end > start, 'split range handler exists');
 const input = {value: '1, 3, 5–8'};
 const context = {window: {}, organizeOrder: [0,1,2,3,4,5,6,7], organizeSelected: new Set(),
   $: () => input, L: en => en, renderOrganizeGrid() {}, showError(message) { this.error = message; }};
