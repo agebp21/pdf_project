@@ -17,6 +17,10 @@
 .hh-magazine-cover{object-fit:cover}
 .hh-catalog-page{background:#fff;overflow:hidden}
 .hh-catalog-page img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
+.hh-magazine-back{display:flex;flex-direction:column;justify-content:flex-end;gap:10px;padding:10%;color:#fff;background:linear-gradient(155deg,#244d3e,#17372f 68%,#102820);box-sizing:border-box}
+.hh-magazine-back:before{content:'';position:absolute;inset:8%;border:1px solid #ffffff48;pointer-events:none}
+.hh-magazine-back span{font:900 clamp(26px,5vw,58px)/.88 Georgia,serif;letter-spacing:-.055em;z-index:1}
+.hh-magazine-back small{font:700 11px/1.3 'Plus Jakarta Sans',sans-serif;letter-spacing:.28em;color:#ffb37e;z-index:1}
 .hh[data-sample=interior] #hh-demo-toolbar button:not(#hh-tool-home):not(#hh-tool-end):not(#hh-tool-open):not(#hh-demo-full):not(#hh-demo-sound){display:none}
 .sample-interior{background:#d7c4a7;color:#3b332b}.sample-fashion{background:#34344d;color:#f5d8ce}.sample-travel{background:#1f6258;color:#e8e2b4}.sample-learning{background:#f2a445;color:#342b42}
 .hh-sample b{display:block;font:600 10px/1.5 'Plus Jakarta Sans',sans-serif;margin-top:10px}

@@ -28,6 +28,9 @@
         var magazineImage = document.createElement('img'); magazineImage.src = 'assets/samples/grand-designs/page-' + String(m).padStart(2,'0') + '.webp'; magazineImage.alt = 'Grand Designs Australia · ' + m; magazineImage.decoding = 'async';
         magazinePage.appendChild(magazineImage); magazinePages.push(magazinePage);
       }
+      var magazineBack = document.createElement('div'); magazineBack.className = 'hh-page hh-magazine-back'; magazineBack.dataset.density = 'hard';
+      magazineBack.innerHTML = '<span>GRAND<br>DESIGNS</span><small>AUSTRALIA</small>';
+      magazinePages.push(magazineBack);
     }
     showingCatalog = catalog; showingMagazine = magazine;
     flip.updateFromHtml(catalog ? catalogPages : magazine ? magazinePages : originalPages);
