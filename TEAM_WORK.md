@@ -1,5 +1,6 @@
 # Koordinasi tim AI
 
+- ADMIN-MEMBER-DATE-DEFAULT (27 Okt, Codex): `0321407` live. Dari/Sampai di filter Member otomatis tanggal hari ini (WIB), Reset sama. Browser, JS 59/59, Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.
 - ADMIN-VISIT-DETAIL-ROUTES (27 Okt, Codex): `7a36ad5` live. Kartu Pengunjung menuju rincian data di tab terkait; dialog agregat dicabut. Filter kunjungan member dan tanggal daftar member baru otomatis diterapkan. JS 59/59, Python 233/233 OK, tes admin 10/10, browser enam kartu lulus. Backup/verifikasi di `DEPLOY.md`.
 - ADMIN-VISIT-METRIC-DETAIL (27 Okt, Codex): `04047da` live. Enam kartu ringkasan Pengunjung langsung membuka dialog rincian di tengah layar; Tutup/Escape aktif. JS 59/59, Python 233/233, dan klik keenam kartu di browser lulus. Backup/verifikasi di `DEPLOY.md`.
 - FLIPBOOK-TOOLBAR (27 Okt, Codex): `463409c` live. Toolbar turun baris saat sempit, semua tombol tampak utuh; Layar penuh tetap tengah. JS 59/59, Python 233/233 lulus; ukuran 390/600/900/1280 px dicek di browser. Backup/verifikasi di `DEPLOY.md`.
