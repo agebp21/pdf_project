@@ -2,6 +2,7 @@
 
 ## Log terbaru
 
+- 27 Oktober 2026 — live `4b79ac3`: dua paragraf petunjuk panjang pada Detail pengunjung dihapus. JS 59/59 dan Python 233/233 lulus; backup `/root/pdf_project-code-backup-20261027-visitor-copy-4b79ac3.tgz`; kedua layanan aktif; admin/sesi/capabilities HTTPS 200 dan teks sudah tidak ada di HTML live.
 - 27 Oktober 2026 — live `0321407`: filter tanggal Member “Dari” dan “Sampai” default hari ini (WIB); Reset kembali ke hari ini. Tes browser nilai awal/Reset, JS 59/59, Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261027-member-date-0321407.tgz`; kedua layanan aktif; admin/sesi/capabilities HTTPS 200.
 - 27 Oktober 2026 — live `7a36ad5`: enam kartu Pengunjung langsung menuju tab rincian nyata (lokasi/negara, daftar pengunjung, halaman terpopuler, pengunjung tanggal akhir, kunjungan member terfilter, dan daftar member baru sesuai tanggal), menggantikan dialog agregat. JS 59/59, Python 233/233 berakhir OK, tes admin 10/10 dan browser enam kartu lulus. Backup `/root/pdf_project-code-backup-20261027-visitor-details-7a36ad5.tgz`; kedua layanan aktif; admin/sesi/capabilities HTTPS 200.
 - 27 Oktober 2026 — live `04047da`: enam kartu ringkasan Pengunjung membuka rincian langsung dalam dialog di tengah layar, dengan Tutup/Escape. JS 59/59 dan Python 233/233 lulus; enam kartu diuji klik di browser. Backup `/root/pdf_project-code-backup-20261027-visitor-modal-04047da.tgz`; kedua layanan aktif; admin, sesi, dan capabilities HTTPS 200.
