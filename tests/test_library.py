@@ -117,7 +117,8 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(status, 200)
         book = body['id']
         # Update the same book (new title) instead of adding one.
-        self.assertEqual(self.save(ana, project('Laporan Final'), book)[1]['id'], book)
+        updated_project = project('Laporan Final')
+        self.assertEqual(self.save(ana, updated_project, book)[1]['id'], book)
         # Cover and an HTML export; a second HTML export replaces the first.
         self.assertEqual(ana.call('POST', f'/api/library/{book}/cover', b'\xff\xd8\xff\xe0cover', 'image/jpeg')[0], 200)
         ana.call('POST', f'/api/library/{book}/export', b'<html>v1</html>', 'application/octet-stream', {'X-Kind': 'html', 'X-Filename': 'Laporan.html'})
@@ -130,7 +131,7 @@ class LibraryTests(unittest.TestCase):
         self.assertEqual(listing['usage']['books'], 1)
         # Downloads come back exactly.
         status, headers, raw = ana.call('GET', f'/api/library/{book}/project')
-        self.assertEqual(raw, project('Laporan Final'))
+        self.assertEqual(raw, updated_project)
         self.assertIn('Laporan Final.smflipbook', urllib.parse.unquote(headers['Content-Disposition']))
         self.assertEqual(ana.call('GET', f'/api/library/{book}/cover')[2], b'\xff\xd8\xff\xe0cover')
         export_id = entry['exports'][0]['id']
