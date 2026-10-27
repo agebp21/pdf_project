@@ -9,8 +9,20 @@ fieldset{border:0;margin:0;padding:0;min-width:0}fieldset:disabled{opacity:.45}.
 
 body:has(.preview.reading-fullscreen){overflow:hidden}
 body:has(.preview.reading-fullscreen) .topbar,body:has(.preview.reading-fullscreen) .sh-wrap,body:has(.preview:fullscreen) .sh-wrap{display:none}
-/* Opening a PDF: red progress bar under the status text. */
-#load-status.is-loading{background-image:linear-gradient(#e03131,#e03131),linear-gradient(#fbd5d5,#fbd5d5);background-size:var(--load-progress,0%) 6px,100% 6px;background-position:left bottom,left bottom;background-repeat:no-repeat;padding-bottom:14px;transition:background-size .25s ease}
+/* Progress stays visible over the pages without intercepting turns, drags or taps. */
+#reader-stage{position:relative}
+#load-status.is-loading{position:absolute;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+.reader-loading{position:absolute;inset:0;z-index:20;display:grid;place-items:center;pointer-events:none;user-select:none}
+.reader-loading[hidden]{display:none}
+.reader-loading__circle{position:relative;width:clamp(150px,18vw,186px);aspect-ratio:1;filter:drop-shadow(0 14px 28px rgba(33,61,50,.18))}
+.reader-loading__ring{position:absolute;inset:0;border-radius:50%;background:conic-gradient(#f35b2a var(--reader-progress,0%),rgba(235,203,178,.82) 0)}
+.reader-loading.is-indeterminate .reader-loading__ring{background:conic-gradient(#f35b2a 0 25%,rgba(235,203,178,.82) 25%);animation:reader-loading-spin 1.15s linear infinite}
+.reader-loading__content{position:absolute;inset:7px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:18px;text-align:center;background:rgba(255,250,244,.83);backdrop-filter:blur(10px);-webkit-backdrop-filter:blur(10px);color:#214d40}
+.reader-loading__content strong{font-size:26px;line-height:1;font-weight:800;color:#e95025}
+.reader-loading__content strong:empty{display:none}
+.reader-loading__content span{font-size:11px;line-height:1.35;font-weight:650;overflow-wrap:anywhere}
+@keyframes reader-loading-spin{to{transform:rotate(360deg)}}
+@media(prefers-reduced-motion:reduce){.reader-loading.is-indeterminate .reader-loading__ring{animation:none}}
 /* Full screen like the normal reader: title bar, the book, then the buttons below it — the book is sized to the
    space between them, so the buttons never cover the bottom of a page. */
 .preview:fullscreen,.preview.reading-fullscreen{display:flex;flex-direction:column}
