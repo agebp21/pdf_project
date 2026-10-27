@@ -87,6 +87,10 @@
   .visit-pane .grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:10px}
   .visit-pane .card{padding:10px 12px;border-radius:12px}
   .visit-pane .card .n{font-size:22px}
+  .visit-detail-dialog{width:min(680px,calc(100vw - 28px));max-height:min(80dvh,720px);padding:20px;border:1px solid var(--line);border-radius:18px;background:var(--card);color:var(--ink);box-shadow:0 24px 70px #112b2240;overflow:auto}
+  .visit-detail-dialog::backdrop{background:#14271ca8}
+  .visit-detail-dialog h3{margin:0;font-size:18px}
+  .visit-detail-dialog .visit-table-wrap{max-height:60dvh;overflow:auto}
   .visit-pane .bars{height:112px}
   .visit-pane .two{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   .visit-pane[data-visit-pane="locations"] .two{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -503,6 +507,7 @@ $('#visit-search').oninput = () => { visitorPage = 1; recentPage = 1; filterVisi
 function filterVisitRows() {
   const query = $('#visit-search').value.trim().toLowerCase();
   document.querySelectorAll('#visit-view table tr').forEach(row => {
+    if (row.closest('#visit-drilldown')) return;
     if (row.closest('#visitor-detail')) return;
     if (row.classList.contains('recent-visit-row')) return;
     if (row.classList.contains('visitor-expanded')) { row.hidden = !row.previousElementSibling || row.previousElementSibling.hidden; return; }
@@ -593,10 +598,10 @@ document.addEventListener('click', event => {
       rows = d.daily.filter(row => kind === 'today' ? row.day === latestDay : row[config[1]]).slice().reverse().map(row => [row.day, num(row[config[1]])]);
     }
   }
-  const panel = $('#visit-drilldown'); panel.hidden = false;
-  panel.innerHTML = `<div class="row"><h3 style="flex:1;margin:0">${esc(title)}</h3><button class="ghost" type="button" id="visit-close-detail">Tutup</button></div>${kind === 'members' ? '<p class="muted">Rincian dari sampel kunjungan terbaru yang tersedia, bukan daftar lengkap seluruh periode.</p>' : ''}<table><tr>${columns.map(label => `<th>${esc(label)}</th>`).join('')}</tr>${rows.map(row => `<tr>${row.map(value => `<td>${esc(value)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${columns.length}">Belum ada data.</td></tr>`}</table>`;
-  $('#visit-close-detail').onclick = () => { panel.hidden = true; };
-  filterVisitRows();
+  const panel = $('#visit-drilldown');
+  panel.innerHTML = `<div class="row"><h3 id="visit-detail-heading" style="flex:1">${esc(title)}</h3><button class="ghost" type="button" id="visit-close-detail">Tutup</button></div>${kind === 'members' ? '<p class="muted">Rincian dari sampel kunjungan terbaru yang tersedia, bukan daftar lengkap seluruh periode.</p>' : ''}<div class="visit-table-wrap"><table><tr>${columns.map(label => `<th>${esc(label)}</th>`).join('')}</tr>${rows.map(row => `<tr>${row.map(value => `<td>${esc(value)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${columns.length}">Belum ada data.</td></tr>`}</table></div>`;
+  $('#visit-close-detail').onclick = () => panel.close();
+  panel.showModal();
 });
 const DEVICE = {desktop: 'Komputer', mobile: 'HP', tablet: 'Tablet'};
 const place = p => [p.city, p.region, p.country].filter((x, i, all) => x && all.indexOf(x) === i).join(', ') || '—';
@@ -711,7 +716,7 @@ async function loadVisits(days) {
     <section class="visit-pane active" data-visit-pane="summary"><div class="grid">${visitMetric((d.countries || []).length, 'Negara asal', 'origins')}${visitMetric(d.visitors, 'Total pengunjung &middot; ' + days + ' hari', 'visitors')}
       ${visitMetric(d.views, 'Tampilan halaman', 'views')}${visitMetric((d.today || {}).visitors, visitRange ? 'Pengunjung pada tanggal akhir' : 'Pengunjung hari ini', 'today')}
       ${visitMetric(d.members, 'Member yang berkunjung', 'members')}${visitMetric(d.newMembers, 'Member baru', 'newMembers')}</div>
-    <div id="visit-drilldown" class="panel" hidden></div>
+    <dialog id="visit-drilldown" class="visit-detail-dialog" aria-labelledby="visit-detail-heading"></dialog>
     <div class="panel"><h3>Aktivitas per hari</h3>${bars(d.daily)}</div></section>
     <section class="visit-pane" data-visit-pane="daily"><div class="panel"><h3>Laporan harian</h3><div class="visit-table-wrap"><table><tr><th>Tanggal</th><th>Pengunjung</th><th>Tampilan</th><th>Member baru</th><th>Konversi</th><th>AI</th><th>Karakter diterjemahkan</th><th>Buku disimpan</th></tr>
       ${report.map(r => `<tr><td>${esc(r.day)}</td><td><button type="button" class="summary-link daily-visitor-link" data-visitor-day="${esc(r.day)}" aria-label="Lihat ${num(r.visitors)} pengunjung tanggal ${esc(r.day)}">${num(r.visitors)}</button></td><td>${num(r.views)}</td><td>${num(r.members)}</td><td>${num(r.office)}</td><td>${num(r.ai)}</td><td>${num(r.translate)}</td><td>${num(r.books)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Belum ada data.</td></tr>'}</table></div></div></section>
