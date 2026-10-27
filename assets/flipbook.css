@@ -6,6 +6,15 @@ fieldset{border:0;margin:0;padding:0;min-width:0}fieldset:disabled{opacity:.45}.
 
 /* Keep book navigation centered within the preview. */
 .preview .controls{justify-content:center}
+.preview .controls.fit-wrap{overflow:visible}
+.preview .controls.fit-wrap .navigation{width:100%;max-width:100%;flex-wrap:wrap;justify-content:center;transform:none!important;margin-right:0!important}
+.preview .controls.fit-wrap .navigation::before,.preview .controls.fit-wrap .navigation::after{content:"";flex-basis:100%;height:0}
+.preview .controls.fit-wrap .navigation::before{order:1}
+.preview .controls.fit-wrap .navigation::after{order:3}
+.preview .controls.fit-wrap .navigation button{order:0}
+.preview .controls.fit-wrap .navigation #fullscreen{order:2;margin-inline:auto}
+.preview .controls.fit-wrap .navigation #fullscreen~button{order:4}
+body.clay .preview:not(:fullscreen):not(.reading-fullscreen) .controls{padding-bottom:8px!important}
 
 body:has(.preview.reading-fullscreen){overflow:hidden}
 body:has(.preview.reading-fullscreen) .topbar,body:has(.preview.reading-fullscreen) .sh-wrap,body:has(.preview:fullscreen) .sh-wrap{display:none}

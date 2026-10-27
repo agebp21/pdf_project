@@ -949,23 +949,16 @@
     if (book.getState() !== 'read') return;
     book.turnToPage(0); updatePage(); animate(true);
   });
-  // The reader buttons stay on one row and fit whatever screen the reader has: tighter
-  // spacing first, then the whole row scaled down (never cut off, never a second row).
+  // Keep every reader button visible: tighten spacing, then wrap when needed.
   // Measured again on resize, full screen, and when a button appears or hides.
   function fitControls() {
     const bar = document.querySelector('.controls'), row = bar && bar.querySelector('.navigation');
     if (!row) return;
-    row.classList.remove('fit-tight'); bar.classList.remove('fit-scroll'); row.style.transform = ''; row.style.marginRight = '';
+    row.classList.remove('fit-tight'); bar.classList.remove('fit-scroll', 'fit-wrap'); row.style.transform = ''; row.style.marginRight = '';
     const room = () => bar.clientWidth - (parseFloat(getComputedStyle(bar).paddingLeft) || 0) - (parseFloat(getComputedStyle(bar).paddingRight) || 0);
     if (row.scrollWidth <= room()) return;
     row.classList.add('fit-tight');
-    const width = row.scrollWidth, space = room();
-    if (width <= space) return;
-    // Not below 70% (still readable and tappable); a phone narrower than that swipes the row sideways.
-    const scale = Math.max(0.7, space / width);
-    row.style.transform = `scale(${scale})`;
-    row.style.marginRight = `${-(width * (1 - scale))}px`;      // the row takes its scaled width
-    if (width * scale > space + 1) bar.classList.add('fit-scroll');
+    if (row.scrollWidth > room()) bar.classList.add('fit-wrap');
   }
   {
     let frame = 0;
