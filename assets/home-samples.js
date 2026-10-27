@@ -33,7 +33,7 @@
         const image = document.createElement('img'); image.src = 'assets/samples/sekar-bumi/page-01.webp'; image.alt = 'Sekar Bumi Product Catalog'; image.className = 'hh-catalog-cover'; closedCover.append(image);
       }
       document.querySelectorAll('.hh-sample').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.sample === selected)));
-      const note = document.getElementById('hh-sample-notice'); note.removeAttribute('data-en'); note.textContent = en() ? 'Sekar Bumi catalog · 19 pages' : 'Katalog Sekar Bumi · 19 halaman';
+      const note = document.getElementById('hh-sample-notice'); note.removeAttribute('data-en'); note.textContent = en() ? 'Sekar Bumi catalog · 20 pages' : 'Katalog Sekar Bumi · 20 halaman';
       return;
     }
     if (closedCover && closedCover.querySelector('.hh-catalog-cover,.hh-magazine-cover')) closedCover.innerHTML = originalCover;
