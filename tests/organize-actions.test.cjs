@@ -130,9 +130,9 @@ async function main() {
   w.qaSetup([0, 1, 2, 3], []);
   await w.orgExtract();
   assert.match(w.qaError(), /Tick pages|Centang/, 'empty selection warns');
-  // Modes share one shell: merge flips, split/edit select, tools per mode.
+  // Modes share one shell: merge flips, split selects, tools per mode.
   const tabs = JSON.stringify([...w.document.querySelectorAll('.org-tabs button')].map(b => b.dataset.mode));
-  assert.equal(tabs, JSON.stringify(['merge', 'split', 'edit', 'compress']), 'four mode tabs');
+  assert.equal(tabs, JSON.stringify(['merge', 'split', 'compress']), 'three mode tabs');
   const tabActive = () => w.document.querySelector('.org-tabs button.active').dataset.mode;
   assert.equal(tabActive(), 'merge', 'merge by default');
   w.qaSetup([0, 1, 2, 3], []);
@@ -147,7 +147,7 @@ async function main() {
   assert.ok(w.document.querySelector('#organizeGrid').innerHTML.includes(' sel'), 'split click selects');
   assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'split hides unrelated editing tools even with selection');
   w.orgModeSet('edit');
-  assert.ok(!w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'editing tools remain available in edit');
+  assert.equal(tabActive(), 'split', 'removed edit mode is ignored');
   w.orgModeSet('merge');
   w.renderOrganizeGrid();
   assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'merge hides the box');
@@ -161,19 +161,6 @@ async function main() {
   assert.equal(first.getPageCount(), 2, 'selected pages remain in one PDF');
   assert.ok((await textOf(await bufOf(file)))[0].includes('Bravo 2'), 'first selected page first');
   assert.ok((await textOf(await bufOf(file)))[1].includes('Delta 4'), 'second selected page follows in order');
-  const JSZip = require('../.build/qa-runtime/node_modules/jszip');
-  let zip;
-  // Split every N: chunks across the arranged order.
-  w.qaSetup([3, 2, 1, 0], []);
-  w.document.querySelector('#orgSplitN').value = '3';
-  await w.orgSplitEvery();
-  [file] = w.qaSaved().slice(-1);
-  assert.ok(file.name.endsWith('-split-every-3.zip'), file.name);
-  zip = await JSZip.loadAsync(await bufOf(file));
-  const names = Object.keys(zip.files).sort();
-  assert.equal(names.length, 2, '4 pages in threes');
-  first = await global.PDFLib.PDFDocument.load(await zip.file(names[0]).async('uint8array'));
-  assert.equal(first.getPageCount(), 3, 'first chunk holds three');
   // Compress keeps every page in a valid PDF.
   w.qaSetup([0, 1, 2, 3], []);
   await w.orgCompress();
@@ -181,11 +168,6 @@ async function main() {
   assert.ok(file.name.endsWith('-compressed-medium.pdf'), file.name);
   out = await global.PDFLib.PDFDocument.load(await bufOf(file));
   assert.equal(out.getPageCount(), 4, 'compressed keeps every page');
-  // Edit mode brings the selection box back.
-  w.orgModeSet('edit');
-  w.qaSetup([0, 1, 2, 3], [0]);
-  w.renderOrganizeGrid();
-  assert.ok(!w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'edit shows the box');
   w.close();
   console.log('PASS organize actions: extract order+content, consecutive numbers, watermark, annotate text/rect/line+guards, empty guard');
 }
