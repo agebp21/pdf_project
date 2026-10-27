@@ -2,6 +2,7 @@
 
 ## Log terbaru
 
+- 27 Oktober 2026 16:45 WIB — live `14e400b`: keterangan katalog Sekar Bumi diperbaiki menjadi 20 halaman; tes sampel, Organize, rentang halaman, QA browser, dan arsip library diperbarui. Suite JS 59/59 dan Python 233/233 lulus. Backup `/root/pdf_project-code-backup-202610271645-fixes.tgz`; layanan aktif; homepage, aset sampel, API, dan admin HTTPS 200.
 - 27 Oktober 2026 16:30 WIB — live `141c13d`: Admin Pengunjung ditata dengan tab, default hari ini, pagination detail dan kunjungan terbaru, kartu lokasi bisa dibuka. Backup `/root/pdf_project-code-backup-202610271630-admin.tgz`; layanan aktif; `/admin/`, `/admin/api/session`, dan `/api/capabilities` HTTPS 200. Tes admin 10/10 lulus; suite penuh punya 5 kegagalan JS dan 1 Python di area lain. Owner meminta deploy langsung.
 
 > Wajib diwaca sakdurunge ndemek VPS. Salah login = ke-ban fail2ban.
