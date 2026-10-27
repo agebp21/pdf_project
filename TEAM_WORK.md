@@ -1,5 +1,6 @@
 # Koordinasi tim AI
 
+- FLIPBOOK-EDIT-TO-ORGANIZE (27 Okt, Codex): `28f8202` live. Tombol Edit PDF kembali ke workspace Organize dan meneruskan PDF aktif; cache JS baru. QA terkait, JS 59/59, Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.
 - ADMIN-DAILY-ROW (27 Okt, Codex): `292640a` live. Klik baris Laporan harian membuka detail pengunjung tanggal itu; Enter/spasi juga aktif. Browser, JS 59/59, Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.
 - ADMIN-MEMBER-RESET-ALL (27 Okt, Codex): `a385f43` live. Reset Member menghapus pencarian, tanggal, dan pilihan paket lalu memuat semua member. Browser, JS 59/59, Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.
 - ADMIN-MEMBER-DATE-REVERT (27 Okt, Codex): `6ae46d1` live. Default Dari/Sampai Member kembali kosong, Reset juga kosong (membatalkan default hari ini `0321407`). Browser, JS 59/59, Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.

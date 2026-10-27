@@ -2,6 +2,7 @@
 
 ## Log terbaru
 
+- 27 Oktober 2026 — live `28f8202`: tombol Edit PDF di Flipbook kembali menuju `converter.html?tool=organize-pdf` dengan PDF aktif lewat FlipbookTransfer; cache JS `organize-return1`. QA Flipbook dan Organize lulus; JS 59/59, Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261027-edit-organize-28f8202.tgz`; kedua layanan aktif; Flipbook/JS/Organize/API/admin HTTPS 200.
 - 27 Oktober 2026 — live `292640a`: seluruh baris Laporan harian Pengunjung bisa diklik atau dibuka dengan Enter/spasi menuju daftar detail tanggal tersebut. Tes browser mouse/keyboard, JS 59/59, Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261027-daily-row-292640a.tgz`; kedua layanan aktif; admin/sesi/capabilities HTTPS 200.
 - 27 Oktober 2026 — live `a385f43`: tombol Reset Member menghapus pencarian, rentang tanggal, dan filter paket sekaligus, lalu memuat semua member dari halaman pertama. Tes browser query kosong, JS 59/59, Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261027-member-reset-all-a385f43.tgz`; kedua layanan aktif; admin/sesi/capabilities HTTPS 200.
 - 27 Oktober 2026 — live `6ae46d1`: permintaan owner, default filter tanggal Member dikembalikan kosong; Reset juga mengosongkan Dari/Sampai. Tes browser nilai awal/Reset, JS 59/59 dan Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261027-member-date-revert-6ae46d1.tgz`; kedua layanan aktif; admin/sesi/capabilities HTTPS 200.
