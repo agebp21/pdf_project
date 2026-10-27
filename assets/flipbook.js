@@ -294,7 +294,7 @@
       if (project) for (const [index,config] of Object.entries(project.overlays)) { overlays.set(Number(index),config); renderOverlay(Number(index),config); }
       $('#build-download').hidden = true;
       $('#document-name').textContent = name;
-      draftName = name; hideDraft(); saveDraft();
+      draftName = name; saveDraft();
       $('#target-page').replaceChildren(...newElements.map((_, index) => {
         const option = document.createElement('option'); option.value = String(index); option.textContent = L('Page ', 'Halaman ') + (index + 1); return option;
       }));
@@ -846,7 +846,6 @@
   async function openSources(list) {
     const files = [...list];
     if (!files.length || opening || exporting || adding) return;
-    hideDraft();
     adding = true; $('#add-dialog').classList.add('is-busy');
     try {
       const first = files[0], ext = extOf(first.name), base = first.name.replace(/\.[^.]+$/, '') || 'document';
@@ -1153,7 +1152,6 @@
   // when those must survive. Storage lives in flipbook-export.js so the
   // save/load round-trip is unit-testable.
   let draftName = '', draftTimer = 0;
-  function hideDraft() { const box = $('#draft-box'); if (box) box.hidden = true; }
   function saveDraft() {
     if (!sourcePdf || !keeps()) return;
     const titleEl = $('#export-title');
@@ -1360,13 +1358,8 @@
   const titleInput = $('#export-title');
   if (titleInput) titleInput.addEventListener('input', queueDraft);
   document.addEventListener('visibilitychange', () => { if (document.hidden) saveDraft(); });
-  // No incoming document (converter handoff, library, link): offer the
-  // autosaved draft back instead of a blank editor.
-  // A refresh brings the book straight back (no question); opening the
-  // editor fresh still asks, so starting a new document stays easy.
-  const reloaded = (() => { try { return performance.getEntriesByType('navigation')[0].type === 'reload'; } catch (e) { return false; } })();
+  // With no incoming document, restore the saved draft without adding controls to the sidebar.
   async function resumeDraft(draft) {
-    hideDraft();
     if (await openPdf(draft.blob, draft.name)) {
       if (draft.title) $('#export-title').value = draft.title;
       draftName = draft.name; saveDraft();
@@ -1375,13 +1368,7 @@
   if (!fromLibrary && !handedLink && !handedJournal && !handedBook && !source) {
     loadCaps().then(() => keeps() ? FlipbookExport.draftLoad() : FlipbookExport.draftClear().then(() => null)).then(draft => {
       if (!draft || !draft.blob || sourcePdf) return;
-      if (reloaded) { resumeDraft(draft); return; }
-      const box = $('#draft-box'); if (!box) return;
-      $('#draft-resume').textContent = L('Continue saved project', 'Lanjutkan proyek tersimpan');
-      $('#draft-discard').textContent = L('Discard', 'Buang');
-      box.hidden = false;
-      $('#draft-resume').onclick = () => resumeDraft(draft);
-      $('#draft-discard').onclick = async () => { hideDraft(); await FlipbookExport.draftClear(); };
+      resumeDraft(draft);
     });
   }
   if (source) {    (async () => {

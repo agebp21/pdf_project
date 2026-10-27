@@ -6,7 +6,7 @@
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=pro">
   <title>PDF to Flipbook — MyFlipbook</title>
   <link rel="stylesheet" href="assets/animation.css">
-  <link rel="stylesheet" href="assets/flipbook.css?v=toolbar-wrap1">
+  <link rel="stylesheet" href="assets/flipbook.css?v=draft-simple1">
   <link rel="stylesheet" href="assets/export/book-effects.css?v=back-paper7">
   <link rel="stylesheet" href="assets/theme-cream.css?v=fit">
   <link rel="stylesheet" href="assets/ui-clay.css">
@@ -29,7 +29,7 @@
   <script defer src="/assets/site-header.js"></script>
 <script defer src="assets/auth.js"></script>
   <script defer src="assets/drive-picker.js?v=folder"></script>
-  <script defer src="assets/flipbook.js?v=organize-new-tab1"></script>
+  <script defer src="assets/flipbook.js?v=draft-simple1"></script>
   <link rel="stylesheet" href="assets/flipbook-guide.css?v=3">
   <script defer src="assets/flipbook-guide.js?v=3"></script>
   <style>
@@ -65,10 +65,7 @@
         <div class="panel-heading"><span class="step">01</span><h2 data-en="Choose document">Pilih dokumen</h2></div>
         <button id="add-file" class="primary add-file" type="button" aria-haspopup="dialog" data-en="＋ Add source">＋ Tambah sumber</button>
         <input id="pdf-file" type="file" accept="application/pdf,.pdf,.docx,.doc,.xlsx,.xls,.csv,.pptx,.ppt,.jpg,.jpeg,.png,.webp,.gif,.bmp,.avif,image/*" multiple hidden>
-        <p id="load-status" class="feedback" role="status"><span data-en="No document yet.">Belum ada dokumen.</span></p>
-        <div id="draft-box" hidden>
-          <div style="display:flex;gap:.5rem"><button id="draft-resume" class="secondary" type="button">Lanjutkan</button><button id="draft-discard" class="secondary" type="button" data-en="Discard">Buang</button></div>
-        </div>
+        <p id="load-status" class="feedback" role="status" aria-live="polite"></p>
         <p class="archive-line"><span id="archive-status" class="archive-status" role="status"></span></p>
         <button type="button" id="save-library" class="secondary archive-link">📚 Open My Library</button>
         <!-- Editor animasi disembunyikan sementara atas permintaan pengguna. -->

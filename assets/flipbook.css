@@ -20,7 +20,7 @@ body:has(.preview.reading-fullscreen){overflow:hidden}
 body:has(.preview.reading-fullscreen) .topbar,body:has(.preview.reading-fullscreen) .sh-wrap,body:has(.preview:fullscreen) .sh-wrap{display:none}
 /* Progress stays visible over the pages without intercepting turns, drags or taps. */
 #reader-stage{position:relative}
-#load-status.is-loading{position:absolute;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
+#load-status{position:absolute;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .reader-loading{position:absolute;inset:0;z-index:20;display:grid;place-items:center;pointer-events:none;user-select:none}
 .reader-loading[hidden]{display:none}
 .reader-loading__circle{position:relative;width:clamp(150px,18vw,186px);aspect-ratio:1;border-radius:50%;background:rgba(24,55,44,.35);opacity:.28;filter:drop-shadow(0 10px 20px rgba(33,61,50,.1))}
