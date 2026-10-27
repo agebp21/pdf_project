@@ -53,6 +53,8 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 - Paywall ON; pembayaran **dipause** (`PAYMENTS_PAUSED=1` nang `.env`, key Midtrans/Tripay/Lemon durung diisi) — upgrade member saiki lewat `--grant`. Nguripke: isi key gateway, tes, banjur guwang/setel `PAYMENTS_PAUSED=0` + `systemctl restart myflipbook`.
 - Ojo ngganti password root / user lewat SSH; urusan kredensial domain-e owner.
 
+27 Oktober2026 09:40WIB - Codex: live `e25b12b`. Sampel majalah entuk kaca sampul mburi hard kanthi desain ijo; jumlah kaca dadi 18 supaya kaca isi pungkasan ora dadi pasangan lan buku nutup kaya majalah. Cache-bust `magazine-3`. Backup `/root/pdf_project-code-backup-20261027094035.tgz`; layanan aktif, homepage, JS, lan CSS HTTPS200.
+
 27 Oktober2026 09:38WIB - Codex: live `9d060d0`. Sampel majalah beranda saiki nyelarasake sampul pratinjau karo sampul Grand Designs lan nalika dibukak nuduhake 17 kaca saka PDF sing diwenehake; kabeh aset WebP kira-kira 0.97 MB. Cache-bust `magazine-2`. Backup `/root/pdf_project-code-backup-20261027093739.tgz`; `myflipbook` aktif, homepage lan kabeh 17 kaca HTTPS200.
 
 26 Oktober2026 23:26WIB - Codex: live `3fe4e93`. Beranda saiki duwe telung conto sing bisa diklik: Katalog Sekar Bumi, Buku, lan Majalah Grand Designs. Sampul majalah dioptimalake dadi WebP 64 KB; pilihan ngganti sampul flipbook pratinjau. Backup `/root/pdf_project-code-backup-20261026225416.tgz`; `myflipbook` aktif, homepage lan sampul majalah HTTPS200.
