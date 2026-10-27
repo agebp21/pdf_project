@@ -87,10 +87,6 @@
   .visit-pane .grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:10px}
   .visit-pane .card{padding:10px 12px;border-radius:12px}
   .visit-pane .card .n{font-size:22px}
-  .visit-detail-dialog{width:min(680px,calc(100vw - 28px));max-height:min(80dvh,720px);padding:20px;border:1px solid var(--line);border-radius:18px;background:var(--card);color:var(--ink);box-shadow:0 24px 70px #112b2240;overflow:auto}
-  .visit-detail-dialog::backdrop{background:#14271ca8}
-  .visit-detail-dialog h3{margin:0;font-size:18px}
-  .visit-detail-dialog .visit-table-wrap{max-height:60dvh;overflow:auto}
   .visit-pane .bars{height:112px}
   .visit-pane .two{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
   .visit-pane[data-visit-pane="locations"] .two{grid-template-columns:repeat(2,minmax(0,1fr))}
@@ -507,7 +503,6 @@ $('#visit-search').oninput = () => { visitorPage = 1; recentPage = 1; filterVisi
 function filterVisitRows() {
   const query = $('#visit-search').value.trim().toLowerCase();
   document.querySelectorAll('#visit-view table tr').forEach(row => {
-    if (row.closest('#visit-drilldown')) return;
     if (row.closest('#visitor-detail')) return;
     if (row.classList.contains('recent-visit-row')) return;
     if (row.classList.contains('visitor-expanded')) { row.hidden = !row.previousElementSibling || row.previousElementSibling.hidden; return; }
@@ -550,6 +545,7 @@ function filterVisitRows() {
 }
 let visitData = null;
 let visitPane = 'summary';
+let visitorDetailMode = '';
 let visitorPage = 1, visitorPageSize = 10;
 let recentPage = 1, recentPageSize = 10;
 function setVisitPane(name) {
@@ -567,7 +563,7 @@ function locationMetric(rows, label, detail) {
 }
 document.addEventListener('click', event => {
   const dayButton = event.target.closest('[data-visitor-day]');
-  if (dayButton) { setVisitPane('people'); loadVisitorDetail(dayButton.dataset.visitorDay); return; }
+  if (dayButton) { visitorDetailMode = ''; setVisitPane('people'); loadVisitorDetail(dayButton.dataset.visitorDay); return; }
   const locationButton = event.target.closest('[data-location-detail]');
   if (locationButton && visitData) {
     const key = locationButton.dataset.locationDetail;
@@ -581,27 +577,28 @@ document.addEventListener('click', event => {
   }
   const button = event.target.closest('[data-visit-detail]');
   if (!button || !visitData) return;
-  const kind = button.dataset.visitDetail, d = visitData;
-  let title, columns, rows;
+  const kind = button.dataset.visitDetail;
+  $('#visit-search').value = '';
+  filterVisitRows();
   if (kind === 'origins') {
-    title = 'Asal pengunjung'; columns = ['Negara', 'Jumlah pengunjung'];
-    rows = (d.countries || []).map(row => [row.name || 'Tidak diketahui', num(row.views)]);
-  } else {
-    const config = {visitors:['Total kunjungan','visitors'], views:['Tampilan halaman','views'], today:['Pengunjung hari ini','visitors'], members:['Member yang berkunjung','visitors'], newMembers:['Member baru','members']}[kind];
-    title = config[0];
-    if (kind === 'members') {
-      columns = ['Waktu', 'Member', 'Halaman'];
-      rows = (d.recent || []).filter(row => row.member).map(row => [when(row.ts), row.member, row.path]);
-    } else {
-      columns = ['Tanggal', title];
-      const latestDay = d.daily.length ? d.daily[d.daily.length-1].day : '';
-      rows = d.daily.filter(row => kind === 'today' ? row.day === latestDay : row[config[1]]).slice().reverse().map(row => [row.day, num(row[config[1]])]);
-    }
+    setVisitPane('locations');
+    $('#visit-view [data-location-detail="countries"]')?.click();
+    return;
   }
-  const panel = $('#visit-drilldown');
-  panel.innerHTML = `<div class="row"><h3 id="visit-detail-heading" style="flex:1">${esc(title)}</h3><button class="ghost" type="button" id="visit-close-detail">Tutup</button></div>${kind === 'members' ? '<p class="muted">Rincian dari sampel kunjungan terbaru yang tersedia, bukan daftar lengkap seluruh periode.</p>' : ''}<div class="visit-table-wrap"><table><tr>${columns.map(label => `<th>${esc(label)}</th>`).join('')}</tr>${rows.map(row => `<tr>${row.map(value => `<td>${esc(value)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${columns.length}">Belum ada data.</td></tr>`}</table></div>`;
-  $('#visit-close-detail').onclick = () => panel.close();
-  panel.showModal();
+  if (kind === 'views') { setVisitPane('sources'); return; }
+  if (kind === 'newMembers') {
+    $('#member-q').value = '';
+    $('#member-start').value = $('#visit-start').value;
+    $('#member-end').value = $('#visit-end').value;
+    memberPlan = '';
+    document.querySelectorAll('[data-member-plan]').forEach(item => item.setAttribute('aria-pressed', 'false'));
+    open('members');
+    return;
+  }
+  visitorDetailMode = kind === 'members' ? 'members' : '';
+  setVisitPane('people');
+  const day = kind === 'today' ? $('#visit-end').value : '';
+  loadVisitorDetail(day);
 });
 const DEVICE = {desktop: 'Komputer', mobile: 'HP', tablet: 'Tablet'};
 const place = p => [p.city, p.region, p.country].filter((x, i, all) => x && all.indexOf(x) === i).join(', ') || '—';
@@ -637,11 +634,16 @@ async function loadVisitorDetail(focusDay = '') {
     rangeLabel = focusDay;
   }
   try { d = await api('/api/visitors?days=' + (focusDay ? 1 : visitorDays) + query); } catch (e) { box.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; return; }
-  const c = d.counts || {};
+  const items = visitorDetailMode === 'members' ? d.items.filter(v => v.members && v.members.length) : d.items;
+  const c = visitorDetailMode === 'members' ? items.reduce((counts, item) => {
+    counts[item.status] = (counts[item.status] || 0) + 1;
+    return counts;
+  }, {}) : d.counts || {};
   const on = teamBrowser();
   visitorPage = 1;
   const btn = (key, kind, label) => `<button class="ghost" style="padding:2px 8px;font-size:11.5px" onclick="labelVisitor('${key}','${kind}')">${label}</button>`;
-  box.innerHTML = `<h3>Detail pengunjung <span class="muted" style="font-weight:400;font-size:13px">(${esc(rangeLabel)}, per pengunjung per hari)</span></h3>
+  box.innerHTML = `<h3>${visitorDetailMode === 'members' ? 'Member yang berkunjung' : 'Detail pengunjung'} <span class="muted" style="font-weight:400;font-size:13px">(${esc(rangeLabel)}, per pengunjung per hari)</span></h3>
+    ${visitorDetailMode === 'members' ? `<p class="muted">${num(items.length)} kunjungan member sesuai periode. Klik baris untuk melihat halaman dan alamat email yang tersedia.</p>` : ''}
     <div class="row">
       <span class="tag paid">✅ Asli ${num(c.human || 0)}</span><span class="tag pending">⚠️ Ragu ${num(c.unsure || 0)}</span>
       <span class="tag failed">❌ Tim ${num(c.team || 0)}</span><span class="tag failed">❌ Mesin ${num(c.bot || 0)}</span>
@@ -651,7 +653,7 @@ async function loadVisitorDetail(focusDay = '') {
     <p class="muted" style="margin-top:0">Klik baris pengunjung untuk membuka detail dan tindak lanjut. Email promo tersedia untuk member login yang sudah memverifikasi email; tamu tetap anonim.</p>
     <div class="visitor-pagination"><span id="visitor-page-info" role="status"></span><label>Baris per halaman <select id="visitor-page-size" aria-label="Jumlah pengunjung per halaman"><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option></select></label><button type="button" class="ghost" id="visitor-prev">Sebelumnya</button><button type="button" class="ghost" id="visitor-next">Berikutnya</button></div>
     <div class="visitor-table-wrap"><table><tr><th>Pengunjung</th><th>Kapan</th><th>Halaman</th><th>Status</th><th>Tindak lanjuti</th><th>Tandai</th></tr>
-    ${d.items.map((v, index) => {
+    ${items.map((v, index) => {
       const [icon, word, tag] = STATUS[v.status] || STATUS.human;
       const who = `<b>${esc(place(v))}</b><br><span class="muted">${esc(v.isp || '—')} · ${esc(DEVICE[v.device] || v.device)}${v.members.length ? ' · member ' + v.members.map(esc).join(', ') : ' · tamu'}${v.ref ? ' · dari ' + esc(v.ref) : ''}</span>`;
       const time = esc(when(v.first)) + (v.last - v.first > 60 ? '<br><span class="muted">s/d ' + esc(when(v.last)) + '</span>' : '');
@@ -684,7 +686,7 @@ async function loadVisitorDetail(focusDay = '') {
     filterVisitRows();
   };
   box.querySelectorAll('tr.visitor-click-row').forEach(row => {
-    const visitor = d.items.find(item => item.key === row.dataset.visitorKey);
+    const visitor = items.find(item => item.key === row.dataset.visitorKey);
     if (!visitor) return;
     row.onclick = event => { if (!event.target.closest('a,button')) toggleVisitorDetails(row, visitor); };
     row.onkeydown = event => {
@@ -716,7 +718,6 @@ async function loadVisits(days) {
     <section class="visit-pane active" data-visit-pane="summary"><div class="grid">${visitMetric((d.countries || []).length, 'Negara asal', 'origins')}${visitMetric(d.visitors, 'Total pengunjung &middot; ' + days + ' hari', 'visitors')}
       ${visitMetric(d.views, 'Tampilan halaman', 'views')}${visitMetric((d.today || {}).visitors, visitRange ? 'Pengunjung pada tanggal akhir' : 'Pengunjung hari ini', 'today')}
       ${visitMetric(d.members, 'Member yang berkunjung', 'members')}${visitMetric(d.newMembers, 'Member baru', 'newMembers')}</div>
-    <dialog id="visit-drilldown" class="visit-detail-dialog" aria-labelledby="visit-detail-heading"></dialog>
     <div class="panel"><h3>Aktivitas per hari</h3>${bars(d.daily)}</div></section>
     <section class="visit-pane" data-visit-pane="daily"><div class="panel"><h3>Laporan harian</h3><div class="visit-table-wrap"><table><tr><th>Tanggal</th><th>Pengunjung</th><th>Tampilan</th><th>Member baru</th><th>Konversi</th><th>AI</th><th>Karakter diterjemahkan</th><th>Buku disimpan</th></tr>
       ${report.map(r => `<tr><td>${esc(r.day)}</td><td><button type="button" class="summary-link daily-visitor-link" data-visitor-day="${esc(r.day)}" aria-label="Lihat ${num(r.visitors)} pengunjung tanggal ${esc(r.day)}">${num(r.visitors)}</button></td><td>${num(r.views)}</td><td>${num(r.members)}</td><td>${num(r.office)}</td><td>${num(r.ai)}</td><td>${num(r.translate)}</td><td>${num(r.books)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Belum ada data.</td></tr>'}</table></div></div></section>
@@ -732,7 +733,13 @@ async function loadVisits(days) {
       <div class="visit-table-wrap"><table id="visit-recent-table"><tr><th>Waktu</th><th>Halaman</th><th>Lokasi</th><th>Provider</th><th>Perangkat</th><th>Member</th><th>Sumber</th></tr>
       ${(d.recent || []).map((r, index) => `<tr class="recent-visit-row" ${index >= recentPageSize ? 'hidden' : ''}><td>${esc(when(r.ts))}</td><td>${esc(r.path)}</td><td>${esc(place(r))}</td><td>${esc(r.isp) || '-'}</td><td>${esc(DEVICE[r.device] || r.device)}</td><td>${esc(r.member || '') || '<span class="muted">Tamu</span>'}</td><td>${esc(r.ref) || '-'}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Belum ada data.</td></tr>'}</table></div></div></section>
     </div>`;
-  $('#visit-tabs').querySelectorAll('[data-visit-pane-tab]').forEach(button => button.onclick = () => setVisitPane(button.dataset.visitPaneTab));
+  $('#visit-tabs').querySelectorAll('[data-visit-pane-tab]').forEach(button => button.onclick = () => {
+    if (button.dataset.visitPaneTab === 'people' && visitorDetailMode) {
+      visitorDetailMode = '';
+      loadVisitorDetail();
+    }
+    setVisitPane(button.dataset.visitPaneTab);
+  });
   setVisitPane(visitPane);
   recentPage = 1;
   $('#recent-page-size').value = String(recentPageSize);
