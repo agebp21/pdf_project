@@ -1373,10 +1373,7 @@
       if (!draft || !draft.blob || sourcePdf) return;
       if (reloaded) { resumeDraft(draft); return; }
       const box = $('#draft-box'); if (!box) return;
-      const when = draft.savedAt ? new Date(draft.savedAt).toLocaleString() : '';
-      $('#draft-text').textContent = L(`Continue with “${draft.name}”${when ? ' (' + when + ')' : ''}? Unsaved edits other than notes are lost otherwise.`,
-        `Lanjutkan “${draft.name}”${when ? ' (' + when + ')' : ''}? Kalau tidak, editan yang belum tersimpan (selain catatan) akan hilang.`);
-      $('#draft-resume').textContent = L('Continue', 'Lanjutkan');
+      $('#draft-resume').textContent = L('Continue saved project', 'Lanjutkan proyek tersimpan');
       $('#draft-discard').textContent = L('Discard', 'Buang');
       box.hidden = false;
       $('#draft-resume').onclick = () => resumeDraft(draft);
