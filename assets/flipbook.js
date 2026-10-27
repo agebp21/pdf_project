@@ -762,9 +762,7 @@
         loading(L(`Reading text in pictures (OCR) ${n + 1} / ${todo.length}…`, `Membaca teks di gambar (OCR) ${n + 1} / ${todo.length}…`), (n + 1) / todo.length);
       }
       loading(null);
-      $('#load-status').textContent = found
-        ? L(`Text found in ${found} picture page${found === 1 ? '' : 's'} (OCR): highlighter and audio book work there now.`, `Teks ditemukan di ${found} halaman gambar (OCR): stabilo dan audio book sekarang bisa dipakai di sana.`)
-        : L('No readable text in the picture pages.', 'Tidak ada teks yang terbaca di halaman gambar.');
+      $('#load-status').textContent = '';
       if (found && libraryId) archiveBook();                   // keep it in My Library
     } catch (cause) {
       if (!gone()) { loading(null); $('#load-status').textContent = L('Text in pictures skipped: ', 'Teks di gambar dilewati: ') + cause.message; }
