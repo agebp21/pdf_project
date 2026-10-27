@@ -40,8 +40,8 @@
   th,td{text-align:left;padding:7px 8px;border-bottom:1px solid var(--line);vertical-align:top}
   th{color:var(--muted);font-weight:600;font-size:12px;white-space:nowrap}
   tr.click{cursor:pointer} tr.click:hover td{background:#f3ecdf}
-  tr.visitor-click-row{cursor:pointer}
-  tr.visitor-click-row:hover td,tr.visitor-click-row:focus-visible td{background:#f3ecdf}
+  tr.visitor-click-row,tr.daily-visit-row{cursor:pointer}
+  tr.visitor-click-row:hover td,tr.visitor-click-row:focus-visible td,tr.daily-visit-row:hover td,tr.daily-visit-row:focus-visible td{background:#f3ecdf}
   tr.visitor-expanded td{background:#fffaf1;border-bottom:2px solid var(--accent)}
   .daily-visitor-link{padding:0 4px;font:inherit;font-weight:600}
   .tag{display:inline-block;padding:1px 8px;border-radius:999px;font-size:11.5px;font-weight:600;background:#eee6d6;color:#5b5446}
@@ -609,6 +609,12 @@ document.addEventListener('click', event => {
   const day = kind === 'today' ? $('#visit-end').value : '';
   loadVisitorDetail(day);
 });
+document.addEventListener('keydown', event => {
+  const row = event.target.closest('tr.daily-visit-row');
+  if (!row || !['Enter', ' '].includes(event.key)) return;
+  event.preventDefault();
+  row.click();
+});
 const DEVICE = {desktop: 'Komputer', mobile: 'HP', tablet: 'Tablet'};
 const place = p => [p.city, p.region, p.country].filter((x, i, all) => x && all.indexOf(x) === i).join(', ') || '—';
 // Visitor list: one row per visitor per day, with a verdict (person / team /
@@ -727,7 +733,7 @@ async function loadVisits(days) {
       ${visitMetric(d.members, 'Member yang berkunjung', 'members')}${visitMetric(d.newMembers, 'Member baru', 'newMembers')}</div>
     <div class="panel"><h3>Aktivitas per hari</h3>${bars(d.daily)}</div></section>
     <section class="visit-pane" data-visit-pane="daily"><div class="panel"><h3>Laporan harian</h3><div class="visit-table-wrap"><table><tr><th>Tanggal</th><th>Pengunjung</th><th>Tampilan</th><th>Member baru</th><th>Konversi</th><th>AI</th><th>Karakter diterjemahkan</th><th>Buku disimpan</th></tr>
-      ${report.map(r => `<tr><td>${esc(r.day)}</td><td><button type="button" class="summary-link daily-visitor-link" data-visitor-day="${esc(r.day)}" aria-label="Lihat ${num(r.visitors)} pengunjung tanggal ${esc(r.day)}">${num(r.visitors)}</button></td><td>${num(r.views)}</td><td>${num(r.members)}</td><td>${num(r.office)}</td><td>${num(r.ai)}</td><td>${num(r.translate)}</td><td>${num(r.books)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Belum ada data.</td></tr>'}</table></div></div></section>
+      ${report.map(r => `<tr class="daily-visit-row" data-visitor-day="${esc(r.day)}" tabindex="0" role="button" aria-label="Lihat detail pengunjung tanggal ${esc(r.day)}"><td>${esc(r.day)}</td><td><span class="summary-link daily-visitor-link">${num(r.visitors)}</span></td><td>${num(r.views)}</td><td>${num(r.members)}</td><td>${num(r.office)}</td><td>${num(r.ai)}</td><td>${num(r.translate)}</td><td>${num(r.books)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Belum ada data.</td></tr>'}</table></div></div></section>
     <section class="visit-pane" data-visit-pane="sources"><div class="two"><div class="panel"><h3>Halaman terpopuler</h3>${list(d.pages, n => n)}</div><div class="panel"><h3>Sumber kunjungan</h3>${list(d.referrers, n => n)}</div><div class="panel"><h3>Perangkat</h3>${list(d.devices, n => DEVICE[n] || n)}</div></div></section>
     <section class="visit-pane" data-visit-pane="locations"><h3>Lokasi pengunjung <span class="muted" style="font-weight:400;font-size:13px">(perkiraan berdasarkan jaringan)</span></h3>
     ${d.geoReady ? '' : '<p class="muted">Data lokasi belum tersedia di server.</p>'}
