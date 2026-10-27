@@ -53,6 +53,8 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 - Paywall ON; pembayaran **dipause** (`PAYMENTS_PAUSED=1` nang `.env`, key Midtrans/Tripay/Lemon durung diisi) — upgrade member saiki lewat `--grant`. Nguripke: isi key gateway, tes, banjur guwang/setel `PAYMENTS_PAUSED=0` + `systemctl restart myflipbook`.
 - Ojo ngganti password root / user lewat SSH; urusan kredensial domain-e owner.
 
+27 Oktober2026 09:57WIB - Codex: live `0ded5b7`. Sampul mburi katalog, buku, lan majalah saiki polos warna ijo peteng tanpa tulisan utawa logo. Cache-bust `magazine-5`; homepage, JavaScript, lan CSS HTTPS200. Backup `/root/pdf_project-code-backup-20261027095715.tgz`.
+
 27 Oktober2026 09:46WIB - Codex: live `dfd4008`. Kaca katalog Sekar Bumi saiki uga nduwe sampul mburi dhewe; sampel beranda katalog 20 kaca, buku tetep nganggo sampul pungkasane, lan majalah 18 kaca. Cache-bust `magazine-4`. Backup `/root/pdf_project-code-backup-20261027094614.tgz`; layanan aktif, homepage/JS/CSS HTTPS200.
 
 27 Oktober2026 09:40WIB - Codex: live `e25b12b`. Sampel majalah entuk kaca sampul mburi hard kanthi desain ijo; jumlah kaca dadi 18 supaya kaca isi pungkasan ora dadi pasangan lan buku nutup kaya majalah. Cache-bust `magazine-3`. Backup `/root/pdf_project-code-backup-20261027094035.tgz`; layanan aktif, homepage, JS, lan CSS HTTPS200.
