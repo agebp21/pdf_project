@@ -1,5 +1,6 @@
 # Koordinasi tim AI
 
+- FLIPBOOK-COPY (27 Okt, Codex): `11aa573` live. Bantuan format file di bawah Tambah sumber dan paragraf peringatan draft dihapus; lanjut draft tetap berfungsi lewat tombol berlabel jelas. JS 59/59, Python 233/233 lulus. Backup dan verifikasi di `DEPLOY.md`.
 - MYFLIPBOOK-FIXES (27 Okt, Codex): `14e400b` live. Keterangan katalog 20 halaman selaras dengan sampul belakang. Lima kegagalan JS lan satu Python dari rilis sebelumnya sudah diperbaiki lewat tes yang mengikuti perilaku saat ini dan input arsip yang stabil; browser QA diarahkan ke modul/URL lokal. Suite JS 59/59, Python 233/233 lulus. Rincian backup dan verifikasi di `DEPLOY.md`.
 - ADMIN-PENGUNJUNG (27 Okt, Codex): `141c13d` live. Tab Pengunjung ditata ringkas, default hari ini, detail dan kunjungan terbaru berpaginasi, kartu lokasi dapat dibuka. Backup dan verifikasi tercatat di `DEPLOY.md`. Tes admin 10/10 lulus; suite penuh masih punya kegagalan di area lain, owner meminta deploy langsung.
 
