@@ -6,11 +6,12 @@
   if (!book || !demo) return;
   var hero = demo.closest('.hh');
   var flip = null, loading = null, opener = null, settle = null, busy = false, tools = null;
-  var originalPages = null, catalogPages = null, showingCatalog = false;
+  var originalPages = null, catalogPages = null, magazinePages = null, showingCatalog = false, showingMagazine = false;
   function applySample() {
     if (!flip || busy) return;
     var catalog = hero.dataset.sample === 'interior';
-    if (catalog === showingCatalog) return;
+    var magazine = hero.dataset.sample === 'magazine';
+    if (catalog === showingCatalog && magazine === showingMagazine) return;
     if (tools) tools.pause();
     if (catalog && !catalogPages) {
       catalogPages = [];
@@ -20,8 +21,16 @@
         page.appendChild(image); catalogPages.push(page);
       }
     }
-    showingCatalog = catalog;
-    flip.updateFromHtml(catalog ? catalogPages : originalPages);
+    if (magazine && !magazinePages) {
+      magazinePages = [];
+      for (var m=1; m<=17; m++) {
+        var magazinePage = document.createElement('div'); magazinePage.className = 'hh-page hh-catalog-page'; magazinePage.dataset.density = 'soft';
+        var magazineImage = document.createElement('img'); magazineImage.src = 'assets/samples/grand-designs/page-' + String(m).padStart(2,'0') + '.webp'; magazineImage.alt = 'Grand Designs Australia · ' + m; magazineImage.decoding = 'async';
+        magazinePage.appendChild(magazineImage); magazinePages.push(magazinePage);
+      }
+    }
+    showingCatalog = catalog; showingMagazine = magazine;
+    flip.updateFromHtml(catalog ? catalogPages : magazine ? magazinePages : originalPages);
     flip.turnToPage(0); if (settle) settle(); status();
   }
   var EN = function () { return window.I18N && I18N.get && I18N.get() === 'en'; };
@@ -53,7 +62,7 @@
       document.getElementById('hh-tool-open').disabled = document.getElementById('hh-demo-next').disabled;
       document.getElementById('hh-tool-open').textContent = i === 0 ? (EN() ? 'Open cover →' : 'Buka sampul →') : (EN() ? 'Next →' : 'Berikutnya →');
     }
-    if (tools && !showingCatalog) tools.refresh();
+    if (tools && !showingCatalog && !showingMagazine) tools.refresh();
   }
   function build() {
     var box = document.getElementById('hh-demo-book'), pages = [].slice.call(box.querySelectorAll('.hh-page'));

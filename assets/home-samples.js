@@ -14,10 +14,19 @@
   let selected = null;
   const closedCover = document.querySelector('#hh-book .hh-cover');
   const originalCover = closedCover ? closedCover.innerHTML : '';
+  const demoCover = document.querySelector('#hh-demo-book .hh-page-cover .hh-cover');
+  const originalDemoCover = demoCover ? demoCover.innerHTML : '';
   function render() {
     if (!selected) return;
     const sample = samples[selected], lang = en() ? 1 : 0;
     hero.dataset.sample = selected;
+    if (demoCover) {
+      if (selected === 'magazine') {
+        demoCover.replaceChildren();
+        const cover = document.createElement('img'); cover.src = 'assets/samples/grand-designs/page-01.webp'; cover.alt = 'Grand Designs Australia magazine cover';
+        cover.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain'; demoCover.append(cover);
+      } else if (demoCover.querySelector('img[alt="Grand Designs Australia magazine cover"]')) demoCover.innerHTML = originalDemoCover;
+    }
     if (selected === 'interior') {
       if (closedCover) {
         closedCover.replaceChildren();
