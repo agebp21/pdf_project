@@ -1288,14 +1288,19 @@
   $('#open-project').onclick=async ()=>{ if(await allowed('openproject')) $('#project-file').click(); };
   $('#organize-pages').onclick=async ()=>{
     if(!sourcePdf){ error(L('Open a PDF first.','Buka PDF dulu.')); return; }
-    if(!(await allowed('organize'))) return;
-    const raw=(($('#document-name')||{}).textContent||'').trim()||'document.pdf';
-    const name=/\.pdf$/i.test(raw)?raw:raw+'.pdf';
+    const editWindow=window.open('', '_blank');
+    if(!editWindow){ error(L('Allow pop-ups to open Organize PDF in a new tab.','Izinkan pop-up agar Organize PDF bisa dibuka di tab baru.')); return; }
+    editWindow.opener=null;
     try{
+      if(!(await allowed('organize'))){ editWindow.close(); return; }
+      const raw=(($('#document-name')||{}).textContent||'').trim()||'document.pdf';
+      const name=/\.pdf$/i.test(raw)?raw:raw+'.pdf';
       loading(L('Preparing Organize PDF…','Menyiapkan Organize PDF…'));
       const id=await FlipbookTransfer.save(sourcePdf, name);
-      location.href='converter.html?tool=organize-pdf&source='+encodeURIComponent(id);
-    }catch(cause){ loading(null); error(L('Could not open Organize PDF: ','Tidak bisa membuka Organize PDF: ')+(cause&&cause.message||cause)); }
+      if(editWindow.closed){ await FlipbookTransfer.remove(id); return; }
+      editWindow.location.replace('converter.html?tool=organize-pdf&source='+encodeURIComponent(id));
+      loading(null);
+    }catch(cause){ editWindow.close(); loading(null); error(L('Could not open Organize PDF: ','Tidak bisa membuka Organize PDF: ')+(cause&&cause.message||cause)); }
   };
   fetch('/api/capabilities').then(async response=>{
     if(!response.ok)throw Error(L('The build service is not running','Layanan build belum berjalan'));
