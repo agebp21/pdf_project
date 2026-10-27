@@ -1,5 +1,6 @@
 # Koordinasi tim AI
 
+- FLIPBOOK-LOADING-OPACITY (27 Okt, Codex): `30762fc` live. Indikator loading bulat dibuat lebih tipis/transparan dengan angka progres tetap jelas; cache CSS dinaikkan ke `load-orb2`. JS 59/59, Python 233/233 lulus. Rincian di `DEPLOY.md`.
 - FLIPBOOK-LOADING (27 Okt, Codex): `7654b28` live. Indikator loading PDF/OCR bulat transparan di tengah buku menampilkan progres dan tidak menangkap pointer, supaya halaman tetap dapat digeser/dibalik ketika proses di latar belakang. Status sidebar disembunyikan saat loading; ARIA status tetap ada. JS 59/59, Python 233/233 lulus, browser desktop/HP diperiksa. Backup/verifikasi di `DEPLOY.md`.
 - FLIPBOOK-COPY (27 Okt, Codex): `11aa573` live. Bantuan format file di bawah Tambah sumber dan paragraf peringatan draft dihapus; lanjut draft tetap berfungsi lewat tombol berlabel jelas. JS 59/59, Python 233/233 lulus. Backup dan verifikasi di `DEPLOY.md`.
 - MYFLIPBOOK-FIXES (27 Okt, Codex): `14e400b` live. Keterangan katalog 20 halaman selaras dengan sampul belakang. Lima kegagalan JS lan satu Python dari rilis sebelumnya sudah diperbaiki lewat tes yang mengikuti perilaku saat ini dan input arsip yang stabil; browser QA diarahkan ke modul/URL lokal. Suite JS 59/59, Python 233/233 lulus. Rincian backup dan verifikasi di `DEPLOY.md`.
