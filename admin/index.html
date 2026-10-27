@@ -63,6 +63,57 @@
   .visit-date-row label{font-size:11px;color:var(--muted);display:grid;gap:4px}
   .visit-date-row input[type=date]{box-sizing:border-box;width:132px;min-width:0;height:32px;padding:4px 7px;border:1px solid var(--line);border-radius:8px;background:#fff;color:var(--ink);font:12px system-ui,sans-serif}
   .visit-date-row button{min-height:32px;padding:5px 11px;font-size:12px}
+  #app main:has(section[data-view="visits"]:not([hidden])){height:calc(100dvh - 66px);padding-top:14px;padding-bottom:14px;overflow:hidden}
+  section[data-view="visits"]:not([hidden]){height:100%;display:flex;flex-direction:column;min-height:0;overflow:hidden}
+  section[data-view="visits"]>h2{flex:none;margin-bottom:8px}
+  .visit-filters{flex:none;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:10px 12px;margin-bottom:8px}
+  .visit-filter-main{display:grid;grid-template-columns:minmax(160px,220px) minmax(220px,1fr);gap:10px;align-items:end}
+  .visit-control{display:grid;gap:4px;color:var(--muted);font-size:11px;font-weight:600}
+  .visit-control select,.visit-control input{width:100%;min-width:0;height:34px;border:1px solid var(--line);border-radius:8px;background:#fff;padding:5px 9px;color:var(--ink);font:13px system-ui,sans-serif}
+  .visit-filter-label{margin-top:8px;color:var(--muted);font-size:11px;font-weight:600}
+  .visit-filters .visit-date-row{margin:4px 0 0;gap:8px;align-items:flex-end}
+  .visit-filters .visit-date-row label{font-size:11px;color:var(--muted);font-weight:600}
+  .visit-filters .visit-date-row input[type=date]{width:140px;height:32px}
+  .visit-filters .visit-date-row #visit-range-error{flex:1 1 180px;min-height:0}
+  #visit-view{min-height:0;flex:1;display:flex;flex-direction:column;overflow:hidden}
+  .visit-export{flex:none;margin:0 0 8px;gap:8px;font-size:12px}
+  .visit-tabs{display:flex;gap:6px;flex:none;overflow-x:auto;scrollbar-width:thin;border-bottom:1px solid var(--line);margin-bottom:8px}
+  .visit-tabs button{background:transparent;border:0;border-bottom:3px solid transparent;border-radius:8px 8px 0 0;padding:8px 14px;color:var(--muted);font:inherit;cursor:pointer}
+  .visit-tabs button[aria-selected=true]{color:var(--pine);border-bottom-color:var(--pine);font-weight:700}
+  .visit-panes{min-height:0;flex:1;position:relative}
+  .visit-pane{display:none;position:absolute;inset:0;overflow:auto;padding:1px 2px 10px}
+  .visit-pane.active{display:block}
+  .visit-pane .panel{margin-bottom:10px;padding:12px}
+  .visit-pane .grid{grid-template-columns:repeat(6,minmax(0,1fr));gap:8px;margin-bottom:10px}
+  .visit-pane .card{padding:10px 12px;border-radius:12px}
+  .visit-pane .card .n{font-size:22px}
+  .visit-pane .bars{height:112px}
+  .visit-pane .two{grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}
+  .visit-pane[data-visit-pane="locations"] .two{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .location-cards{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .location-card{min-height:90px;display:flex;flex-direction:column;justify-content:center;gap:3px}
+  .location-card .n{font-size:22px;font-weight:700;color:var(--pine)}
+  .location-card .l{font-size:12px;color:var(--muted)}
+  .location-card:disabled{cursor:default;opacity:.78}
+  .location-card:disabled:hover{transform:none;box-shadow:none}
+  .visit-table-wrap{max-width:100%;overflow:auto}
+  .visit-pane table{font-size:12px}
+  .visit-pane th,.visit-pane td{padding:5px 7px}
+  .visitor-pagination{display:flex;align-items:center;justify-content:flex-end;gap:8px;flex-wrap:wrap;margin:10px 0 12px}
+  .visitor-pagination #visitor-page-info{margin-right:auto;color:var(--muted);font-size:12px}
+  .visitor-pagination label{display:flex;align-items:center;gap:6px;color:var(--muted);font-size:12px}
+  .visitor-pagination select{border:1px solid var(--line);border-radius:8px;background:#fff;padding:6px 8px;color:var(--ink);font:inherit}
+  #visitor-detail .visitor-table-wrap{max-width:100%;overflow:auto}
+  #visitor-detail table{min-width:860px;table-layout:fixed}
+  @media(max-width:760px){
+    #app main:has(section[data-view="visits"]:not([hidden])){height:calc(100dvh - 116px);padding:10px}
+    .visit-filter-main{grid-template-columns:1fr 1fr}
+    .visit-filter-main .visit-control:last-child{grid-column:1/-1}
+    .visit-filters .visit-date-row input[type=date]{width:132px}
+    .visit-pane .grid{grid-template-columns:repeat(2,minmax(0,1fr))}
+    .visit-pane .two{grid-template-columns:1fr}
+    .visit-tabs button{flex:0 0 auto;padding:8px 10px;font-size:12px}
+  }
   .member-toolbar{display:flex;flex-wrap:nowrap;gap:10px;align-items:center}
   .member-toolbar>input[type=search]{flex:1 1 180px;min-width:140px;width:auto}
   .member-toolbar>div[aria-label="Filter paket member"]{flex:0 0 auto;gap:8px}
@@ -171,11 +222,14 @@
     </section>
     <section data-view="visits" hidden>
       <h2>Pengunjung</h2>
-      <div class="row">
-        <label for="visit-days">Periode</label><select id="visit-days" style="padding:10px;border:1px solid var(--line);border-radius:10px;font:inherit"><option value="7">7 hari terakhir</option><option value="30" selected>30 hari terakhir</option><option value="90">90 hari terakhir</option><option value="365">1 tahun terakhir</option></select>
-        <input type="search" id="visit-search" placeholder="Cari lokasi, halaman, member, atau sumber…" aria-label="Cari data pengunjung" style="flex:1">
+      <div class="visit-filters">
+        <div class="visit-filter-main">
+        <label class="visit-control" for="visit-days">Periode<select id="visit-days"><option value="1" selected>Hari ini</option><option value="7">7 hari terakhir</option><option value="30">30 hari terakhir</option><option value="90">90 hari terakhir</option><option value="365">1 tahun terakhir</option></select></label>
+          <label class="visit-control" for="visit-search">Cari pengunjung<input type="search" id="visit-search" placeholder="Ketik lokasi, halaman, member, atau sumber" aria-label="Cari data pengunjung"></label>
+        </div>
+        <div class="visit-filter-label">Atur rentang tanggal</div>
+        <div class="row visit-date-row"><label>Dari<input id="visit-start" type="date"></label><label>Sampai<input id="visit-end" type="date"></label><button type="button" class="btn" id="visit-apply-range">Terapkan</button><button type="button" class="ghost" id="visit-reset-range">Reset</button><span id="visit-range-error" class="err" role="status"></span></div>
       </div>
-      <div class="row visit-date-row"><label>Mulai<input id="visit-start" type="date"></label><label>Sampai<input id="visit-end" type="date"></label><button type="button" class="btn" id="visit-apply-range">Terapkan</button><button type="button" class="ghost" id="visit-reset-range">Reset</button><span id="visit-range-error" class="err" role="status"></span></div>
       <div id="visit-view"></div>
     </section>
     <section data-view="server" hidden></section>
@@ -248,7 +302,7 @@ function open(tab, record = true) {
   else if (!record) history.replaceState({tab}, '', '#' + tab);
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.tab === tab)));
   document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== tab; });
-  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(30), server: loadServer, password: async () => {}};
+  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(1), server: loadServer, password: async () => {}};
   loaders[tab]()
     .catch(e => { document.querySelector(`[data-view="${tab}"]`).insertAdjacentHTML('afterbegin', `<p class="err">${esc(e.message)}</p>`); });
 }
@@ -438,21 +492,81 @@ $('#visit-apply-range').onclick = () => {
   loadVisits(Number($('#visit-days').value)).catch(error => { $('#visit-range-error').textContent = error.message; });
 };
 $('#visit-reset-range').onclick = () => { visitRange = null; $('#visit-start').value = $('#visit-end').value = ''; $('#visit-range-error').textContent = ''; loadVisits(Number($('#visit-days').value)); };
-$('#visit-search').oninput = () => filterVisitRows();
+$('#visit-search').oninput = () => { visitorPage = 1; recentPage = 1; filterVisitRows(); };
 function filterVisitRows() {
   const query = $('#visit-search').value.trim().toLowerCase();
   document.querySelectorAll('#visit-view table tr').forEach(row => {
+    if (row.closest('#visitor-detail')) return;
+    if (row.classList.contains('recent-visit-row')) return;
     if (row.classList.contains('visitor-expanded')) { row.hidden = !row.previousElementSibling || row.previousElementSibling.hidden; return; }
     row.hidden = !row.querySelector('th') && !row.textContent.toLowerCase().includes(query);
   });
+  const rows = [...document.querySelectorAll('#visitor-detail tr.visitor-click-row')];
+  const matches = rows.filter(row => row.textContent.toLowerCase().includes(query));
+  const pageCount = Math.max(1, Math.ceil(matches.length / visitorPageSize));
+  visitorPage = Math.min(visitorPage, pageCount);
+  const first = (visitorPage - 1) * visitorPageSize;
+  rows.forEach(row => {
+    const index = matches.indexOf(row), visible = index >= first && index < first + visitorPageSize;
+    row.hidden = index < 0 || !visible;
+    const detail = row.nextElementSibling;
+    if (detail && detail.classList.contains('visitor-expanded')) detail.hidden = row.hidden;
+  });
+  const info = $('#visitor-page-info');
+  if (info) info.textContent = matches.length
+    ? `Halaman ${visitorPage} dari ${pageCount} · ${first + 1}–${Math.min(first + visitorPageSize, matches.length)} dari ${matches.length} pengunjung`
+    : 'Tidak ada pengunjung yang cocok.';
+  const prev = $('#visitor-prev'), next = $('#visitor-next');
+  if (prev) prev.disabled = visitorPage <= 1;
+  if (next) next.disabled = visitorPage >= pageCount;
+  const recentRows = [...document.querySelectorAll('#visit-recent-table .recent-visit-row')];
+  const recentMatches = recentRows.filter(row => row.textContent.toLowerCase().includes(query));
+  const recentPageCount = Math.max(1, Math.ceil(recentMatches.length / recentPageSize));
+  recentPage = Math.min(recentPage, recentPageCount);
+  const recentFirst = (recentPage - 1) * recentPageSize;
+  recentRows.forEach(row => {
+    const index = recentMatches.indexOf(row);
+    row.hidden = index < recentFirst || index >= recentFirst + recentPageSize;
+  });
+  const recentInfo = $('#recent-page-info');
+  if (recentInfo) recentInfo.textContent = recentMatches.length
+    ? `Halaman ${recentPage} dari ${recentPageCount} · ${recentFirst + 1}–${Math.min(recentFirst + recentPageSize, recentMatches.length)} dari ${recentMatches.length} kunjungan`
+    : 'Tidak ada kunjungan yang cocok.';
+  const recentPrev = $('#recent-prev'), recentNext = $('#recent-next');
+  if (recentPrev) recentPrev.disabled = recentPage <= 1;
+  if (recentNext) recentNext.disabled = recentPage >= recentPageCount;
 }
 let visitData = null;
+let visitPane = 'summary';
+let visitorPage = 1, visitorPageSize = 10;
+let recentPage = 1, recentPageSize = 10;
+function setVisitPane(name) {
+  visitPane = ['summary','daily','sources','locations','people','recent'].includes(name) ? name : 'summary';
+  document.querySelectorAll('#visit-tabs [data-visit-pane-tab]').forEach(button => button.setAttribute('aria-selected', String(button.dataset.visitPaneTab === visitPane)));
+  document.querySelectorAll('#visit-view [data-visit-pane]').forEach(panel => panel.classList.toggle('active', panel.dataset.visitPane === visitPane));
+}
 function visitMetric(value, label, detail) {
   return `<button type="button" class="card" data-visit-detail="${detail}" aria-label="${esc(label)}: lihat rincian"><div class="n">${num(value)}</div><div class="l">${esc(label)} →</div></button>`;
 }
+function locationMetric(rows, label, detail) {
+  const count = (rows || []).length;
+  if (!count) return `<div class="card location-card" aria-disabled="true"><span class="n">—</span><span class="l">${esc(label)}</span><span class="muted">Belum ada data</span></div>`;
+  return `<button type="button" class="card location-card" data-location-detail="${detail}" aria-label="${esc(label)}: lihat rincian"><span class="n">${num(count)}</span><span class="l">${esc(label)} · klik untuk melihat detail</span></button>`;
+}
 document.addEventListener('click', event => {
   const dayButton = event.target.closest('[data-visitor-day]');
-  if (dayButton) { loadVisitorDetail(dayButton.dataset.visitorDay); return; }
+  if (dayButton) { setVisitPane('people'); loadVisitorDetail(dayButton.dataset.visitorDay); return; }
+  const locationButton = event.target.closest('[data-location-detail]');
+  if (locationButton && visitData) {
+    const key = locationButton.dataset.locationDetail;
+    const names = {countries:'Negara', regions:'Provinsi', cities:'Kota', isps:'Provider internet'};
+    const rows = (visitData[key] || []).slice().sort((a, b) => (b.views || 0) - (a.views || 0));
+    const panel = $('#location-drilldown');
+    panel.hidden = false;
+    panel.innerHTML = `<div class="row"><h3 style="flex:1;margin:0">Rincian ${esc(names[key] || 'lokasi')}</h3><button type="button" class="ghost" id="location-detail-close">Tutup</button></div><div class="visit-table-wrap"><table><tr><th>${esc(names[key] || 'Lokasi')}</th><th style="text-align:right">Pengunjung</th></tr>${rows.map(row => `<tr><td>${esc(row.name || 'Tidak diketahui')}</td><td style="text-align:right">${num(row.views)}</td></tr>`).join('') || '<tr><td colspan="2">Belum ada data.</td></tr>'}</table></div>`;
+    $('#location-detail-close').onclick = () => { panel.hidden = true; };
+    return;
+  }
   const button = event.target.closest('[data-visit-detail]');
   if (!button || !visitData) return;
   const kind = button.dataset.visitDetail, d = visitData;
@@ -475,7 +589,7 @@ document.addEventListener('click', event => {
   const panel = $('#visit-drilldown'); panel.hidden = false;
   panel.innerHTML = `<div class="row"><h3 style="flex:1;margin:0">${esc(title)}</h3><button class="ghost" type="button" id="visit-close-detail">Tutup</button></div>${kind === 'members' ? '<p class="muted">Rincian dari sampel kunjungan terbaru yang tersedia, bukan daftar lengkap seluruh periode.</p>' : ''}<table><tr>${columns.map(label => `<th>${esc(label)}</th>`).join('')}</tr>${rows.map(row => `<tr>${row.map(value => `<td>${esc(value)}</td>`).join('')}</tr>`).join('') || `<tr><td colspan="${columns.length}">Belum ada data.</td></tr>`}</table>`;
   $('#visit-close-detail').onclick = () => { panel.hidden = true; };
-  filterVisitRows(); panel.scrollIntoView({block:'nearest',behavior:'smooth'});
+  filterVisitRows();
 });
 const DEVICE = {desktop: 'Komputer', mobile: 'HP', tablet: 'Tablet'};
 const place = p => [p.city, p.region, p.country].filter((x, i, all) => x && all.indexOf(x) === i).join(', ') || '—';
@@ -501,7 +615,7 @@ async function labelVisitor(key, kind) {
 }
 async function loadVisitorDetail(focusDay = '') {
   let box = $('#visitor-detail');
-  if (!box) { box = document.createElement('div'); box.id = 'visitor-detail'; box.className = 'panel'; $('#visit-view').append(box); }
+  if (!box) { box = document.createElement('div'); box.id = 'visitor-detail'; box.className = 'panel'; $('#visit-people').append(box); }
   box.innerHTML = '<p class="muted">Memuat detail pengunjung…</p>';
   let d;
   let query = visitRangeQuery(), rangeLabel = `${visitorDays} hari`;
@@ -513,6 +627,7 @@ async function loadVisitorDetail(focusDay = '') {
   try { d = await api('/api/visitors?days=' + (focusDay ? 1 : visitorDays) + query); } catch (e) { box.innerHTML = '<p class="err">' + esc(e.message) + '</p>'; return; }
   const c = d.counts || {};
   const on = teamBrowser();
+  visitorPage = 1;
   const btn = (key, kind, label) => `<button class="ghost" style="padding:2px 8px;font-size:11.5px" onclick="labelVisitor('${key}','${kind}')">${label}</button>`;
   box.innerHTML = `<h3>Detail pengunjung <span class="muted" style="font-weight:400;font-size:13px">(${esc(rangeLabel)}, per pengunjung per hari)</span></h3>
     <div class="row">
@@ -522,8 +637,9 @@ async function loadVisitorDetail(focusDay = '') {
     </div>
     <p class="muted" style="margin-top:0">Tim dan Mesin tidak masuk angka laporan. Klik "Jangan hitung browser ini" sekali di setiap browser/HP tim (berlaku di situs MyFlipbook di browser itu). Status bisa dikoreksi per baris.</p>
     <p class="muted" style="margin-top:0">Klik baris pengunjung untuk membuka detail dan tindak lanjut. Email promo tersedia untuk member login yang sudah memverifikasi email; tamu tetap anonim.</p>
-    <div style="overflow:auto"><table><tr><th>Pengunjung</th><th>Kapan</th><th>Halaman</th><th>Status</th><th>Tindak lanjuti</th><th>Tandai</th></tr>
-    ${d.items.map(v => {
+    <div class="visitor-pagination"><span id="visitor-page-info" role="status"></span><label>Baris per halaman <select id="visitor-page-size" aria-label="Jumlah pengunjung per halaman"><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option></select></label><button type="button" class="ghost" id="visitor-prev">Sebelumnya</button><button type="button" class="ghost" id="visitor-next">Berikutnya</button></div>
+    <div class="visitor-table-wrap"><table><tr><th>Pengunjung</th><th>Kapan</th><th>Halaman</th><th>Status</th><th>Tindak lanjuti</th><th>Tandai</th></tr>
+    ${d.items.map((v, index) => {
       const [icon, word, tag] = STATUS[v.status] || STATUS.human;
       const who = `<b>${esc(place(v))}</b><br><span class="muted">${esc(v.isp || '—')} · ${esc(DEVICE[v.device] || v.device)}${v.members.length ? ' · member ' + v.members.map(esc).join(', ') : ' · tamu'}${v.ref ? ' · dari ' + esc(v.ref) : ''}</span>`;
       const time = esc(when(v.first)) + (v.last - v.first > 60 ? '<br><span class="muted">s/d ' + esc(when(v.last)) + '</span>' : '');
@@ -531,10 +647,14 @@ async function loadVisitorDetail(focusDay = '') {
       const contacts = (v.memberContacts || []).map(contact => contact.verified
         ? `<a class="ghost" style="display:inline-block;padding:4px 8px;font-size:11px" href="${esc(followupLink(contact))}">Email promo · ${esc(contact.name || contact.email)}</a>`
         : `<span class="muted">${esc(contact.email)} · email belum terverifikasi</span>`).join('<br>') || '<span class="muted">Tamu anonim</span>';
-      return `<tr class="visitor-click-row" data-visitor-key="${esc(v.key)}" tabindex="0" aria-expanded="false" title="Klik untuk membuka detail tindak lanjut"><td>${who}</td><td>${time}</td><td>${pages}</td>
+      return `<tr class="visitor-click-row" data-visitor-key="${esc(v.key)}" ${index >= visitorPageSize ? 'hidden' : ''} tabindex="0" aria-expanded="false" title="Klik untuk membuka detail tindak lanjut"><td>${who}</td><td>${time}</td><td>${pages}</td>
         <td><span class="tag ${tag}">${icon} ${word}</span>${v.reason ? '<br><span class="muted">' + esc(v.reason) + '</span>' : ''}</td>
         <td style="min-width:190px">${contacts}</td><td style="white-space:nowrap">${btn(v.key, 'human', 'Asli')} ${btn(v.key, 'team', 'Tim')} ${btn(v.key, 'bot', 'Mesin')}${v.reason === 'Ditandai admin' ? ' ' + btn(v.key, '', '↺') : ''}</td></tr>`;
     }).join('') || '<tr><td colspan="6" class="muted">Belum ada pengunjung.</td></tr>'}</table></div>`;
+  $('#visitor-page-size').value = String(visitorPageSize);
+  $('#visitor-page-size').onchange = event => { visitorPageSize = Number(event.target.value) || 20; visitorPage = 1; filterVisitRows(); };
+  $('#visitor-prev').onclick = () => { if (visitorPage > 1) { visitorPage--; filterVisitRows(); } };
+  $('#visitor-next').onclick = () => { visitorPage++; filterVisitRows(); };
   const closeVisitorDetails = () => {
     box.querySelectorAll('tr.visitor-expanded').forEach(row => row.remove());
     box.querySelectorAll('tr.visitor-click-row[aria-expanded="true"]').forEach(row => row.setAttribute('aria-expanded', 'false'));
@@ -560,7 +680,6 @@ async function loadVisitorDetail(focusDay = '') {
     };
   });
   filterVisitRows();
-  if (focusDay) box.scrollIntoView({behavior: 'smooth', block: 'center'});
 }
 async function loadVisits(days) {
   const d = await api('/api/visits?days=' + days + visitRangeQuery());
@@ -569,32 +688,45 @@ async function loadVisits(days) {
   visitData = d; if (!visitRange) $('#visit-days').value = String(days);
   const list = (rows, label) => `<table>${rows.map(r => `<tr><td>${esc(label(r.name))}</td><td style="text-align:right">${num(r.views)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada data.</td></tr>'}</table>`;
   const report = d.daily.slice().reverse().filter(r => r.visitors || r.views || r.members || r.office || r.ai || r.translate || r.books);
-  $('#visit-view').innerHTML = rangeNote + `<div class="row" ${visitRange ? 'style="display:none"' : ''}><a class="ghost" href="api/report.pdf?days=${days}" style="text-decoration:none">📄 Unduh laporan PDF (${days} hari)</a>
-    <a class="ghost" href="api/report.csv?days=${days}" style="text-decoration:none">⬇ Unduh laporan (CSV, ${days} hari)</a>
-      <span class="muted">${d.teamExcluded ? 'Tim (' + d.teamExcluded + ' akun) tidak dihitung.' : 'Tim belum dikecualikan (STATS_EXCLUDE_EMAILS).'}${d.since ? ' Data mulai ' + esc(d.since) + '.' : ''}</span></div>
-    <div class="grid">${visitMetric((d.countries || []).length, 'Asal pengunjung (negara)', 'origins')}${visitMetric(d.visitors, 'Total kunjungan (' + days + ' hari)', 'visitors')}
+  const recentCount = (d.recent || []).length;
+  $('#visit-view').innerHTML = rangeNote + `<div class="row visit-export" ${visitRange ? 'style="display:none"' : ''}><a class="ghost" href="api/report.pdf?days=${days}" style="text-decoration:none">Unduh PDF (${days} hari)</a>
+    <a class="ghost" href="api/report.csv?days=${days}" style="text-decoration:none">Unduh CSV (${days} hari)</a>
+    <span class="muted">${d.teamExcluded ? 'Tim (' + d.teamExcluded + ' akun) tidak dihitung.' : 'Tim belum dikecualikan (STATS_EXCLUDE_EMAILS).'}${d.since ? ' Data mulai ' + esc(d.since) + '.' : ''}</span></div>
+    <nav id="visit-tabs" class="visit-tabs" aria-label="Tampilan data pengunjung">
+      <button type="button" data-visit-pane-tab="summary" aria-selected="true">Ringkasan</button>
+      <button type="button" data-visit-pane-tab="daily" aria-selected="false">Laporan harian</button>
+      <button type="button" data-visit-pane-tab="sources" aria-selected="false">Halaman &amp; sumber</button>
+      <button type="button" data-visit-pane-tab="locations" aria-selected="false">Lokasi</button>
+      <button type="button" data-visit-pane-tab="people" aria-selected="false">Daftar pengunjung</button>
+      <button type="button" data-visit-pane-tab="recent" aria-selected="false">Kunjungan terbaru</button>
+    </nav>
+    <div class="visit-panes">
+    <section class="visit-pane active" data-visit-pane="summary"><div class="grid">${visitMetric((d.countries || []).length, 'Negara asal', 'origins')}${visitMetric(d.visitors, 'Total pengunjung &middot; ' + days + ' hari', 'visitors')}
       ${visitMetric(d.views, 'Tampilan halaman', 'views')}${visitMetric((d.today || {}).visitors, visitRange ? 'Pengunjung pada tanggal akhir' : 'Pengunjung hari ini', 'today')}
       ${visitMetric(d.members, 'Member yang berkunjung', 'members')}${visitMetric(d.newMembers, 'Member baru', 'newMembers')}</div>
     <div id="visit-drilldown" class="panel" hidden></div>
-    <div class="panel"><h3>Per hari</h3>${bars(d.daily)}</div>
-    <div class="panel"><h3>Laporan harian</h3><table><tr><th>Tanggal</th><th>Pengunjung</th><th>Tampilan</th><th>Member baru</th><th>Konversi</th><th>AI</th><th>Huruf diterjemahkan</th><th>Buku disimpan</th></tr>
-      ${report.map(r => `<tr><td>${esc(r.day)}</td><td><button type="button" class="summary-link daily-visitor-link" data-visitor-day="${esc(r.day)}" aria-label="Lihat ${num(r.visitors)} pengunjung tanggal ${esc(r.day)}">${num(r.visitors)} ↓</button></td><td>${num(r.views)}</td><td>${num(r.members)}</td><td>${num(r.office)}</td><td>${num(r.ai)}</td><td>${num(r.translate)}</td><td>${num(r.books)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Belum ada data.</td></tr>'}</table></div>
-    <div class="two">
-      <div class="panel"><h3>Halaman</h3>${list(d.pages, n => n)}</div>
-      <div class="panel"><h3>Datang dari</h3>${list(d.referrers, n => n)}</div>
-      <div class="panel"><h3>Perangkat</h3>${list(d.devices, n => DEVICE[n] || n)}</div>
-    </div>
-    <h3 style="margin-top:22px">Lokasi pengunjung <span class="muted" style="font-weight:400;font-size:13px">(jumlah pengunjung)</span></h3>
-    ${d.geoReady ? '' : '<p class="muted">Database lokasi belum dipasang di server (python3 geo.py --update) — kolom lokasi masih kosong.</p>'}
-    <div class="two">
-      <div class="panel"><h3>Negara</h3>${list(d.countries, n => n)}</div>
-      <div class="panel"><h3>Provinsi</h3>${list(d.regions, n => n)}</div>
-      <div class="panel"><h3>Kota</h3>${list(d.cities, n => n)}</div>
-      <div class="panel"><h3>Provider internet</h3>${list(d.isps, n => n)}</div>
-    </div>
-    <div class="panel"><h3>Kunjungan terbaru</h3><table><tr><th>Waktu</th><th>Halaman</th><th>Lokasi</th><th>Provider</th><th>Perangkat</th><th>Member</th><th>Datang dari</th></tr>
-      ${(d.recent || []).map(r => `<tr><td>${esc(when(r.ts))}</td><td>${esc(r.path)}</td><td>${esc(place(r))}</td><td>${esc(r.isp) || '—'}</td><td>${esc(DEVICE[r.device] || r.device)}</td><td>${esc(r.member || '') || '<span class="muted">tamu</span>'}</td><td>${esc(r.ref) || '—'}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Belum ada data.</td></tr>'}</table></div>
-    <p class="muted">Dihitung hanya saat halaman benar-benar terbuka di browser (bot & alat otomatis tidak terhitung), reload dalam 1 menit dihitung sekali. Tanpa menyimpan IP: pengunjung dihitung dengan kode acak yang berganti setiap hari, jadi "total kunjungan" = jumlah pengunjung harian. Lokasi = perkiraan dari jaringan (biasanya tepat sampai provinsi; kota bisa meleset, terutama jaringan HP), dicari di server saat itu juga — alamat IP-nya tidak disimpan. <a href="https://db-ip.com" target="_blank" rel="noopener">IP Geolocation by DB-IP</a>.</p>`;
+    <div class="panel"><h3>Aktivitas per hari</h3>${bars(d.daily)}</div></section>
+    <section class="visit-pane" data-visit-pane="daily"><div class="panel"><h3>Laporan harian</h3><div class="visit-table-wrap"><table><tr><th>Tanggal</th><th>Pengunjung</th><th>Tampilan</th><th>Member baru</th><th>Konversi</th><th>AI</th><th>Karakter diterjemahkan</th><th>Buku disimpan</th></tr>
+      ${report.map(r => `<tr><td>${esc(r.day)}</td><td><button type="button" class="summary-link daily-visitor-link" data-visitor-day="${esc(r.day)}" aria-label="Lihat ${num(r.visitors)} pengunjung tanggal ${esc(r.day)}">${num(r.visitors)}</button></td><td>${num(r.views)}</td><td>${num(r.members)}</td><td>${num(r.office)}</td><td>${num(r.ai)}</td><td>${num(r.translate)}</td><td>${num(r.books)}</td></tr>`).join('') || '<tr><td colspan="8" class="muted">Belum ada data.</td></tr>'}</table></div></div></section>
+    <section class="visit-pane" data-visit-pane="sources"><div class="two"><div class="panel"><h3>Halaman terpopuler</h3>${list(d.pages, n => n)}</div><div class="panel"><h3>Sumber kunjungan</h3>${list(d.referrers, n => n)}</div><div class="panel"><h3>Perangkat</h3>${list(d.devices, n => DEVICE[n] || n)}</div></div></section>
+    <section class="visit-pane" data-visit-pane="locations"><h3>Lokasi pengunjung <span class="muted" style="font-weight:400;font-size:13px">(perkiraan berdasarkan jaringan)</span></h3>
+    ${d.geoReady ? '' : '<p class="muted">Data lokasi belum tersedia di server.</p>'}
+    <div class="location-cards">${locationMetric(d.countries, 'Negara', 'countries')}${locationMetric(d.regions, 'Provinsi', 'regions')}${locationMetric(d.cities, 'Kota', 'cities')}${locationMetric(d.isps, 'Provider internet', 'isps')}</div>
+    <div id="location-drilldown" class="panel" hidden></div>
+    <p class="muted">Bot tidak dihitung. ID pengunjung berganti setiap hari dan alamat IP tidak disimpan.</p></section>
+    <section class="visit-pane" data-visit-pane="people"><div id="visit-people"></div></section>
+    <section class="visit-pane" data-visit-pane="recent"><div class="panel"><h3>Kunjungan terbaru</h3>
+      <div class="visitor-pagination"><span id="recent-page-info" role="status">${recentCount ? `Halaman 1 dari ${Math.max(1, Math.ceil(recentCount / recentPageSize))} · 1–${Math.min(recentCount, recentPageSize)} dari ${recentCount} kunjungan` : 'Belum ada kunjungan.'}</span><label>Baris per halaman <select id="recent-page-size" aria-label="Jumlah kunjungan per halaman"><option value="10">10</option><option value="20">20</option><option value="50">50</option></select></label><button type="button" class="ghost" id="recent-prev" disabled>Sebelumnya</button><button type="button" class="ghost" id="recent-next" ${recentCount > recentPageSize ? '' : 'disabled'}>Berikutnya</button></div>
+      <div class="visit-table-wrap"><table id="visit-recent-table"><tr><th>Waktu</th><th>Halaman</th><th>Lokasi</th><th>Provider</th><th>Perangkat</th><th>Member</th><th>Sumber</th></tr>
+      ${(d.recent || []).map((r, index) => `<tr class="recent-visit-row" ${index >= recentPageSize ? 'hidden' : ''}><td>${esc(when(r.ts))}</td><td>${esc(r.path)}</td><td>${esc(place(r))}</td><td>${esc(r.isp) || '-'}</td><td>${esc(DEVICE[r.device] || r.device)}</td><td>${esc(r.member || '') || '<span class="muted">Tamu</span>'}</td><td>${esc(r.ref) || '-'}</td></tr>`).join('') || '<tr><td colspan="7" class="muted">Belum ada data.</td></tr>'}</table></div></div></section>
+    </div>`;
+  $('#visit-tabs').querySelectorAll('[data-visit-pane-tab]').forEach(button => button.onclick = () => setVisitPane(button.dataset.visitPaneTab));
+  setVisitPane(visitPane);
+  recentPage = 1;
+  $('#recent-page-size').value = String(recentPageSize);
+  $('#recent-page-size').onchange = event => { recentPageSize = Number(event.target.value) || 10; recentPage = 1; filterVisitRows(); };
+  $('#recent-prev').onclick = () => { if (recentPage > 1) { recentPage--; filterVisitRows(); } };
+  $('#recent-next').onclick = () => { recentPage++; filterVisitRows(); };
   visitorDays = Math.min(days, 90);
   loadVisitorDetail();
   filterVisitRows();
