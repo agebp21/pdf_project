@@ -17,12 +17,7 @@
 .hh-magazine-cover{object-fit:cover}
 .hh-catalog-page{background:#fff;overflow:hidden}
 .hh-catalog-page img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
-.hh-magazine-back,.hh-catalog-back{display:flex;flex-direction:column;justify-content:flex-end;gap:10px;padding:10%;color:#fff;background:linear-gradient(155deg,#244d3e,#17372f 68%,#102820);box-sizing:border-box}
-.hh-magazine-back:before,.hh-catalog-back:before{content:'';position:absolute;inset:8%;border:1px solid #ffffff48;pointer-events:none}
-.hh-magazine-back span,.hh-catalog-back span{font:900 clamp(26px,5vw,58px)/.88 Georgia,serif;letter-spacing:-.055em;z-index:1}
-.hh-magazine-back small,.hh-catalog-back small{font:700 11px/1.3 'Plus Jakarta Sans',sans-serif;letter-spacing:.22em;color:#ffb37e;z-index:1}
-.hh-catalog-back{background:linear-gradient(155deg,#806746,#57472f 68%,#3c3022)}
-.hh-catalog-back small{color:#f0d5a2}
+.hh-sample-back{background:#1A3C34}
 .hh[data-sample=interior] #hh-demo-toolbar button:not(#hh-tool-home):not(#hh-tool-end):not(#hh-tool-open):not(#hh-demo-full):not(#hh-demo-sound){display:none}
 .sample-interior{background:#d7c4a7;color:#3b332b}.sample-fashion{background:#34344d;color:#f5d8ce}.sample-travel{background:#1f6258;color:#e8e2b4}.sample-learning{background:#f2a445;color:#342b42}
 .hh-sample b{display:block;font:600 10px/1.5 'Plus Jakarta Sans',sans-serif;margin-top:10px}
@@ -136,9 +131,6 @@
 .hh-in>span{font-size:clamp(12px,1.25vw,15px);line-height:1.6;color:#57534E}
 .hh-list{display:flex;flex-direction:column;gap:8px}
 .hh-list span::before{content:'✓';color:#2F6B4F;font-weight:800;margin-right:8px}
-.hh-back{background:linear-gradient(160deg,#21503F,#1A3C34 60%,#14302A);justify-content:center}
-.hh-back strong{color:#fff}.hh-back>span{color:rgba(255,255,255,.85)}
-.hh-back .hh-go{align-self:flex-start;margin-top:8px;font-size:14px;padding:12px 20px}
 /* Keep live page announcements available to screen readers without a second navigation row. */
 .hh-demo-bar{position:absolute;width:1px;height:1px;padding:0;margin:-1px;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
 .hh-go-small{font-size:13px;padding:11px 18px;margin-left:10px;box-shadow:2px 2px 0 #1C1917}
@@ -146,10 +138,6 @@
 /* PageFlip sets each page's display itself: lay the text out as blocks, not flex */
 .hh-in>small,.hh-in>strong,.hh-in>span{display:block;margin:0 0 14px}
 .hh-in>small{margin-bottom:12px}
-.hh-back{display:flex}
-.hh-back>small{margin-top:30%}
-.hh-back-brand{width:68%;padding:8px 10px;box-sizing:border-box;border-radius:8px;background:#FFFBF2}
-.hh-back-brand img{display:block;width:100%;height:auto;object-fit:contain}
 .hh-list>span{display:block;margin:0 0 8px}
 
 /* full screen: the preview fills the screen on the page's cream */

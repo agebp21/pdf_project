@@ -20,8 +20,7 @@
         var image = document.createElement('img'); image.src = 'assets/samples/sekar-bumi/page-' + String(i).padStart(2,'0') + '.webp'; image.alt = 'Sekar Bumi · ' + i; image.decoding = 'async';
         page.appendChild(image); catalogPages.push(page);
       }
-      var catalogBack = document.createElement('div'); catalogBack.className = 'hh-page hh-catalog-back'; catalogBack.dataset.density = 'hard';
-      catalogBack.innerHTML = '<span>SEKAR<br>BUMI</span><small>PRODUCT CATALOG</small>';
+      var catalogBack = document.createElement('div'); catalogBack.className = 'hh-page hh-sample-back'; catalogBack.dataset.density = 'hard';
       catalogPages.push(catalogBack);
     }
     if (magazine && !magazinePages) {
@@ -31,8 +30,7 @@
         var magazineImage = document.createElement('img'); magazineImage.src = 'assets/samples/grand-designs/page-' + String(m).padStart(2,'0') + '.webp'; magazineImage.alt = 'Grand Designs Australia · ' + m; magazineImage.decoding = 'async';
         magazinePage.appendChild(magazineImage); magazinePages.push(magazinePage);
       }
-      var magazineBack = document.createElement('div'); magazineBack.className = 'hh-page hh-magazine-back'; magazineBack.dataset.density = 'hard';
-      magazineBack.innerHTML = '<span>GRAND<br>DESIGNS</span><small>AUSTRALIA</small>';
+      var magazineBack = document.createElement('div'); magazineBack.className = 'hh-page hh-sample-back'; magazineBack.dataset.density = 'hard';
       magazinePages.push(magazineBack);
     }
     showingCatalog = catalog; showingMagazine = magazine;
