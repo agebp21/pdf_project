@@ -1,5 +1,6 @@
 # Koordinasi tim AI
 
+- FLIPBOOK-LOADING-WHITE (27 Okt, Codex): `c01ff7c` live. Teks/angka/cincin progres loading PDF/OCR putih transparan, termasuk jalur cincin yang belum terisi; opacity 28% dipertahankan. JS 59/59, Python 233/233 lulus. Detail di `DEPLOY.md`.
 - FLIPBOOK-LOADING-SUBTLE (27 Okt, Codex): `c99d28c` live. Seluruh bulatan loading PDF/OCR dibuat opacity 28% agar sangat samar di atas buku; cache CSS `load-orb3`. JS 59/59, Python 233/233 lulus; verifikasi live tercatat di `DEPLOY.md`.
 - FLIPBOOK-LOADING-OPACITY (27 Okt, Codex): `30762fc` live. Indikator loading bulat dibuat lebih tipis/transparan dengan angka progres tetap jelas; cache CSS dinaikkan ke `load-orb2`. JS 59/59, Python 233/233 lulus. Rincian di `DEPLOY.md`.
 - FLIPBOOK-LOADING (27 Okt, Codex): `7654b28` live. Indikator loading PDF/OCR bulat transparan di tengah buku menampilkan progres dan tidak menangkap pointer, supaya halaman tetap dapat digeser/dibalik ketika proses di latar belakang. Status sidebar disembunyikan saat loading; ARIA status tetap ada. JS 59/59, Python 233/233 lulus, browser desktop/HP diperiksa. Backup/verifikasi di `DEPLOY.md`.
