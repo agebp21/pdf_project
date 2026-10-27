@@ -481,6 +481,13 @@ async function loadUploads() {
 
 let visitRange = null;
 const visitRangeQuery = () => visitRange ? '&start=' + visitRange.start + '&end=' + visitRange.end : '';
+// YYYY-MM-DD in WIB, `back` days before today; the date fields mirror the active period (default: today).
+const wibDay = (back = 0) => new Date(Date.now() + 7 * 3600000 - back * 86400000).toISOString().slice(0, 10);
+function fillVisitDates(days) {
+  $('#visit-start').value = wibDay(Math.max(1, Number(days) || 1) - 1);
+  $('#visit-end').value = wibDay(0);
+}
+fillVisitDates($('#visit-days').value);
 $('#visit-days').onchange = () => { visitRange = null; $('#visit-range-error').textContent = ''; loadVisits(Number($('#visit-days').value)); };
 $('#visit-apply-range').onclick = () => {
   const start = Date.parse($('#visit-start').value + 'T00:00:00+07:00') / 1000;
@@ -491,7 +498,7 @@ $('#visit-apply-range').onclick = () => {
   visitRange = {start, end}; $('#visit-range-error').textContent = '';
   loadVisits(Number($('#visit-days').value)).catch(error => { $('#visit-range-error').textContent = error.message; });
 };
-$('#visit-reset-range').onclick = () => { visitRange = null; $('#visit-start').value = $('#visit-end').value = ''; $('#visit-range-error').textContent = ''; loadVisits(Number($('#visit-days').value)); };
+$('#visit-reset-range').onclick = () => { visitRange = null; fillVisitDates($('#visit-days').value); $('#visit-range-error').textContent = ''; loadVisits(Number($('#visit-days').value)); };
 $('#visit-search').oninput = () => { visitorPage = 1; recentPage = 1; filterVisitRows(); };
 function filterVisitRows() {
   const query = $('#visit-search').value.trim().toLowerCase();
@@ -685,7 +692,7 @@ async function loadVisits(days) {
   const d = await api('/api/visits?days=' + days + visitRangeQuery());
   if (visitRange) days = d.days || days;
   const rangeNote = visitRange ? `<p class="muted">Rentang WIB: ${esc($('#visit-start').value.replace('T',' '))} sampai ${esc($('#visit-end').value.replace('T',' '))}. Untuk unduhan PDF/CSV gunakan periode standar; ekspor rentang khusus belum tersedia.</p>` : '';
-  visitData = d; if (!visitRange) $('#visit-days').value = String(days);
+  visitData = d; if (!visitRange) { $('#visit-days').value = String(days); fillVisitDates(days); }
   const list = (rows, label) => `<table>${rows.map(r => `<tr><td>${esc(label(r.name))}</td><td style="text-align:right">${num(r.views)}</td></tr>`).join('') || '<tr><td class="muted">Belum ada data.</td></tr>'}</table>`;
   const report = d.daily.slice().reverse().filter(r => r.visitors || r.views || r.members || r.office || r.ai || r.translate || r.books);
   const recentCount = (d.recent || []).length;

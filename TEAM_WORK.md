@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ADMIN-VISIT-DATE-DEFAULT (27 Okt, Antigravity, lokal belum commit/deploy): `admin/index.html` tab Pengunjung — kolom Dari/Sampai otomatis terisi tanggal WIB sesuai periode aktif (default Hari ini = tanggal hari ini; 7 hari = 6 hari lalu s/d hari ini), juga setelah Reset. Filter member tidak diubah. Syntax inline script + diff-check + tes admin 10/10 lulus; belum QA browser.
+
 - FLIPBOOK-OCR-STATUS (27 Okt, Codex): `dc7c716` live. Pesen OCR selesai ora tampil maneh nang sidebar; status kosong ndhelikake kothak ijo. JS 59/59, Python 233/233 lulus. Verifikasi/backup ing `DEPLOY.md`.
 - FLIPBOOK-TITLE (27 Okt, Codex): `a0eab23` live. Label/kolom Judul buku dikeluarkan dari sidebar; nilai judul otomatis tetap dipakai oleh ekspor. JS 59/59, Python 233/233 lulus; verifikasi di `DEPLOY.md`.
 - FLIPBOOK-EDIT-BUTTON (27 Okt, Codex): `e387c11` + cache commit `9e35d43` live. Bantuan simpan proyek dihapus; tombol Atur halaman diganti Edit PDF dan dipindah ke atas Simpan & ekspor. Klik membuka editor dengan PDF aktif via FlipbookTransfer. JS 59/59, Python 233/233 lulus; alur editor diverifikasi browser. Backup/live check di `DEPLOY.md`.
