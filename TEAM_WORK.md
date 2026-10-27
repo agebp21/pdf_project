@@ -1,5 +1,6 @@
 # Koordinasi tim AI
 
+- FLIPBOOK-TOOLBAR (27 Okt, Codex): `463409c` live. Toolbar turun baris saat sempit, semua tombol tampak utuh; Layar penuh tetap tengah. JS 59/59, Python 233/233 lulus; ukuran 390/600/900/1280 px dicek di browser. Backup/verifikasi di `DEPLOY.md`.
 - ADMIN-VISIT-DATE-DEFAULT (27 Okt, Antigravity): `cfcd082` live. `admin/index.html` tab Pengunjung — kolom Dari/Sampai otomatis terisi tanggal WIB sesuai periode aktif (default Hari ini = tanggal hari ini; 7 hari = 6 hari lalu s/d hari ini), juga setelah Reset. Filter member tidak diubah. Python 233/233, tes admin 10/10, JS 57/59 (2 QA homepage gagal karena modul Playwright tidak ditemukan, tidak terkait). Belum QA browser. Rincian di `DEPLOY.md`.
 
 - FLIPBOOK-OCR-STATUS (27 Okt, Codex): `dc7c716` live. Pesen OCR selesai ora tampil maneh nang sidebar; status kosong ndhelikake kothak ijo. JS 59/59, Python 233/233 lulus. Verifikasi/backup ing `DEPLOY.md`.

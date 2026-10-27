@@ -2,6 +2,7 @@
 
 ## Log terbaru
 
+- 27 Oktober 2026 19:50 WIB — live `463409c`: toolbar Flipbook otomatis turun baris saat sempit supaya tombol tidak terpotong; tombol Layar penuh tetap berada di tengah. Cache CSS/JS `toolbar-wrap1`. Suite JS 59/59 dan Python 233/233 lulus; browser lebar 390/600/900/1280 px menunjukkan nol tombol terpotong dan Layar penuh tepat tengah. Backup `/root/pdf_project-code-backup-202610271950-toolbar.tgz`; kedua layanan aktif; Flipbook, CSS, JS, admin HTTPS 200.
 - 27 Oktober 2026 18:38 WIB — Antigravity: live `cfcd082`. Admin tab Pengunjung: kolom Dari/Sampai default tanggal hari ini (WIB) dan mengikuti periode aktif, juga setelah Reset. Hanya `admin/index.html`; restart `myflipbook-admin` saja. Python 233/233 lulus; JS 57/59 (qa-home-hero/qa-home-toolbar gagal `ERR_MODULE_NOT_FOUND` Playwright di shell ini, tidak terkait admin); tes admin 10/10. Backup `/root/pdf_project-code-backup-202610271838-admin-date.tgz`; dua layanan aktif; `/admin/`, `/admin/api/session`, `/api/capabilities` HTTPS 200, HTML live memuat perubahan. Belum QA visual browser. File dirty agen lain tidak ikut.
 
 - 27 Oktober 2026 19:20 WIB — live `dc7c716`: pesan hasil OCR di sidebar Flipbook dihapus; setelah OCR selesai `#load-status` kosong dan kotak hijau hilang otomatis. Cache JS `ocr-status1`. Suite JS 59/59 dan Python 233/233 lulus; browser memastikan kotak kosong tersembunyi. Backup `/root/pdf_project-code-backup-202610271920-ocr-status.tgz`; layanan aktif; Flipbook dan JS HTTPS 200.
