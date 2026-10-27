@@ -411,7 +411,7 @@ document.querySelectorAll('[data-member-plan]').forEach(button => {
 });
 $('#member-q').oninput = () => { clearTimeout(memberTimer); memberTimer = setTimeout(() => loadMembers(1), 300); };
 for (const id of ['member-start', 'member-end']) $('#' + id).onchange = () => loadMembers(1).catch(error => { $('#member-range-error').textContent = error.message; });
-$('#member-reset-range').onclick = () => { $('#member-start').value = ''; $('#member-end').value = ''; loadMembers(1).catch(error => { $('#member-range-error').textContent = error.message; }); };
+$('#member-reset-range').onclick = () => { fillMemberDates(); loadMembers(1).catch(error => { $('#member-range-error').textContent = error.message; }); };
 $('#member-prev').onclick = () => memberPage > 1 && loadMembers(memberPage - 1);
 $('#member-next').onclick = () => loadMembers(memberPage + 1);
 async function loadMembers(page) {
@@ -483,6 +483,11 @@ let visitRange = null;
 const visitRangeQuery = () => visitRange ? '&start=' + visitRange.start + '&end=' + visitRange.end : '';
 // YYYY-MM-DD in WIB, `back` days before today; the date fields mirror the active period (default: today).
 const wibDay = (back = 0) => new Date(Date.now() + 7 * 3600000 - back * 86400000).toISOString().slice(0, 10);
+function fillMemberDates() {
+  $('#member-start').value = wibDay();
+  $('#member-end').value = wibDay();
+}
+fillMemberDates();
 function fillVisitDates(days) {
   $('#visit-start').value = wibDay(Math.max(1, Number(days) || 1) - 1);
   $('#visit-end').value = wibDay(0);
