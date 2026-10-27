@@ -20,6 +20,9 @@
         var image = document.createElement('img'); image.src = 'assets/samples/sekar-bumi/page-' + String(i).padStart(2,'0') + '.webp'; image.alt = 'Sekar Bumi · ' + i; image.decoding = 'async';
         page.appendChild(image); catalogPages.push(page);
       }
+      var catalogBack = document.createElement('div'); catalogBack.className = 'hh-page hh-catalog-back'; catalogBack.dataset.density = 'hard';
+      catalogBack.innerHTML = '<span>SEKAR<br>BUMI</span><small>PRODUCT CATALOG</small>';
+      catalogPages.push(catalogBack);
     }
     if (magazine && !magazinePages) {
       magazinePages = [];
