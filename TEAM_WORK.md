@@ -1,5 +1,6 @@
 # Koordinasi tim AI
 
+- FLIPBOOK-OCR-STATUS (27 Okt, Codex): `dc7c716` live. Pesen OCR selesai ora tampil maneh nang sidebar; status kosong ndhelikake kothak ijo. JS 59/59, Python 233/233 lulus. Verifikasi/backup ing `DEPLOY.md`.
 - FLIPBOOK-TITLE (27 Okt, Codex): `a0eab23` live. Label/kolom Judul buku dikeluarkan dari sidebar; nilai judul otomatis tetap dipakai oleh ekspor. JS 59/59, Python 233/233 lulus; verifikasi di `DEPLOY.md`.
 - FLIPBOOK-EDIT-BUTTON (27 Okt, Codex): `e387c11` + cache commit `9e35d43` live. Bantuan simpan proyek dihapus; tombol Atur halaman diganti Edit PDF dan dipindah ke atas Simpan & ekspor. Klik membuka editor dengan PDF aktif via FlipbookTransfer. JS 59/59, Python 233/233 lulus; alur editor diverifikasi browser. Backup/live check di `DEPLOY.md`.
 - FLIPBOOK-LOADING-WHITE (27 Okt, Codex): `c01ff7c` live. Teks/angka/cincin progres loading PDF/OCR putih transparan, termasuk jalur cincin yang belum terisi; opacity 28% dipertahankan. JS 59/59, Python 233/233 lulus. Detail di `DEPLOY.md`.
