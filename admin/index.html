@@ -654,8 +654,6 @@ async function loadVisitorDetail(focusDay = '') {
       <span class="tag failed">❌ Tim ${num(c.team || 0)}</span><span class="tag failed">❌ Mesin ${num(c.bot || 0)}</span>
       <button class="ghost" onclick="toggleTeamBrowser()" style="margin-left:auto">${on ? '✅ Browser ini tidak dihitung — hitung lagi' : '🚫 Jangan hitung browser ini'}</button>
     </div>
-    <p class="muted" style="margin-top:0">Tim dan Mesin tidak masuk angka laporan. Klik "Jangan hitung browser ini" sekali di setiap browser/HP tim (berlaku di situs MyFlipbook di browser itu). Status bisa dikoreksi per baris.</p>
-    <p class="muted" style="margin-top:0">Klik baris pengunjung untuk membuka detail dan tindak lanjut. Email promo tersedia untuk member login yang sudah memverifikasi email; tamu tetap anonim.</p>
     <div class="visitor-pagination"><span id="visitor-page-info" role="status"></span><label>Baris per halaman <select id="visitor-page-size" aria-label="Jumlah pengunjung per halaman"><option value="10" selected>10</option><option value="20">20</option><option value="50">50</option></select></label><button type="button" class="ghost" id="visitor-prev">Sebelumnya</button><button type="button" class="ghost" id="visitor-next">Berikutnya</button></div>
     <div class="visitor-table-wrap"><table><tr><th>Pengunjung</th><th>Kapan</th><th>Halaman</th><th>Status</th><th>Tindak lanjuti</th><th>Tandai</th></tr>
     ${items.map((v, index) => {
