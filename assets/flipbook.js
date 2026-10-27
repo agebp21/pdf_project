@@ -74,6 +74,7 @@
   let libraryId = null, openingLibraryId = null, archiveUser;
   function exportState() {
     $('#export-fields').disabled = !sourcePdf || opening || exporting;
+    $('#organize-pages').disabled = !sourcePdf || opening || exporting;
     $('#export-apk').disabled = !buildConfig?.apk;
     $('#export-exe').disabled = !buildConfig?.exe;
     $('#project-file').disabled = opening || exporting;
@@ -1300,10 +1301,10 @@
     const raw=(($('#document-name')||{}).textContent||'').trim()||'document.pdf';
     const name=/\.pdf$/i.test(raw)?raw:raw+'.pdf';
     try{
-      loading(L('Preparing organize…','Menyiapkan organize…'));
+      loading(L('Preparing PDF editor…','Menyiapkan editor PDF…'));
       const id=await FlipbookTransfer.save(sourcePdf, name);
-      location.href='converter.html?tool=organize-pdf&source='+encodeURIComponent(id);
-    }catch(cause){ error(L('Could not open organize: ','Tidak bisa membuka organize: ')+(cause&&cause.message||cause)); }
+      location.href='editor.html?source='+encodeURIComponent(id);
+    }catch(cause){ loading(null); error(L('Could not open PDF editor: ','Tidak bisa membuka editor PDF: ')+(cause&&cause.message||cause)); }
   };
   fetch('/api/capabilities').then(async response=>{
     if(!response.ok)throw Error(L('The build service is not running','Layanan build belum berjalan'));
