@@ -411,7 +411,16 @@ document.querySelectorAll('[data-member-plan]').forEach(button => {
 });
 $('#member-q').oninput = () => { clearTimeout(memberTimer); memberTimer = setTimeout(() => loadMembers(1), 300); };
 for (const id of ['member-start', 'member-end']) $('#' + id).onchange = () => loadMembers(1).catch(error => { $('#member-range-error').textContent = error.message; });
-$('#member-reset-range').onclick = () => { $('#member-start').value = ''; $('#member-end').value = ''; loadMembers(1).catch(error => { $('#member-range-error').textContent = error.message; }); };
+$('#member-reset-range').onclick = () => {
+  clearTimeout(memberTimer);
+  $('#member-q').value = '';
+  $('#member-start').value = '';
+  $('#member-end').value = '';
+  memberPlan = '';
+  document.querySelectorAll('[data-member-plan]').forEach(item => item.setAttribute('aria-pressed', 'false'));
+  $('#member-detail').hidden = true;
+  loadMembers(1).catch(error => { $('#member-range-error').textContent = error.message; });
+};
 $('#member-prev').onclick = () => memberPage > 1 && loadMembers(memberPage - 1);
 $('#member-next').onclick = () => loadMembers(memberPage + 1);
 async function loadMembers(page) {
