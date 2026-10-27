@@ -1,5 +1,6 @@
 # Koordinasi tim AI
 
+- ADMIN-MEMBER-DATE-REVERT (27 Okt, Codex): `6ae46d1` live. Default Dari/Sampai Member kembali kosong, Reset juga kosong (membatalkan default hari ini `0321407`). Browser, JS 59/59, Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.
 - ADMIN-VISITOR-COPY (27 Okt, Codex): `4b79ac3` live. Dua paragraf petunjuk panjang di Detail pengunjung dihapus. JS 59/59, Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.
 - ADMIN-MEMBER-DATE-DEFAULT (27 Okt, Codex): `0321407` live. Dari/Sampai di filter Member otomatis tanggal hari ini (WIB), Reset sama. Browser, JS 59/59, Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.
 - ADMIN-VISIT-DETAIL-ROUTES (27 Okt, Codex): `7a36ad5` live. Kartu Pengunjung menuju rincian data di tab terkait; dialog agregat dicabut. Filter kunjungan member dan tanggal daftar member baru otomatis diterapkan. JS 59/59, Python 233/233 OK, tes admin 10/10, browser enam kartu lulus. Backup/verifikasi di `DEPLOY.md`.
