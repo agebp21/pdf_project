@@ -1,5 +1,7 @@
 # Handoff — PDF Project & Flipbook
 
+Update lokal 2026-10-29 (belum push/deploy, atas permintaan owner): editor PDF mendapat wrap teks di sekitar gambar baru dengan opsi aktif/nonaktif pada gambar, termasuk teks satu baris dan styled text; pratinjau browser dan export PDF memakai area aman yang sama. Tombol OCR halaman aktif dan lingkaran proses tampil pada editor. Tes terkait lulus. Batas saat ini: wrap berbasis kotak, satu gambar per text box; kontur gambar/transparansi dan multi-gambar belum diselesaikan. Detail ada di `TEAM_WORK.md`.
+
 Update 2026-10-28: Reader Flipbook memakai urutan toolbar yang sama pada editor, pratinjau beranda, share, dan ekspor baru. Paket APK/EXE yang dibangun server kini memasukkan `share-theme.css` dan `share-toolbar.js`; paket lama yang sudah diunduh tidak berubah. Link share online menampilkan Translate untuk halaman terbuka dengan akun Medium/Pro, sedangkan file offline tetap membaca terjemahan yang sudah tersimpan. Live commit `5ce8a05`; QA tercatat di `DEPLOY.md`.
 
 26 Oktober2026 — rilis dina iki: menu admin ijo diringkes dadi Status Member, Pengunjung, Email terverifikasi, Status Order, Ganti Password; filter paket tanpa tombol Semua, tanggal daftar member, lan tindak lanjut email draf mung kanggo member login sing email wis diverifikasi. Pengunjung anonim tetep tanpa identitas.

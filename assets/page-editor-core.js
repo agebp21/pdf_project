@@ -140,6 +140,47 @@
     return out;
   }
 
+  // Space available to a line when a placed picture asks surrounding text to flow.
+  // Coordinates are PDF points measured from the top-left of the page.
+  function flowSpan(box, pictures, top, lineHeight, gutter = 5) {
+    let left = box.x, right = box.x + box.w;
+    for (const pic of pictures || []) {
+      if (top + lineHeight <= pic.y - gutter || top >= pic.y + pic.h + gutter) continue;
+      const a = pic.x - gutter, b = pic.x + pic.w + gutter;
+      if (b <= left || a >= right) continue;
+      const before = Math.max(0, a - left), after = Math.max(0, right - b);
+      if (before >= after) right = Math.min(right, a);
+      else left = Math.max(left, b);
+    }
+    return { x: left, w: Math.max(0, right - left) };
+  }
+
+  function flowLines(text, measure, box, pictures, lineHeight, gutter = 5) {
+    const lines = []; let row = 0;
+    for (const para of String(text).split('\n')) {
+      if (!para) { lines.push({ line: '', last: true, ...flowSpan(box, pictures, box.y + row++ * lineHeight, lineHeight, gutter) }); continue; }
+      let rest = para;
+      while (rest.length) {
+        const span = flowSpan(box, pictures, box.y + row * lineHeight, lineHeight, gutter);
+        if (span.w < Math.max(1, lineHeight * .7)) { lines.push({ line: '', last: false, ...span }); row++; if (row > 10000) throw Error('Text cannot fit around the picture'); continue; }
+        const line = wrap(rest, measure, span.w)[0];
+        if (!line) break;
+        rest = rest.slice(line.length).replace(/^\s+/, '');
+        lines.push({ line, last: !rest, ...span }); row++;
+      }
+    }
+    return lines;
+  }
+
+  function flowPicture(elements, el, W, H) {
+    const size = (el.fontSize || .02) * H;
+    const estimatedLines = Math.ceil(String(el.text || '').length * size * .6 / Math.max(1, el.w * W)) + String(el.text || '').split('\n').length;
+    const reach = Math.max(el.h || 0, estimatedLines * size * (el.lineHeight || LINE) / H);
+    return (elements || []).find(pic => pic.type === 'image' && pic.wrapText
+      && pic.y < el.y + reach && pic.y + pic.h > el.y
+      && pic.x < el.x + el.w && pic.x + pic.w > el.x);
+  }
+
 
   // ---- rich text: words styled on their own (bold, italic, underline, colour, size, font) --------
   // A text block may carry html (from the editor) next to its plain text. Only a small
@@ -504,7 +545,7 @@
 
     // A block whose words carry their own styles: laid out word by word (sizes, fonts and
     // colours mixed in a line), wrapped to the box, aligned like the editor shows it.
-    async function drawRich(page, el, x, w, H) {
+    async function drawRich(page, el, x, w, H, pictures) {
       const base = el.fontSize * H, lh = el.lineHeight || LINE, paras = parseRich(el.html);
       const keys = Object.keys(opts.fonts || {});
       const tokens = [];
@@ -526,19 +567,25 @@
       }
       // Lines: greedy wrap; a word wider than the box stays alone on its line.
       const lines = []; let line = { toks: [], w: 0, size: 0 };
-      const finish = last => { while (line.toks.length && line.toks[line.toks.length - 1].space) line.w -= line.toks.pop().w; line.last = last; lines.push(line); line = { toks: [], w: 0, size: 0 }; };
+      const spanAt = () => flowSpan({ x, y: el.y * H, w }, pictures, el.y * H + lines.reduce((n, ln) => n + (ln.size || base) * lh, 0), base * lh);
+      const finish = last => { while (line.toks.length && line.toks[line.toks.length - 1].space) line.w -= line.toks.pop().w; line.last = last; line.span = spanAt(); lines.push(line); line = { toks: [], w: 0, size: 0 }; };
       for (const t of tokens) {
         if (t.end) { line.size = line.size || t.size; finish(true); continue; }
-        if (!el.fit && !t.space && line.toks.some(k => !k.space) && line.w + t.w > w) finish(false);
+        while (!t.space && !line.toks.length && spanAt().w < base * .7) {
+          line.size = base; finish(false);
+          if (lines.length > 10000) throw Error('Text cannot fit around the picture');
+        }
+        if ((!el.fit || pictures.length) && !t.space && line.toks.some(k => !k.space) && line.w + t.w > spanAt().w) finish(false);
         if (t.space && !line.toks.length) continue;
         line.toks.push(t); line.w += t.w; line.size = Math.max(line.size, t.size);
       }
       let top = H - el.y * H;
       for (const ln of lines) {
         const size = ln.size || base, baseY = top - size * baseline(lh);
+        const span = ln.span || { x, w };
         const spaces = ln.toks.filter(t => t.space);
-        const spread = el.align === 'justify' && !ln.last && spaces.length ? (w - ln.w) / spaces.length : 0;
-        let cx = x + (el.align === 'center' ? (w - ln.w) / 2 : el.align === 'right' ? w - ln.w : 0);
+        const spread = el.align === 'justify' && !ln.last && spaces.length ? (span.w - ln.w) / spaces.length : 0;
+        let cx = span.x + (el.align === 'center' ? (span.w - ln.w) / 2 : el.align === 'right' ? span.w - ln.w : 0);
         for (const [k, t] of ln.toks.entries()) {
           const tw = t.w + (t.space ? spread : 0);
           if (!t.space) page.drawText(t.text, { x: cx, y: baseY, size: t.size, font: t.f, color: hex(t.color) });
@@ -557,6 +604,7 @@
       const page = out.addPage([W, H]);
       // Pictures that sit under the page's design go first, then the design layer, then the rest.
       const all = edit.elements || [], under = all.filter(e => e.under), over = all.filter(e => !e.under);
+      const pictureFor = el => { const pic = flowPicture(all, el, W, H); return pic ? [{ x: pic.x * W, y: pic.y * H, w: pic.w * W, h: pic.h * H }] : []; };
       const drawBackground = async () => {
         if (!edit.background) return;
         const bg = bytesOf(edit.background);
@@ -610,7 +658,7 @@
           let cx = x;
           for (const cw of [0, ...lay.cols]) { cx += cw; page.drawLine({ start: { x: cx, y: H - el.y * H }, end: { x: cx, y: top }, ...line }); }
         } else if (el.type === 'text' && el.html && isRich(el.html)) {
-          await drawRich(page, el, x, w, H);
+          await drawRich(page, el, x, w, H, pictureFor(el));
         } else if (el.type === 'text') {
           const size = el.fontSize * H;
           const own = el.font ? await ownFont(el.font, clean(el.text)) : null;
@@ -624,17 +672,20 @@
           const width = s => gap ? s.split(' ').reduce((a, word, i) => a + (i ? gap : 0) + f.widthOfTextAtSize(word, size), 0) : f.widthOfTextAtSize(s, size);
           const lh = size * (el.lineHeight || LINE);
           // Each paragraph wraps on its own: in justified text its last line stays left.
-          const lines = String(text).split('\n').flatMap(para => {
-            const ls = el.fit ? [para] : wrap(para, width, Math.max(w, size));     // a one-line piece only breaks at Enter
-            return ls.map((line, i) => ({ line, last: i === ls.length - 1 }));
-          });
+          const pictures = pictureFor(el);
+          const lines = pictures.length
+            ? flowLines(text, width, { x, y: el.y * H, w }, pictures, lh)
+            : String(text).split('\n').flatMap(para => {
+              const ls = el.fit ? [para] : wrap(para, width, Math.max(w, size));
+              return ls.map((line, i) => ({ line, last: i === ls.length - 1, x, w }));
+            });
           let base = H - el.y * H - size * baseline(el.lineHeight || LINE);
-          for (const { line, last } of lines) {
+          for (const { line, last, x: lineX, w: lineW } of lines) {
             const lw = width(line), words = line.split(/ +/).filter(Boolean);
-            let cx = x + (el.align === 'center' ? (w - lw) / 2 : el.align === 'right' ? w - lw : 0);
+            let cx = lineX + (el.align === 'center' ? (lineW - lw) / 2 : el.align === 'right' ? lineW - lw : 0);
             // Justify: the words spread to both edges, the space between them grows.
             const spread = el.align === 'justify' && !last && words.length > 1
-              ? (w - words.reduce((a, word) => a + f.widthOfTextAtSize(word, size), 0)) / (words.length - 1) : 0;
+              ? (lineW - words.reduce((a, word) => a + f.widthOfTextAtSize(word, size), 0)) / (words.length - 1) : 0;
             const x0 = cx;
             if (!gap && !spread) { if (line) page.drawText(line, { x: cx, y: base, size, font: f, color: hex(el.color) }); }
             else for (const word of words) {
@@ -643,7 +694,7 @@
             }
             if (el.underline && line.trim()) {
               const uy = base - size * 0.13;
-              page.drawLine({ start: { x: x0, y: uy }, end: { x: x0 + (spread ? w : lw), y: uy }, thickness: Math.max(0.5, size * 0.06), color: hex(el.color) });
+              page.drawLine({ start: { x: x0, y: uy }, end: { x: x0 + (spread ? lineW : lw), y: uy }, thickness: Math.max(0.5, size * 0.06), color: hex(el.color) });
             }
             base -= lh;
           }
@@ -654,7 +705,7 @@
     return opts.report ? { bytes, missing: [...missing] } : bytes;
   }
 
-  globalThis.PageEditorCore = { FAMILIES, LINE, baseline, clean, family, groupLines, paragraphs, wrap, exportPdf,
+  globalThis.PageEditorCore = { FAMILIES, LINE, baseline, clean, family, groupLines, paragraphs, wrap, flowSpan, flowLines, flowPicture, exportPdf,
     KEY1, KEY2, keyPictures, unkey, repair, textColors, clearPaper, parseRich, isRich, plainRich, richHtml, tidyRich,
     richOf, plainOf, splitParas, joinParas, blockOf, breakPoints,
     TABLE_LINE, TABLE_PAD, colWidths, tableLayout, newTable, headingLevel, collectHeadings, tocLines };

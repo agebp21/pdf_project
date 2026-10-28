@@ -58,6 +58,13 @@ async function main() {
   assert.deepEqual(E.wrap('satu dua tiga empat', m, 9), ['satu dua', 'tiga', 'empat']);
   assert.deepEqual(E.wrap('a\nb c', m, 10), ['a', 'b c']);
   assert.deepEqual(E.wrap('panjaaaaaaang', m, 5), ['panja', 'aaaaa', 'ang']);
+  const flowBox = { x: 20, y: 20, w: 180 }, flowPic = [{ x: 20, y: 40, w: 88, h: 32 }];
+  const flowed = E.flowLines('satu dua tiga empat lima enam tujuh delapan sembilan sepuluh sebelas', s => s.length * 6, flowBox, flowPic, 14);
+  assert.equal(flowed[0].x, 20, 'first line uses the full width');
+  assert.ok(flowed.some(row => row.x >= 113 && row.line), 'rows beside the picture start after its right edge');
+  assert.ok(flowed.every(row => !row.line || row.w > 0), 'text never enters a blocked row');
+  const growingText = { type: 'text', x: .1, y: .1, w: .8, h: .02, fontSize: .02, text: 'teks panjang '.repeat(30) };
+  assert.ok(E.flowPicture([{ type: 'image', wrapText: true, x: .2, y: .25, w: .25, h: .1 }], growingText, 400, 600), 'edited text that grows toward a picture triggers wrapping');
 
   // Export: page 1 edited (background + new text + image + rectangle), page 2 untouched.
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
@@ -81,6 +88,21 @@ async function main() {
   const r = await pixel(out, 1, 0.65, 0.55); assert.ok(r[0] > 180 && r[1] < 60, 'image placed ' + r);
   const gr = await pixel(out, 1, 0.2, 0.85); assert.ok(gr[1] > 120 && gr[0] < 60, 'rectangle filled ' + gr);
   const doc = await PDFDocument.load(out); assert.equal(doc.getPageCount(), 2);
+  const wrapDoc = await PDFDocument.create(); wrapDoc.addPage([200, 180]);
+  const wrapPdf = await E.exportPdf(await wrapDoc.save(), { 0: { size: [200, 180], elements: [
+    { type: 'image', wrapText: true, x: .1, y: 40 / 180, w: .44, h: 32 / 180, src: 'data:image/png;base64,' + red.toBuffer('image/png').toString('base64') },
+    { type: 'text', x: .1, y: 20 / 180, w: .9, h: .5, text: 'satu dua tiga empat lima enam tujuh delapan sembilan sepuluh sebelas', fontSize: 12 / 180, family: 'sans', color: '#000000', fit: true },
+  ] } });
+  const wrapRead = await open(wrapPdf), wrapItems = (await (await wrapRead.getPage(1)).getTextContent()).items.filter(item => item.str.trim());
+  assert.ok(wrapItems.some(item => item.transform[4] >= 113 && item.transform[5] < 180 - 34 && item.transform[5] > 180 - 82), 'export moves text beside the picture');
+  await wrapRead.destroy();
+  const richWrapPdf = await E.exportPdf(await wrapDoc.save(), { 0: { size: [200, 180], elements: [
+    { type: 'image', wrapText: true, x: .1, y: 40 / 180, w: .44, h: 32 / 180, src: 'data:image/png;base64,' + red.toBuffer('image/png').toString('base64') },
+    { type: 'text', x: .1, y: 20 / 180, w: .9, h: .5, text: 'satu dua tiga empat lima enam tujuh delapan sembilan', html: 'satu <b>dua tiga empat</b> lima enam tujuh delapan sembilan', fontSize: 12 / 180, family: 'sans', color: '#000000' },
+  ] } });
+  const richRead = await open(richWrapPdf), richItems = (await (await richRead.getPage(1)).getTextContent()).items.filter(item => item.str.trim());
+  assert.ok(richItems.some(item => item.transform[4] >= 113 && item.transform[5] < 180 - 34 && item.transform[5] > 180 - 82), 'styled text also flows beside the picture');
+  await richRead.destroy();
   assert.deepEqual([doc.getPage(0).getWidth(), doc.getPage(0).getHeight()], [400, 600]);
   // Page order can be chosen (e.g. after reordering).
   const swapped = await E.exportPdf(bytes, {}, { order: [1, 0] });

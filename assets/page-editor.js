@@ -593,7 +593,7 @@
     if (!st.picked.has(i)) { st.picked = new Set([i]); anchor = i; }
     renderThumbs();
     const stage = $('#pe-stage');
-    stage.innerHTML = '<div class="pe-busy">' + L('Preparing the page…', 'Menyiapkan halaman…') + '</div>';
+    stage.innerHTML = '<div class="pe-ocr-loading on" id="pe-ocr-loading" aria-label="' + L('Preparing this page', 'Menyiapkan halaman ini') + '"></div>';
     sizeStage(); layoutDesk();
     if (scroll) stage.scrollIntoView({ block: 'start', behavior: 'instant' });
     try { await prepare(page()); status(L('Click any text to type. Drag pictures to move them.', 'Klik teks mana saja untuk mengetik. Seret gambar untuk memindahkan.')); }
@@ -669,6 +669,7 @@
     for (const el of pg.elements) if (el.under) stage.append(build(el));
     const bg = document.createElement('img'); bg.className = 'pe-bg'; bg.src = pg.bg; bg.alt = ''; stage.append(bg);
     for (const el of pg.elements) if (!el.under) stage.append(build(el));
+    const busy = document.createElement('div'); busy.id = 'pe-ocr-loading'; busy.className = 'pe-ocr-loading'; busy.setAttribute('aria-label', L('OCR is running', 'OCR sedang berjalan')); stage.append(busy);
     // Where its text may run, as the page first shows (before anything was typed).
     if (!pg.band && !isTyped(pg) && !pg.spill) { pinFooters(pg); pg.band = bandOf(pg); }
     // A selected picture under the design keeps its place in the layers; its frame
@@ -697,6 +698,21 @@
     Object.assign(node.style, { fontFamily: (own ? `"${el.font}", ` : '') + (CSS_FONT[el.family] || CSS_FONT.sans), fontSize: el.fontSize * H + 'px', lineHeight: String(el.lineHeight || C.LINE),
       fontWeight: !own && el.bold ? '700' : '400', fontStyle: !own && el.italic ? 'italic' : 'normal', color: el.color || '#1c1917', textAlign: el.align || 'left',
       textDecoration: el.underline ? 'underline' : 'none', whiteSpace: el.fit ? 'pre' : 'pre-wrap' });
+    node.classList.remove('pe-flow');
+    const pg = st.pages.find(p => p.elements.includes(el));
+    if (!pg) return;
+    const pic = C.flowPicture(pg.elements, el, pg.size[0], pg.size[1]);
+    if (!pic) return;
+    node.style.whiteSpace = 'pre-wrap';
+    const [W, PH] = pg.size, gutter = 5 / W;
+    const leftRoom = Math.max(0, pic.x - gutter - el.x), rightRoom = Math.max(0, el.x + el.w - pic.x - pic.w - gutter);
+    const floatLeft = rightRoom >= leftRoom;
+    const occupied = floatLeft ? pic.x + pic.w + gutter - el.x : el.x + el.w - pic.x + gutter;
+    node.style.setProperty('--pe-flow-side', floatLeft ? 'left' : 'right');
+    node.style.setProperty('--pe-flow-width', Math.min(100, Math.max(0, occupied / el.w * 100)) + '%');
+    node.style.setProperty('--pe-flow-top', Math.max(0, (pic.y - el.y) * H) + 'px');
+    node.style.setProperty('--pe-flow-height', (Math.max(0, pic.y - el.y) + pic.h + 10 / PH) * H + 'px');
+    node.classList.add('pe-flow');
   }
   function build(el, sheetH) {
     const div = document.createElement('div');
@@ -1559,6 +1575,7 @@
     for (const id of ['#pe-delete', '#pe-front', '#pe-back', '#pe-color']) { const b = $(id); if (b) b.disabled = !el; }
     const fill = $('#pe-fill'); if (fill) fill.disabled = !(el && (el.type === 'rect' || el.type === 'ellipse' || el.type === 'triangle'));
     const rep = $('#pe-replace'); if (rep) rep.parentElement.style.display = el && el.type === 'image' ? '' : 'none';
+    const wrapButton = $('#pe-wrap-image'); if (wrapButton) { wrapButton.disabled = !(el && el.type === 'image'); wrapButton.classList.toggle('on', !!(el && el.wrapText)); }
     if (text && el.type === 'text') {
       fontSelect(el);
       $('#pe-size').value = Math.round(el.fontSize * H * 10) / 10;
@@ -1888,7 +1905,7 @@
     C.repair(d.data, W, H, [repairBox]); g.putImageData(d, 0, 0);
     snapshot();
     pg.bg = canvas.toDataURL(pg.layered ? 'image/png' : 'image/jpeg', 0.9); canvas.width = 0;
-    const el = { id: newId(), type: 'image', x: b.x, y: b.y, w: b.w, h: b.h, src, rotation: 0 };
+    const el = { id: newId(), type: 'image', x: b.x, y: b.y, w: b.w, h: b.h, src, rotation: 0, wrapText: true };
     els().push(el); touched(); st.sel = el.id; render();
     status(L('Done: the area is now a picture — drag it, resize it or delete it.', 'Selesai: area itu sekarang gambar — seret, ubah ukuran, atau hapus.'));
   }
@@ -2015,7 +2032,7 @@
     $('#pe-list-number').onclick = () => toggleList('number');
     $('#pe-add-image').onchange = async e => {
       const f = e.target.files[0]; e.target.value = ''; if (!f) return;
-      try { const { src, ratio } = await readImage(f); const [W, H] = page().size, w = 0.4; add({ type: 'image', x: 0.3, y: 0.3, w, h: w * ratio * W / H, src, rotation: 0 }); }
+      try { const { src, ratio } = await readImage(f); const [W, H] = page().size, w = 0.4; add({ type: 'image', x: 0.3, y: 0.3, w, h: w * ratio * W / H, src, rotation: 0, wrapText: true }); }
       catch (err) { status(err.message); }
     };
     $('#pe-replace').onchange = async e => {
@@ -2023,6 +2040,7 @@
       try { const { src, ratio } = await readImage(f); change(el => { if (el.type !== 'image') return; el.src = src; const [W, H] = page().size; el.h = el.w * ratio * W / H; }); }
       catch (err) { status(err.message); }
     };
+    $('#pe-wrap-image').onclick = () => change(el => { if (el.type === 'image') el.wrapText = !el.wrapText; });
     $('#pe-family').onchange = async e => {
       const v = e.target.value, el = find(st.sel);
       if (v === '__local') { await loadLocalFonts(); fontSelect(el); return; }
@@ -2071,6 +2089,7 @@
     $('#pe-reset').onclick = () => { if (!page()) return; snapshot(); page().elements = JSON.parse(page().initial); page().bg = page().initialBg; page().edited = false; st.sel = null; st.group = []; render(); renderThumbs(); };
     $('#pe-ocr-area').onclick = () => { cutting = cutting === 'ocr' ? false : 'ocr'; $('#pe-ocr-area').classList.toggle('on', !!cutting); $('#pe-cut').classList.remove('on'); $('#pe-stage').style.cursor = cutting ? 'crosshair' : '';
       if (cutting) status(L('Drag a box around words in a picture: they become text you can edit.', 'Seret kotak di sekitar tulisan pada gambar: tulisan itu menjadi teks yang bisa diedit.')); };
+    $('#pe-ocr-page').onclick = () => ocrPage(st.cur).catch(err => status(err.message || String(err)));
     $('#pe-cut').onclick = () => { cutting = cutting === 'img' ? false : 'img'; $('#pe-cut').classList.toggle('on', !!cutting); $('#pe-ocr-area').classList.remove('on'); $('#pe-stage').style.cursor = cutting ? 'crosshair' : '';
       if (cutting) status(L('Draw freely around a logo, chart or drawing with the pointer, then release to cut it out.', 'Gambar garis bebas ngubengi logo, grafik, utawa objek nganggo pointer, banjur culna kanggo motong dadi gambar.')); };
     $('#pe-save').onclick = () => save(st.from === 'organize' ? 'organize' : 'download');
