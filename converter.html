@@ -883,16 +883,22 @@ function orgMergeOcrLines(lines) {
 }
 // The full page editor (editor.html): the organized PDF goes over as it is now,
 // opening on the first ticked page (or the page shown in the reader).
-window.orgOpenEditor = async () => {
+window.orgOpenEditor = async (startPos = null) => {
   try {
     if (files.length === 0) throw new Error(L('Upload a PDF first', 'Upload PDF dulu'));
     const prog = $('#progress'); if (prog) { prog.classList.remove('hidden'); prog.textContent = L('Opening the editor…', 'Membuka editor…'); }
-    const bytes = await buildOrganizePdf(organizeOrder);
+    const singlePage = Number.isInteger(startPos);
+    const editOrder = singlePage ? [organizeOrder[startPos]] : organizeOrder;
+    if (singlePage && editOrder[0] === undefined) throw new Error(L('Page not found', 'Halaman ora ditemokake'));
+    const bytes = await buildOrganizePdf(editOrder);
     let page = 1;
-    try { if (orgBook) page = orgBook.getCurrentPageIndex() + 1; } catch (e) {}
-    const ticked = organizeOrder.findIndex(code => organizeSelected.has(code));
-    if (ticked >= 0) page = ticked + 1;
-    const id = await FlipbookTransfer.save(new Blob([bytes], { type: 'application/pdf' }), orgBaseName() + '.pdf');
+    if (!singlePage) {
+      try { if (orgBook) page = orgBook.getCurrentPageIndex() + 1; } catch (e) {}
+      const ticked = organizeOrder.findIndex(code => organizeSelected.has(code));
+      if (ticked >= 0) page = ticked + 1;
+    }
+    const suffix = singlePage ? '-page-' + (startPos + 1) : '';
+    const id = await FlipbookTransfer.save(new Blob([bytes], { type: 'application/pdf' }), orgBaseName() + suffix + '.pdf');
     location.href = 'editor.html?source=' + encodeURIComponent(id) + '&page=' + page + '&from=organize';
   } catch (e) { showError(e.message || String(e)); }
 };
@@ -1667,7 +1673,7 @@ function renderOrganizeGrid(){
     <div class="org-cell">
       <div draggable="true" data-pos="${pos}" data-orig="${origIdx}" ondragstart="orgDrag(event)" ondragend="orgFinishDrag()" ondragover="orgOver(event)" ondrop="orgDrop(event)" onclick="orgCardClick(event,${orgArg(origIdx)})"
         class="org-card group${sel?' sel':''}">
-        <div class="org-thumb" data-thumb="${origIdx}" onclick="${isBlank&&!goZoom?`event.stopPropagation();orgBlankAsk(${orgArg(origIdx)})`:''}" ondblclick="event.stopPropagation();openOrgViewer(${pos})" title="${isBlank&&!goZoom?L('Add an image to this blank page','Tambah gambar di halaman kosong ini'):L('Click to flip here, double-click to zoom','Klik untuk flip ke sini, double-click untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){orgCardClick(event,${orgArg(origIdx)})}">${thumb}</div>
+        <div class="org-thumb" data-thumb="${origIdx}" onclick="${isBlank&&!goZoom?`event.stopPropagation();orgBlankAsk(${orgArg(origIdx)})`:''}" ondblclick="event.stopPropagation();${orgMode==='edit'?`orgOpenEditor(${pos})`:`openOrgViewer(${pos})`}" title="${isBlank&&!goZoom?L('Add an image to this blank page','Tambah gambar di halaman kosong iki'):orgMode==='edit'?L('Double-click to edit this page','Klik kaping pindho kanggo ngedit halaman iki'):L('Click to flip here, double-click to zoom','Klik kanggo flip ke sini, double-click untuk zoom')}" role="button" tabindex="0" onkeydown="if(event.key==='Enter'){orgCardClick(event,${orgArg(origIdx)})}">${thumb}</div>
         <div class="org-hover">
           ${isBlank?'':`<button onclick="event.stopPropagation();orgRotateOne(${origIdx})" title="${L('Rotate this page 90°','Putar halaman ini 90°')}">${ORG_ICONS.rotate}</button>`}
           <button onclick="event.stopPropagation();orgDeleteOne(${pos})" title="${L('Delete this page','Hapus halaman ini')}">${ORG_ICONS.x}</button>
