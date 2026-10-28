@@ -4048,7 +4048,11 @@ class Handler(SimpleHTTPRequestHandler):
                 return
             # Shared books are self-contained snapshots. Apply the current reader theme
             # when serving older links without changing their sealed pages or download.
-            themed = data.replace(b'</head>', b'<style id="mf-share-theme">' + SHARE_THEME + b'</style></head>', 1)
+            # Only the hosted reader may call the authenticated translation API.
+            # The downloadable sealed HTML keeps its offline CSP unchanged.
+            online = data.replace(b"font-src data:", b"font-src data:; connect-src 'self'", 1)
+            online = online.replace(b"connect-src 'none'", b"connect-src 'self'", 1)
+            themed = online.replace(b'</head>', b'<style id="mf-share-theme">' + SHARE_THEME + b'</style></head>', 1)
             head, sep, tail = themed.rpartition(b'</body>')
             toolbar = b'<script id="mf-share-toolbar">' + SHARE_TOOLBAR + b'</script>'
             page = (head + SHARE_BAR.encode() + toolbar + sep + tail) if sep else (themed + SHARE_BAR.encode() + toolbar)

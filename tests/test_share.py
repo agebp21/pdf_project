@@ -19,7 +19,8 @@ import share
 
 
 def sealed(title='Buku Coba'):
-    return ('<!DOCTYPE html><html><head><title>' + title + '</title></head><body>'
+    return ('<!DOCTYPE html><html><head><meta http-equiv="Content-Security-Policy" '
+            'content="default-src \'none\'; font-src data:"><title>' + title + '</title></head><body>'
             '<script type="application/json" id="book-payload">{"v":1}</script></body></html>').encode()
 
 
@@ -127,6 +128,7 @@ class ShareTests(unittest.TestCase):
         self.assertIn('no-cache', headers['Cache-Control'])
         self.assertIn(b'mf-share-theme', raw, 'old links receive current reader style')
         self.assertIn(b'mf-share-toolbar', raw, 'old links receive current toolbar order')
+        self.assertIn(b"connect-src 'self'", raw, 'hosted shares can call the translation API')
         etag = headers['ETag']
         status, headers, raw = pro.call('GET', link, headers={'If-None-Match': etag})
         self.assertEqual((status, raw), (304, b''), 'unchanged reader revalidates without resending the book')
@@ -139,6 +141,7 @@ class ShareTests(unittest.TestCase):
         self.assertNotIn(b'?dl=1', raw, 'downloaded file is the clean book')
         self.assertNotIn(b'mf-share-theme', raw, 'downloaded original stays unchanged')
         self.assertNotIn(b'mf-share-toolbar', raw)
+        self.assertNotIn(b"connect-src 'self'", raw, 'download retains its offline CSP')
         # No login needed to read; strangers cannot delete.
         self.assertEqual(Member(self.base).call('GET', link)[0], 200)
         other = self.member('other@s.co', 'pro')
