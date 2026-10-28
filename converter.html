@@ -191,8 +191,17 @@
   #options.org-full{max-width:none}
   #orgFootExtra:empty{display:none}
   #orgFootExtra p{margin-top:0}
-  /* Mini flipbook preview above the grid: click a card and the book flips there. */
-  #orgReader{background:#fff;border:1px solid #e7e2f2;border-radius:12px;padding:.6rem;margin-bottom:.75rem;position:sticky;top:.5rem;z-index:6}
+  /* Compact cover in the workspace; the full flipbook lives in a dialog. */
+  .org-cover-preview{display:flex;align-items:center;gap:12px;width:min(100%,280px);margin:12px auto 16px;padding:8px;text-align:left;background:#fff;border:1px solid #e7e2f2;border-radius:12px;cursor:pointer;color:#1f2937}
+  .org-cover-preview:hover,.org-cover-preview:focus-visible{border-color:#1a3c34;box-shadow:0 3px 12px #1a3c3426}
+  .org-cover-preview img,.org-cover-placeholder{width:86px;height:112px;object-fit:contain;background:#f7f4ed;border-radius:7px;flex:none}
+  .org-cover-placeholder{display:grid;place-items:center;color:#777;font-size:11px}
+  .org-cover-preview [hidden]{display:none!important}
+  .org-cover-preview span:last-child{font-size:12px;font-weight:700;line-height:1.4}
+  #orgReaderDialog{width:min(96vw,1300px);max-width:96vw;max-height:94dvh;padding:18px 14px 14px;border:1px solid #e7e2f2;border-radius:18px;background:#fff;box-shadow:0 24px 80px #11182755;overflow:auto}
+  #orgReaderDialog::backdrop{background:#111827b8}
+  .org-reader-close{position:sticky;top:0;float:right;z-index:10;width:34px;height:34px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#374151;cursor:pointer;font-size:22px;line-height:1}
+  #orgReader{background:#fff;border:0;border-radius:12px;padding:.6rem;position:relative;clear:both}
   .org-reader-bar{display:flex;align-items:center;justify-content:center;gap:.5rem;font-size:12px;font-weight:800;margin-bottom:.5rem;color:#374151}
   .org-reader-bar button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;min-width:30px;padding:.25rem .6rem;font-size:12px;font-weight:800;cursor:pointer;color:#374151}
   #orgBook{margin:0 auto}
@@ -470,6 +479,11 @@ function renderHeader(){
           <button data-mode="split" onclick="orgModeSet('split')"><span class="ot-ic" style="background:#FFE3D9;color:#9A3412">↗↙</span><span class="ot-tx"><span class="ot-t">${L('Split','Pisah')}</span><span class="ot-d">${L('Take out pages','Pisahkan halaman')}</span></span></button>
           <button data-mode="compress" onclick="orgModeSet('compress')"><span class="ot-ic" style="background:#E4F3C2;color:#1A3C34">⇲</span><span class="ot-tx"><span class="ot-t">${L('Compress','Kompres')}</span><span class="ot-d">${L('Make the file smaller','Perkecil ukuran file')}</span></span></button>
         </div>
+        <button id="orgCoverPreview" class="org-cover-preview is-hidden" type="button" onclick="orgReaderOpen()" aria-label="${L('Open book preview','Buka pratinjau buku')}">
+          <img id="orgCoverImage" alt="${L('Book cover','Sampul buku')}" hidden>
+          <span id="orgCoverPlaceholder" class="org-cover-placeholder">${L('Cover','Sampul')}</span>
+          <span>${L('Open book preview','Buka pratinjau buku')}<br><small id="orgCoverCount"></small></span>
+        </button>
         <div id="orgEditTools" class="org-edittools is-hidden">
           <button onclick="orgZoomStep(-0.25)" title="Zoom out">−</button>
           <span id="orgZoomLabel">100%</span>
@@ -486,6 +500,8 @@ function renderHeader(){
             <button onclick="orgEditTextApply()">Add</button>
           </span>
         </div>
+        <dialog id="orgReaderDialog" aria-label="${L('Book preview','Pratinjau buku')}" onclick="if(event.target===this)orgReaderCloseDialog()" onclose="orgReaderClosed()">
+          <button class="org-reader-close" type="button" onclick="orgReaderCloseDialog()" aria-label="${L('Close preview','Tutup pratinjau')}">×</button>
         <div id="orgReader" class="is-hidden">
           <div class="org-reader-bar">
             <button onclick="orgReaderGo(-1)" aria-label="Previous">←</button>
@@ -494,6 +510,7 @@ function renderHeader(){
           </div>
           <div id="orgBook"></div>
         </div>
+        </dialog>
         <div id="orgEmpty" class="org-empty">
           <p style="font-size:28px">📄</p>
           <p><b>${L('Pick a PDF to start organizing','Pilih PDF untuk mulai mengatur')}</b></p>
@@ -590,6 +607,7 @@ function renderHeader(){
   if(flCard&&progNode&&errNode) flCard.append(progNode,errNode);
   if($('#resultActions')?.closest('#options')) resultActionsHome();   // don't lose the buttons with the old sidebar
   document.getElementById('cropUi')?.remove();                         // its listeners point at the old fields
+  if(document.getElementById('orgReaderDialog')?.open) orgReaderCloseDialog();
   $('#options').innerHTML=html;
   if(t.id==='edit-pdf'&&window.PDFEdit){PDFEdit.toggleKind();PDFEdit.renderDrafts();}
   if(active==='organize-pdf'){
@@ -1550,7 +1568,8 @@ function renderOrganizeGrid(){
   document.getElementById('orgEmpty')?.classList.toggle('is-hidden',hasPages);
   grid.classList.toggle('is-hidden',!hasPages);
   document.getElementById('orgSide')?.classList.toggle('is-hidden',!hasPages);
-  if(!hasPages) return;
+  document.getElementById('orgCoverPreview')?.classList.toggle('is-hidden',!hasPages);
+  if(!hasPages){ orgReaderCloseDialog(); return; }
   paintOrgFiles();
   const nSel=organizeSelected.size;
   const box=$('#orgSelBox');
@@ -1585,7 +1604,9 @@ function renderOrganizeGrid(){
     </div>`;
   }).join('');
   orgObserveThumbs();
+  orgCoverUpdate();
   const sig=organizeOrder.join('|')+'#'+Object.keys(organizeRotations).sort().join(',')+'#'+Object.keys(orgBlankImg).sort().join(',')+'#'+Object.keys(orgTextEdits).sort().map(k=>k+':'+orgTextEdits[k].length).join(',');
+  if(!document.getElementById('orgReaderDialog')?.open) return;
   if(orgStatic){ orgStaticRender(); return; }
   if(sig!==orgReaderSig||!orgBook){ orgReaderSig=sig; orgReaderBuild(); }
 }
@@ -1730,8 +1751,7 @@ function orgViewerKeys(e){
 function closeOrgViewer(){ document.getElementById('orgViewer')?.remove(); document.removeEventListener('keydown', orgViewerKeys); }
 window.orgWsOver=(e)=>{ e.preventDefault(); };
 window.orgWsDrop=(e)=>{ e.preventDefault(); if(e.dataTransfer&&e.dataTransfer.files.length){ log('Drop '+e.dataTransfer.files.length+' files'); handleFiles(e.dataTransfer.files); } };
-// Mini flipbook preview: the current order as a real flippable book.
-// Clicking a card selects it AND flips the preview there.
+// Dialog flipbook preview: the current order as a real flippable book.
 let orgBook=null, orgPrevCache=new Map(), orgReaderSig='', orgBuildSeq=0, orgEngineLoading=null, orgFaceEls=[];
 function orgBookEngine(){
   if(window.St&&window.St.PageFlip) return Promise.resolve();
@@ -1744,6 +1764,28 @@ function orgBookEngine(){
   return orgEngineLoading;
 }
 function orgReaderClose(){ if(orgBook){ try{orgBook.destroy();}catch(e){} orgBook=null; } }
+function orgReaderClosed(){ orgReaderClose(); orgReaderSig=''; orgStatic=false; }
+window.orgReaderCloseDialog=()=>{ const dialog=document.getElementById('orgReaderDialog'); if(dialog?.open) dialog.close(); };
+window.orgReaderOpen=()=>{
+  if(!organizeOrder.length) return;
+  const dialog=document.getElementById('orgReaderDialog');
+  if(!dialog || dialog.open) return;
+  dialog.showModal();
+  orgReaderBuild();
+};
+let orgCoverToken=0;
+async function orgCoverUpdate(){
+  const token=++orgCoverToken, code=organizeOrder[0];
+  const cover=document.getElementById('orgCoverPreview'), image=document.getElementById('orgCoverImage');
+  if(!cover || !image || code===undefined) return;
+  const count=document.getElementById('orgCoverCount');
+  if(count) count.textContent=L(`${organizeOrder.length} pages`,`${organizeOrder.length} halaman`);
+  const url=typeof code==='number' ? await orgRenderPage(code) : (orgBlankImg[code]||'');
+  if(token!==orgCoverToken || organizeOrder[0]!==code || !cover.isConnected) return;
+  image.hidden=!url;
+  image.src=url||'';
+  document.getElementById('orgCoverPlaceholder').hidden=!!url;
+}
 function orgPrevKey(code){ return code+'|'+(organizeRotations[code]||0); }
 function orgPreviewFace(code,pos){
   const hit=orgPrevCache.get(orgPrevKey(code));
@@ -1962,11 +2004,12 @@ async function orgRenderVisible(){
 }
 window.orgReaderGo=(dir)=>{
   let cur=orgStatic?orgStaticIdx:0;
+  let step=1;
   if(!orgStatic){
     if(!orgBook) return;
-    try{cur=orgBook.getCurrentPageIndex();}catch(e){return;}
+    try{cur=orgBook.getCurrentPageIndex();step=orgBook.getOrientation()==='landscape'?2:1;}catch(e){return;}
   }
-  orgFlipTo(cur+dir);
+  orgFlipTo(cur+dir*step);
 };
 window.orgRotateOne=(idx)=>{ organizeRotations[idx]=((organizeRotations[idx]||0)+90)%360; if(!organizeRotations[idx]) delete organizeRotations[idx]; renderOrganizeGrid(); };
 const orgPruneFills=()=>{ const alive=new Set(organizeOrder); Object.keys(orgBlankImg).forEach(k=>{ if(!alive.has(k)) delete orgBlankImg[k]; }); };
@@ -2087,7 +2130,7 @@ function updateFileUI({preserveError=false}={}){
     document.getElementById('orgEmpty')?.classList.toggle('is-hidden',loaded);
     document.getElementById('organizeGrid')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgSide')?.classList.toggle('is-hidden',!loaded);
-    document.getElementById('orgReader')?.classList.toggle('is-hidden',!loaded);
+    document.getElementById('orgCoverPreview')?.classList.toggle('is-hidden',!loaded || !organizeOrder.length);
     paintOrgMode();
     if(!loaded){
       organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map(); orgBlankSeq=0; orgBlankImg={}; orgBlankTarget=null;
@@ -2097,7 +2140,7 @@ function updateFileUI({preserveError=false}={}){
       orgPdfDocs=[];
       orgStatic=false;
       orgReaderClose();
-      const wr=document.getElementById('orgReader'); if(wr) wr.classList.add('is-hidden');
+      orgReaderCloseDialog();
       const grid0=document.getElementById('organizeGrid'); if(grid0) grid0.innerHTML='';
     }
   }

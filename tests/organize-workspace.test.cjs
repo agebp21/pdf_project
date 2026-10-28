@@ -5,6 +5,8 @@ async function main(){
   const dom=new JSDOM(html,{url:'http://localhost:8080/converter.html?tool=organize-pdf',runScripts:'outside-only'});
   const w=dom.window;
   w.console.log=()=>{}; w.scrollTo=()=>{};
+  w.HTMLDialogElement.prototype.showModal=function(){this.setAttribute('open','');};
+  w.HTMLDialogElement.prototype.close=function(){this.removeAttribute('open');this.dispatchEvent(new w.Event('close'));};
   const script=[...w.document.scripts].find(s=>s.textContent.includes('const TOOLS')).textContent;
   // Driver hooks must live in the SAME eval scope (top-level let is not shared across eval calls).
   w.eval(script+`
@@ -94,7 +96,8 @@ async function main(){
   assert.equal(vis('organizeGrid'),true,'grid shows with file');
   assert.ok(w.document.querySelector('.org-sort'),'sort lives in the files header now');
   assert.ok(w.document.querySelector('.org-sort').getAttribute('onclick').includes('orgSortToggle'),'sort button wired');
-  assert.equal(vis('orgReader'),true,'reader opens by default');
+  assert.equal(vis('orgCoverPreview'),false,'cover waits for page preview');
+  assert.equal(w.document.getElementById('orgReaderDialog').open,false,'book popup starts closed');
   assert.ok(w.document.getElementById('fileList').classList.contains('hidden'),'no duplicate file panel');
   // Removing the file restores the prompt and clears the grid.
   w.qaClear();
@@ -122,11 +125,15 @@ async function main(){
   assert.ok(w.document.getElementById('drop').classList.contains('is-hidden'),'drop hidden for organize');
   w.qaTool('merge-pdf');
   assert.ok(!w.document.getElementById('drop').classList.contains('is-hidden'),'drop returns for merge');
-  // Reader is part of the workspace: visible with files, no toggle needed.
+  // The cover appears below the mode buttons; the full book opens only on click.
   w.qaTool('organize-pdf');
   w.qaLoad();
-  assert.ok(!w.document.getElementById('orgReader').classList.contains('is-hidden'),'reader shows with files');
   w.qaPreview();
+  assert.equal(vis('orgCoverPreview'),true,'cover thumbnail shows with pages');
+  w.orgReaderOpen();
+  assert.equal(w.document.getElementById('orgReaderDialog').open,true,'book popup opens');
+  w.orgReaderCloseDialog();
+  assert.equal(w.document.getElementById('orgReaderDialog').open,false,'book popup closes');
   assert.ok(w.document.getElementById('orgBook'),'reader book element present');
   // Static fallback (no engine): plain spread + label follow the position.
   assert.equal(w.qaStatic(),2,'static spread renders two pages');
