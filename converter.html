@@ -607,7 +607,7 @@ function renderHeader(){
           </div>
           <div class="org-split-range" id="orgSplitRangeBox">
             <label for="orgSplitPages">${L('Page range','Rentang halaman')}</label>
-            <input id="orgSplitPages" type="text" placeholder="1-5, 8, 10-12" aria-label="${L('Page range to split','Rentang halaman yang dipisahkan')}" onfocus="orgSplitView('range')" oninput="this.setCustomValidity('')" onchange="if(this.value.trim())orgApplySplitPages()">
+            <input id="orgSplitPages" type="text" placeholder="1-5, 8, 10-12" aria-label="${L('Page range to split','Rentang halaman yang dipisahkan')}" onfocus="orgSplitView('range')" oninput="orgSplitPreview(this)" onchange="if(this.value.trim())orgApplySplitPages()">
           </div>
           <p class="org-split-help" id="orgSplitHelp">${L('Example: 1-5, 8, 10-12. Selected pages stay together in one PDF.','Contoh: 1-5, 8, 10-12. Halaman pilihan tetap jadi satu PDF.')}</p>
           <div class="org-split-quick">
@@ -708,6 +708,7 @@ window.orgModeSet = (mode) => {
   log('Org mode ' + mode);
 };
 window.orgSplitView = (mode) => {
+  clearTimeout(orgSplitPreviewTimer);
   document.querySelectorAll('[data-split-view]').forEach(button => button.classList.toggle('active', button.dataset.splitView === mode));
   const range = document.getElementById('orgSplitRangeBox');
   if (range) range.hidden = mode === 'pages';
@@ -717,6 +718,7 @@ window.orgSplitView = (mode) => {
     : L('Example: 1-5, 8, 10-12. Selected pages stay together in one PDF.','Contoh: 1-5, 8, 10-12. Halaman pilihan tetap jadi satu PDF.');
   if (mode === 'pages') { const input = document.getElementById('orgSplitPages'); if (input) input.value = ''; }
 };
+let orgSplitPreviewTimer;
 window.orgPrimaryAction = () => {
   if (orgMode === 'split') return orgSplitSelected();
   if (orgMode === 'edit') return orgOpenEditor();
@@ -3030,7 +3032,7 @@ window.orgAnnPicked = async (inp) => {
   } catch (e) { showError(e.message); }
 };
 // Split mode: one PDF per selected page, packed as a ZIP.
-window.orgApplySplitPages=()=>{
+window.orgApplySplitPages=(silent=false)=>{
   try {
     const input=$('#orgSplitPages');
     const raw=(input?.value||'').trim().replace(/[–—]/g,'-');
@@ -3046,7 +3048,18 @@ window.orgApplySplitPages=()=>{
     organizeSelected=new Set([...positions].map(pos=>organizeOrder[pos]));
     renderOrganizeGrid();
     return true;
-  } catch(error) { showError(error.message); return false; }
+  } catch(error) { if(!silent) showError(error.message); return false; }
+};
+window.orgSplitPreview=input=>{
+  input.setCustomValidity('');
+  clearTimeout(orgSplitPreviewTimer);
+  orgSplitPreviewTimer=setTimeout(()=>{
+    if(orgMode!=='split') return;
+    if(!input.value.trim() || !orgApplySplitPages(true)){
+      organizeSelected.clear();
+      renderOrganizeGrid();
+    }
+  },120);
 };
 window.orgSplitSelected=async ()=>{
   try{
