@@ -87,6 +87,11 @@
   #pe-stage{position:relative;background:#fff;box-shadow:0 10px 30px rgba(0,0,0,.18);flex:none;touch-action:none}
   #pe-stage,.pe-sheet{scroll-margin-top:140px}
   #pe-stage>.pe-bg{position:absolute;inset:0;width:100%;height:100%;user-select:none;pointer-events:none}
+  .pe-ocr-loading{position:absolute;left:50%;top:50%;transform:translate(-50%,-50%);z-index:30;width:78px;height:78px;border-radius:50%;display:none;align-items:center;justify-content:center;background:rgba(28,25,23,.28);border:1px solid rgba(255,255,255,.55);box-shadow:0 8px 24px rgba(28,25,23,.18);pointer-events:none}
+  .pe-ocr-loading.on{display:flex}
+  .pe-ocr-loading::before{content:'';width:38px;height:38px;border-radius:50%;border:3px solid rgba(255,255,255,.35);border-top-color:#fff;border-right-color:rgba(255,255,255,.8);animation:pe-ocr-spin .8s linear infinite}
+  .pe-ocr-loading::after{content:'OCR';position:absolute;color:#fff;font:800 10px 'Plus Jakarta Sans',sans-serif;letter-spacing:.08em;text-shadow:0 1px 2px rgba(0,0,0,.35)}
+  @keyframes pe-ocr-spin{to{transform:rotate(360deg)}}
   .pe-el{position:absolute;box-sizing:border-box;outline:1px dashed transparent;outline-offset:1px}
   .pe-el:hover{outline-color:rgba(255,92,40,.55)}
   .pe-el.sel{outline:1.5px solid #FF5C28;z-index:5}
@@ -232,7 +237,7 @@
     <div class="pe-status" id="pe-status"></div>
     <div class="pe-main">
       <div class="pe-thumbs" id="pe-thumbs"></div>
-      <div class="pe-desk" id="pe-desk"><div id="pe-stage"></div></div>
+      <div class="pe-desk" id="pe-desk"><div id="pe-stage"><div class="pe-ocr-loading" id="pe-ocr-loading" aria-label="OCR sedang berjalan"></div></div></div>
     </div>
     <div class="pe-statusbar" id="pe-sb"></div>
     <p class="pe-help" data-en="Pages: right-click (or ⋯) for a blank page, duplicate, rotate, delete, save some pages or read the text (OCR); drag to change the order; drop PDFs or pictures on the left panel to insert them. Ctrl/Shift+click picks several pages.">Halaman: klik kanan (atau ⋯) untuk halaman kosong, duplikat, putar, hapus, simpan sebagian, atau baca teks (OCR); seret untuk mengubah urutan; jatuhkan PDF/gambar ke panel kiri untuk menyisipkan. Ctrl/Shift+klik memilih beberapa halaman.</p>
