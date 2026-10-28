@@ -77,7 +77,8 @@
   .org-side-title::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:#ef2d2d}
   .org-files-head{display:flex;justify-content:space-between;align-items:center;padding:.25rem 1.25rem;font-size:13px;font-weight:700}
   .org-reset{color:#ef2d2d;font-weight:800;font-size:12px;text-decoration:underline;background:none;border:0;cursor:pointer}
-  .org-sort{color:#6b7280;font-weight:800;font-size:12px;text-decoration:underline;background:none;border:0;cursor:pointer}
+  .org-sort{display:inline-grid;place-items:center;width:28px;height:28px;color:#6b7280;font-weight:800;font-size:17px;background:none;border:0;border-radius:50%;cursor:pointer}
+  .org-sort:hover,.org-sort:focus-visible{background:#fff1e8;color:#c2410c}
   .org-chip{margin:0;display:flex;align-items:center;gap:.5rem;background:#fde8e8;border-radius:8px;padding:.6rem .75rem;font-size:12px;min-width:0}
   #orgFiles{display:grid;gap:.4rem;margin:.25rem 1.25rem 0}
   .org-chip-badge{background:#1f2937;color:#fff;font-size:10px;font-weight:800;border-radius:6px;min-width:20px;height:20px;display:grid;place-items:center;flex-shrink:0}
@@ -534,7 +535,7 @@ function renderHeader(){
       </div>
       <aside class="org-side is-hidden" id="orgSide">
         <h3 class="org-side-title">Organize pdf</h3>
-        <div class="org-files-head"><span>${L('Files:','File:')}</span><span><button onclick="orgSortToggle()" class="org-sort" title="${L('Sort by page number','Urutkan nomor halaman')}">⇅ ${L('Sort','Urut')}</button> <button onclick="orgReset()" class="org-reset">Reset all</button></span></div>
+        <div class="org-files-head"><span>${L('Files:','File:')}</span><span><button onclick="orgSortToggle()" class="org-sort" type="button" title="${L('Sort by page number','Urutkan nomor halaman')}" aria-label="${L('Sort by page number','Urutkan nomor halaman')}">⇅</button> <button onclick="orgReset()" class="org-reset">Reset all</button></span></div>
         <div id="orgFiles"></div>
         <button class="org-addfile" onclick="addMoreFiles()">＋ ${L('Add file','Tambah file')}</button>
         <input id="blankInput" type="file" accept="image/*" hidden onchange="orgBlankPicked(this)">
