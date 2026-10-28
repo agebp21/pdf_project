@@ -50,6 +50,35 @@ python server.py --host 127.0.0.1 --port 8080 --public-host myflipbook.id --publ
 - Contoh variabel: [.env.example](.env.example). Konversi Office butuh LibreOffice di server; build APK/EXE butuh Flutter (EXE hanya di Windows).
 - Batasan saat ini: belum ada reset password via email, verifikasi email, atau halaman admin; server satu proses (ThreadingHTTPServer) cocok untuk skala kecil. Build native tetap satu antrean.
 
+### Deploy VPS Ubuntu (contoh: myflipbookpro.com)
+
+Asumsi: VPS Ubuntu + akses root, DNS rekord A `myflipbookpro.com` (dan `www`-nya bila dipakai) sudah ke IP VPS. Di Linux, build EXE otomatis mati (capabilities `exe` hanya true di Windows); APK butuh Flutter + Android SDK bila mau diaktifkan.
+
+1. Di VPS: `apt update && apt install -y python3 caddy ufw libreoffice --no-install-recommends fonts-dejavu` (tambah `fonts-liberation` bila dokumen butuh font mirip Office).
+2. Salin repo ke VPS (tanpa `.env`, `.venv`, `.data`, `.build`), mis. `/opt/pdf_project`. Buat `.env` di sana dari `.env.example` (jangan commit): kunci pembayaran, `GOOGLE_CLIENT_ID`, SMTP, `MYFLIPBOOK_BASE_URL=https://myflipbookpro.com`.
+3. Caddy (`/etc/caddy/Caddyfile`) — HTTPS otomatis via Let's Encrypt:
+   ```
+   myflipbookpro.com {
+       reverse_proxy 127.0.0.1:8080
+   }
+   ```
+   `systemctl reload caddy`. Caddy otomatis teruskan Host; pastikan `X-Forwarded-For` ikut (default Caddy ikut) karena throttle login per IP memakainya.
+4. Jalankan app sebagai service (`/etc/systemd/system/myflipbook.service`):
+   ```
+   [Unit]
+   Description=MyFlipbook PDF Tools
+   After=network.target
+   [Service]
+   WorkingDirectory=/opt/pdf_project
+   ExecStart=/usr/bin/python3 server.py --host 127.0.0.1 --port 8080 --public-host myflipbookpro.com
+   Restart=on-failure
+   [Install]
+   WantedBy=multi-user.target
+   ```
+   `systemctl daemon-reload && systemctl enable --now myflipbook`. Server tetap bind loopback; yang menghadap publik hanya Caddy.
+5. Firewall: `ufw allow 80,443/tcp && ufw enable`. Port 8080 jangan dibuka publik.
+6. Di Google Cloud Console tambah origin `https://myflipbookpro.com` (OAuth + Picker), dan di dashboard Tripay/Midtrans/Lemon Squeezy daftarkan URL callback domain baru ini. Satu domain kanonis untuk callback: `MYFLIPBOOK_BASE_URL=https://myflipbookpro.com` (boleh tambah domain alias lain via `--public-host` berulang; cookie session host-only jadi aman lintas domain).
+
 ## Buat dan ekspor buku
 
 1. Pilih **PDF to Flipbook**, lalu unggah PDF. Atau klik **Jadikan Flipbook** pada hasil converter yang berupa PDF.

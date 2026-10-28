@@ -396,7 +396,20 @@
       const pad = b.padding ?? Math.max(2, Math.ceil((b.y1 - b.y0) * 0.15));
       const x0 = Math.max(0, Math.floor(b.x0) - pad), y0 = Math.max(0, Math.floor(b.y0) - pad);
       const x1 = Math.min(w - 1, Math.ceil(b.x1) + pad), y1 = Math.min(h - 1, Math.ceil(b.y1) + pad);
-      for (let y = y0; y <= y1; y++) mask.fill(1, y * w + x0, y * w + x1 + 1);
+      if (b.points && b.points.length >= 3) {
+        for (let y = y0; y <= y1; y++) {
+          const scan = y + 0.5, xs = [];
+          for (let i = 0; i < b.points.length; i++) {
+            const a = b.points[i], c = b.points[(i + 1) % b.points.length];
+            if ((a.y <= scan && c.y > scan) || (c.y <= scan && a.y > scan)) xs.push(a.x + (scan - a.y) * (c.x - a.x) / (c.y - a.y));
+          }
+          xs.sort((a, c) => a - c);
+          for (let i = 0; i + 1 < xs.length; i += 2) {
+            const left = Math.max(x0, Math.floor(xs[i]) - pad), right = Math.min(x1, Math.ceil(xs[i + 1]) + pad);
+            if (right >= left) mask.fill(1, y * w + left, y * w + right + 1);
+          }
+        }
+      } else for (let y = y0; y <= y1; y++) mask.fill(1, y * w + x0, y * w + x1 + 1);
     }
     for (let y = 0; y < h; y++) for (let x = 0; x < w;) {
       if (!mask[y * w + x]) { x++; continue; }

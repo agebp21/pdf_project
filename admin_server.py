@@ -36,7 +36,7 @@ ROOT = Path(__file__).resolve().parent
 COOKIE = 'mf_admin'
 SESSION_SECONDS = 12 * 3600
 MAX_FAILURES, FAILURE_WINDOW = 5, 15 * 60
-CONFIG = dict(secure=False, proxy=False)
+CONFIG = dict(secure=False, proxy=False, local_no_login=False)
 SESSIONS = {}                 # token -> expires_at (memory only: a restart logs the admin out)
 SESSION_USERS = {}            # token -> authenticated admin username
 FAILURES = {}                 # ip -> [failure times]
@@ -660,6 +660,12 @@ class AdminHandler(BaseHTTPRequestHandler):
         return ''
 
     def signed_in(self):
+        if (CONFIG.get('local_no_login') and not CONFIG['proxy']
+                and self.server.server_address[0] in ('127.0.0.1', '::1')
+                and self.client_address[0] in ('127.0.0.1', '::1')
+                and self.headers.get('Host', '').split(':')[0] in ('127.0.0.1', 'localhost')
+                and not self.headers.get('X-Forwarded-For')):
+            return True
         token = self.token()
         with LOCK:
             expires = SESSIONS.get(token)
@@ -882,6 +888,7 @@ def main():
     parser.add_argument('--host', default='127.0.0.1', help='127.0.0.1 (default): reach it through nginx or an SSH tunnel.')
     parser.add_argument('--port', type=int, default=8091)
     parser.add_argument('--proxy', action='store_true', help='Behind nginx: trust X-Forwarded-For / X-Forwarded-Proto.')
+    parser.add_argument('--local-no-login', action='store_true', help='Local preview without login; only loopback, never behind a proxy.')
     parser.add_argument('--secure', action='store_true', help='Always mark the cookie Secure (HTTPS).')
     parser.add_argument('--hash-password', action='store_true', help='Print ADMIN_PASSWORD_HASH=... for a new password.')
     parser.add_argument('--new-api-key', metavar='NAME', help='Make a read-only monitoring key (printed once; only its hash is kept).')
@@ -890,6 +897,8 @@ def main():
     parser.add_argument('--grant', nargs=3, metavar=('EMAIL', 'PLAN', 'DAYS'),
                         help='Give a member a plan (free/pro/business) for DAYS more days, or "lifetime", without payment.')
     args = parser.parse_args()
+    if args.local_no_login and (args.host != '127.0.0.1' or args.proxy or args.secure):
+        parser.error('--local-no-login requires --host 127.0.0.1 without --proxy or --secure')
     if args.grant:
         load_env(ROOT / '.env')
         email, plan, days = args.grant
@@ -928,6 +937,7 @@ def main():
         return
     load_env(ROOT / '.env')
     CONFIG['proxy'], CONFIG['secure'] = args.proxy, args.secure
+    CONFIG['local_no_login'] = args.local_no_login
     httpd = ThreadingHTTPServer((args.host, args.port), AdminHandler)
     print(f'MyFlipbook admin: http://{args.host}:{args.port}  (database: {db_path()})'
           + ('' if admin_configured() else '  — login not set: ADMIN_USERNAME + ADMIN_PASSWORD_HASH in .env'))
