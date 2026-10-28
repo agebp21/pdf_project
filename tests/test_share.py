@@ -124,9 +124,12 @@ class ShareTests(unittest.TestCase):
         self.assertIn('text/html', headers['Content-Type'])
         self.assertIn(b'book-payload', raw)
         self.assertIn(b'?dl=1', raw, 'download button injected')
-        self.assertIn('must-revalidate', headers['Cache-Control'])
+        self.assertIn('no-cache', headers['Cache-Control'])
         self.assertIn(b'mf-share-theme', raw, 'old links receive current reader style')
         self.assertIn(b'mf-share-toolbar', raw, 'old links receive current toolbar order')
+        etag = headers['ETag']
+        status, headers, raw = pro.call('GET', link, headers={'If-None-Match': etag})
+        self.assertEqual((status, raw), (304, b''), 'unchanged reader revalidates without resending the book')
         # ?dl=1 downloads the same book for keeping.
         status, headers, raw = pro.call('GET', link + '?dl=1')
         self.assertEqual(status, 200)

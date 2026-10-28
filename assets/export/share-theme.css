@@ -11,6 +11,12 @@ footer button{min-height:34px;padding:7px 11px;border:1px solid #e5ddd0;border-r
   color:#1a3c34;font:700 11px/1.2 'Plus Jakarta Sans',system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 5px #1c19170a}
 footer button:hover:not(:disabled),footer button:focus-visible{background:#fff0e8;border-color:#ff7843;color:#c2410c}
 footer button:disabled{opacity:.42}
+footer #prev{order:1}footer #home{order:2}footer #end{order:3}footer #next{order:4}
+footer #zoom{order:5}footer #bookmark{order:6}footer #bookmarks{order:7}footer #notes{order:8}
+footer #highlight{order:9}footer #fullscreen{order:10}footer #speak{order:11}footer #podcast{order:12}
+footer #edition{order:13}footer #translate{order:14}footer #summary{order:15}footer #sound{order:16}footer #replay{order:17}
+footer #next{width:34px;padding:0;font-size:0}
+footer #next::after{content:'→';font-size:16px;line-height:1}
 footer #status{min-width:64px;padding:0 3px;color:#57534e;font-size:11px;font-weight:800;white-space:nowrap}
 footer #fullscreen{background:linear-gradient(135deg,#ff7843,#ff4f1c);color:#fff;border-color:#d94519;
   font-weight:800;box-shadow:0 3px 0 #cf3a11,0 5px 14px #ff5c283b}

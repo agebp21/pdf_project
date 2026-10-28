@@ -59,6 +59,7 @@ import visits
 ROOT = Path(__file__).resolve().parent
 SHARE_THEME = (ROOT / 'assets/export/share-theme.css').read_bytes()
 SHARE_TOOLBAR = (ROOT / 'assets/export/share-toolbar.js').read_bytes()
+SHARE_VIEW_REV = hashlib.sha256(SHARE_THEME + SHARE_TOOLBAR).hexdigest()[:12]
 BUILD = ROOT / '.build'
 DATA = ROOT / '.data'
 ANDROID_SIGNING = DATA / 'android-signing.json'
@@ -4038,6 +4039,13 @@ class Handler(SimpleHTTPRequestHandler):
             if (parse_qs(urlsplit(self.path).query).get('dl') or [''])[0]:
                 self.send_file_bytes(data, 'text/html', share_filename(title))
                 return
+            etag = f'"{match[1]}-{SHARE_VIEW_REV}"'
+            if self.headers.get('If-None-Match') == etag:
+                self.send_response(304)
+                self.send_header('Cache-Control', 'public, no-cache, must-revalidate')
+                self.send_header('ETag', etag)
+                self.end_headers()
+                return
             # Shared books are self-contained snapshots. Apply the current reader theme
             # when serving older links without changing their sealed pages or download.
             themed = data.replace(b'</head>', b'<style id="mf-share-theme">' + SHARE_THEME + b'</style></head>', 1)
@@ -4047,7 +4055,8 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             # The book data is stable, but the server may refresh its reader styling.
-            self.send_header('Cache-Control', 'public, max-age=300, must-revalidate')
+            self.send_header('Cache-Control', 'public, no-cache, must-revalidate')
+            self.send_header('ETag', etag)
             self.send_header('Content-Length', str(len(page)))
             self.end_headers()
             self.wfile.write(page)
