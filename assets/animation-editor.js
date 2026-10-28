@@ -818,7 +818,7 @@
       const zip=new JSZip();
       const txt=async p=>{const r=await fetch(p);if(!r.ok)throw Error('Missing: '+p);return r.text();};
       const bin=async p=>{const r=await fetch(p);if(!r.ok)throw Error('Missing: '+p);return r.arrayBuffer();};
-      for(const f of['index.html','viewer.css','book-effects.css','layout.js','viewer.js'])zip.file(f,await txt('assets/export/'+f));
+      for(const f of['index.html','viewer.css','share-theme.css','book-effects.css','layout.js','viewer.js','share-toolbar.js'])zip.file(f,await txt('assets/export/'+f));
       zip.file('page-flip.browser.js',await bin('assets/vendor/page-flip.browser.js'));
       zip.file('ENGINE-SOURCE.md',await txt('assets/vendor/SOURCE.md'));
       zip.file('PAGEFLIP-LICENSE.txt',await txt('assets/vendor/PAGEFLIP-LICENSE.txt'));

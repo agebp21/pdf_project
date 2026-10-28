@@ -89,7 +89,7 @@
   @media (prefers-reduced-motion:reduce){.card:hover,.btn-tang:hover,.btn-ink:hover{transform:none}}
   .numa-bumper img{min-height:118px;object-fit:cover;object-position:left center}
 </style>
-<link rel="stylesheet" href="assets/home-hero.css?v=hide-pen-1">
+<link rel="stylesheet" href="assets/home-hero.css?v=toolbar-unified-1">
 <script defer src="assets/home-hero.js?v=catalogs-1"></script>
 <script defer src="assets/home-samples.js?v=catalogs-1"></script>
 </head>
@@ -171,21 +171,22 @@
         <div class="hh-page hh-back hh-sample-back" data-density="hard"></div>
       </div></div></div>
       <div id="hh-demo-toolbar" class="hh-demo-toolbar" role="toolbar" aria-label="Alat pratinjau" data-en-aria="Preview tools">
+        <button id="hh-demo-prev" type="button" aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button>
         <button id="hh-tool-home" type="button" data-en="Home">Awal</button>
         <button id="hh-tool-end" type="button" data-en="End">Akhir</button>
         <button id="hh-tool-open" type="button">Buka sampul →</button>
         <button id="hh-tool-zoom" type="button" aria-label="Perbesar" data-en-aria="Zoom">🔍</button>
         <button id="hh-tool-mark" type="button">🔖 Tandai</button>
+        <button id="hh-demo-full" type="button" data-en="⛶ Full screen">⛶ Layar penuh</button>
         <button id="hh-tool-marks" type="button" aria-label="Daftar penanda" data-en-aria="Bookmarks">☰ 0</button>
         <button id="hh-tool-notes" type="button" aria-label="Catatan" data-en-aria="Notes">📝 0</button>
         <button id="hh-tool-pen" type="button" aria-label="Stabilo dan spidol" data-en-aria="Highlighter and marker">✎</button>
-        <button id="hh-demo-full" type="button" data-en="⛶ Full screen">⛶ Layar penuh</button>
         <button id="hh-tool-audio" type="button">🎧 Audio book</button>
         <button id="hh-tool-translate" type="button" title="Alihkan bahasa contoh Indonesia/Inggris" data-en-title="Switch sample text between Indonesian and English" data-en="🌐 Translate">🌐 Terjemahkan</button>
         <button id="hh-demo-sound" type="button"></button>
       </div>
       <p id="hh-tool-notice" class="hh-tool-notice" role="status" hidden></p>
-      <div class="hh-demo-bar"><button id="hh-demo-prev" type="button" hidden aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><span id="hh-demo-status" aria-live="polite"></span><button id="hh-demo-next" type="button" hidden aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div>
+      <div class="hh-demo-bar"><span id="hh-demo-status" aria-live="polite"></span><button id="hh-demo-next" type="button" hidden aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div>
     </div>
   </div>
   <div class="horde-rows" id="horde" hidden></div>

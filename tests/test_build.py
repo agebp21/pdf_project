@@ -42,7 +42,7 @@ class BuildTests(unittest.TestCase):
             html = (destination / 'index.html').read_text(encoding='utf-8')
             self.assertNotIn('malicious-client-code', html)
             self.assertIn('<title>Book &lt;/script&gt;</title>', html)
-            self.assertEqual(html.count('</script>'), 6, 'payload + 5 reader scripts: the title cannot close a script early')
+            self.assertEqual(html.count('</script>'), 7, 'payload + 6 reader scripts: the title cannot close a script early')
             # The embedded pages and data decrypt back to the originals.
             import base64, re as _re
             payload = json.loads(_re.search(r'<script type="application/json" id="book-payload">(.*?)</script>', html, _re.S)[1])

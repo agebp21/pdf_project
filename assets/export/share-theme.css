@@ -3,9 +3,9 @@ body{background:#fbf6ed;color:#1c1917;font-family:'Plus Jakarta Sans',system-ui,
 main{background:radial-gradient(circle at 50% 15%,#fffaf2 0,#fbf6ed 65%)}
 header{background:linear-gradient(#fbf6edee,#fbf6ed00);color:#1c1917;opacity:1;padding:10px 16px}
 .brand{color:#1a3c34;font-size:11px;font-weight:800;letter-spacing:.11em}
-footer{bottom:12px;gap:5px;flex-wrap:nowrap;width:max-content;max-width:calc(100% - 20px);padding:7px 9px;
-  overflow-x:auto;scrollbar-width:thin;border:1px solid #e8e2d4;border-radius:999px;background:#fffdf8f2;
-  box-shadow:0 12px 34px #1c191724,0 2px 8px #1c19170d;opacity:1}
+footer{bottom:12px;gap:5px;flex-wrap:nowrap;width:max-content;max-width:calc(100% - 20px);padding:6px 2px;
+  overflow-x:auto;scrollbar-width:thin;border:0;border-radius:0;background:transparent;
+  box-shadow:none;opacity:1}
 footer>*{flex:none;margin:0}
 footer button{min-height:34px;padding:7px 11px;border:1px solid #e5ddd0;border-radius:999px;background:#fffdf9;
   color:#1a3c34;font:700 11px/1.2 'Plus Jakarta Sans',system-ui,sans-serif;white-space:nowrap;box-shadow:0 2px 5px #1c19170a}

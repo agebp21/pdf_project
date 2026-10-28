@@ -24,12 +24,12 @@ const { pathToFileURL } = require('node:url');
       await page.waitForTimeout(300);
       await page.locator('#hh-tool-home').click();
       await page.waitForFunction(() => document.getElementById('hh-demo-status').textContent.startsWith('Sampul ·'));
-      assert.equal(await page.locator('#hh-demo-toolbar button').count(),12);
-      assert.equal(await page.locator('#hh-tool-pen').evaluate(el=>el.nextElementSibling.id),'hh-demo-full','Fullscreen immediately follows the highlighter');
+      assert.equal(await page.locator('#hh-demo-toolbar button').count(),13);
+      assert.equal(await page.locator('#hh-tool-mark').evaluate(el=>el.nextElementSibling.id),'hh-demo-full','Fullscreen follows Mark');
       assert.equal(await page.locator('#hh-tool-pen').isVisible(),false,'Pen control is hidden from the homepage preview');
-      assert.equal(await page.locator('#hh-demo-prev').isVisible(),false);
+      assert.equal(await page.locator('#hh-demo-prev').isVisible(),true);
       assert.equal(await page.locator('#hh-demo-next').isVisible(),false);
-      assert(await page.locator('#hh-demo-toolbar button').evaluateAll(buttons => buttons.every(b => b.getBoundingClientRect().height <= 24)), 'Compact demo buttons are at most 24px tall');
+      assert(await page.locator('#hh-demo-toolbar button').evaluateAll(buttons => buttons.filter(b => getComputedStyle(b).display !== 'none').every(b => b.getBoundingClientRect().height >= 34)), 'Reader buttons have a usable touch target');
       assert(await page.locator('#hh-demo-toolbar').evaluate(el => {
         const r=el.getBoundingClientRect(),stage=document.querySelector('.hh-demo-stage').getBoundingClientRect();
         return r.width<=stage.width+1 && r.width>stage.width*.85 && r.height<55 && r.top>=stage.bottom-1;

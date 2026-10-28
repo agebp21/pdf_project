@@ -1087,9 +1087,10 @@ def unpack_book(archive, destination):
     export = ROOT / 'assets/export'
     read = lambda path: path.read_text(encoding='utf-8')
     html = book_seal.single_html(
-        read(export / 'index.html'), [read(export / 'viewer.css'), read(export / 'book-effects.css')],
+        read(export / 'index.html'), [read(export / 'viewer.css'), read(export / 'book-effects.css'),
+                                     read(export / 'share-theme.css')],
         [read(export / 'book-seal.js'), 'BookSeal.open();', read(ROOT / 'assets/vendor/page-flip.browser.js'),
-         read(export / 'layout.js'), read(export / 'viewer.js')],
+         read(export / 'layout.js'), read(export / 'viewer.js'), read(export / 'share-toolbar.js')],
         book_seal.seal_payload(data, pages), data['title'])
     destination.mkdir(parents=True, exist_ok=True)
     (destination / 'index.html').write_text(html, encoding='utf-8')
