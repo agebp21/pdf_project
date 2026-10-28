@@ -126,6 +126,7 @@ class ShareTests(unittest.TestCase):
         self.assertIn(b'?dl=1', raw, 'download button injected')
         self.assertIn('must-revalidate', headers['Cache-Control'])
         self.assertIn(b'mf-share-theme', raw, 'old links receive current reader style')
+        self.assertIn(b'mf-share-toolbar', raw, 'old links receive current toolbar order')
         # ?dl=1 downloads the same book for keeping.
         status, headers, raw = pro.call('GET', link + '?dl=1')
         self.assertEqual(status, 200)
@@ -134,6 +135,7 @@ class ShareTests(unittest.TestCase):
         self.assertIn(b'book-payload', raw)
         self.assertNotIn(b'?dl=1', raw, 'downloaded file is the clean book')
         self.assertNotIn(b'mf-share-theme', raw, 'downloaded original stays unchanged')
+        self.assertNotIn(b'mf-share-toolbar', raw)
         # No login needed to read; strangers cannot delete.
         self.assertEqual(Member(self.base).call('GET', link)[0], 200)
         other = self.member('other@s.co', 'pro')

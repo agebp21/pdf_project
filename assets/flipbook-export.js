@@ -180,7 +180,7 @@
     const data = validate(model);
     if(imageUrls.length!==data.pageCount+versionImages(data).length)throw Error('Jumlah gambar dan halaman tidak cocok.');
     const zip = new JSZip();
-    for(const name of ['index.html','viewer.css','share-theme.css','book-effects.css','layout.js','viewer.js'])zip.file(name,await asset('assets/export/'+name));
+    for(const name of ['index.html','viewer.css','share-theme.css','book-effects.css','layout.js','viewer.js','share-toolbar.js'])zip.file(name,await asset('assets/export/'+name));
     zip.file('page-flip.browser.js',await asset('assets/vendor/page-flip.browser.js'));
     zip.file('ENGINE-SOURCE.md',await asset('assets/vendor/SOURCE.md'));
     zip.file('PAGEFLIP-LICENSE.txt',await asset('assets/vendor/PAGEFLIP-LICENSE.txt'));
@@ -199,8 +199,8 @@
     if (!globalThis.BookSeal) throw Error('Modul enkripsi buku tidak tersedia. Muat ulang halaman.');
     const data = validate(model);
     if (imageUrls.length !== data.pageCount + versionImages(data).length) throw Error('Jumlah gambar dan halaman tidak cocok.');
-    const names = ['index.html','viewer.css','share-theme.css','book-effects.css','book-seal.js','layout.js','viewer.js'];
-    const [template, viewerCss, shareTheme, effectsCss, seal, layout, viewer] = await Promise.all(names.map(name => asset('assets/export/' + name)));
+    const names = ['index.html','viewer.css','share-theme.css','book-effects.css','book-seal.js','layout.js','viewer.js','share-toolbar.js'];
+    const [template, viewerCss, shareTheme, effectsCss, seal, layout, viewer, toolbar] = await Promise.all(names.map(name => asset('assets/export/' + name)));
     const engine = await asset('assets/vendor/page-flip.browser.js');
     const pages = [];
     for (let i = 0; i < imageUrls.length; i++) {
@@ -210,7 +210,7 @@
     }
     const payload = await BookSeal.sealAsync(data, pages, fraction => onProgress('Mengenkripsi halaman…', 0.45 + 0.5 * fraction));
     onProgress('Menyusun file buku…', 0.97);
-    const html = BookSeal.singleHtml(template, [viewerCss, effectsCss, shareTheme], [seal, 'BookSeal.open();', engine, layout, viewer], payload, data.title);
+    const html = BookSeal.singleHtml(template, [viewerCss, effectsCss, shareTheme], [seal, 'BookSeal.open();', engine, layout, viewer, toolbar], payload, data.title);
     return new Blob([html], {type: 'text/html;charset=utf-8'});
   }
   // A file name from the book title, as readable as the OS allows.

@@ -58,6 +58,7 @@ import visits
 
 ROOT = Path(__file__).resolve().parent
 SHARE_THEME = (ROOT / 'assets/export/share-theme.css').read_bytes()
+SHARE_TOOLBAR = (ROOT / 'assets/export/share-toolbar.js').read_bytes()
 BUILD = ROOT / '.build'
 DATA = ROOT / '.data'
 ANDROID_SIGNING = DATA / 'android-signing.json'
@@ -4041,7 +4042,8 @@ class Handler(SimpleHTTPRequestHandler):
             # when serving older links without changing their sealed pages or download.
             themed = data.replace(b'</head>', b'<style id="mf-share-theme">' + SHARE_THEME + b'</style></head>', 1)
             head, sep, tail = themed.rpartition(b'</body>')
-            page = (head + SHARE_BAR.encode() + sep + tail) if sep else (themed + SHARE_BAR.encode())
+            toolbar = b'<script id="mf-share-toolbar">' + SHARE_TOOLBAR + b'</script>'
+            page = (head + SHARE_BAR.encode() + toolbar + sep + tail) if sep else (themed + SHARE_BAR.encode() + toolbar)
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
             # The book data is stable, but the server may refresh its reader styling.
