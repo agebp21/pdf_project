@@ -451,7 +451,7 @@
       status(L('Reading the text (OCR)…', 'Membaca teks (OCR)…'));
       const found = await AnimationOCR.read(canvas, e => { if (e.status === 'recognizing text') status(L('OCR ', 'OCR ') + Math.round((e.progress || 0) * 100) + '%'); });
       const read = found.filter(l => goodLine(l) && l.confidence >= (scanned ? 75 : 60))
-        .map(l => ({ text: C.clean(l.text), x: l.bbox.x0, y: l.bbox.y0, w: l.bbox.x1 - l.bbox.x0, h: l.bbox.y1 - l.bbox.y0, size: ocrSize(l.text, l.bbox.y1 - l.bbox.y0), family: 'sans' }));
+        .map(l => ({ text: C.clean(l.text), x: l.bbox.x0, y: l.bbox.y0, w: l.bbox.x1 - l.bbox.x0, h: l.bbox.y1 - l.bbox.y0, size: ocrSize(l.text, l.bbox.y1 - l.bbox.y0), family: 'sans', ocr: true }));
       const overlap = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)) / Math.max(1, Math.min(a.w * a.h, b.w * b.h));
       lines = scanned ? read : [...lines, ...read.filter(l => !lines.some(o => overlap(o, l) > 0.3))];
     }
@@ -537,7 +537,10 @@
     C.repair(bgData.data, W, H, [...lineBoxes, ...holes, ...shapeBoxes]);
     ctx.clearRect(0, 0, W, H); ctx.putImageData(bgData, 0, 0);
 
-    const blocks = C.paragraphs(lines);
+    const blocks = [
+      ...C.paragraphs(lines.filter(l => !l.ocr)),
+      ...lines.filter(l => l.ocr).map(l => ({ ...l, lines: 1 }))
+    ].sort((a, b) => a.y - b.y || a.x - b.x);
     const measure = document.createElement('canvas').getContext('2d');
     const textEls = blocks.map(b => {
       let size = b.size;
@@ -547,7 +550,8 @@
         : `${b.italic ? 'italic ' : ''}${b.bold ? '700 ' : ''}${size}px ${CSS_FONT[b.family] || CSS_FONT.sans}`;
       const words = b.text.split(' '), perLine = Math.ceil(words.length / b.lines);
       let widest = 0; for (let i = 0; i < words.length; i += perLine) widest = Math.max(widest, measure.measureText(words.slice(i, i + perLine).join(' ')).width);
-      if (b.lines === 1 && widest > b.w) size *= Math.max(0.5, b.w / widest);
+      const fitWidth = b.w * (b.ocr ? 0.86 : 0.96);
+      if (b.lines === 1 && widest > fitWidth) size *= Math.max(0.5, fitWidth / widest);
       const fitted = b.lines === 1 ? widest * size / b.size : b.w;
       // Keep the first line's baseline where it was (the editor and the PDF share this offset).
       const lh = b.lineHeight || C.LINE, top = b.y + b.size * 0.82 - size * C.baseline(lh);
@@ -1779,27 +1783,51 @@
   const goodLine = l => { const n = (l.text.match(/[\p{L}\p{N}]/gu) || []).length; return n >= 4 ? l.confidence >= 55 : n >= 2 && l.confidence >= 85; };
   const loadImg = src => new Promise((ok, fail) => { const i = new Image(); i.onload = () => ok(i); i.onerror = fail; i.src = src; });
   function startCut(e) {
-    const stage = $('#pe-stage'), r = stage.getBoundingClientRect(), sx = e.clientX, sy = e.clientY;
-    const box = document.createElement('div');
-    box.style.cssText = 'position:absolute;border:2px dashed #FF5C28;background:rgba(255,92,40,.08);z-index:9;pointer-events:none';
-    stage.append(box);
-    let b = null;
+    const stage = $('#pe-stage'), r = stage.getBoundingClientRect(), sx = e.clientX, sy = e.clientY, mode = cutting, lasso = mode === 'img';
+    let overlay, shape, points = [], b = null;
+    const point = ev => ({ x: Math.max(0, Math.min(r.width, ev.clientX - r.left)), y: Math.max(0, Math.min(r.height, ev.clientY - r.top)) });
+    if (lasso) {
+      overlay = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+      overlay.setAttribute('viewBox', `0 0 ${r.width} ${r.height}`);
+      overlay.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;z-index:9;overflow:visible;pointer-events:none';
+      // Show the in-progress lasso as an open pen stroke; close it on release.
+      shape = document.createElementNS('http://www.w3.org/2000/svg', 'polyline');
+      shape.setAttribute('fill', 'none'); shape.setAttribute('stroke', '#FF5C28'); shape.setAttribute('stroke-width', '3'); shape.setAttribute('stroke-linecap', 'round'); shape.setAttribute('stroke-linejoin', 'round'); shape.setAttribute('vector-effect', 'non-scaling-stroke');
+      overlay.append(shape); stage.append(overlay); points.push(point(e));
+    } else {
+      overlay = document.createElement('div');
+      overlay.style.cssText = 'position:absolute;border:2px dashed #FF5C28;background:rgba(255,92,40,.08);z-index:9;pointer-events:none';
+      stage.append(overlay);
+    }
     const move = ev => {
-      const x0 = Math.min(sx, ev.clientX) - r.left, y0 = Math.min(sy, ev.clientY) - r.top;
-      b = { x: Math.max(0, x0 / r.width), y: Math.max(0, y0 / r.height), w: Math.abs(ev.clientX - sx) / r.width, h: Math.abs(ev.clientY - sy) / r.height };
-      Object.assign(box.style, { left: b.x * 100 + '%', top: b.y * 100 + '%', width: b.w * 100 + '%', height: b.h * 100 + '%' });
+      if (lasso) {
+        const p = point(ev), last = points[points.length - 1];
+        if (Math.hypot(p.x - last.x, p.y - last.y) >= 1.5) points.push(p);
+        shape.setAttribute('points', points.map(q => `${q.x},${q.y}`).join(' '));
+      } else {
+        const p = point(ev), a = point({ clientX: sx, clientY: sy }), x = Math.min(a.x, p.x), y = Math.min(a.y, p.y);
+        b = { x: x / r.width, y: y / r.height, w: Math.abs(p.x - a.x) / r.width, h: Math.abs(p.y - a.y) / r.height };
+        Object.assign(overlay.style, { left: b.x * 100 + '%', top: b.y * 100 + '%', width: b.w * 100 + '%', height: b.h * 100 + '%' });
+      }
     };
     const up = async () => {
-      removeEventListener('pointermove', move); removeEventListener('pointerup', up); box.remove();
-      const mode = cutting;
+      removeEventListener('pointermove', move); removeEventListener('pointerup', up);
+      if (lasso) {
+        const end = point(e), last = points[points.length - 1];
+        if (last && Math.hypot(end.x - last.x, end.y - last.y) > 0.5) points.push(end);
+      }
+      overlay.remove();
+      if (lasso && points.length >= 3) {
+        const xs = points.map(p => p.x), ys = points.map(p => p.y), x = Math.min(...xs), y = Math.min(...ys), right = Math.max(...xs), bottom = Math.max(...ys);
+        b = { x: x / r.width, y: y / r.height, w: (right - x) / r.width, h: (bottom - y) / r.height,
+          points: points.map(p => ({ x: p.x / r.width, y: p.y / r.height })) };
+      }
       cutting = false; $('#pe-cut').classList.remove('on'); $('#pe-ocr-area').classList.remove('on'); stage.style.cursor = '';
-      if (!b || b.w < 0.01 || b.h < 0.01) return;
+      if (!b || b.w < 0.01 || b.h < 0.01 || (lasso && points.length < 3)) return;
       try { await (mode === 'ocr' ? ocrArea(b) : cutArea(b)); } catch (err) { status(err.message || String(err)); }
     };
     addEventListener('pointermove', move); addEventListener('pointerup', up);
   }
-  // Area → text (OCR): the words in a picture become text you can edit. A patch of the
-  // page with those words wiped sits under the new text, so the old words do not show.
   async function ocrArea(b) {
     const pg = page(), orig = await loadImg(pg.original), W = orig.naturalWidth, H = orig.naturalHeight;
     const x0 = Math.round(b.x * W), y0 = Math.round(b.y * H), cw = Math.max(1, Math.round(b.w * W)), ch = Math.max(1, Math.round(b.h * H));
@@ -1833,13 +1861,22 @@
     const crop = Object.assign(document.createElement('canvas'), { width: Math.max(1, Math.round(px.x1 - px.x0)), height: Math.max(1, Math.round(px.y1 - px.y0)) });
     const cg = crop.getContext('2d', { willReadFrequently: true });
     cg.drawImage(orig, px.x0, px.y0, crop.width, crop.height, 0, 0, crop.width, crop.height);
-    // A logo on plain paper comes out without the paper (transparent around it).
-    const cd = cg.getImageData(0, 0, crop.width, crop.height);
-    if (C.clearPaper(cd.data, crop.width, crop.height)) cg.putImageData(cd, 0, 0);
+    const polygon = b.points && b.points.length >= 3 ? b.points.map(p => ({ x: (p.x - b.x) / b.w * crop.width, y: (p.y - b.y) / b.h * crop.height })) : null;
+    if (polygon) {
+      cg.save(); cg.globalCompositeOperation = 'destination-in'; cg.beginPath(); cg.moveTo(polygon[0].x, polygon[0].y);
+      for (let i = 1; i < polygon.length; i++) cg.lineTo(polygon[i].x, polygon[i].y);
+      cg.closePath(); cg.fill(); cg.restore();
+    } else {
+      // A logo on plain paper comes out without the paper (transparent around it).
+      const cd = cg.getImageData(0, 0, crop.width, crop.height);
+      if (C.clearPaper(cd.data, crop.width, crop.height)) cg.putImageData(cd, 0, 0);
+    }
     const src = crop.toDataURL('image/png'); crop.width = 0;
     const canvas = Object.assign(document.createElement('canvas'), { width: W, height: H });
     const g = canvas.getContext('2d', { willReadFrequently: true }); g.drawImage(bg, 0, 0, W, H);
-    const d = g.getImageData(0, 0, W, H); C.repair(d.data, W, H, [{ ...px, padding: 2 }]); g.putImageData(d, 0, 0);
+    const d = g.getImageData(0, 0, W, H), repairBox = { ...px, padding: 2 };
+    if (polygon) repairBox.points = b.points.map(p => ({ x: p.x * W, y: p.y * H }));
+    C.repair(d.data, W, H, [repairBox]); g.putImageData(d, 0, 0);
     snapshot();
     pg.bg = canvas.toDataURL(pg.layered ? 'image/png' : 'image/jpeg', 0.9); canvas.width = 0;
     const el = { id: newId(), type: 'image', x: b.x, y: b.y, w: b.w, h: b.h, src, rotation: 0 };
@@ -2026,7 +2063,7 @@
     $('#pe-ocr-area').onclick = () => { cutting = cutting === 'ocr' ? false : 'ocr'; $('#pe-ocr-area').classList.toggle('on', !!cutting); $('#pe-cut').classList.remove('on'); $('#pe-stage').style.cursor = cutting ? 'crosshair' : '';
       if (cutting) status(L('Drag a box around words in a picture: they become text you can edit.', 'Seret kotak di sekitar tulisan pada gambar: tulisan itu menjadi teks yang bisa diedit.')); };
     $('#pe-cut').onclick = () => { cutting = cutting === 'img' ? false : 'img'; $('#pe-cut').classList.toggle('on', !!cutting); $('#pe-ocr-area').classList.remove('on'); $('#pe-stage').style.cursor = cutting ? 'crosshair' : '';
-      if (cutting) status(L('Drag a box around a logo, chart or drawing: it becomes a picture you can move.', 'Seret kotak di sekitar logo, grafik, atau gambar: area itu menjadi gambar yang bisa dipindah.')); };
+      if (cutting) status(L('Draw freely around a logo, chart or drawing with the pointer, then release to cut it out.', 'Gambar garis bebas ngubengi logo, grafik, utawa objek nganggo pointer, banjur culna kanggo motong dadi gambar.')); };
     $('#pe-save').onclick = () => save(st.from === 'organize' ? 'organize' : 'download');
     $('#pe-download').onclick = () => save('download');
     $('#pe-flipbook').onclick = () => save('flipbook');

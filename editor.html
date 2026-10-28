@@ -14,11 +14,11 @@
 <script defer src="assets/vendor/pdf.min.js"></script>
 <script defer src="assets/vendor/pdf-lib.min.js"></script>
 <script defer src="assets/flipbook-transfer.js"></script>
-<script defer src="assets/animation-ocr.js"></script>
+<script defer src="assets/animation-ocr.js?v=ocr-fast-1"></script>
 <script defer src="assets/pdf-compress.js"></script>
-<script defer src="assets/page-editor-core.js"></script>
+<script defer src="assets/page-editor-core.js?v=lasso-1"></script>
 <script defer src="assets/editor-templates.js"></script>
-<script defer src="assets/page-editor.js"></script>
+<script defer src="assets/page-editor.js?v=lasso-1"></script>
 <style>
   body{margin:0;background:#F4F1EA;color:#1C1917;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
   .pe-wrap{max-width:1500px;margin:0 auto;padding:12px 14px 30px}
@@ -205,7 +205,7 @@
         <button id="pe-add-text" title="Kotak teks" data-en-title="Text box" data-en="T Text box">T Kotak teks</button>
         <label class="pe-btn" title="Gambar dari komputer" data-en-title="Picture from your computer"><span data-en="🖼 Picture">🖼 Gambar</span><input id="pe-add-image" type="file" accept="image/*" hidden></label>
         <button id="pe-shapes" title="Bentuk: kotak, elips, garis, panah, segitiga" data-en-title="Shapes: rectangle, ellipse, line, arrow, triangle" data-en="⬠ Shapes ▾">⬠ Bentuk ▾</button>
-        <button id="pe-cut" title="Jadikan area (logo, grafik, gambar vektor) sebagai gambar yang bisa dipindah" data-en-title="Turn an area (logo, chart, vector drawing) into a picture you can move" data-en="✂ Area → picture">✂ Area → gambar</button>
+        <button id="pe-cut" title="Gambar bebas mengitari objek untuk memisahkannya jadi gambar yang bisa dipindah" data-en-title="Draw freely around an object to separate it as a movable picture" data-en="✂ Lasso → picture">✂ Laso → gambar</button>
         <button id="pe-ocr-area" title="Baca tulisan pada gambar/foto di area yang dipilih menjadi teks yang bisa diedit" data-en-title="Read the words in a picture or photo inside the area as editable text" data-en="🔤 Area → text (OCR)">🔤 Area → teks (OCR)</button>
         <button id="pe-table" title="Sisipkan tabel" data-en-title="Insert a table" data-en="▦ Table ▾">▦ Tabel ▾</button>
         <span id="pe-tbl-ops" hidden><button id="pe-row-add" title="Baris di bawah sel ini" data-en-title="Row below this cell" data-en="＋ Row">＋ Baris</button><button id="pe-col-add" title="Kolom di kanan sel ini" data-en-title="Column right of this cell" data-en="＋ Column">＋ Kolom</button><button id="pe-row-del" title="Hapus baris ini" data-en-title="Delete this row" data-en="− Row">− Baris</button><button id="pe-col-del" title="Hapus kolom ini" data-en-title="Delete this column" data-en="− Column">− Kolom</button><button id="pe-tbl-head" title="Baris pertama sebagai judul tabel" data-en-title="First row as the table header" data-en="Header row">Baris judul</button></span>

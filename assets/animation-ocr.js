@@ -49,26 +49,46 @@ globalThis.AnimationOCR=(()=>{
     });
     ctx.putImageData(image,0,0);return colors;
   }
-  async function read(canvas,onProgress){
-    progress=onProgress||(()=>{});const instance=await engine();
-    await instance.setParameters({tessedit_pageseg_mode:'11',preserve_interword_spaces:'1'});
-    const {data}=await instance.recognize(canvas);
-    // A second pass isolates dark lettering on colored infographics.
-    const contrast=document.createElement('canvas');contrast.width=canvas.width;contrast.height=canvas.height;
-    const ctx=contrast.getContext('2d');ctx.drawImage(canvas,0,0);const pixels=ctx.getImageData(0,0,contrast.width,contrast.height);
-    for(let i=0;i<pixels.data.length;i+=4){const value=Math.max(pixels.data[i],pixels.data[i+1],pixels.data[i+2])<125?0:255;pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=value;}
-    ctx.putImageData(pixels,0,0);
-    let extra;try{extra=(await instance.recognize(contrast)).data;}finally{contrast.width=contrast.height=0;}
+  function linesOf(data){
     const lines=[];
-    for(const line of [...(data.lines||[]),...(extra.lines||[])]){
+    for(const line of data.lines||[]){
       const words=(line.words||[]).filter(word=>/[\p{L}\p{N}]/u.test(word.text||'')&&word.confidence>=45);
       if(!words.length)continue;
       const bbox={x0:Math.min(...words.map(w=>w.bbox.x0)),y0:Math.min(...words.map(w=>w.bbox.y0)),x1:Math.max(...words.map(w=>w.bbox.x1)),y1:Math.max(...words.map(w=>w.bbox.y1))};
-      const candidate={text:words.map(w=>w.text).join(' '),confidence:words.reduce((sum,w)=>sum+w.confidence,0)/words.length,bbox,words:words.map(w=>w.bbox)};
-      const duplicate=lines.findIndex(old=>{const a=old.bbox,b=bbox,intersection=Math.max(0,Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0))*Math.max(0,Math.min(a.y1,b.y1)-Math.max(a.y0,b.y0));return intersection/Math.max(1,Math.min((a.x1-a.x0)*(a.y1-a.y0),(b.x1-b.x0)*(b.y1-b.y0)))>.6;});
+      lines.push({text:words.map(w=>w.text).join(' '),confidence:words.reduce((sum,w)=>sum+w.confidence,0)/words.length,bbox,words:words.map(w=>w.bbox)});
+    }
+    return lines;
+  }
+  function mergeLines(...groups){
+    const lines=[];
+    for(const candidate of groups.flat()){
+      const duplicate=lines.findIndex(old=>{const a=old.bbox,b=candidate.bbox,intersection=Math.max(0,Math.min(a.x1,b.x1)-Math.max(a.x0,b.x0))*Math.max(0,Math.min(a.y1,b.y1)-Math.max(a.y0,b.y0));return intersection/Math.max(1,Math.min((a.x1-a.x0)*(a.y1-a.y0),(b.x1-b.x0)*(b.y1-b.y0)))>.6;});
       if(duplicate<0)lines.push(candidate);else if(candidate.confidence>lines[duplicate].confidence)lines[duplicate]=candidate;
     }
     return lines.sort((a,b)=>a.bbox.y0-b.bbox.y0||a.bbox.x0-b.bbox.x0);
+  }
+  function quality(lines){
+    const words=lines.reduce((n,line)=>n+line.words.length,0), confidence=words?lines.reduce((n,line)=>n+line.confidence*line.words.length,0)/words:0;
+    return {words,confidence};
+  }
+  function contrastImage(canvas){
+    const contrast=document.createElement('canvas');contrast.width=canvas.width;contrast.height=canvas.height;
+    const ctx=contrast.getContext('2d'),pixels=(ctx.drawImage(canvas,0,0),ctx.getImageData(0,0,contrast.width,contrast.height)),hist=new Uint32Array(256),gray=new Uint8Array(contrast.width*contrast.height);
+    for(let i=0,j=0;i<pixels.data.length;i+=4,j++){const v=Math.round(.299*pixels.data[i]+.587*pixels.data[i+1]+.114*pixels.data[i+2]);gray[j]=v;hist[v]++;}
+    const total=gray.length,sum=hist.reduce((n,v,i)=>n+i*v,0);let background=0,weighted=0,best=-1,cut=128;
+    for(let v=0;v<256;v++){background+=hist[v];if(!background)continue;const foreground=total-background;if(!foreground)break;weighted+=v*hist[v];const meanB=weighted/background,meanF=(sum-weighted)/foreground,score=background*foreground*(meanB-meanF)**2;if(score>best){best=score;cut=v;}}
+    for(let j=0,i=0;j<gray.length;j++,i+=4)pixels.data[i]=pixels.data[i+1]=pixels.data[i+2]=gray[j]>cut?255:0;
+    ctx.putImageData(pixels,0,0);return contrast;
+  }
+  async function read(canvas,onProgress,options={}){
+    progress=onProgress||(()=>{});const instance=await engine();
+    await instance.setParameters({tessedit_pageseg_mode:String(options.pageSegMode||11),preserve_interword_spaces:'1'});
+    const first=linesOf((await instance.recognize(canvas)).data||{}),q=quality(first);
+    // Clean pages finish after one pass. Re-read only sparse or uncertain results.
+    if(q.words>=12&&q.confidence>=82)return first;
+    const contrast=contrastImage(canvas);let extra;
+    try{extra=linesOf((await instance.recognize(contrast)).data||{});}finally{contrast.width=contrast.height=0;}
+    return mergeLines(first,extra);
   }
   async function release(){const instance=worker;worker=null;if(instance)await instance.terminate();}
   return {read,repair,release};

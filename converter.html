@@ -1837,15 +1837,16 @@ function orgBookEngine(){
   return orgEngineLoading;
 }
 function orgReaderClose(){ if(orgBook){ try{orgBook.destroy();}catch(e){} orgBook=null; } }
-function orgReaderClosed(){ orgReaderClose(); orgReaderSig=''; orgStatic=false; orgReaderPages=organizeOrder; }
+function orgReaderClosed(){ orgReaderClose(); orgReaderSig=''; orgStatic=false; orgReaderPages=organizeOrder; orgReaderStart=0; }
 window.orgReaderCloseDialog=()=>{ const dialog=document.getElementById('orgReaderDialog'); if(dialog?.open) dialog.close(); };
-let orgReaderPages=organizeOrder;
+let orgReaderPages=organizeOrder, orgReaderStart=0;
 window.orgReaderOpen=(selectedOnly=false)=>{
   if(!organizeOrder.length) return;
   const dialog=document.getElementById('orgReaderDialog');
   if(!dialog || dialog.open) return;
-  orgReaderPages=selectedOnly && organizeSelected.size
-    ? organizeOrder.filter(code=>organizeSelected.has(code)) : organizeOrder.slice();
+  orgReaderPages=organizeOrder.slice();
+  const firstSelected=selectedOnly ? organizeOrder.findIndex(code=>organizeSelected.has(code)) : -1;
+  orgReaderStart=firstSelected >= 0 ? firstSelected : 0;
   dialog.showModal();
   orgReaderBuild();
 };
@@ -2085,6 +2086,7 @@ async function orgReaderBuild(){
   }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau tidak tersedia')+'</p>'; return; }
   orgBook.on('flip',()=>{ orgPaintReaderLabel(); try{ log('Org at '+orgBook.getCurrentPageIndex()); }catch(e){} orgRenderVisible(); });
   orgPaintReaderLabel(); orgRenderVisible();
+  if(orgReaderStart>0) setTimeout(()=>{ if(orgBook&&!orgStatic) orgFlipTo(orgReaderStart); },0);
   setTimeout(()=>{ try{
     if(!orgStatic&&orgBook&&!orgPaintOk()){ log('Org static fallback'); orgStaticShow(orgStaticIdx); }
   }catch(e){} },2000);

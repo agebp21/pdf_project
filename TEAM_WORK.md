@@ -1,5 +1,9 @@
 # Koordinasi tim AI
 
+- ORGANIZE-SPLIT-FULL-PREVIEW (29 Okt, Codex): `3648781` live. Preview Pisah diwiwiti saka halaman sing dipilih, nanging tetep ngemot kabeh halaman supaya bisa flip terus per halaman/spread; ora maneh dadi `1/1` nalika mung siji halaman dipilih. Browser lokal/live pilih halaman 4: mulai `3/8`, tombol sabanjure maju `5/8`; tes workspace/reader/actions PASS. Backup `/root/pdf_project-code-backup-20261029-split-full-preview.tgz`.
+
+- GITHUB-LOCAL-MERGE (29 Okt, Codex): `beaa091` live. GitHub update `eaef693` digabung karo perubahan lokal tracked: homepage nambah sample Jurnal lan banner hero dihapus; OCR luwih irit pass kapindho, lasso editor, label OCR supaya font luwih stabil, admin local-no-login, lan cache-bust editor. File scratch/untracked ora dilebokake. Tes page-editor core, build 36/36, share 6/6, QA homepage desktop/HP, live homepage sample 4/Jurnal 8 halaman tanpa error. Backup `/root/pdf_project-code-backup-20261029-github-local-merged.tgz`.
+
 - ORGANIZE-SELECTED-PREVIEW (28 Okt, Codex): `594a5d1` live. Pratinjau sidebar/Pisah dan dialog buku memakai halaman terpilih yang sama (termasuk pilihan tidak berurutan), bukan kembali ke halaman pertama dokumen. Tes browser lokal/live 17 halaman, pilih 12–13 → dialog berisi kode halaman 11/12, label 1/2; organize workspace/reader/actions PASS. Backup `/root/pdf_project-code-backup-20261028-selected-preview.tgz`.
 
 - ORGANIZE-SORT-ICON (28 Okt, Codex): `aaa3ac7` live. Tombol “⇅ Urut” menjadi ikon ⇅ saja dengan label aksesibel; fungsi tetap. Organize workspace PASS, browser lokal/live ukuran 28×28. Backup `/root/pdf_project-code-backup-20261028-sort-icon.tgz`.
