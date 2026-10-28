@@ -111,7 +111,7 @@
 .hh-demo-tools button:hover{background:#FAF4E8}
 .hh-demo-tools svg{width:20px;height:20px}
 .hh-demo-stage{position:relative;overflow:hidden}
-.hh-demo-stage{width:100%;height:min(600px,calc(100dvh - 220px));min-height:320px;display:flex;align-items:center;justify-content:center}
+.hh-demo-stage{width:100%;height:min(680px,calc(100dvh - 180px));min-height:320px;display:flex;align-items:center;justify-content:center}
 .hh-demo-book{margin:auto}
 .hh-demo-zoom{width:100%;height:100%;display:flex;align-items:center;justify-content:center;position:relative}
 .hh-demo-toolbar{box-sizing:border-box;display:flex;align-items:center;justify-content:safe center;gap:4px;max-width:100%;min-width:0;padding:4px 2px;overflow-x:auto;overscroll-behavior-x:contain;scrollbar-width:thin;white-space:nowrap}
@@ -167,7 +167,7 @@
 @media (prefers-reduced-motion:reduce){.hh,.hh-book.is-moving{transition:none}}
 /* The cover's cell is as tall as the preview (close tools + stage + gap + compact toolbar), so the hero
    keeps its height when one replaces the other. Phones: a cover as big as the preview's page. */
-.hh-book-wrap{min-height:calc(max(320px,min(600px,100dvh - 220px)) + 104px);align-items:center}
+.hh-book-wrap{min-height:calc(max(320px,min(680px,100dvh - 180px)) + 104px);align-items:center}
 @media (max-width:900px){
   .hh-book{width:min(350px,100%)}
   .hh-demo-stage{height:calc(min(350px,100vw - 40px) / .72);min-height:0}
