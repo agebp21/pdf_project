@@ -1192,7 +1192,8 @@
   }
   async function shareBook(){
     if(!sourcePdf||opening||exporting) return;
-    if(!buildConfig){ try{ const r=await fetch('/api/capabilities',{cache:'no-store'}); if(r.ok){ buildConfig=await r.json(); markLocked(); } }catch(e){} }
+    // A tab may have stayed open across a server restart; its build token then expires.
+    try{ const r=await fetch('/api/capabilities',{cache:'no-store'}); if(r.ok){ buildConfig=await r.json(); markLocked(); } }catch(e){}
     const plan=lockedFor('html', buildConfig);
     if(plan){
       // Publishing is Pro, but Free gets its first shares: guests sign in
@@ -1214,8 +1215,13 @@
       const data=model();
       const single=await FlipbookExport.packageSingleHtml(data, allPictures(data), (message,fraction)=>{ status(message); if(fraction!==undefined) step(0,.8)(fraction); });
       status(L('Uploading the book for sharing…','Mengunggah buku untuk dibagikan…'));
-      const sent=await FlipbookExport.upload('/api/share', single,
+      const upload=()=>FlipbookExport.upload('/api/share', single,
         {'Content-Type':'text/html','X-Build-Token':buildConfig.token,'X-Title':encodeURIComponent(data.title||'Interactive book')}, step(.8,.98));
+      let sent=await upload();
+      if(sent.status===403 && sent.data?.error?.includes('Sesi build tidak valid')){
+        const fresh=await fetch('/api/capabilities',{cache:'no-store'});
+        if(fresh.ok){ buildConfig=await fresh.json(); if(buildConfig.token) sent=await upload(); }
+      }
       if(!sent.ok) throw Error((sent.data&&sent.data.error)||L('Sharing failed.','Berbagi gagal.'));
       const url=location.origin+sent.data.url;
       $('#share-url').value=url; $('#share-box').hidden=false;
