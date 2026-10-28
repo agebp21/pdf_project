@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-SPLIT-SIMPLE (28 Okt, Codex): `825a826` live. UI Pisah PDF memakai ikon Rentang/Halaman, sidebar ringkas, aksi di bawah; hasil tetap satu PDF. JS/Python233 dan browser lokal/live lulus; detail di `DEPLOY.md`.
+
 - ORGANIZE-FOUR-TABS (28 Okt, Codex): `260be94` live. Urutan Gabung, Pisah, Edit, Kompres; Edit membuka editor PDF. Browser lokal/live desktop/HP, tes Organize/toolbar dan Python233 lulus; detail deploy di `DEPLOY.md`.
 
 - FLIPBOOK-GUIDE-320 (28 Okt, Codex): `862a0b6` live. Popup tutorial 320 px, browser desktop/HP lulus; detail di `DEPLOY.md`.

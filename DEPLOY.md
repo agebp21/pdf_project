@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 28 Oktober 2026 — live `825a826`: panel Pisah PDF diringkas menjadi pilihan ikon Rentang/Halaman, input rentang jelas, tombol Pilih semua/Kosongkan, pratinjau kecil, dan tombol aksi di bawah panel. Rentang `1-2,4` memilih tiga halaman; klik thumbnail beralih ke mode Halaman. Hasil tetap satu PDF. JS semua lulus, Python 233/233, browser lokal/live desktop-HP lulus. Backup `/root/pdf_project-code-backup-20261028-split-simple-825a826.tgz`; kedua layanan aktif, Organize/API/admin HTTPS 200.
+
 - 28 Oktober 2026 — live `260be94`: tab Organize diurutkan Gabung, Pisah, Edit, Kompres; mode Edit menampilkan alat edit dan tombol utama membuka editor PDF. Tes Organize/toolbar desktop-HP dan Python 233/233 lulus; satu tes toolbar lama diselaraskan dengan ikon pensil homepage yang sudah disembunyikan. Browser lokal/live empat tab dan responsif lulus; backup `/root/pdf_project-code-backup-20261028-org-tabs-260be94.tgz`; kedua layanan aktif, Organize/API/admin HTTPS 200.
 
 - 28 Oktober 2026 — live `862a0b6`: popup tutorial Flipbook diperkecil lagi dari 344 ke 320 px, padding 20 px, judul 22 px. Browser lokal/live desktop dan HP memastikan tombol/teks tidak terpotong; Flipbook/CSS HTTPS 200. Backup `/root/pdf_project-code-backup-20261028-guide-320-862a0b6.tgz`; kedua layanan aktif.
