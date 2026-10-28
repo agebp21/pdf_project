@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 28 Oktober 2026 — live `e3e9557`: ikon pensil/stabilo pada toolbar pratinjau homepage disembunyikan. Browser lokal/live memastikan tombol tidak terlihat, navigasi tetap aktif; tes sampel lulus, homepage/CSS/API HTTPS 200. Backup `/root/pdf_project-code-backup-20261028-hide-pen-e3e9557.tgz`; kedua layanan aktif.
+
 - 28 Oktober 2026 — live `6c61f7c`: kartu tiga sampel homepage diperbesar seragam menjadi 128 px pada desktop, tetap responsif 110 px pada HP; menu Katalog 1 kini sama dengan Katalog 2/Buku. Browser lokal/live dua ukuran tanpa overflow, tes sampel lulus, homepage/CSS/API HTTPS 200. Backup `/root/pdf_project-code-backup-20261028-sample-size-6c61f7c.tgz`; kedua layanan aktif.
 
 - 28 Oktober 2026 — live `1972e2e`: area pratinjau katalog homepage desktop diperbesar dari 600 ke 680 px agar ruang bawah lebih terisi; tampilan HP tetap proporsional. Browser lokal desktop/HP tanpa overflow; homepage/CSS/API HTTPS 200. Backup `/root/pdf_project-code-backup-20261028-catalog-size-1972e2e.tgz`; kedua layanan aktif.
