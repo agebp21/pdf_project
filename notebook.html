@@ -426,7 +426,6 @@
       <h2 class="col-h" data-en="Sources">Sumber</h2>
        <label id="drop" class="drop" for="file" data-en="<b data-ico=&quot;upload&quot;>Add sources</b>"><b data-ico="upload">Tambah sumber</b></label>
       <button id="add-sources" class="clay-btn clay-btn-ghost" type="button" hidden data-ico="plus" data-en="Add sources">Tambah sumber</button>
-      <button id="research-open" class="clay-btn clay-btn-ghost" type="button" data-ico="ask" data-en="Fast Research">Riset Cepat</button>
       <button id="library-open" class="clay-btn clay-btn-primary" type="button" hidden data-ico="book" data-en="Open My Library">Buka My Library</button>
       <input id="file" type="file" accept="application/pdf,.pdf" multiple hidden>
       <label id="select-all-row" class="row" hidden><input id="select-all" type="checkbox"><span data-en="Select all">Pilih semua</span></label>
@@ -1016,57 +1015,6 @@ window.addEventListener('DOMContentLoaded', () => {
   ['dragenter', 'dragover'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.add('is-over'); }));
   ['dragleave', 'drop'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.remove('is-over'); }));
   $('#drop').addEventListener('drop', e => { filesOf(e.dataTransfer.files).forEach(f => open(f, f.name)); });
-  // ---------- Fast Research: Gemini's Google Search grounding finds web sources for a query;
-  // the reader picks which to actually add (each becomes a source via /api/fetch-source, the
-  // same path a pasted link already uses — it turns any URL, PDF or web page, into a PDF).
-  $('#research-open').addEventListener('click', async () => {
-    const query = await MFDialog.prompt({title: L('Fast Research', 'Riset Cepat'), value: '', placeholder: L('What do you want to research?', 'Topik yang ingin dicari…'), ok: L('Search', 'Cari')});
-    if (!query) return;
-    status('#load-status', L('Searching the web…', 'Mencari di web…'));
-    let results;
-    try { results = (await post('/api/research', {query, lang: 'id-ID'})).sources; }
-    catch (cause) { status('#load-status', cause.message, true); return; }
-    status('#load-status', '');
-    showResearchPicker(results || [], query);
-  });
-  function showResearchPicker(results, query) {
-    document.getElementById('research-pick')?.remove();
-    $('#sources-list').hidden = true; $('#select-all-row').hidden = true;
-    const box = document.createElement('div'); box.id = 'research-pick'; box.className = 'research-pick';
-    box.append(Object.assign(document.createElement('p'), {className: 'status', textContent: results.length
-      ? L(`Results for "${query}" — pick which to add:`, `Hasil untuk "${query}" — pilih yang mau ditambahkan:`)
-      : L(`No web sources found for "${query}".`, `Tidak ada sumber web untuk "${query}".`)}));
-    const list = document.createElement('ul'); list.className = 'src-list';
-    results.forEach(r => {
-      const li = document.createElement('li'); li.className = 'src-item';
-      const check = Object.assign(document.createElement('input'), {type: 'checkbox', checked: true});
-      const label = document.createElement('label'); label.className = 'src-main';
-      label.append(check, Object.assign(document.createElement('span'), {className: 'src-text', textContent: r.title}),
-                   Object.assign(document.createElement('span'), {className: 'src-status', textContent: r.url}));
-      li.append(label); list.append(li);
-    });
-    box.append(list);
-    const actions = document.createElement('div'); actions.className = 'row';
-    const addBtn = Object.assign(document.createElement('button'), {type: 'button', className: 'clay-btn clay-btn-primary', textContent: L('Add selected', 'Tambahkan terpilih'), hidden: !results.length});
-    const cancelBtn = Object.assign(document.createElement('button'), {type: 'button', className: 'clay-btn clay-btn-ghost', textContent: L('Close', 'Tutup')});
-    actions.append(addBtn, cancelBtn); box.append(actions);
-    $('#sources-list').after(box);
-    const close = () => { box.remove(); $('#sources-list').hidden = false; renderSources(); };
-    cancelBtn.onclick = close;
-    addBtn.onclick = async () => {
-      const chosen = results.filter((r, i) => list.children[i].querySelector('input').checked);
-      close();
-      for (const r of chosen) {
-        status('#load-status', L(`Fetching ${r.title}…`, `Mengambil ${r.title}…`));
-        try {
-          const c = await caps();
-          const resp = await fetch('/api/fetch-source', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Build-Token': c.token}, body: JSON.stringify({url: r.url})});
-          if (!resp.ok) throw Error((await resp.json().catch(() => ({}))).error || L('Could not fetch this source.', 'Sumber ini tidak bisa diambil.'));
-          await open(await resp.blob(), (r.title || L('web source', 'sumber web')).replace(/\.pdf$/i, '').slice(0, 150) + '.pdf');
-        } catch (cause) { status('#load-status', `${r.title}: ${cause.message}`, true); }
-      }
-    };
-  }
   // ---------- My Library: pick one or more saved books as sources. A library entry is a
   // `.smflipbook` project (a ZIP of project.json + source.pdf) — the same thing flipbook.html
   // opens via `?library=<id>`; here it's fetched and unzipped directly, same /api/library
@@ -1991,7 +1939,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!c || !c.paywall) return;
     const has = new Set(c.entitlements || []);
     if (window.NotebookWork) NotebookWork.lock(!has.has('ai'));
-    for (const [sel, need, plan] of [['#summary-make', 'ai', 'Medium'], ['#translate-make', 'ai', 'Medium'], ['#ask-open', 'ai', 'Medium'], ['#research-open', 'ai', 'Medium'], ['#studio-audio', 'podcast', 'Pro'], ['#studio-video', 'podcast', 'Pro']]) {
+    for (const [sel, need, plan] of [['#summary-make', 'ai', 'Medium'], ['#translate-make', 'ai', 'Medium'], ['#ask-open', 'ai', 'Medium'], ['#studio-audio', 'podcast', 'Pro'], ['#studio-video', 'podcast', 'Pro']]) {
       const button = $(sel);
       if (!button || has.has(need)) continue;
       button.classList.add('plan-lock');
