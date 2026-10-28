@@ -1,5 +1,7 @@
 # Handoff — PDF Project & Flipbook
 
+Update 2026-10-29: panel Organize mode Edit memakai dua aksi langsung Flipbook/Download di bagian bawah; tombol Edit PDF utama dihilangkan pada mode ini. Klik dua kali halaman tetap membuka editor fokus halaman.
+
 Update 2026-10-29: editor text wrap, OCR halaman aktif, dan indikator loading live di `89941a1` bersama update PC Wiyan. Keterbatasan wrap masih mengikuti kotak satu gambar per blok teks; pekerjaan untuk kontur/multi-gambar dilanjutkan lokal. Detail QA dan backup ada di `DEPLOY.md`.
 
 Update lokal 2026-10-29 (belum push/deploy, atas permintaan owner): editor PDF mendapat wrap teks di sekitar gambar baru dengan opsi aktif/nonaktif pada gambar, termasuk teks satu baris dan styled text; pratinjau browser dan export PDF memakai area aman yang sama. Tombol OCR halaman aktif dan lingkaran proses tampil pada editor. Tes terkait lulus. Batas saat ini: wrap berbasis kotak, satu gambar per text box; kontur gambar/transparansi dan multi-gambar belum diselesaikan. Detail ada di `TEAM_WORK.md`.
