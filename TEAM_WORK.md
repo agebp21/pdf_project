@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-SPLIT-SIDEBAR (28 Okt, Codex): `7ad1613` live. Klik Pisah halaman pilihan tidak lagi membuat panel hasil/preview ulang di bawah atau menggulir halaman; pesan sukses dan tombol Unduh/Jadikan Flipbook tetap di sidebar. Browser lokal/live dengan PDF 2 halaman: result tersembunyi, unduh ada, error JS 0. Tes organize actions PASS. Backup `/root/pdf_project-code-backup-20261028-split-sidebar.tgz`.
+
 - ORGANIZE-EDIT-TOOLBAR-REMOVE (28 Okt, Codex): `cd2864a` live. Toolbar tambahan zoom/Geser/Edit teks & gambar/T Text/bentuk pada mode Edit Organize dihapus; tab Edit tetap. Tes organize actions PASS, browser lokal/live toolbar 0, tab Edit 1, tanpa error JS. Backup `/root/pdf_project-code-backup-20261028-remove-org-editbar.tgz`.
 
 - FLIPBOOK-READER-UNIFIED (28 Okt, Codex): `224563f`, `35b86f3`, `5ce8a05` live. Toolbar editor, share lama/baru, pratinjau beranda, ekspor HTML/ZIP dan paket server APK/EXE mengikuti urutan Mark → Layar penuh → daftar/catatan/pena → Audio book → Translate → Sound dan tombol pil krem/jingga. Share online bisa menerjemahkan halaman aktif dengan akun Medium/Pro; HTML offline tetap tidak menghubungi API. Tes build 36/36, share 6/6, ekspor PASS, browser beranda desktop/HP serta link share live tanpa error. File kerja lain tidak diikutkan. Backup `/root/pdf_project-code-backup-20261028-unified-reader.tgz`.
