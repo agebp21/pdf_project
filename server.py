@@ -57,6 +57,7 @@ import invoice
 import visits
 
 ROOT = Path(__file__).resolve().parent
+SHARE_THEME = (ROOT / 'assets/export/share-theme.css').read_bytes()
 BUILD = ROOT / '.build'
 DATA = ROOT / '.data'
 ANDROID_SIGNING = DATA / 'android-signing.json'
@@ -4036,12 +4037,15 @@ class Handler(SimpleHTTPRequestHandler):
             if (parse_qs(urlsplit(self.path).query).get('dl') or [''])[0]:
                 self.send_file_bytes(data, 'text/html', share_filename(title))
                 return
-            head, sep, tail = data.rpartition(b'</body>')
-            page = (head + SHARE_BAR.encode() + sep + tail) if sep else (data + SHARE_BAR.encode())
+            # Shared books are self-contained snapshots. Apply the current reader theme
+            # when serving older links without changing their sealed pages or download.
+            themed = data.replace(b'</head>', b'<style id="mf-share-theme">' + SHARE_THEME + b'</style></head>', 1)
+            head, sep, tail = themed.rpartition(b'</body>')
+            page = (head + SHARE_BAR.encode() + sep + tail) if sep else (themed + SHARE_BAR.encode())
             self.send_response(200)
             self.send_header('Content-Type', 'text/html; charset=utf-8')
-            # One id = one immutable book: caches may keep it for a year.
-            self.send_header('Cache-Control', 'public, max-age=31536000, immutable')
+            # The book data is stable, but the server may refresh its reader styling.
+            self.send_header('Cache-Control', 'public, max-age=300, must-revalidate')
             self.send_header('Content-Length', str(len(page)))
             self.end_headers()
             self.wfile.write(page)
