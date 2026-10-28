@@ -103,6 +103,13 @@ async function main() {
   const richRead = await open(richWrapPdf), richItems = (await (await richRead.getPage(1)).getTextContent()).items.filter(item => item.str.trim());
   assert.ok(richItems.some(item => item.transform[4] >= 113 && item.transform[5] < 180 - 34 && item.transform[5] > 180 - 82), 'styled text also flows beside the picture');
   await richRead.destroy();
+  const longWordPdf = await E.exportPdf(await wrapDoc.save(), { 0: { size: [200, 180], elements: [
+    { type: 'image', wrapText: true, x: .1, y: 20 / 180, w: .44, h: 50 / 180, src: 'data:image/png;base64,' + red.toBuffer('image/png').toString('base64') },
+    { type: 'text', x: .1, y: 20 / 180, w: .9, h: .5, text: 'supercalifragilisticexpialidocious', html: '<b>supercalifragilisticexpialidocious</b>', fontSize: 12 / 180, family: 'sans', color: '#000000' },
+  ] } });
+  const longRead = await open(longWordPdf), longItems = (await (await longRead.getPage(1)).getTextContent()).items.filter(item => item.str.trim());
+  assert.ok(longItems.length > 1 && longItems.every(item => item.transform[4] >= 113), 'a long styled word splits beside the image');
+  await longRead.destroy();
   assert.deepEqual([doc.getPage(0).getWidth(), doc.getPage(0).getHeight()], [400, 600]);
   // Page order can be chosen (e.g. after reordering).
   const swapped = await E.exportPdf(bytes, {}, { order: [1, 0] });

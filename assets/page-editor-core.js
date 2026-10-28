@@ -565,7 +565,7 @@
         }
         tokens.push({ para: pi, end: true, size: base });                 // paragraph end (keeps empty lines)
       }
-      // Lines: greedy wrap; a word wider than the box stays alone on its line.
+      // Lines: greedy wrap, including long words that must fit beside a picture.
       const lines = []; let line = { toks: [], w: 0, size: 0 };
       const spanAt = () => flowSpan({ x, y: el.y * H, w }, pictures, el.y * H + lines.reduce((n, ln) => n + (ln.size || base) * lh, 0), base * lh);
       const finish = last => { while (line.toks.length && line.toks[line.toks.length - 1].space) line.w -= line.toks.pop().w; line.last = last; line.span = spanAt(); lines.push(line); line = { toks: [], w: 0, size: 0 }; };
@@ -576,6 +576,17 @@
           if (lines.length > 10000) throw Error('Text cannot fit around the picture');
         }
         if ((!el.fit || pictures.length) && !t.space && line.toks.some(k => !k.space) && line.w + t.w > spanAt().w) finish(false);
+        if (!t.space && pictures.length && !line.toks.length && t.w > spanAt().w) {
+          const chars = Array.from(t.text);
+          let count = 1;
+          while (count < chars.length && t.f.widthOfTextAtSize(chars.slice(0, count + 1).join(''), t.size) <= spanAt().w) count++;
+          if (count < chars.length) {
+            const at = tokens.indexOf(t), rest = chars.slice(count).join('');
+            t.text = chars.slice(0, count).join('');
+            t.w = t.f.widthOfTextAtSize(t.text, t.size);
+            tokens.splice(at + 1, 0, { ...t, text: rest, w: t.f.widthOfTextAtSize(rest, t.size) });
+          }
+        }
         if (t.space && !line.toks.length) continue;
         line.toks.push(t); line.w += t.w; line.size = Math.max(line.size, t.size);
       }
