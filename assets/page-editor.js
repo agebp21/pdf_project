@@ -2190,9 +2190,12 @@
             const src = await PDFLib.PDFDocument.load(await original.blob.arrayBuffer(), { ignoreEncryption: true });
             const edited = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
             const merged = await PDFLib.PDFDocument.create();
-            const replacement = (await merged.copyPages(edited, [0]))[0];
+            const editedPages = await merged.copyPages(edited, edited.getPageIndices());
             const originals = await merged.copyPages(src, src.getPageIndices());
-            originals.forEach((pg, i) => merged.addPage(i === st.returnPage ? replacement : pg));
+            originals.forEach((pg, i) => {
+              if (i === st.returnPage) editedPages.forEach(editedPage => merged.addPage(editedPage));
+              else merged.addPage(pg);
+            });
             const mergedBlob = new Blob([await merged.save()], { type: 'application/pdf' });
             await FlipbookTransfer.remove(st.returnSource);
             const mergedId = await FlipbookTransfer.save(mergedBlob, name);
