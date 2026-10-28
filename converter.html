@@ -2435,7 +2435,7 @@ async function showPdfPages(blob, url){
     pdf.destroy();
   }catch(e){ const b=box(); if(b) b.innerHTML=`<iframe src="${url}" class="w-full h-[380px] rounded-lg border bg-white"></iframe>`; }
 }
-function downloadBlob(blob, filename, {flipbookSource=null}={}){
+function downloadBlob(blob, filename, {flipbookSource=null, compact=false}={}){
   const flipbookButton = $('#makeFlipbook');
   const bookPdf = blob.type.includes('pdf') ? {blob, name:filename} : (flipbookSource ? {blob:flipbookSource, name:flipbookSource.name||'document.pdf'} : null);
   flipbookButton.hidden = !bookPdf;
@@ -2468,6 +2468,15 @@ function downloadBlob(blob, filename, {flipbookSource=null}={}){
   const a=$('#downloadBtn'); a.href=url; a.download=filename;
   $('#result').classList.remove('hidden');
   resultActionsHome();
+  if(compact){
+    // Organize already shows the pages in its workspace. Keep only its
+    // download/Flipbook actions beside the action button, without a second
+    // full-page preview or an automatic jump to the bottom.
+    $('#resultPreview').replaceChildren();
+    $('#result').classList.add('hidden');
+    $('#progress').classList.add('hidden');
+    return;
+  }
   if(active==='crop-pdf' && blob.type.includes('pdf') && document.getElementById('cropUi')){
     $('#result').classList.add('hidden'); $('#progress').classList.add('hidden');
     cropShowResult(blob, url, filename).catch(e=>log('Crop result fail '+(e&&e.message||e)));
@@ -2898,14 +2907,17 @@ async function organizePdf(){
   if(organizeOrder.length===0) throw new Error(L('Upload a PDF first','Upload PDF dulu'));
   if(organizeOrder.length===0) throw new Error(L('No pages','Tidak ada halaman'));
   const bytes=await buildOrganizePdf(organizeOrder);
-  downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'-organized.pdf'));
-  // No big preview here: the page grid already shows the result. The note and
-  // the buttons go in the sidebar, right under the Organize button.
-  $('#result').classList.add('hidden'); $('#progress').classList.add('hidden');
+  downloadBlob(new Blob([bytes],{type:'application/pdf'}), files[0].name.replace(/\.pdf$/i,'-organized.pdf'), {compact:true});
+  orgFinishInSidebar(L(`✅ ${organizeOrder.length} pages saved`,`✅ ${organizeOrder.length} halaman tersimpan`),
+    `${L('Pages','Halaman')}: ${orgOrderText(organizeOrder)}`);
+}
+function orgFinishInSidebar(message, detail=''){
   const foot=document.querySelector('#orgSide .org-foot');
   if(!foot){ resultActionsHome(); $('#result').classList.remove('hidden'); return; }
+  $('#resultNote')?.remove();
   const note=document.createElement('p'); note.id='resultNote'; note.className='org-done';
-  note.innerHTML=L(`✅ ${organizeOrder.length} pages saved`,`✅ ${organizeOrder.length} halaman tersimpan`)+`<span>${L('Pages','Halaman')}: ${orgOrderText(organizeOrder)}</span>`;
+  note.textContent=message;
+  if(detail){ const sub=document.createElement('span'); sub.textContent=detail; note.append(sub); }
   const box=$('#resultActions'); box.className='org-after';
   foot.append(note,box);
 }
@@ -3042,8 +3054,8 @@ window.orgSplitSelected=async ()=>{
     $('#progress').textContent=L('Preparing selected pages…','Menyiapkan halaman pilihan…');
     const pages=organizeOrder.filter(code=>organizeSelected.has(code));
     const bytes=await buildOrganizePdf(pages);
-    downloadBlob(new Blob([bytes],{type:'application/pdf'}), orgBaseName()+'-selected-pages.pdf');
-    orgNote(L(`<p class="text-center py-2">✅ ${codes.length} selected pages kept together in one PDF</p>`,`<p class="text-center py-2">✅ ${codes.length} halaman pilihan digabung dalam satu PDF</p>`));
+    downloadBlob(new Blob([bytes],{type:'application/pdf'}), orgBaseName()+'-selected-pages.pdf', {compact:true});
+    orgFinishInSidebar(L(`✅ ${codes.length} selected pages saved in one PDF`,`✅ ${codes.length} halaman pilihan tersimpan dalam satu PDF`));
     log('Org split selected '+codes.length+' pages into one PDF');
   }catch(e){ showError(e.message); }
 };
