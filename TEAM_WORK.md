@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-SELECTED-SPREAD (28 Okt, Codex): `8789b21` live. Sidebar menampilkan halaman pilihan + halaman berikutnya berdampingan, termasuk fallback saat pilihan dibatalkan. Browser, JS 59/59, Python 233/233 lulus; backup/verifikasi di `DEPLOY.md`.
+
 - ORGANIZE-THUMBS (28 Okt, Codex): `502a10a` live. Thumbnail halaman maks. 150 px, tanpa outline saat belum dipilih, terpilih hijau. Browser, JS 59/59, Python 233/233 lulus; backup/verifikasi di `DEPLOY.md`.
 
 - ORGANIZE-COVER-SIDEBAR (28 Okt, Codex): `4281c4e` live. Thumbnail sampul dipindah tepat di bawah tombol aksi sidebar; dialog buku tetap berfungsi. JS 59/59, Python 233/233 lulus; backup/verifikasi di `DEPLOY.md`.

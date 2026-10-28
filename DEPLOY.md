@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 28 Oktober 2026 ? live `8789b21`: thumbnail sidebar Organize otomatis menampilkan halaman yang dipilih dan halaman berikutnya secara berdampingan; saat halaman terakhir dipilih sisi kanan kosong, dan saat pilihan dibatalkan kembali ke pilihan sebelumnya. Browser memverifikasi perpindahan gambar/halaman; JS 59/59 dan Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261028-spread-8789b21.tgz`; kedua layanan aktif; Organize/Flipbook/API/admin HTTPS 200.
+
 - 28 Oktober 2026 ? live `502a10a`: grid thumbnail Organize diperkecil maksimum 150 px, kartu tanpa outline sebelum dipilih; halaman pilihan mendapat garis dan tanda centang hijau. Browser memverifikasi 150 px/outline/seleksi; JS 59/59 dan Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261028-thumbs-502a10a.tgz`; kedua layanan aktif; Organize/Flipbook/API/admin HTTPS 200.
 
 - 28 Oktober 2026 ? live `4281c4e`: thumbnail sampul Organize dipindah tepat di bawah tombol aksi Gabung/Pisah dalam sidebar kanan; klik tetap membuka dialog buku. JS 59/59 dan Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261028-sidebar-4281c4e.tgz`; kedua layanan aktif; Organize/Flipbook/API/admin HTTPS 200.
