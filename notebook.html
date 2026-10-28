@@ -11,6 +11,7 @@
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:opsz,wght@9..144,700;9..144,900&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
 <script defer src="assets/vendor/pdf.min.js"></script>
+<script defer src="assets/vendor/jszip.min.js"></script>
 <script defer src="assets/pdf-links.js"></script>
 <script defer src="assets/pdf-words.js"></script>
 <script defer src="assets/export/layout.js"></script>
@@ -92,6 +93,7 @@
   #select-all-row{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#57534E;padding:0 4px}
   .research-pick{display:grid;gap:8px;margin:4px 0}
   .research-pick .row{justify-content:flex-end}
+  .lib-cover{width:26px;height:36px;object-fit:cover;border-radius:3px;border:1px solid #E4DED0;flex:none}
   /* Inline citation badge ("[1]", "[2]" in an Ask answer) and the collapsible Thoughts panel. */
   .cite-badge{display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 3px;margin:0 1px;border:0;border-radius:999px;background:#FFE680;color:#1C1917;font:800 10px/1 'Plus Jakarta Sans',sans-serif;cursor:pointer;vertical-align:2px}
   .cite-badge:hover{background:#FF5C28;color:#fff}
@@ -425,6 +427,7 @@
        <label id="drop" class="drop" for="file" data-en="<b data-ico=&quot;upload&quot;>Add sources</b>"><b data-ico="upload">Tambah sumber</b></label>
       <button id="add-sources" class="clay-btn clay-btn-ghost" type="button" hidden data-ico="plus" data-en="Add sources">Tambah sumber</button>
       <button id="research-open" class="clay-btn clay-btn-ghost" type="button" data-ico="ask" data-en="Fast Research">Riset Cepat</button>
+      <button id="library-open" class="clay-btn clay-btn-primary" type="button" hidden data-ico="book" data-en="Open My Library">Buka My Library</button>
       <input id="file" type="file" accept="application/pdf,.pdf" multiple hidden>
       <label id="select-all-row" class="row" hidden><input id="select-all" type="checkbox"><span data-en="Select all">Pilih semua</span></label>
       <ul id="sources-list" class="src-list"></ul>
@@ -1061,6 +1064,63 @@ window.addEventListener('DOMContentLoaded', () => {
           if (!resp.ok) throw Error((await resp.json().catch(() => ({}))).error || L('Could not fetch this source.', 'Sumber ini tidak bisa diambil.'));
           await open(await resp.blob(), (r.title || L('web source', 'sumber web')).replace(/\.pdf$/i, '').slice(0, 150) + '.pdf');
         } catch (cause) { status('#load-status', `${r.title}: ${cause.message}`, true); }
+      }
+    };
+  }
+  // ---------- My Library: pick one or more saved books as sources. A library entry is a
+  // `.smflipbook` project (a ZIP of project.json + source.pdf) — the same thing flipbook.html
+  // opens via `?library=<id>`; here it's fetched and unzipped directly, same /api/library
+  // endpoints, source.pdf handed to the existing open(file, name).
+  $('#library-open').addEventListener('click', async () => {
+    status('#load-status', L('Loading your library…', 'Memuat perpustakaan Anda…'));
+    let books;
+    try {
+      const r = await fetch('/api/library', {credentials: 'same-origin'});
+      if (!r.ok) throw Error((await r.json().catch(() => ({}))).error || L('My Library could not be loaded.', 'My Library tidak bisa dimuat.'));
+      books = (await r.json()).books || [];
+    } catch (cause) { status('#load-status', cause.message, true); return; }
+    status('#load-status', '');
+    showLibraryPicker(books);
+  });
+  function showLibraryPicker(books) {
+    document.getElementById('library-pick')?.remove();
+    $('#sources-list').hidden = true; $('#select-all-row').hidden = true;
+    const box = document.createElement('div'); box.id = 'library-pick'; box.className = 'research-pick';
+    box.append(Object.assign(document.createElement('p'), {className: 'status', textContent: books.length
+      ? L('Pick from My Library:', 'Pilih dari My Library:') : L('My Library is empty.', 'My Library masih kosong.')}));
+    const list = document.createElement('ul'); list.className = 'src-list';
+    books.forEach(b => {
+      const li = document.createElement('li'); li.className = 'src-item';
+      const check = Object.assign(document.createElement('input'), {type: 'checkbox'});
+      const label = document.createElement('label'); label.className = 'src-main';
+      if (b.hasCover) { const img = document.createElement('img'); img.className = 'lib-cover'; img.alt = ''; img.src = `/api/library/${b.id}/cover`; label.append(img); }
+      label.append(check, Object.assign(document.createElement('span'), {className: 'src-text', textContent: b.title}),
+                   Object.assign(document.createElement('span'), {className: 'src-status', textContent: L(`${b.pageCount} pages`, `${b.pageCount} halaman`)}));
+      li.append(label); list.append(li);
+    });
+    box.append(list);
+    const actions = document.createElement('div'); actions.className = 'row';
+    const addBtn = Object.assign(document.createElement('button'), {type: 'button', className: 'clay-btn clay-btn-primary', textContent: L('Add selected', 'Tambahkan terpilih'), hidden: !books.length});
+    const cancelBtn = Object.assign(document.createElement('button'), {type: 'button', className: 'clay-btn clay-btn-ghost', textContent: L('Close', 'Tutup')});
+    actions.append(addBtn, cancelBtn); box.append(actions);
+    $('#sources-list').after(box);
+    const close = () => { box.remove(); $('#sources-list').hidden = false; renderSources(); };
+    cancelBtn.onclick = close;
+    addBtn.onclick = async () => {
+      const chosen = books.filter((b, i) => list.children[i].querySelector('input').checked);
+      close();
+      for (const b of chosen) {
+        status('#load-status', L(`Loading ${b.title}…`, `Memuat ${b.title}…`));
+        try {
+          const resp = await fetch(`/api/library/${b.id}/project`, {credentials: 'same-origin'});
+          if (!resp.ok) throw Error((await resp.json().catch(() => ({}))).error || L('This book could not be loaded.', 'Buku ini tidak bisa dimuat.'));
+          const zip = await JSZip.loadAsync(await resp.blob());
+          if (!zip.file('source.pdf')) throw Error(L('This library item has no source PDF.', 'Item perpustakaan ini tidak punya PDF sumber.'));
+          const pdfBlob = new Blob([await zip.file('source.pdf').async('arraybuffer')], {type: 'application/pdf'});
+          let name = b.title;
+          if (zip.file('project.json')) { try { name = JSON.parse(await zip.file('project.json').async('string')).title || name; } catch (e) {} }
+          await open(pdfBlob, name.replace(/\.pdf$/i, '').slice(0, 150) + '.pdf');
+        } catch (cause) { status('#load-status', `${b.title}: ${cause.message}`, true); }
       }
     };
   }
@@ -1915,6 +1975,12 @@ window.addEventListener('DOMContentLoaded', () => {
       } catch (e) {}
     });
   }
+  // "Open My Library" only makes sense once signed in (it's the member's own saved books).
+  (async () => {
+    let who = null;
+    try { who = window.MFAuth ? await MFAuth.me() : null; } catch (e) {}
+    $('#library-open').hidden = !(who && who.user);
+  })();
   // Crowns on the AI tools the member's plan lacks (as on the flipbook): a click goes straight
   // to the price list. Guests keep the usual login first.
   (async () => {
