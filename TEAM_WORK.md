@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- HOME-CATALOG-SAMPLES (28 Okt, Codex): `154297d` live. Sampel 1 dan 3 memakai 12 halaman WebP dari Catalog 1/2.pdf di Downloads; Buku tetap. Sampul belakang asli terlihat saat End. JS 59/59, Python 233/233, browser live lulus; detail deploy di `DEPLOY.md`.
+
 - FLIPBOOK-CLOSED-BACK (28 Okt, Codex): `b13f665` live. Sampul belakang tunggal untuk PDF ganjil/genap, navigasi akhir dan cache layout diperbaiki di Flipbook/home/ekspor. JS 59/59, Python 233/233, runtime 19/20 halaman dan browser live lulus; backup/verifikasi di `DEPLOY.md`.
 
 - ORGANIZE-SEL-ORANGE (28 Okt, Antigravity): `d73ca27` live (branch `v2`). `converter.html` — border kartu thumbnail terpilih + bulatan centang diganti hijau ke oranye `#FF5C28` (selaras tab aktif); tombol alat aktif mode Edit merah ke oranye. `editor.html` (Edit PDF) — sorotan teks (`::selection`) di area kertas jadi oranye transparan, bukan biru bawaan browser. `git diff --check` lulus; belum QA browser.
