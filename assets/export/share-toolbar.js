@@ -7,8 +7,8 @@
     if (!bar || !header || !document.getElementById('fullscreen')) return;
     const status = document.getElementById('status');
     if (status && status.parentElement === bar) header.append(status);
-    const order = ['prev','home','end','next','zoom','bookmark','bookmarks','notes','highlight',
-      'fullscreen','speak','podcast','edition','translate','summary','sound','replay'];
+    const order = ['prev','home','end','next','zoom','bookmark','fullscreen','bookmarks','notes','highlight',
+      'speak','podcast','edition','translate','summary','sound','replay'];
     order.forEach(id => { const button = document.getElementById(id); if (button && button.parentElement === bar) bar.append(button); });
     const next = document.getElementById('next');
     if (next) {

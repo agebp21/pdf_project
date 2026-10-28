@@ -12,8 +12,8 @@ footer button{min-height:34px;padding:7px 11px;border:1px solid #e5ddd0;border-r
 footer button:hover:not(:disabled),footer button:focus-visible{background:#fff0e8;border-color:#ff7843;color:#c2410c}
 footer button:disabled{opacity:.42}
 footer #prev{order:1}footer #home{order:2}footer #end{order:3}footer #next{order:4}
-footer #zoom{order:5}footer #bookmark{order:6}footer #bookmarks{order:7}footer #notes{order:8}
-footer #highlight{order:9}footer #fullscreen{order:10}footer #speak{order:11}footer #podcast{order:12}
+footer #zoom{order:5}footer #bookmark{order:6}footer #fullscreen{order:7}footer #bookmarks{order:8}footer #notes{order:9}
+footer #highlight{order:10}footer #speak{order:11}footer #podcast{order:12}
 footer #edition{order:13}footer #translate{order:14}footer #summary{order:15}footer #sound{order:16}footer #replay{order:17}
 footer #next{width:34px;padding:0;font-size:0}
 footer #next::after{content:'→';font-size:16px;line-height:1}
