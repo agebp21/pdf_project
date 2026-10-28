@@ -132,7 +132,7 @@ async function main() {
   assert.match(w.qaError(), /Tick pages|Centang/, 'empty selection warns');
   // Modes share one shell: merge flips, split selects, tools per mode.
   const tabs = JSON.stringify([...w.document.querySelectorAll('.org-tabs button')].map(b => b.dataset.mode));
-  assert.equal(tabs, JSON.stringify(['merge', 'split', 'compress']), 'three mode tabs');
+  assert.equal(tabs, JSON.stringify(['merge', 'split', 'edit', 'compress']), 'four mode tabs in requested order');
   const tabActive = () => w.document.querySelector('.org-tabs button.active').dataset.mode;
   assert.equal(tabActive(), 'merge', 'merge by default');
   w.qaSetup([0, 1, 2, 3], []);
@@ -147,7 +147,8 @@ async function main() {
   assert.ok(w.document.querySelector('#organizeGrid').innerHTML.includes(' sel'), 'split click selects');
   assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'split hides unrelated editing tools even with selection');
   w.orgModeSet('edit');
-  assert.equal(tabActive(), 'split', 'removed edit mode is ignored');
+  assert.equal(tabActive(), 'edit', 'edit follows split in the mode tabs');
+  assert.ok(!w.document.querySelector('#orgEditTools').classList.contains('is-hidden'), 'edit tools show for loaded PDF');
   w.orgModeSet('merge');
   w.renderOrganizeGrid();
   assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'merge hides the box');
