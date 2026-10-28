@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-SELECTED-PREVIEW (28 Okt, Codex): `594a5d1` live. Pratinjau sidebar/Pisah dan dialog buku memakai halaman terpilih yang sama (termasuk pilihan tidak berurutan), bukan kembali ke halaman pertama dokumen. Tes browser lokal/live 17 halaman, pilih 12–13 → dialog berisi kode halaman 11/12, label 1/2; organize workspace/reader/actions PASS. Backup `/root/pdf_project-code-backup-20261028-selected-preview.tgz`.
+
 - ORGANIZE-SORT-ICON (28 Okt, Codex): `aaa3ac7` live. Tombol “⇅ Urut” menjadi ikon ⇅ saja dengan label aksesibel; fungsi tetap. Organize workspace PASS, browser lokal/live ukuran 28×28. Backup `/root/pdf_project-code-backup-20261028-sort-icon.tgz`.
 
 - ORGANIZE-SPLIT-SIDEBAR (28 Okt, Codex): `7ad1613` live. Klik Pisah halaman pilihan tidak lagi membuat panel hasil/preview ulang di bawah atau menggulir halaman; pesan sukses dan tombol Unduh/Jadikan Flipbook tetap di sidebar. Browser lokal/live dengan PDF 2 halaman: result tersembunyi, unduh ada, error JS 0. Tes organize actions PASS. Backup `/root/pdf_project-code-backup-20261028-split-sidebar.tgz`.
