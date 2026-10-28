@@ -29,7 +29,7 @@
   body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:-1;
     background:radial-gradient(700px 420px at 50% 0%,#EDE9FE 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
   .wrap{max-width:1500px;margin:0 auto;padding:12px 16px 56px}
-  .workspace{display:grid;grid-template-columns:300px minmax(0,1fr);grid-template-areas:"src view";gap:16px;align-items:start;margin-top:18px}
+  .workspace{display:grid;grid-template-columns:320px minmax(0,1fr);grid-template-areas:"src view";gap:16px;align-items:start;margin-top:18px}
   .sources{grid-area:src}.viewer{grid-area:view}
   .col-h-sub{margin-top:8px;padding-top:14px;border-top:1px solid #EFE9DC}
   .col-h{margin:0 0 2px;font:700 14px 'Plus Jakarta Sans',sans-serif;color:#1C1917}
@@ -37,6 +37,16 @@
   .side .clay-btn:disabled{background:#fff;color:#A8A29E;border-color:#EFE9DC;box-shadow:none;opacity:1}
   .sources .doc-btns{flex-direction:column}
   .sources .doc-btns .clay-btn{width:100%;font-size:13px;padding:9px 12px}
+  .studio-intro{margin:0 0 3px;font-size:12px;line-height:1.55;color:#78716C}
+  .studio-flow{display:grid;gap:9px}
+  .studio-step{border:1px solid #EAE4D9;border-radius:14px;background:#FCFAF6;padding:11px;display:grid;gap:7px}
+  .studio-step:focus-within{border-color:#FFB096}
+  .studio-step-head{display:flex;align-items:center;gap:8px;color:#1C1917;font-size:12px;font-weight:800}
+  .studio-step-head b{width:22px;height:22px;display:grid;place-items:center;border-radius:7px;background:#FFF0E9;color:#D94B1D;font-size:11px}
+  .studio-step p:not(.status){margin:0;color:#78716C;font-size:11px;line-height:1.45}
+  .studio-step .row{justify-content:space-between}
+  .studio-step .status{margin:0}
+  .studio-extra{padding-top:9px;border-top:1px solid #EFE9DC}
   .doc-card{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border:1px solid #EFE9DC;border-radius:12px;background:#FAF8F4}
   .doc-ico{color:#78716C;padding-top:2px}.doc-ico::before{margin:0}
   .doc-text{display:grid;gap:2px;min-width:0}
@@ -68,6 +78,8 @@
   .vtabs button{border:1px solid #E8E2D6;background:#fff;color:#44403C;border-radius:999px;padding:6px 14px;font:700 12px 'Plus Jakarta Sans',sans-serif;cursor:pointer}
   .vtabs button:hover{border-color:#FF5C28;color:#FF5C28}
   .vtabs button[aria-selected=true]{background:#1C1917;border-color:#1C1917;color:#fff}
+  .vtabs button[data-view=summary],.vtabs button[data-view=translate],.vtabs button[data-view=ask]{font-weight:800}
+  .vtabs button[data-view=ask][aria-selected=true]{background:#FF5C28;border-color:#FF5C28}
   .viewer-body{flex:1;padding:26px 22px;overflow:auto;max-height:78vh;background:#fff;display:flex;flex-direction:column;align-items:center}
   .sheet{width:100%;max-width:760px;min-height:60vh;box-sizing:border-box;background:transparent;padding:14px 8px 40px;flex:none}
   .viewer-empty{display:grid;place-content:center;text-align:center;color:#78716C;gap:4px}
@@ -331,18 +343,24 @@
       </div>
       <p id="load-status" class="status" role="status"></p>
       <button id="ocr-stop" class="ocr-stop" type="button" hidden data-en="Stop OCR (keep the pages read)">Hentikan OCR (simpan halaman yang sudah terbaca)</button>
-      <h2 class="col-h col-h-sub">Studio</h2>
+      <h2 class="col-h col-h-sub" data-en="AI Studio">Studio AI</h2>
+      <p class="studio-intro" data-en="Work with a selected passage: summarize it, translate it, then ask follow-up questions in context.">Pilih bagian dokumen, lalu ringkas, terjemahkan, dan tanyakan lanjutannya dalam satu alur.</p>
       <fieldset id="tools" disabled>
-        <button id="summary-make" class="clay-btn clay-btn-primary" type="button" data-ico="summary" data-en="Make a summary">Buat ringkasan</button>
-        <p id="summary-status" class="status" role="status"></p>
-        <hr class="sep">
-        <label class="row"><span data-en="Into">Ke bahasa</span> <select id="translate-target"><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
-        <button id="translate-make" class="clay-btn clay-btn-primary" type="button" data-ico="translate" data-en="Translate">Terjemahkan</button>
-        <p id="translate-status" class="status" role="status"></p>
-        <hr class="sep">
-        <button id="ask-open" class="clay-btn clay-btn-primary" type="button" data-ico="ask" data-en="Ask the document">Tanya dokumen</button>
-        <hr class="sep">
-        <button id="notes-open" class="clay-btn clay-btn-ghost" type="button" data-ico="note" data-en="Notes">Catatan</button>
+        <div class="studio-flow">
+          <div class="studio-step"><div class="studio-step-head"><b>1</b><span data-en="Summary">Ringkasan</span></div>
+            <p data-en="Summarize the text you highlighted.">Ringkas teks yang sudah distabilo.</p>
+            <button id="summary-make" class="clay-btn clay-btn-primary" type="button" data-ico="summary" data-en="Make a summary">Buat ringkasan</button>
+            <p id="summary-status" class="status" role="status"></p></div>
+          <div class="studio-step"><div class="studio-step-head"><b>2</b><span data-en="AI translation">Terjemahan AI</span></div>
+            <p data-en="Translate selected pages into another language.">Terjemahkan halaman pilihan ke bahasa lain.</p>
+            <label class="row"><span data-en="Into">Ke bahasa</span> <select id="translate-target"><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
+            <button id="translate-make" class="clay-btn clay-btn-primary" type="button" data-ico="translate" data-en="Translate">Terjemahkan</button>
+            <p id="translate-status" class="status" role="status"></p></div>
+          <div class="studio-step"><div class="studio-step-head"><b>3</b><span data-en="Contextual chat">Chat kontekstual</span></div>
+            <p data-en="Ask about the document and continue from your summary and earlier questions.">Tanya isi dokumen, lanjut dari ringkasan dan percakapan sebelumnya.</p>
+            <button id="ask-open" class="clay-btn clay-btn-primary" type="button" data-ico="ask" data-en="Open chat">Buka chat</button></div>
+          <div class="studio-extra"><button id="notes-open" class="clay-btn clay-btn-ghost" type="button" data-ico="note" data-en="Notes and writing">Catatan dan tulisan</button></div>
+        </div>
       </fieldset>
       <div id="hl-box" class="hl-box" hidden>
         <div class="hl-head"><span id="hl-info" class="hl-info" role="status"></span><button id="hl-clear" class="link-btn" type="button" hidden data-ico="trash" data-en="Clear highlights">Hapus stabilo</button></div>
@@ -355,7 +373,7 @@
           <button type="button" role="tab" data-view="doc" hidden data-ico="doc" data-en="Document">Dokumen</button>
           <button type="button" role="tab" data-view="summary" hidden data-ico="summary" data-en="Summary">Ringkasan</button>
           <button type="button" role="tab" data-view="translate" hidden data-ico="translate" data-en="Translation">Terjemahan</button>
-          <button type="button" role="tab" data-view="ask" hidden data-ico="ask" data-en="Ask">Tanya</button>
+          <button type="button" role="tab" data-view="ask" hidden data-ico="ask" data-en="Chat">Chat</button>
           <button type="button" role="tab" data-view="notes" hidden data-ico="note" data-en="Notes">Catatan</button>
           <button type="button" role="tab" data-view="journal" hidden data-ico="journal" data-en="Journal">Jurnal</button>
           <button type="button" role="tab" data-view="slides" hidden data-ico="slides" data-en="Slides">Slide</button>
