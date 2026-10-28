@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- FLIPBOOK-READER-UNIFIED (28 Okt, Codex): `224563f`, `35b86f3`, `5ce8a05` live. Toolbar editor, share lama/baru, pratinjau beranda, ekspor HTML/ZIP dan paket server APK/EXE mengikuti urutan Mark → Layar penuh → daftar/catatan/pena → Audio book → Translate → Sound dan tombol pil krem/jingga. Share online bisa menerjemahkan halaman aktif dengan akun Medium/Pro; HTML offline tetap tidak menghubungi API. Tes build 36/36, share 6/6, ekspor PASS, browser beranda desktop/HP serta link share live tanpa error. File kerja lain tidak diikutkan. Backup `/root/pdf_project-code-backup-20261028-unified-reader.tgz`.
+
 - ORGANIZE-SPLIT-AUTO (28 Okt, Codex): `dedb46c` live. Rentang yang diketik langsung memilih thumbnail, fokus input tetap; browser lokal/live dan tes parser lulus. Detail di `DEPLOY.md`.
 
 - ORGANIZE-SPLIT-SIMPLE (28 Okt, Codex): `825a826` live. UI Pisah PDF memakai ikon Rentang/Halaman, sidebar ringkas, aksi di bawah; hasil tetap satu PDF. JS/Python233 dan browser lokal/live lulus; detail di `DEPLOY.md`.

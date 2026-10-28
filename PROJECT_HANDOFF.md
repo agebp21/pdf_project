@@ -1,5 +1,7 @@
 # Handoff — PDF Project & Flipbook
 
+Update 2026-10-28: Reader Flipbook memakai urutan toolbar yang sama pada editor, pratinjau beranda, share, dan ekspor baru. Paket APK/EXE yang dibangun server kini memasukkan `share-theme.css` dan `share-toolbar.js`; paket lama yang sudah diunduh tidak berubah. Link share online menampilkan Translate untuk halaman terbuka dengan akun Medium/Pro, sedangkan file offline tetap membaca terjemahan yang sudah tersimpan. Live commit `5ce8a05`; QA tercatat di `DEPLOY.md`.
+
 26 Oktober2026 — rilis dina iki: menu admin ijo diringkes dadi Status Member, Pengunjung, Email terverifikasi, Status Order, Ganti Password; filter paket tanpa tombol Semua, tanggal daftar member, lan tindak lanjut email draf mung kanggo member login sing email wis diverifikasi. Pengunjung anonim tetep tanpa identitas.
 
 Organize PDF bisa misah nomer/rentang kaca tartamtu, milih kabeh/kosongake, lan jeneng ZIP manut posisi kaca. Flipbook nduwe tutorial langkah-langkah, fullscreen luwih cetha, reverse curl kanggo klik lan navigasi, drag tetep interaktif, lan lembar pungkasan katon. Kode wis live; QA tes otomatis lulus, visual QA browser kanggo flipbook durung ditindakake.
