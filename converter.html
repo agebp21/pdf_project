@@ -675,7 +675,13 @@ function renderHeader(){
 let organizeOrder = []; // page indices (numbers) or 'blank-N' ids, in current order
 // Workspace mode: merge keeps today's behavior (click flips); split and
 // edit select pages (red) for their actions; compress needs no selection.
-let orgMode = 'merge';
+const orgModeFromUrl = (() => {
+  try {
+    const mode = new URLSearchParams(location.search).get('mode');
+    return ['merge', 'split', 'edit', 'compress'].includes(mode) ? mode : 'merge';
+  } catch (e) { return 'merge'; }
+})();
+let orgMode = orgModeFromUrl;
 // Edit-toolbar state (zoom level + hand/pan). Declared up here so
 // paintOrgMode can read them even on the very first render.
 let orgZoom = 1, orgHand = false;
@@ -899,7 +905,7 @@ window.orgOpenEditor = async (startPos = null) => {
     }
     const suffix = singlePage ? '-page-' + (startPos + 1) : '';
     const id = await FlipbookTransfer.save(new Blob([bytes], { type: 'application/pdf' }), orgBaseName() + suffix + '.pdf');
-    location.href = 'editor.html?source=' + encodeURIComponent(id) + '&page=' + page + '&from=organize';
+    location.href = 'editor.html?source=' + encodeURIComponent(id) + '&page=' + page + '&from=organize&mode=' + encodeURIComponent(orgMode);
   } catch (e) { showError(e.message || String(e)); }
 };
 window.orgEditTextOcr = async () => {
@@ -3892,7 +3898,8 @@ renderToolList(); renderHeader(); updateFileUI();
     const entry=await FlipbookTransfer.get(source);
     if(!entry || !entry.blob) throw new Error(L('The book was not found. Open it from the flipbook again.','Buku tidak ditemukan. Buka lagi dari flipbook.'));
     await FlipbookTransfer.remove(source);
-    history.replaceState(null,'',location.pathname+'?tool=organize-pdf');
+    const returnMode = new URLSearchParams(location.search).get('mode');
+    history.replaceState(null,'',location.pathname+'?tool=organize-pdf' + (['merge','split','edit','compress'].includes(returnMode) ? '&mode=' + encodeURIComponent(returnMode) : ''));
     const file=entry.blob instanceof File?entry.blob:new File([entry.blob], entry.name||'document.pdf', {type:entry.blob.type||'application/pdf'});
     log('Flipbook handoff '+file.name);
     handleFiles([file]);

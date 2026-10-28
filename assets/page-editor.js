@@ -2177,7 +2177,7 @@
       if ((where === 'flipbook' || where === 'organize') && window.FlipbookTransfer) {
         const id = await FlipbookTransfer.save(blob, where === 'organize' ? st.name : name);
         dirtyLeave = false;
-        location.href = where === 'organize' ? 'converter.html?tool=organize-pdf&source=' + encodeURIComponent(id)
+        location.href = where === 'organize' ? 'converter.html?tool=organize-pdf&mode=' + encodeURIComponent(new URLSearchParams(location.search).get('mode') || 'edit') + '&source=' + encodeURIComponent(id)
           : 'flipbook.html?source=' + encodeURIComponent(id);
         return;
       }
