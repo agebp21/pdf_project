@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 28 Oktober 2026 — live `1972e2e`: area pratinjau katalog homepage desktop diperbesar dari 600 ke 680 px agar ruang bawah lebih terisi; tampilan HP tetap proporsional. Browser lokal desktop/HP tanpa overflow; homepage/CSS/API HTTPS 200. Backup `/root/pdf_project-code-backup-20261028-catalog-size-1972e2e.tgz`; kedua layanan aktif.
+
 - 28 Oktober 2026 — live `154297d`: sampel beranda nomor 1 dan 3 diganti dengan `Catalog 1.pdf` (Nivora Home) dan `Catalog 2.pdf` (RushBite Express) dari Downloads, masing-masing 12 halaman WebP; sampel Buku tetap. Sampul belakang memakai halaman terakhir PDF. JS 59/59, Python 233/233, browser lokal/live lulus; backup `/root/pdf_project-code-backup-20261028-catalogs-154297d.tgz`; kedua layanan aktif dan aset/API HTTPS 200.
 
 - 28 Oktober 2026 ? live `b13f665`: Flipbook, ekspor HTML, dan pratinjau sampel kini mencapai sampul belakang tunggal yang tertutup. PDF dengan jumlah halaman genap mendapat dua lembar kosong di mesin pembaca; tombol Sabanjur?/Akhir aktif sampai posisi tutup. Versi URL layout diperbarui agar browser mengambil aturan baru. JS 59/59 dan Python 233/233 lulus; runtime PageFlip 19/20 halaman serta browser live katalog/majalah lulus. Backup `/root/pdf_project-code-backup-20261028-backcover-cache-b13f665.tgz`; kedua layanan aktif; homepage/Flipbook/layout HTTPS 200. Commit seleksi oranye `d73ca27` dari agen lain tetap termuat.

@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- HOME-CATALOG-SIZE (28 Okt, Codex): `1972e2e` live. Tinggi pratinjau katalog desktop 680 px, HP tetap responsif; browser lokal desktop/HP dan endpoint live lulus. Backup/verifikasi di `DEPLOY.md`.
+
 - HOME-CATALOG-SAMPLES (28 Okt, Codex): `154297d` live. Sampel 1 dan 3 memakai 12 halaman WebP dari Catalog 1/2.pdf di Downloads; Buku tetap. Sampul belakang asli terlihat saat End. JS 59/59, Python 233/233, browser live lulus; detail deploy di `DEPLOY.md`.
 
 - FLIPBOOK-CLOSED-BACK (28 Okt, Codex): `b13f665` live. Sampul belakang tunggal untuk PDF ganjil/genap, navigasi akhir dan cache layout diperbaiki di Flipbook/home/ekspor. JS 59/59, Python 233/233, runtime 19/20 halaman dan browser live lulus; backup/verifikasi di `DEPLOY.md`.
