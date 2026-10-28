@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-SEL-ORANGE (28 Okt, Antigravity, lokal belum commit/deploy): `converter.html` — border kartu thumbnail terpilih + bulatan centang diganti hijau ke oranye `#FF5C28` (selaras tab aktif); tombol alat aktif mode Edit merah ke oranye. `editor.html` (Edit PDF) — sorotan teks (`::selection`) di area kertas jadi oranye transparan, bukan biru bawaan browser. `git diff --check` lulus; belum QA browser.
+
 - ORGANIZE-MERGE-FILES (28 Okt, Codex): `03093ae` live. Gabung menampilkan satu kartu sampul per PDF di tengah/sidebar; file baru bersebelahan, drag memindahkan grup halaman. Pisah tetap per halaman. Browser live, JS 59/59, Python 233/233 lulus; backup/verifikasi di `DEPLOY.md`.
 
 - ORGANIZE-VISIBLE-MERGE (28 Okt, Codex): `57818a7` live. Pratinjau sidebar dipindah ke area terlihat; klik halaman Gabung/Pisah memperbarui pasangan thumbnail. Browser live, JS 59/59, Python 233/233 lulus; backup/verifikasi di `DEPLOY.md`.
