@@ -606,7 +606,7 @@ function renderHeader(){
           </div>
         </div>
         <div class="org-foot"><div id="orgFootExtra"></div><button onclick="orgPrimaryAction()" class="org-go"><span id="orgGoText">Organize</span> <span aria-hidden="true">→</span></button></div>
-        <button id="orgCoverPreview" class="org-cover-preview is-hidden" type="button" onclick="orgReaderOpen()" aria-label="${L('Open book preview','Buka pratinjau buku')}">
+        <button id="orgCoverPreview" class="org-cover-preview is-hidden" type="button" onclick="orgReaderOpen(true)" aria-label="${L('Open book preview','Buka pratinjau buku')}">
           <span class="org-cover-pages">
             <img id="orgCoverImage" alt="${L('Selected page','Halaman pilihan')}" hidden>
             <span id="orgCoverPlaceholder" class="org-cover-placeholder">${L('Page','Halaman')}</span>
@@ -1837,12 +1837,15 @@ function orgBookEngine(){
   return orgEngineLoading;
 }
 function orgReaderClose(){ if(orgBook){ try{orgBook.destroy();}catch(e){} orgBook=null; } }
-function orgReaderClosed(){ orgReaderClose(); orgReaderSig=''; orgStatic=false; }
+function orgReaderClosed(){ orgReaderClose(); orgReaderSig=''; orgStatic=false; orgReaderPages=organizeOrder; }
 window.orgReaderCloseDialog=()=>{ const dialog=document.getElementById('orgReaderDialog'); if(dialog?.open) dialog.close(); };
-window.orgReaderOpen=()=>{
+let orgReaderPages=organizeOrder;
+window.orgReaderOpen=(selectedOnly=false)=>{
   if(!organizeOrder.length) return;
   const dialog=document.getElementById('orgReaderDialog');
   if(!dialog || dialog.open) return;
+  orgReaderPages=selectedOnly && organizeSelected.size
+    ? organizeOrder.filter(code=>organizeSelected.has(code)) : organizeOrder.slice();
   dialog.showModal();
   orgReaderBuild();
 };
@@ -1853,8 +1856,10 @@ window.orgMergeCoverOpen=code=>{
 };
 let orgCoverToken=0, orgCoverFocus=null;
 function orgCoverCode(){
+  const selected=organizeOrder.find(code=>organizeSelected.has(code));
+  if(selected!==undefined) return selected;
   if(orgCoverFocus!==null && organizeOrder.includes(orgCoverFocus)) return orgCoverFocus;
-  return organizeOrder.find(code=>organizeSelected.has(code)) ?? organizeOrder[0];
+  return organizeOrder[0];
 }
 async function orgCoverUpdate(){
   const token=++orgCoverToken, code=orgCoverCode();
@@ -1879,10 +1884,14 @@ async function orgCoverUpdate(){
   }
   const cover=document.getElementById('orgCoverPreview'), image=document.getElementById('orgCoverImage');
   if(!cover || !image || code===undefined) return;
-  const pos=organizeOrder.indexOf(code), next=organizeOrder[pos+1];
+  const pos=organizeOrder.indexOf(code);
+  const selectedPages=organizeOrder.filter(page=>organizeSelected.has(page));
+  const next=selectedPages.length ? selectedPages[1] : organizeOrder[pos+1];
+  const nextPos=next===undefined ? -1 : organizeOrder.indexOf(next);
   const count=document.getElementById('orgCoverCount');
   const selected=organizeSelected.has(code);
-  if(count) count.textContent=selected ? L(`Selected page ${pos+1}${next===undefined?'':`–${pos+2}`}`,`Halaman ${pos+1}${next===undefined?'':`–${pos+2}`} dipilih`) : L(`${organizeOrder.length} pages`,`${organizeOrder.length} halaman`);
+  const pair=nextPos<0 ? '' : `${nextPos===pos+1?'–':', '}${nextPos+1}`;
+  if(count) count.textContent=selected ? L(`Selected page ${pos+1}${pair}`,`Halaman ${pos+1}${pair} dipilih`) : L(`${organizeOrder.length} pages`,`${organizeOrder.length} halaman`);
   const render=page=>page===undefined?'':typeof page==='number'?orgRenderPage(page):Promise.resolve(orgBlankImg[page]||'');
   const [url,nextUrl]=await Promise.all([render(code),render(next)]);
   if(token!==orgCoverToken || orgCoverCode()!==code || !cover.isConnected) return;
@@ -1909,7 +1918,7 @@ function orgReaderFaces(){
   // detaches the engine's own wrapper and blanks the whole book.
   const out=[];
   orgFaceEls=[];
-  organizeOrder.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.dataset.code=code; d.append(orgPreviewFace(code,pos)); out.push(d); orgFaceEls.push(d); });
+  orgReaderPages.forEach((code,pos)=>{ const d=document.createElement('div'); d.className='opf-page'; d.dataset.code=code; d.append(orgPreviewFace(code,pos)); out.push(d); orgFaceEls.push(d); });
   return out;
 }
 // Paint check: do the visible book sheets actually show the current spread?
@@ -1920,7 +1929,7 @@ function orgPaintOk(){
     let cur=0; try{cur=orgBook.getCurrentPageIndex();}catch(e){return true;}
     let ori='landscape'; try{ori=orgBook.getOrientation();}catch(e){}
     const start=ori==='portrait'?cur:cur-(cur%2);
-    const want=new Set([start,start+1].filter(i=>i>=0&&i<organizeOrder.length).map(i=>String(organizeOrder[i])));
+    const want=new Set([start,start+1].filter(i=>i>=0&&i<orgReaderPages.length).map(i=>String(orgReaderPages[i])));
     if(!want.size) return true;
     let painted=false;
     box.querySelectorAll('.stf__item').forEach(el=>{
@@ -1936,15 +1945,15 @@ let orgStatic=false, orgStaticIdx=0;
 function orgStaticSpread(){
   const wrap=document.getElementById('orgReader');
   const narrow=wrap?(wrap.clientWidth||600)<520:true;
-  const idx=Math.max(0,Math.min(organizeOrder.length-1,orgStaticIdx));
-  return narrow?[idx]:[idx-(idx%2),idx-(idx%2)+1].filter(i=>i>=0&&i<organizeOrder.length);
+  const idx=Math.max(0,Math.min(orgReaderPages.length-1,orgStaticIdx));
+  return narrow?[idx]:[idx-(idx%2),idx-(idx%2)+1].filter(i=>i>=0&&i<orgReaderPages.length);
 }
 async function orgStaticRender(){
   const box=document.getElementById('orgBook'); if(!box) return;
   box.innerHTML='';
   const row=document.createElement('div'); row.className='org-staticrow';
   for(const pos of orgStaticSpread()){
-    const code=organizeOrder[pos];
+    const code=orgReaderPages[pos];
     const cell=document.createElement('div'); cell.className='opf-page'; cell.dataset.code=code;
     cell.append(orgPreviewFace(code,pos)); row.append(cell);
   }
@@ -1952,19 +1961,20 @@ async function orgStaticRender(){
   orgPaintReaderLabel();
   const idxs=orgStaticSpread();
   for(let k=0;k<idxs.length;k++){
-    const pos=idxs[k], code=organizeOrder[pos];
+    const pos=idxs[k], code=orgReaderPages[pos];
     const url=await orgRenderPage(code);
     if(url==null) continue;
     const cell=row.children[k];
-    if(cell&&organizeOrder[pos]===code){
+    if(cell&&orgReaderPages[pos]===code){
       const img=document.createElement('img'); img.src=url; img.draggable=false; img.alt='';
       cell.replaceChildren(img);
     }
   }
 }
 function orgStaticShow(pos){
+  if(!document.getElementById('orgReaderDialog')?.open) orgReaderPages=organizeOrder;
   orgStatic=true;
-  orgStaticIdx=Math.max(0,Math.min(organizeOrder.length-1,pos==null?orgStaticIdx:pos));
+  orgStaticIdx=Math.max(0,Math.min(orgReaderPages.length-1,pos==null?orgStaticIdx:pos));
   if(orgBook){ try{orgBook.destroy();}catch(e){} orgBook=null; }
   const box=document.getElementById('orgBook');
   if(box) orgStaticRender();
@@ -1991,19 +2001,19 @@ async function orgRenderPage(code){
 // Programmatic jump with self-heal: flip() animates, but if the engine
 // swallows it (it never throws), fall back to an instant turnToPage.
 function orgFlipTo(pos){
-  pos=Math.max(0,Math.min(organizeOrder.length-1,pos));
-  if(organizeOrder[pos]===undefined) return;
+  pos=Math.max(0,Math.min(orgReaderPages.length-1,pos));
+  if(orgReaderPages[pos]===undefined) return;
   orgStaticIdx=pos;
   if(orgStatic){ orgStaticRender(); return; }
   if(!orgBook) return;
   let cur=-1;
   // Recalculate from live layout first: flips silently die on stale geometry.
   try{ orgBook.update(); cur=orgBook.getCurrentPageIndex(); }catch(e){ return; }
-  if(cur===pos||organizeOrder[pos]===undefined) return;
+  if(cur===pos||orgReaderPages[pos]===undefined) return;
   log('Org flip '+cur+' -> '+pos);
   try{orgBook.flip(pos);}catch(e){ log('Org flip threw: '+(e&&e.message||e)); }
   setTimeout(()=>{ try{
-    if(!orgBook||organizeOrder[pos]===undefined||orgStatic) return;
+    if(!orgBook||orgReaderPages[pos]===undefined||orgStatic) return;
     // Still mid-flip long after it should have settled: revive the loop.
     if(orgBook.getState()==='flipping'){ try{orgBook.getRender().start();}catch(e){} return; }
     // Settled but never moved: revive the loop, then snap there instantly.
@@ -2026,7 +2036,7 @@ async function orgReaderBuild(){
   wrap.classList.remove('is-hidden');
   wrap.classList.toggle('org-zoomed', orgZoom > 1);
   wrap.classList.toggle('org-hand', orgHand);
-  if(!organizeOrder.length){
+  if(!orgReaderPages.length){
     orgReaderClose();
     const b0=document.getElementById('orgBook');
     if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('No pages','Tidak ada halaman')+'</p>';
@@ -2084,26 +2094,26 @@ function orgPaintReaderLabel(){
   let cur=1;
   if(orgStatic) cur=orgStaticIdx+1;
   else if(orgBook){ try{cur=orgBook.getCurrentPageIndex()+1;}catch(e){} }
-  el.textContent=cur+' / '+organizeOrder.length;
+  el.textContent=cur+' / '+orgReaderPages.length;
 }
 function orgVisibleIdx(){
   let cur=0;
   if(orgBook){ try{cur=orgBook.getCurrentPageIndex();}catch(e){} }
   const out=[];
-  for(let i=Math.max(0,cur-1);i<=Math.min(organizeOrder.length-1,cur+2);i++) out.push(i);
+  for(let i=Math.max(0,cur-1);i<=Math.min(orgReaderPages.length-1,cur+2);i++) out.push(i);
   return out;
 }
 async function orgRenderVisible(){
   if(!orgBook) return;
   for(const pos of orgVisibleIdx()){
-    const code=organizeOrder[pos]; if(code===undefined) continue;
+    const code=orgReaderPages[pos]; if(code===undefined) continue;
     const had=orgPrevCache.has(orgPrevKey(code));
     const url=await orgRenderPage(code);
     if(url==null||had) continue;
     // NB: never touch box.children[] here — after loadFromHTML those are the
     // engine's wrapper, not our faces (replacing one would nuke the book).
     const cell=orgFaceEls[pos];
-    if(cell&&cell.isConnected&&organizeOrder[pos]===code){
+    if(cell&&cell.isConnected&&orgReaderPages[pos]===code){
       const img=document.createElement('img'); img.src=url; img.draggable=false; img.alt='';
       cell.replaceChildren(img);
     }
