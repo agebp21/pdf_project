@@ -69,6 +69,29 @@
   .side .desc{margin:0;font-size:12px;color:#57534E;line-height:1.5}
   .side .clay-btn{padding:10px 14px;font-size:13px;width:100%}
   .doc-btns{display:flex;gap:6px;width:100%}.doc-btns .clay-btn{flex:1;padding:8px 10px;font-size:12px}
+  /* Sources panel (NotebookLM-style): a checkable, openable, removable list. */
+  .src-list{list-style:none;margin:0;padding:0;display:grid;gap:3px;max-height:40vh;overflow:auto}
+  .src-item{display:flex;align-items:center;gap:6px;border-radius:10px;padding:2px}
+  .src-item.open{background:#FFF1EA}
+  .src-item input[type=checkbox]{flex:none}
+  .src-main{flex:1;min-width:0;display:flex;align-items:center;gap:7px;border:0;background:none;padding:7px 4px;border-radius:8px;cursor:pointer;text-align:left;font:600 12.5px/1.3 'Plus Jakarta Sans',sans-serif;color:#1C1917}
+  .src-main:hover{background:#FAF4E8}
+  .src-main .doc-ico{flex:none}
+  .src-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .src-status{flex:none;font-size:11px;color:#A8A29E}
+  .src-remove{flex:none;border:0;background:none;border-radius:8px;width:22px;height:22px;color:#A8A29E;cursor:pointer;font-size:14px;line-height:1}
+  .src-remove:hover{background:#FDE8E8;color:#B91C1C}
+  #select-all-row{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#57534E;padding:0 4px}
+  .research-pick{display:grid;gap:8px;margin:4px 0}
+  .research-pick .row{justify-content:flex-end}
+  /* Inline citation badge ("[1]", "[2]" in an Ask answer) and the collapsible Thoughts panel. */
+  .cite-badge{display:inline-grid;place-items:center;min-width:17px;height:17px;padding:0 3px;margin:0 1px;border:0;border-radius:999px;background:#FFE680;color:#1C1917;font:800 10px/1 'Plus Jakarta Sans',sans-serif;cursor:pointer;vertical-align:2px}
+  .cite-badge:hover{background:#FF5C28;color:#fff}
+  .thoughts{margin:0 0 10px;border:1px solid #EFE9DC;border-radius:12px;background:#FAF8F4}
+  .thoughts summary{cursor:pointer;padding:8px 12px;font:700 12px 'Plus Jakarta Sans',sans-serif;color:#78716C;list-style:none}
+  .thoughts summary::-webkit-details-marker{display:none}
+  .thoughts summary::before{content:'✦ ';}
+  .thoughts-text{padding:0 12px 10px;font-size:12.5px;line-height:1.6;color:#57534E;white-space:pre-wrap}
   .viewer{background:#fff;border:1px solid #ECE7DD;border-radius:20px;overflow:hidden;min-height:72vh;display:flex;flex-direction:column}
   .viewer-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:10px;padding:10px 14px;background:#fff;color:#78716C;
     border-bottom:1px solid #F1ECE2;font-size:11px;font-weight:800;letter-spacing:.12em}
@@ -341,12 +364,16 @@
 
   <div class="workspace">
     <aside class="side sources" aria-label="Sumber" data-en-aria="Source">
-      <h2 class="col-h" data-en="Source">Sumber</h2>
-       <label id="drop" class="drop" for="file" data-en="<b data-ico=&quot;upload&quot;>Choose a PDF</b>"><b data-ico="upload">Pilih PDF</b></label>
-      <input id="file" type="file" accept="application/pdf,.pdf" hidden>
+      <h2 class="col-h" data-en="Sources">Sumber</h2>
+       <label id="drop" class="drop" for="file" data-en="<b data-ico=&quot;upload&quot;>Add sources</b>"><b data-ico="upload">Tambah sumber</b></label>
+      <button id="add-sources" class="clay-btn clay-btn-ghost" type="button" hidden data-ico="plus" data-en="Add sources">Tambah sumber</button>
+      <button id="research-open" class="clay-btn clay-btn-ghost" type="button" data-ico="ask" data-en="Fast Research">Riset Cepat</button>
+      <input id="file" type="file" accept="application/pdf,.pdf" multiple hidden>
+      <label id="select-all-row" class="row" hidden><input id="select-all" type="checkbox"><span data-en="Select all">Pilih semua</span></label>
+      <ul id="sources-list" class="src-list"></ul>
       <div id="doc" class="doc" hidden>
         <div class="doc-card"><span class="doc-ico" data-ico="doc" aria-hidden="true"></span><div class="doc-text"><span id="doc-name" class="doc-name"></span><span id="doc-meta" class="doc-meta"></span></div></div>
-        <span class="doc-btns"><button id="to-flipbook" class="clay-btn clay-btn-ghost" type="button" data-ico="book" data-en="Make a flipbook">Jadikan Flipbook</button><button id="change" class="clay-btn clay-btn-ghost" type="button" data-ico="swap" data-en="Change PDF">Ganti PDF</button></span>
+        <span class="doc-btns"><button id="to-flipbook" class="clay-btn clay-btn-ghost" type="button" data-ico="book" data-en="Make a flipbook">Jadikan Flipbook</button></span>
         <button id="to-editor" class="clay-btn clay-btn-ghost" type="button" data-ico="edit" data-en="Edit this PDF">Edit PDF ini</button>
       </div>
       <p id="load-status" class="status" role="status"></p>
@@ -523,8 +550,28 @@ window.addEventListener('DOMContentLoaded', () => {
   const NAMES_ID = {'id-ID': 'Bahasa Indonesia', 'en-US': 'English', 'ms-MY': 'Bahasa Melayu'};
   const NAMES_EN = {'id-ID': 'Indonesian', 'en-US': 'English', 'ms-MY': 'Malay'};
   const NAMES = new Proxy({}, {get: (o, k) => L(NAMES_EN, NAMES_ID)[k]});
-  let doc = null;            // {name, blob, pages, text: {page: [lines]}, lang}
-  let summary = null, translations = {}, translating = false, trPage = 0;
+  // Several sources can be loaded at once (the Sources panel, like NotebookLM); `doc` is
+  // whichever one is currently shown in the viewer — always the same object as its entry in
+  // `sources`, so code that reads/writes `doc.xxx` keeps working unchanged for the open source.
+  let sources = [];          // [{id, name, blob, pages, text: {page: [lines]}, lang, chapters, highlights, translations, ocrDone, ocred, active}]
+  let doc = null, openId = null, nextId = 1;
+  let summary = null, translating = false, trPage = 0;
+  const activeSources = () => sources.filter(s => s.active);
+  // {page: [passages]} of one source's highlights (or its whole text if `whole`), page order.
+  function pickedOf(source) {
+    const out = {};
+    (source.highlights || []).slice().sort((a, b) => a.page - b.page || (a.top || 0) - (b.top || 0)).forEach(h => {
+      const text = h.whole ? (source.text[String(h.page)] || []).join('\n') : h.text;
+      if (text && text.trim()) (out[String(h.page)] ||= []).push(text);
+    });
+    return out;
+  }
+  // Every active source as {id, name, text}, for /api/summary, /api/ask, /api/write: a source
+  // with highlights sends only those (narrows the scope) when `scope === 'marks'`; one without
+  // always sends its whole text (nothing to narrow to).
+  function sourcesPayload(scope) {
+    return activeSources().map(s => ({id: s.id, name: s.name.replace(/\.pdf$/i, ''), text: (scope === 'marks' && s.highlights.length) ? pickedOf(s) : s.text}));
+  }
 
   function status(id, text, bad = false) { const el = $(id); el.textContent = text || ''; el.classList.toggle('error', bad); }
   // An error that comes with the way out (the allowance used up): the price list as a button.
@@ -554,8 +601,8 @@ window.addEventListener('DOMContentLoaded', () => {
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   }
   const title = () => doc ? doc.name.replace(/\.pdf$/i, '') : L('Document', 'Dokumen');
-  const allText = () => Object.keys(doc.text).map(k => doc.text[k].join(' ')).join(' ');
-  const textPages = () => Object.keys(doc.text).map(Number).sort((a, b) => a - b).filter(i => doc.text[i].join(' ').trim());
+  const allText = (s = doc) => Object.keys(s.text).map(k => s.text[k].join(' ')).join(' ');
+  const textPages = (s = doc) => Object.keys(s.text).map(Number).sort((a, b) => a - b).filter(i => s.text[i].join(' ').trim());
   // PDF lines → paragraphs (a line runs on unless it ends a sentence, is short, or starts a list item).
   function paragraphs(lines) {
     const clean = (lines || []).map(l => String(l).replace(/\s+/g, ' ').trim()).filter(Boolean);
@@ -612,6 +659,10 @@ window.addEventListener('DOMContentLoaded', () => {
     return found;
   }
   $('#ocr-stop').addEventListener('click', () => { ocrStop = true; $('#ocr-stop').hidden = true; });
+  // Several sources can be loading at once; OCR (one Tesseract pool) runs for one at a time,
+  // in the order it was asked for — a later `ocrPages` call waits for the earlier one to finish.
+  let ocrQueue = Promise.resolve();
+  function queueOcr(job) { return ocrQueue = ocrQueue.catch(() => {}).then(job); }
   // The PDF's chapters from its outline (bookmarks): [{title, page (index)}] — the level that
   // gives 3+ entries (a single root such as "Contents" opens to its children). [] when none.
   async function chaptersOf(pdf) {
@@ -633,98 +684,220 @@ window.addEventListener('DOMContentLoaded', () => {
       return out.sort((a, b) => a.page - b.page).filter((c, i, all) => !i || c.page !== all[i - 1].page);
     } catch (e) { return []; }
   }
-  // The document's line (name · pages · words · language · OCR) and the tools.
-  function docReady(ocred) {
-    const words = allText().split(/\s+/).filter(Boolean).length;
-    doc.lang = FlipbookSpeech.lang(allText().slice(0, 20000));
-    $('#doc-meta').textContent = L(`${doc.pages} pages · ${words.toLocaleString('en-US')} words · ${NAMES[doc.lang]}`, `${doc.pages} halaman · ${words.toLocaleString('id-ID')} kata · ${NAMES[doc.lang]}`)
-      + (ocred ? L(` · ${ocred} pages read with OCR`, ` · ${ocred} halaman dibaca OCR`) : '');
+  // One source's line (name · pages · words · language · OCR) and language; the data (lang)
+  // is always computed, the `#doc-meta` line only drawn when `source` is the one open right now.
+  function docReady(source, ocred) {
+    const words = allText(source).split(/\s+/).filter(Boolean).length;
+    source.lang = FlipbookSpeech.lang(allText(source).slice(0, 20000));
+    if (doc === source) {
+      $('#doc-meta').textContent = L(`${source.pages} pages · ${words.toLocaleString('en-US')} words · ${NAMES[source.lang]}`, `${source.pages} halaman · ${words.toLocaleString('id-ID')} kata · ${NAMES[source.lang]}`)
+        + (ocred ? L(` · ${ocred} pages read with OCR`, ` · ${ocred} halaman dibaca OCR`) : '');
+    }
     return words;
   }
+  // Each call adds one more source (the Sources panel), shown in the viewer as soon as it
+  // starts reading; `source === doc` guards below skip UI writes once the reader has switched
+  // to a different source while this one was still loading in the background.
   async function open(blob, name) {
+    const source = {id: nextId++, name, blob, pages: 0, text: {}, lang: 'id-ID', chapters: [], highlights: [], translations: {}, ocrDone: false, ocred: 0, active: true, status: L('Reading…', 'Membaca…')};
+    const first = !sources.length;
+    sources.push(source); doc = source; openId = source.id;
+    renderSources();
     status('#load-status', L('Reading the PDF…', 'Membaca PDF…'));
-    $('#tools').disabled = true;
-    ocrRun++;                                            // a background OCR of the last document stops
+    $('#tools').disabled = false;
     try {
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
       const pdf = await pdfjsLib.getDocument({data: new Uint8Array(await blob.arrayBuffer())}).promise;
-      if (window.previewPdf) window.previewPdf(blob).catch(() => {});
-      $('#doc-name').textContent = name; $('#doc-meta').textContent = ''; $('#drop').hidden = true; $('#doc').hidden = false;
-      const {text} = await PdfWords.extract(pdf, {withText: true, progress: (i, n) => status('#load-status', L(`Reading text ${i} / ${n}…`, `Membaca teks ${i} / ${n}…`))});
-      doc = {name, blob, pages: pdf.numPages, text, chapters: await chaptersOf(pdf), highlights: []};
-      hlInfo();
-      summary = null; translations = {};
-      ['#chat-summary', '#summary-out', '#summary-tools', '#translate-out', '#translate-pager', '#translate-tools'].forEach(s => { $(s).hidden = true; });
-      ['#summary-status', '#translate-status'].forEach(s => status(s, ''));
-      $('#translate-make').textContent = L('Translate', 'Terjemahkan');
-      askReset();
-      if (window.NotebookWork) NotebookWork.reset();
+      source.pages = pdf.numPages;
+      if (doc === source) {
+        if (window.previewPdf) window.previewPdf(blob).catch(() => {});
+        $('#doc-name').textContent = name; $('#doc-meta').textContent = ''; $('#drop').hidden = true; $('#doc').hidden = false;
+      }
+      const {text} = await PdfWords.extract(pdf, {withText: true, progress: (i, n) => { if (doc === source) status('#load-status', L(`Reading text ${i} / ${n}…`, `Membaca teks ${i} / ${n}…`)); }});
+      source.text = text; source.chapters = await chaptersOf(pdf);
+      if (doc === source) hlInfo();
+      if (first) { askReset(); if (window.NotebookWork) NotebookWork.reset(); }  // a brand new notebook only
       const thin = window.OcrEngine ? thinPages(pdf, text) : [];
       const own = Object.keys(text).reduce((sum, k) => sum + countWords(text[k]), 0);
-      const mine = doc;
       if (thin.length && own >= 40) {
         // Enough text already: the tools open now, the scanned pages join in the background.
-        docReady(0); $('#translate-target').value = doc.lang === 'en-US' ? 'id-ID' : 'en-US';
-        $('#tools').disabled = false;
-        remember();
-        backgroundOcr(pdf, thin, mine);
+        docReady(source, 0); if (doc === source) $('#translate-target').value = source.lang === 'en-US' ? 'id-ID' : 'en-US';
+        source.status = ''; renderSources(); remember();
+        backgroundOcr(pdf, thin, source);
         return;
       }
       let ocred = 0;
-      if (!thin.length) doc.ocrDone = true;
+      if (!thin.length) source.ocrDone = true;
       if (thin.length) {
-        try { ocred = await ocrPages(pdf, text, thin, false); }
-        catch (cause) { status('#load-status', L('OCR could not run: ', 'OCR gagal dijalankan: ') + cause.message, true); }
+        try { ocred = await queueOcr(() => ocrPages(pdf, text, thin, false)); }
+        catch (cause) { if (doc === source) status('#load-status', L('OCR could not run: ', 'OCR gagal dijalankan: ') + cause.message, true); }
       }
       await pdf.destroy();
-      if (doc !== mine) return;
-      doc.ocrDone = true; doc.ocred = ocred;
-      const words = docReady(ocred);
-      $('#translate-target').value = doc.lang === 'en-US' ? 'id-ID' : 'en-US';
-      if (words < 40) { status('#load-status', L('No readable text was found in this PDF, even with OCR (a photo or a drawing?).', 'Tidak ada teks yang terbaca di PDF ini, bahkan dengan OCR (foto atau gambar?).'), true); return; }
-      status('#load-status', ocred ? L(`Text read with OCR from ${ocred} scanned pages — results may need a quick check.`, `Teks dari ${ocred} halaman scan dibaca dengan OCR — hasilnya mungkin perlu dicek sekilas.`) : '');
-      $('#tools').disabled = false;
+      source.ocrDone = true; source.ocred = ocred;
+      const words = docReady(source, ocred);
+      if (doc === source) $('#translate-target').value = source.lang === 'en-US' ? 'id-ID' : 'en-US';
+      source.status = '';
+      if (words < 40) {
+        source.status = L('No text', 'Tanpa teks'); renderSources();
+        if (doc === source) status('#load-status', L('No readable text was found in this PDF, even with OCR (a photo or a drawing?).', 'Tidak ada teks yang terbaca di PDF ini, bahkan dengan OCR (foto atau gambar?).'), true);
+        return;
+      }
+      renderSources();
+      if (doc === source) status('#load-status', ocred ? L(`Text read with OCR from ${ocred} scanned pages — results may need a quick check.`, `Teks dari ${ocred} halaman scan dibaca dengan OCR — hasilnya mungkin perlu dicek sekilas.`) : '');
       remember();
-    } catch (cause) { status('#load-status', L('The PDF could not be read: ', 'PDF tidak bisa dibaca: ') + cause.message, true); }
+    } catch (cause) {
+      source.status = L('Failed', 'Gagal'); renderSources();
+      if (doc === source) status('#load-status', L('The PDF could not be read: ', 'PDF tidak bisa dibaca: ') + cause.message, true);
+    }
   }
-  // The scanned pages of a document that already reads, in the background (on open, or when a
-  // restored session had not finished them).
-  function backgroundOcr(pdf, thin, mine) {
-    ocrPages(pdf, mine.text, thin, true).then(ocred => {
-      if (doc !== mine) return;
-      if (!ocrStop) mine.ocrDone = true;
-      mine.ocred = (mine.ocred || 0) + ocred;
-      docReady(mine.ocred);
-      status('#load-status', ocred ? L(`Text of ${ocred} scanned pages added (OCR) — summaries made from now on include it.`, `Teks ${ocred} halaman scan sudah ditambahkan (OCR) — ringkasan berikutnya ikut memuatnya.`) : '');
+  // The scanned pages of a source that already reads, in the background (on open, or when a
+  // restored session had not finished them) — queued behind any OCR already running.
+  function backgroundOcr(pdf, thin, source) {
+    queueOcr(() => ocrPages(pdf, source.text, thin, true)).then(ocred => {
+      if (!ocrStop) source.ocrDone = true;
+      source.ocred = (source.ocred || 0) + ocred;
+      docReady(source, source.ocred);
+      source.status = ''; renderSources();
+      if (doc === source) status('#load-status', ocred ? L(`Text of ${ocred} scanned pages added (OCR) — summaries made from now on include it.`, `Teks ${ocred} halaman scan sudah ditambahkan (OCR) — ringkasan berikutnya ikut memuatnya.`) : '');
       remember();
-    }).catch(cause => { if (doc === mine) status('#load-status', L('OCR could not run: ', 'OCR gagal dijalankan: ') + cause.message, true); })
+    }).catch(cause => { if (doc === source) status('#load-status', L('OCR could not run: ', 'OCR gagal dijalankan: ') + cause.message, true); })
       .finally(() => pdf.destroy());
   }
+  // ---------- Sources panel: the list, opening one into the viewer, removing one.
+  function renderSources() {
+    $('#sources-list').replaceChildren(...sources.map(s => {
+      const li = document.createElement('li'); li.className = 'src-item' + (s.id === openId ? ' open' : '');
+      const check = Object.assign(document.createElement('input'), {type: 'checkbox', checked: s.active});
+      check.title = L('In scope for Summary / Ask / Write', 'Dipakai untuk Ringkasan / Tanya / Tulis');
+      check.addEventListener('click', e => e.stopPropagation());
+      check.addEventListener('change', () => { s.active = check.checked; updateSelectAll(); remember(); });
+      const main = Object.assign(document.createElement('button'), {type: 'button', className: 'src-main'});
+      const icon = Object.assign(document.createElement('span'), {className: 'doc-ico', ariaHidden: 'true'}); icon.dataset.ico = 'doc';
+      main.append(icon, Object.assign(document.createElement('span'), {className: 'src-text', textContent: s.name}));
+      if (s.status) main.append(Object.assign(document.createElement('span'), {className: 'src-status', textContent: s.status}));
+      main.addEventListener('click', () => openSource(s.id));
+      const remove = Object.assign(document.createElement('button'), {type: 'button', className: 'src-remove', textContent: '×', title: L('Remove', 'Hapus')});
+      remove.addEventListener('click', e => { e.stopPropagation(); removeSource(s.id); });
+      li.append(check, main, remove);
+      return li;
+    }));
+    $('#select-all-row').hidden = sources.length < 2;
+    $('#drop').hidden = sources.length > 0; $('#add-sources').hidden = sources.length === 0;
+    updateSelectAll();
+  }
+  function updateSelectAll() { $('#select-all').checked = sources.length > 0 && sources.every(s => s.active); }
+  $('#select-all').addEventListener('change', () => { sources.forEach(s => s.active = $('#select-all').checked); renderSources(); remember(); });
+  // Switch the viewer to an already-loaded source (no re-reading); resolves once its pages
+  // exist in the DOM, so a citation click can jump straight to one right after.
+  async function showSource(source) {
+    doc = source; openId = source.id;
+    hlInfo();
+    $('#doc-name').textContent = source.name; $('#doc-meta').textContent = ''; $('#doc').hidden = false; $('#drop').hidden = true;
+    docReady(source, source.ocred || 0);
+    if (window.previewPdf) await window.previewPdf(source.blob).catch(() => {});
+    $('#translate-target').value = Object.keys(source.translations).find(k => Object.keys(source.translations[k]).length) || (source.lang === 'en-US' ? 'id-ID' : 'en-US');
+    showTranslation();
+  }
+  async function openSource(id) {
+    if (id === openId) return;
+    const s = sources.find(x => x.id === id);
+    if (!s) return;
+    await showSource(s);
+    renderSources();
+    remember();
+  }
+  function closeViewer() {
+    doc = null; openId = null;
+    $('#doc').hidden = true; $('#drop').hidden = sources.length > 0;
+    if (window.previewPdf) window.previewPdf(null).catch(() => {});
+    ['#translate-out', '#translate-pager', '#translate-tools'].forEach(s => { $(s).hidden = true; });
+    hlInfo();
+  }
+  async function removeSource(id) {
+    const i = sources.findIndex(s => s.id === id);
+    if (i < 0) return;
+    const [removed] = sources.splice(i, 1);
+    if (doc === removed) { if (sources.length) await showSource(sources[0]); else closeViewer(); }
+    $('#tools').disabled = !sources.length;
+    renderSources(); remember();
+  }
+  const filesOf = list => [...list].filter(x => /pdf$/i.test(x.type) || /\.pdf$/i.test(x.name));
   const viewerBox = document.querySelector('.viewer');
   ['dragenter', 'dragover'].forEach(t => viewerBox.addEventListener(t, e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); viewerBox.classList.add('over'); } }));
   viewerBox.addEventListener('dragleave', e => { if (!viewerBox.contains(e.relatedTarget)) viewerBox.classList.remove('over'); });
   viewerBox.addEventListener('drop', e => {
     viewerBox.classList.remove('over');
-    const f = [...(e.dataTransfer.files || [])].find(x => /pdf$/i.test(x.type) || /\.pdf$/i.test(x.name));
-    if (!f) return;
-    e.preventDefault(); open(f, f.name);
+    const files = filesOf(e.dataTransfer.files || []);
+    if (!files.length) return;
+    e.preventDefault(); files.forEach(f => open(f, f.name));
   });
   // Finished results stay in this browser (the last session, below): leaving warns only mid-job.
   addEventListener('beforeunload', e => {
     if (translating || $('#ask-send').disabled || $('#summary-make').disabled) { e.preventDefault(); e.returnValue = ''; }
   });
-  $('#file').addEventListener('change', () => { const f = $('#file').files[0]; if (f) open(f, f.name); $('#file').value = ''; });
-  // Choose a PDF: the shared Add source dialog (link, upload, Google Drive, drop).
+  $('#file').addEventListener('change', () => { filesOf($('#file').files).forEach(f => open(f, f.name)); $('#file').value = ''; });
+  // Choose one or more PDFs: the shared Add source dialog (link, upload, Google Drive, drop).
   const addPdf = event => {
     if (!window.AddSource) return;                 // no dialog: the plain file picker (label for="file")
     if (event) event.preventDefault();
-    AddSource.open({title: L('AI Summarizer', 'AI Ringkasan'), subtitle: L('your PDF', 'PDF Anda'), accept: '.pdf', onFiles: list => open(list[0], list[0].name)});
+    AddSource.open({title: L('AI Summarizer', 'AI Ringkasan'), subtitle: L('your PDFs', 'PDF Anda'), accept: '.pdf', multiple: true, onFiles: list => list.forEach(f => open(f, f.name))});
   };
   $('#drop').addEventListener('click', addPdf);
-  $('#change').addEventListener('click', event => (window.AddSource ? addPdf(event) : $('#file').click()));
+  $('#add-sources').addEventListener('click', addPdf);
   ['dragenter', 'dragover'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.add('is-over'); }));
   ['dragleave', 'drop'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.remove('is-over'); }));
-  $('#drop').addEventListener('drop', e => { const f = [...e.dataTransfer.files].find(x => /pdf$/i.test(x.type) || /\.pdf$/i.test(x.name)); if (f) open(f, f.name); });
+  $('#drop').addEventListener('drop', e => { filesOf(e.dataTransfer.files).forEach(f => open(f, f.name)); });
+  // ---------- Fast Research: Gemini's Google Search grounding finds web sources for a query;
+  // the reader picks which to actually add (each becomes a source via /api/fetch-source, the
+  // same path a pasted link already uses — it turns any URL, PDF or web page, into a PDF).
+  $('#research-open').addEventListener('click', async () => {
+    const query = await MFDialog.prompt({title: L('Fast Research', 'Riset Cepat'), value: '', placeholder: L('What do you want to research?', 'Topik yang ingin dicari…'), ok: L('Search', 'Cari')});
+    if (!query) return;
+    status('#load-status', L('Searching the web…', 'Mencari di web…'));
+    let results;
+    try { results = (await post('/api/research', {query, lang: 'id-ID'})).sources; }
+    catch (cause) { status('#load-status', cause.message, true); return; }
+    status('#load-status', '');
+    showResearchPicker(results || [], query);
+  });
+  function showResearchPicker(results, query) {
+    document.getElementById('research-pick')?.remove();
+    $('#sources-list').hidden = true; $('#select-all-row').hidden = true;
+    const box = document.createElement('div'); box.id = 'research-pick'; box.className = 'research-pick';
+    box.append(Object.assign(document.createElement('p'), {className: 'status', textContent: results.length
+      ? L(`Results for "${query}" — pick which to add:`, `Hasil untuk "${query}" — pilih yang mau ditambahkan:`)
+      : L(`No web sources found for "${query}".`, `Tidak ada sumber web untuk "${query}".`)}));
+    const list = document.createElement('ul'); list.className = 'src-list';
+    results.forEach(r => {
+      const li = document.createElement('li'); li.className = 'src-item';
+      const check = Object.assign(document.createElement('input'), {type: 'checkbox', checked: true});
+      const label = document.createElement('label'); label.className = 'src-main';
+      label.append(check, Object.assign(document.createElement('span'), {className: 'src-text', textContent: r.title}),
+                   Object.assign(document.createElement('span'), {className: 'src-status', textContent: r.url}));
+      li.append(label); list.append(li);
+    });
+    box.append(list);
+    const actions = document.createElement('div'); actions.className = 'row';
+    const addBtn = Object.assign(document.createElement('button'), {type: 'button', className: 'clay-btn clay-btn-primary', textContent: L('Add selected', 'Tambahkan terpilih'), hidden: !results.length});
+    const cancelBtn = Object.assign(document.createElement('button'), {type: 'button', className: 'clay-btn clay-btn-ghost', textContent: L('Close', 'Tutup')});
+    actions.append(addBtn, cancelBtn); box.append(actions);
+    $('#sources-list').after(box);
+    const close = () => { box.remove(); $('#sources-list').hidden = false; renderSources(); };
+    cancelBtn.onclick = close;
+    addBtn.onclick = async () => {
+      const chosen = results.filter((r, i) => list.children[i].querySelector('input').checked);
+      close();
+      for (const r of chosen) {
+        status('#load-status', L(`Fetching ${r.title}…`, `Mengambil ${r.title}…`));
+        try {
+          const c = await caps();
+          const resp = await fetch('/api/fetch-source', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Build-Token': c.token}, body: JSON.stringify({url: r.url})});
+          if (!resp.ok) throw Error((await resp.json().catch(() => ({}))).error || L('Could not fetch this source.', 'Sumber ini tidak bisa diambil.'));
+          await open(await resp.blob(), (r.title || L('web source', 'sumber web')).replace(/\.pdf$/i, '').slice(0, 150) + '.pdf');
+        } catch (cause) { status('#load-status', `${r.title}: ${cause.message}`, true); }
+      }
+    };
+  }
   $('#to-flipbook').addEventListener('click', async () => {
     try { const id = await FlipbookTransfer.save(doc.blob, doc.name); location.href = 'flipbook.html?source=' + encodeURIComponent(id); }
     catch (cause) { status('#load-status', cause.message, true); }
@@ -750,14 +923,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // text, OCR included). The summary, the translation and Ask read only the marks.
   const marks = () => (doc && doc.highlights) || [];
   // {page index: [passages]} in page order (top to bottom within a page)
-  function picked() {
-    const out = {};
-    marks().slice().sort((a, b) => a.page - b.page || (a.top || 0) - (b.top || 0)).forEach(h => {
-      const text = h.whole ? (doc.text[String(h.page)] || []).join('\n') : h.text;
-      if (text && text.trim()) (out[String(h.page)] ||= []).push(text);
-    });
-    return out;
-  }
+  function picked() { return doc ? pickedOf(doc) : {}; }
   const pickedPages = () => Object.keys(picked()).map(Number).sort((a, b) => a - b);
   const pickedWords = () => Object.values(picked()).flat().join(' ').split(/\s+/).filter(Boolean).length;
   // Nothing marked yet: say how, and show the pages.
@@ -810,7 +976,7 @@ window.addEventListener('DOMContentLoaded', () => {
   const drawAll = () => document.querySelectorAll('#doc-pages .doc-page').forEach(drawMarks);
   // A page's marks changed: draw, keep, and forget translations made from its old marks.
   function marksChanged(pages) {
-    pages.forEach(page => Object.values(translations).forEach(done => { delete done[page]; }));
+    pages.forEach(page => Object.values(doc.translations).forEach(done => { delete done[page]; }));
     if (pages.length) showTranslation();
     if (askedForMarks.size && marks().length) { askedForMarks.forEach(id => status(id, '')); askedForMarks.clear(); }
     drawAll(); hlInfo(); remember();
@@ -900,7 +1066,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   $('#summary-out').addEventListener('input', () => { if (summary) { summary.text = boxText($('#summary-out')); remember(); } });
   $('#translate-out').addEventListener('input', () => {
-    const out = $('#translate-out'), done = translations[$('#translate-target').value];
+    const out = $('#translate-out'), done = doc && doc.translations[$('#translate-target').value];
     if (done && out.dataset.page) { done[+out.dataset.page] = boxText(out).replace(/\n\n/g, '\n'); remember(); }
   });
   $('#to-editor').addEventListener('click', async () => {
@@ -952,20 +1118,21 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   const length = 'sedang';
   $('#summary-make').addEventListener('click', async () => {
-    if (!marks().length) { needMarks('#summary-status'); return; }
-    if (pickedWords() < 40) { status('#summary-status', L('Highlight a little more (about 40 words at least) for a summary.', 'Stabilo sedikit lebih banyak (minimal sekitar 40 kata) untuk diringkas.'), true); return; }
+    const actives = activeSources();
+    if (!actives.length) { status('#summary-status', L('Select at least one source first.', 'Pilih minimal satu sumber dulu.'), true); return; }
+    if (actives.length === 1 && !actives[0].highlights.length) { needMarks('#summary-status'); return; }
     if (summary && !await MFDialog.confirm({title: L('Make the summary again?', 'Buat ulang ringkasan?'), message: L('The current summary (with your edits) will be replaced.', 'Ringkasan sekarang (termasuk editan Anda) akan diganti.'),
       ok: L('Make again', 'Buat ulang'), cancel: L('Cancel', 'Batal'), icon: '📝'})) return;
     const button = $('#summary-make');
     button.disabled = true;
-    const long = Object.values(picked()).flat().join(' ').length > 72000;
+    const payload = sourcesPayload('marks');
+    const long = payload.reduce((sum, s) => sum + Object.values(s.text).flat().join(' ').length, 0) > 72000;
     const done = working('#summary-status', long ? L('Long document: read chapter by chapter, about 1-5 minutes.', 'Dokumen tebal: dibaca per bab, sekitar 1-5 menit.')
-                                                 : L('Making the summary… usually 15-60 seconds.', 'Membuat ringkasan… biasanya 15-60 detik.'), L('Reading the document and writing the summary', 'Membaca dokumen dan menulis ringkasan'));
+                                                 : L('Making the summary… usually 15-60 seconds.', 'Membuat ringkasan… biasanya 15-60 detik.'), L('Reading the sources and writing the summary', 'Membaca sumber dan menulis ringkasan'));
     try {
-      const r = await post('/api/summary', {title: title(), text: picked(), lang: doc.lang, length, focus: '', chapters: []});
+      const r = await post('/api/summary', {title: actives.length > 1 ? L('These sources', 'Sumber-sumber ini') : title(), sources: payload, lang: (doc && doc.lang) || 'id-ID', length, focus: '', chapters: []});
       done(); summary = {lang: r.lang, text: r.text}; showSummary(); remember();
-      const n = marks().length;
-      status('#summary-status', L(`Summary of ${n} highlight${n > 1 ? 's' : ''} ready.`, `Ringkasan ${n} stabilo siap.`));
+      status('#summary-status', actives.length > 1 ? L(`Summary of ${actives.length} sources ready.`, `Ringkasan ${actives.length} sumber siap.`) : L('Summary ready.', 'Ringkasan siap.'));
     } catch (cause) { done(); failed('#summary-status', cause); }
     finally { button.disabled = false; }
   });
@@ -974,7 +1141,8 @@ window.addEventListener('DOMContentLoaded', () => {
 
   // ---------- Translation (a few pages per request; done pages are kept)
   function showTranslation() {
-    const target = $('#translate-target').value, done = translations[target] || {}, pages = textPages().filter(i => done[i]);
+    if (!doc) return;
+    const target = $('#translate-target').value, done = doc.translations[target] || {}, pages = textPages().filter(i => done[i]);
     if (!pages.length) { $('#translate-out').hidden = $('#translate-pager').hidden = $('#translate-tools').hidden = true; return; }
     trPage = Math.max(0, Math.min(trPage, pages.length - 1));
     const index = pages[trPage], out = $('#translate-out');
@@ -992,12 +1160,12 @@ window.addEventListener('DOMContentLoaded', () => {
     if (translating) { translating = false; return; }
     if (!marks().length) { needMarks('#translate-status'); return; }
     const target = $('#translate-target').value, pages = pickedPages(), marked = picked();
-    if (pages.every(i => (translations[target] || {})[i])) {
+    if (pages.every(i => (doc.translations[target] || {})[i])) {
       if (!await MFDialog.confirm({title: L(`Translate into ${NAMES[target]} again?`, `Terjemahkan ulang ke ${NAMES[target]}?`), message: L('The existing translation will be replaced.', 'Terjemahan yang sudah ada akan diganti.'),
         ok: L('Translate again', 'Terjemahkan ulang'), cancel: L('Cancel', 'Batal'), icon: '🌐'})) return;
-      delete translations[target];
+      delete doc.translations[target];
     }
-    const todo = pages.filter(i => !(translations[target] || {})[i]), batches = [];
+    const todo = pages.filter(i => !(doc.translations[target] || {})[i]), batches = [];
     let batch = {}, size = 0;
     todo.forEach(i => {
       const text = marked[String(i)].join('\n\n').slice(0, 20000);
@@ -1005,30 +1173,31 @@ window.addEventListener('DOMContentLoaded', () => {
       batch[i] = text; size += text.length;
     });
     if (Object.keys(batch).length) batches.push(batch);
+    const mine = doc;
     translating = true; $('#translate-make').textContent = L('Stop', 'Berhenti'); $('#translate-make').dataset.ico = 'stop';
     try {
       for (let n = 0; n < batches.length && translating; n++) {
-        const sofar = Object.keys(translations[target] || {}).length;
+        const sofar = Object.keys(mine.translations[target] || {}).length;
         status('#translate-status', L(`Translating into ${NAMES[target]}… ${sofar} / ${pages.length} pages`, `Menerjemahkan ke ${NAMES[target]}… ${sofar} / ${pages.length} halaman`));
-        const r = await post('/api/translate', {pages: batches[n], target, title: title()});
-        translations[target] = Object.assign(translations[target] || {}, r.pages); remember();
-        showTranslation();
+        const r = await post('/api/translate', {pages: batches[n], target, title: mine.name.replace(/\.pdf$/i, '')});
+        mine.translations[target] = Object.assign(mine.translations[target] || {}, r.pages); remember();
+        if (doc === mine) showTranslation();
       }
-      const done = Object.keys(translations[target] || {}).length;
+      const done = Object.keys(mine.translations[target] || {}).length;
       status('#translate-status', done >= pages.length ? L(`${NAMES[target]} translation ready: ${done} pages.`, `Terjemahan ${NAMES[target]} siap: ${done} halaman.`)
         : L(`Stopped: ${done} / ${pages.length} pages. Click again to carry on.`, `Berhenti: ${done} / ${pages.length} halaman. Klik lagi untuk melanjutkan.`));
     } catch (cause) {
-      const done = Object.keys(translations[target] || {}).length;
+      const done = Object.keys(mine.translations[target] || {}).length;
       status('#translate-status', cause.message + (done ? L(` (${done} / ${pages.length} pages kept; click again to carry on.)`, ` (${done} / ${pages.length} halaman tersimpan; klik lagi untuk melanjutkan.)`) : ''), true);
     } finally {
       translating = false;
-      const have = Object.keys(translations[target] || {}).length;
+      const have = Object.keys(mine.translations[target] || {}).length;
       $('#translate-make').textContent = have && have < pages.length ? L('Carry on', 'Lanjutkan') : L('Translate', 'Terjemahkan');
       $('#translate-make').dataset.ico = 'translate';
     }
   });
   $('#translate-save').addEventListener('click', () => {
-    const target = $('#translate-target').value, done = translations[target] || {};
+    const target = $('#translate-target').value, done = doc.translations[target] || {};
     download(`${title()} - ${NAMES[target]}.txt`, title() + ` (${NAMES[target]})\n\n` + textPages().filter(i => done[i]).map(i => L(`[Page ${i + 1}]`, `[Halaman ${i + 1}]`) + `\n${done[i]}`).join('\n\n'));
   });
 
@@ -1050,25 +1219,70 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#ask-log').scrollTop = $('#ask-log').scrollHeight;
     return {row, body};
   }
-  function showSources(body, sources) {
-    if (!Array.isArray(sources) || !sources.length) return;
+  // A citation finds its source by the label the server gave it (the file name, sans .pdf) and
+  // opens that source at its page — switching the viewer if it isn't the one already open.
+  async function openCitation(cite) {
+    const match = sources.find(s => s.name.replace(/\.pdf$/i, '') === cite.source);
+    if (match) await openSource(match.id);
+    window.viewer.page(cite.page);
+  }
+  // `[n]` markers in an Ask answer, as clickable numbered badges tied to `citations`; any
+  // "(hlm. N)" style references (Summary, Journal, older saved chats) still become page links.
+  function withCites(text, citations) {
+    const out = document.createDocumentFragment();
+    let last = 0;
+    String(text).replace(/\[(\d+)\]/g, (match, n, at) => {
+      out.append(withRefs(text.slice(last, at)));
+      const cite = citations.find(c => c.n === +n);
+      if (cite) {
+        const b = Object.assign(document.createElement('button'), {type: 'button', className: 'cite-badge', textContent: n, title: `${cite.source} · ${L('p.', 'hlm.')} ${cite.page}`});
+        b.addEventListener('click', () => openCitation(cite));
+        out.append(b);
+      } else out.append(match);
+      last = at + match.length;
+      return match;
+    });
+    out.append(withRefs(text.slice(last)));
+    return out;
+  }
+  function richTextCited(box, text, citations) {
+    if (!citations || !citations.length) { richText(box, text); return; }
+    box.replaceChildren();
+    FlipbookSummary.blocks(text).forEach(b => {
+      if (b.kind === 'list') { const ul = document.createElement('ul'); b.items.forEach(t => { const li = document.createElement('li'); li.append(withCites(t, citations)); ul.append(li); }); box.append(ul); }
+      else if (b.kind === 'title') { const h = Object.assign(document.createElement('h3'), {className: 'chapter'}); h.append(withCites(b.text, citations)); box.append(h); }
+      else { const el = Object.assign(document.createElement('p'), {className: b.kind === 'head' ? 'head' : ''}); el.append(withCites(b.text, citations)); box.append(el); }
+    });
+  }
+  // The detail list under the answer: one row per citation, numbered to match its `[n]` badge.
+  function showCitations(body, citations) {
+    if (!Array.isArray(citations) || !citations.length) return;
     const box = Object.assign(document.createElement('div'), {className: 'ask-sources'});
-    sources.forEach(source => {
-      if (!Number.isInteger(source.page) || typeof source.excerpt !== 'string') return;
+    citations.forEach(cite => {
+      if (!Number.isInteger(cite.n) || !Number.isInteger(cite.page) || typeof cite.excerpt !== 'string') return;
       const button = Object.assign(document.createElement('button'), {type: 'button', className: 'ask-source'});
-      button.append(Object.assign(document.createElement('strong'), {textContent: L(`Page ${source.page} · open source`, `Halaman ${source.page} · buka sumber`)}),
-                    Object.assign(document.createElement('span'), {textContent: source.excerpt}));
-      button.addEventListener('click', () => window.viewer.page(source.page));
+      button.append(Object.assign(document.createElement('strong'), {textContent: `[${cite.n}] ${cite.source || ''} · ${L('p.', 'hlm.')} ${cite.page}`}),
+                    Object.assign(document.createElement('span'), {textContent: cite.excerpt}));
+      button.addEventListener('click', () => openCitation(cite));
       box.append(button);
     });
     body.append(box);
   }
+  // Gemini's thought summary, collapsed above the answer (NotebookLM's "Thoughts").
+  function showThoughts(body, thoughts) {
+    if (!thoughts) return;
+    const det = document.createElement('details'); det.className = 'thoughts';
+    det.append(Object.assign(document.createElement('summary'), {textContent: L('Thoughts', 'Pemikiran')}),
+               Object.assign(document.createElement('div'), {className: 'thoughts-text', textContent: thoughts}));
+    body.prepend(det);
+  }
   const chatButton = (label, onclick, ico) => { const b = Object.assign(document.createElement('button'), {type: 'button', textContent: label, onclick}); if (ico) b.dataset.ico = ico; return b; };
-  // The answer written out word by word (like a chat), then shown with its lists and page tags.
-  function writeOut(body, text) {
+  // The answer written out word by word (like a chat), then shown with its lists, page tags and citation badges.
+  function writeOut(body, text, citations) {
     return new Promise(done => {
       const words = text.split(/(\s+)/), log = $('#ask-log');
-      if (matchMedia('(prefers-reduced-motion: reduce)').matches || words.length < 4) { richText(body, text); done(); return; }
+      const render = () => richTextCited(body, text, citations);
+      if (matchMedia('(prefers-reduced-motion: reduce)').matches || words.length < 4) { render(); done(); return; }
       const step = Math.max(2, Math.ceil(words.length / 140));         // about 2.5 s at most
       let i = 0;
       body.parentElement.classList.add('typing');
@@ -1077,28 +1291,30 @@ window.addEventListener('DOMContentLoaded', () => {
         body.textContent = words.slice(0, i).join('');
         if (log.scrollHeight - log.scrollTop - log.clientHeight < 120) log.scrollTop = log.scrollHeight;
         if (i < words.length) setTimeout(tick, 18);
-        else { body.parentElement.classList.remove('typing'); richText(body, text); log.scrollTop = log.scrollHeight; done(); }
+        else { body.parentElement.classList.remove('typing'); render(); log.scrollTop = log.scrollHeight; done(); }
       };
       tick();
     });
   }
   async function ask(question, retry = false) {
     question = String(question || '').trim();
-    if (!question || !doc || $('#ask-send').disabled) return;
+    const actives = activeSources();
+    if (!question || !actives.length || $('#ask-send').disabled) return;
     const scope = $('#ask-scope').value;
-    if (scope === 'marks' && !marks().length) { needMarks('#load-status'); return; }
+    if (scope === 'marks' && !actives.some(s => s.highlights.length)) { needMarks('#load-status'); return; }
     $('#ask-q').value = ''; grow(); $('#ask-send').disabled = true;
     if (!retry) message('me', question);
     const {row, body} = message('ai', '');
     const sec = Object.assign(document.createElement('span'), {className: 'wait-sec'});
     body.replaceChildren(Object.assign(document.createElement('span'), {className: 'dots', innerHTML: '<i></i><i></i><i></i>'}), sec);
-    const start = Date.now(), timer = setInterval(() => { sec.textContent = L(`reading the document… ${Math.round((Date.now() - start) / 1000)} s`, `membaca dokumen… ${Math.round((Date.now() - start) / 1000)} dtk`); }, 1000);
+    const start = Date.now(), timer = setInterval(() => { sec.textContent = L(`reading the sources… ${Math.round((Date.now() - start) / 1000)} s`, `membaca sumber… ${Math.round((Date.now() - start) / 1000)} dtk`); }, 1000);
     try {
-      const r = await post('/api/ask', {title: title(), text: scope === 'all' ? doc.text : picked(), question, history: asked.slice(-6), work: window.NotebookWork ? NotebookWork.context() : ''});
+      const r = await post('/api/ask', {title: actives.length > 1 ? L('These sources', 'Sumber-sumber ini') : title(), sources: sourcesPayload(scope), question, history: asked.slice(-6), work: window.NotebookWork ? NotebookWork.context() : ''});
       clearInterval(timer);
-      asked.push({role: 'user', text: question}, {role: 'ai', text: r.answer, sources: r.sources || []}); remember();
-      await writeOut(body, r.answer);
-      showSources(body, r.sources);
+      asked.push({role: 'user', text: question}, {role: 'ai', text: r.answer, citations: r.citations || [], thoughts: r.thoughts || ''}); remember();
+      await writeOut(body, r.answer, r.citations);
+      showThoughts(body, r.thoughts);
+      showCitations(body, r.citations);
       const tools = Object.assign(document.createElement('div'), {className: 'msg-tools'});
       tools.append(chatButton(L('Copy', 'Salin'), async e => {
         try { await navigator.clipboard.writeText(r.answer); e.target.textContent = L('Copied', 'Disalin'); e.target.dataset.ico = 'check'; } catch (err) { e.target.textContent = L('Not allowed', 'Tidak diizinkan'); }
@@ -1130,14 +1346,15 @@ window.addEventListener('DOMContentLoaded', () => {
     asked = [];
     $('#ask-log').querySelectorAll('.msg').forEach(m => m.remove());
     $('#ask-hello').hidden = false; chips();
-    $('#chat-doc').textContent = doc ? doc.name : '';
+    $('#chat-doc').textContent = activeSources().length > 1 ? L(`${activeSources().length} sources`, `${activeSources().length} sumber`) : (doc ? doc.name : '');
   }
-  // A saved answer shown again (restored session): its text, page tags and Copy.
-  function showAnswer(question, answer, sources) {
+  // A saved answer shown again (restored session): its text, citations and Copy.
+  function showAnswer(question, answer, citations, thoughts) {
     message('me', question);
     const {body} = message('ai', '');
-    richText(body, answer);
-    showSources(body, sources);
+    richTextCited(body, answer, citations);
+    showThoughts(body, thoughts);
+    showCitations(body, citations);
     const tools = Object.assign(document.createElement('div'), {className: 'msg-tools'});
     tools.append(chatButton(L('Copy', 'Salin'), async e => {
       try { await navigator.clipboard.writeText(answer); e.target.textContent = L('Copied', 'Disalin'); e.target.dataset.ico = 'check'; } catch (err) { e.target.textContent = L('Not allowed', 'Tidak diizinkan'); }
@@ -1167,41 +1384,55 @@ window.addEventListener('DOMContentLoaded', () => {
   let saveTimer = 0;
   function remember() { clearTimeout(saveTimer); saveTimer = setTimeout(saveSession, 600); }
   async function saveSession() {
-    if (!doc) return;
+    if (!sources.length) return;
     try {
-      await sessionDo('readwrite', st => st.put({name: doc.name, blob: doc.blob, pages: doc.pages, text: doc.text, chapters: doc.chapters || [], highlights: marks(), ocrDone: !!doc.ocrDone, ocred: doc.ocred || 0,
-        summary, translations, asked, work: window.NotebookWork ? NotebookWork.state() : null, savedAt: Date.now()}, 'last'));
+      await sessionDo('readwrite', st => st.put({
+        sources: sources.map(s => ({id: s.id, name: s.name, blob: s.blob, pages: s.pages, text: s.text, chapters: s.chapters || [], highlights: s.highlights || [],
+          translations: s.translations || {}, ocrDone: !!s.ocrDone, ocred: s.ocred || 0, active: s.active !== false})),
+        openId, summary, asked, work: window.NotebookWork ? NotebookWork.state() : null, savedAt: Date.now()}, 'last'));
     } catch (e) {}                                       // private window / storage full: just not kept
   }
   async function restoreSession() {
     let saved = null;
     try { saved = await sessionDo('readonly', st => st.get('last')); } catch (e) { return; }
-    if (!saved || !saved.blob || !saved.text || Date.now() - (saved.savedAt || 0) > SESSION_DAYS * 86400000 || doc) return;
-    doc = {name: saved.name, blob: saved.blob, pages: saved.pages, text: saved.text, chapters: saved.chapters || [], highlights: saved.highlights || [], ocrDone: saved.ocrDone, ocred: saved.ocred || 0};
-    hlInfo();
-    summary = saved.summary || null; translations = saved.translations || {};
-    if (window.NotebookWork) NotebookWork.load(saved.work);
+    if (!saved || Date.now() - (saved.savedAt || 0) > SESSION_DAYS * 86400000 || sources.length) return;
+    // an old, single-document session (before the Sources panel) wraps into a one-item list
+    let list = saved.sources;
+    if (!list && saved.blob && saved.text) list = [{id: 1, name: saved.name, blob: saved.blob, pages: saved.pages, text: saved.text, chapters: saved.chapters || [],
+      highlights: saved.highlights || [], translations: saved.translations || {}, ocrDone: saved.ocrDone, ocred: saved.ocred || 0, active: true}];
+    if (!Array.isArray(list) || !list.length) return;
+    sources = list.filter(s => s && s.blob && s.text).map(s => ({id: s.id, name: s.name, blob: s.blob, pages: s.pages, text: s.text, chapters: s.chapters || [],
+      highlights: s.highlights || [], translations: s.translations || {}, ocrDone: !!s.ocrDone, ocred: s.ocred || 0, active: s.active !== false, status: ''}));
+    if (!sources.length) return;
+    nextId = Math.max(...sources.map(s => s.id), 0) + 1;
+    openId = saved.openId && sources.some(s => s.id === saved.openId) ? saved.openId : sources[0].id;
+    doc = sources.find(s => s.id === openId);
+    renderSources();
     $('#doc-name').textContent = doc.name; $('#drop').hidden = true; $('#doc').hidden = false;
     if (window.previewPdf) window.previewPdf(doc.blob).catch(() => {});
-    docReady(doc.ocred);
-    $('#translate-target').value = Object.keys(translations).find(k => Object.keys(translations[k]).length) || (doc.lang === 'en-US' ? 'id-ID' : 'en-US');
+    docReady(doc, doc.ocred);
+    $('#translate-target').value = Object.keys(doc.translations).find(k => Object.keys(doc.translations[k]).length) || (doc.lang === 'en-US' ? 'id-ID' : 'en-US');
+    hlInfo();
+    summary = saved.summary || null;
+    if (window.NotebookWork) NotebookWork.load(saved.work);
     clearChat();
-    (saved.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].sources); });
+    (saved.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || all[i + 1].sources || [], all[i + 1].thoughts); });
     asked = (saved.asked || []).slice();
     if (asked.length) viewer.show('ask');
-    if (Object.keys(translations).length) showTranslation();
+    showTranslation();
     if (summary) showSummary();
     $('#tools').disabled = false;
     status('#load-status', '');
-    // the scanned pages had not all been read: carry on in the background
-    if (!doc.ocrDone && window.OcrEngine) {
+    // the scanned pages of any source had not all been read: carry on in the background, one at a time
+    sources.filter(s => !s.ocrDone).forEach(async s => {
+      if (!window.OcrEngine) return;
       try {
         pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
-        const pdf = await pdfjsLib.getDocument({data: new Uint8Array(await doc.blob.arrayBuffer())}).promise;
-        const thin = thinPages(pdf, doc.text);
-        if (thin.length) backgroundOcr(pdf, thin, doc); else { doc.ocrDone = true; pdf.destroy(); remember(); }
+        const pdf = await pdfjsLib.getDocument({data: new Uint8Array(await s.blob.arrayBuffer())}).promise;
+        const thin = thinPages(pdf, s.text);
+        if (thin.length) backgroundOcr(pdf, thin, s); else { s.ocrDone = true; pdf.destroy(); remember(); }
       } catch (e) {}
-    }
+    });
   }
   // Crowns on the AI tools the member's plan lacks (as on the flipbook): a click goes straight
   // to the price list. Guests keep the usual login first.
@@ -1213,7 +1444,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!c || !c.paywall) return;
     const has = new Set(c.entitlements || []);
     if (window.NotebookWork) NotebookWork.lock(!has.has('ai'));
-    for (const [sel, need, plan] of [['#summary-make', 'ai', 'Medium'], ['#translate-make', 'ai', 'Medium'], ['#ask-open', 'ai', 'Medium']]) {
+    for (const [sel, need, plan] of [['#summary-make', 'ai', 'Medium'], ['#translate-make', 'ai', 'Medium'], ['#ask-open', 'ai', 'Medium'], ['#research-open', 'ai', 'Medium']]) {
       const button = $(sel);
       if (!button || has.has(need)) continue;
       button.classList.add('plan-lock');

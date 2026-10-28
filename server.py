@@ -553,7 +553,7 @@ def book_parts(text, chapters=None):
     """A long book in parts, in order: [{title, first, last, text}]. With the PDF's chapters
     ([(title, page index)]) each chapter is a part (front matter before the first one too,
     tiny chapters joined to the one before, at most BOOK_PARTS); without, even slices."""
-    pages = [p for p in re.split(r'(?=\[Halaman \d+\]\n)', text) if p.strip()]
+    pages = [p for p in re.split(r'(?=\[(?:Sumber \d+: [^\]]+ — )?Halaman \d+\]\n)', text) if p.strip()]
     number = lambda p: int(re.match(r'\[Halaman (\d+)\]', p).group(1)) if re.match(r'\[Halaman (\d+)\]', p) else None
     marks = lambda t: re.findall(r'\[Halaman (\d+)\]', t)
     part = lambda title, t: dict(title=title, first=(marks(t) or [None])[0], last=(marks(t) or [None])[-1], text=t[:PART_MAX_CHARS])
@@ -636,7 +636,7 @@ def summarize_book(title, text, lang='id-ID', length='sedang', focus='', chapter
               f'Lalu baris "{heads[1]}" diikuti {points} butir, tiap butir satu baris diawali "- ".\n'
               + (f'Lalu baris "{heads[2]}" diikuti 3-8 butir "- istilah: arti singkat" dari teks.\n' if length == 'detail' else '')
               + ('Jika teks memuat penanda [Halaman N] atau (hlm. N), akhiri tiap butir dengan halaman sumbernya dalam kurung, '
-                 f'mis. ({page} 12) atau ({page} 12-14); jangan menebak halaman.\n' if re.search(r'\[Halaman \d+\]|\(hlm\. \d', source) else '')
+                 f'mis. ({page} 12) atau ({page} 12-14); jangan menebak halaman.\n' if 'Halaman ' in source or re.search(r'\(hlm\. \d', source) else '')
               + (f'Utamakan hal yang berkaitan dengan: {focus}. Jika teks tidak membahasnya, katakan singkat di intisari.\n' if focus else '')
               + 'Tanpa markdown lain (tanpa #, **, atau tabel).')
     for _ in range(2):
@@ -667,7 +667,7 @@ def ask_pages(text, question):
     weigh more), with their neighbours, in page order, up to ASK_MAX_CHARS."""
     if len(text) <= ASK_MAX_CHARS:
         return text
-    pages = [p for p in re.split(r'(?=\[Halaman \d+\]\n)', text) if p.strip()]
+    pages = [p for p in re.split(r'(?=\[(?:Sumber \d+: [^\]]+ — )?Halaman \d+\]\n)', text) if p.strip()]
     words = lambda t: set(re.findall(r'\w{3,}', t.lower()))
     sets = [words(p) for p in pages]
     wanted = words(question)
@@ -692,9 +692,12 @@ def clean_work(work):
     return '\n'.join(line for line in lines if line)[:WORK_MAX_CHARS]
 
 
-def ask_document(title, text, question, history=(), work=''):
+def ask_document(title, text, question, history=(), work='', include_thoughts=False):
     """An answer to a reader's question, from the document (and the reader's own notes on it,
-    `work`) only, with page references."""
+    `work`) only, with source+page references. One or several sources: `text` carries bare
+    `[Halaman N]` tags for one source, `[Sumber I: Name — Halaman N]` tags for several (see
+    `Handler.sources_text`) — the citation instruction below matches whichever it finds.
+    `include_thoughts=True` returns `(answer, thoughts)` instead of just the answer string."""
     question = ' '.join(str(question or '').split())[:1000]
     if len(question) < 2:
         raise ValueError('Tulis pertanyaan Anda dulu.')
@@ -703,43 +706,78 @@ def ask_document(title, text, question, history=(), work=''):
     turns = ''.join(f'{"Pembaca" if t.get("role") == "user" else "Asisten"}: {str(t.get("text") or "")[:2000]}\n'
                     for t in list(history)[-ASK_HISTORY:] if isinstance(t, dict))
     work = clean_work(work)
+    multi = bool(re.search(r'\[Sumber \d+:', text))
+    cite = ('Sebut sumber dan halamannya dari penanda [Sumber I: Nama — Halaman N] dalam kurung, persis format '
+            '(Sumber I, hlm. N) — untuk jawaban berbahasa Inggris (Source I, p. N). Gunakan hanya kombinasi sumber+halaman '
+            'yang ada dalam SUMBER. Setiap poin penting harus punya rujukan sumber dan halaman.' if multi else
+            'Sebut halaman sumber dari penanda [Halaman N] dalam kurung, mis. (hlm. 12) — untuk jawaban berbahasa Inggris '
+            '(p. 12). Gunakan hanya nomor halaman yang ada dalam SUMBER. Setiap poin penting harus punya rujukan halaman.')
     system = ('Kamu asisten baca yang menjawab pertanyaan pembaca tentang dokumen di bawah. Jawab HANYA dari isi dokumen; '
               'jangan menambah fakta, angka, atau pendapat dari luar. Jika dokumen tidak membahasnya, katakan terus terang '
               'bahwa jawabannya tidak ada di dokumen. Jawab dalam bahasa yang sama dengan pertanyaan, ringkas dan jelas '
-              '(paragraf pendek; boleh butir diawali "- "). Sebut halaman sumber dari penanda [Halaman N] dalam kurung, '
-              'mis. (hlm. 12) — untuk jawaban berbahasa Inggris (p. 12). Gunakan hanya nomor halaman yang ada dalam SUMBER. '
-              'Setiap poin penting harus punya rujukan halaman. Tanpa markdown lain (tanpa #, **, atau tabel).'
+              f'(paragraf pendek; boleh butir diawali "- "). {cite} Tanpa markdown lain (tanpa #, **, atau tabel).'
               + (' Pembaca juga punya hasil kerja sendiri (catatan, ringkasan, draf jurnal, slide) di bagian "HASIL KERJA PEMBACA": '
                  'pakai untuk pertanyaan tentang pekerjaannya (mis. memeriksa, melengkapi, atau membandingkan dengan dokumen), '
                  'tetapi bedakan dengan jelas mana yang dari dokumen dan mana yang dari catatan pembaca.' if work else ''))
     user = (f'Judul dokumen: {title}\n\n{ask_pages(text, question + " " + turns[-500:])}\n\n'
             + (f'HASIL KERJA PEMBACA:\n{work}\n\n' if work else '')
             + (f'Percakapan sebelumnya:\n{turns}\n' if turns else '') + f'Pertanyaan: {question}')
-    reply = ai_chat(system, user, model, max_tokens=2500).replace('**', '').replace('##', '').strip()
+    reply = ai_chat(system, user, model, max_tokens=2500, include_thoughts=include_thoughts)
+    thoughts = ''
+    if include_thoughts:
+        reply, thoughts = reply
+    reply = reply.replace('**', '').replace('##', '').strip()
     if not reply:
         raise RuntimeError('AI tidak menjawab. Coba lagi.')
-    return reply[:12000]
+    reply = reply[:12000]
+    return (reply, thoughts[:4000]) if include_thoughts else reply
 
 
-def ask_source_excerpts(pages, answer, question, limit=3):
-    """Return literal excerpts from cited selected pages; never synthesize source text."""
-    if not isinstance(pages, dict):
-        return []
-    cited = list(dict.fromkeys(int(n) for n in re.findall(r'\b(?:hlm\.?|hal\.?|p\.?)\s*(\d+)\b', answer, re.I)))
+CITE_PAIR = re.compile(r'\(?\s*(?:Sumber|Source)\s*(\d+)\s*[,:]?\s*(?:hlm\.?|hal\.?|p\.?)\s*(\d+)\s*\)?', re.I)
+CITE_PAGE = re.compile(r'\(?\s*\b(?:hlm\.?|hal\.?|p\.?)\s*(\d+)\s*\)?', re.I)
+
+
+def ask_citations(index, names, answer, question, limit=6):
+    """The answer with each source+page citation replaced by a numbered `[n]` marker, and the
+    ordered, deduplicated list those markers point to: `[{n, source, page, excerpt}]`, the
+    excerpt a literal line from that source's page (never synthesized). `index` maps
+    `(source_number, page_number) -> raw lines`, `names` maps `source_number -> its label`
+    (see `Handler.sources_text`)."""
+    if not isinstance(index, dict) or not index:
+        return answer, []
+    multi = any(source != 1 for source, _ in index)
     wanted = set(re.findall(r'\w{4,}', (question + ' ' + answer).lower()))
-    result = []
-    for number in cited:
-        lines = pages.get(str(number - 1))
-        if not isinstance(lines, list):
-            continue
-        passages = [' '.join(str(line).split()) for line in lines if isinstance(line, str) and str(line).strip()]
+    seen, citations = {}, []
+
+    def excerpt(source, page):
+        lines = index.get((source, page))
+        if not lines:
+            return None
+        passages = [' '.join(str(line).split()) for line in lines if str(line).strip()]
         if not passages:
-            continue
-        passage = max(passages, key=lambda line: (len(wanted & set(re.findall(r'\w{4,}', line.lower()))), min(len(line), 500)))
-        result.append({'page': number, 'excerpt': passage[:320] + ('…' if len(passage) > 320 else '')})
-        if len(result) >= limit:
-            break
-    return result
+            return None
+        line = max(passages, key=lambda p: (len(wanted & set(re.findall(r'\w{4,}', p.lower()))), min(len(p), 500)))
+        return line[:320] + ('…' if len(line) > 320 else '')
+
+    def mark(source, page, original):
+        key = (source, page)
+        if key not in index:
+            return original
+        if key not in seen:
+            if len(citations) >= limit:
+                return original
+            text = excerpt(source, page)
+            if text is None:
+                return original
+            seen[key] = len(citations) + 1
+            citations.append({'n': seen[key], 'source': names.get(source, f'Sumber {source}'), 'page': page, 'excerpt': text})
+        return f'[{seen[key]}]'
+
+    if multi:
+        rewritten = CITE_PAIR.sub(lambda m: mark(int(m[1]), int(m[2]), m[0]), answer)
+    else:
+        rewritten = CITE_PAGE.sub(lambda m: mark(1, int(m[1]), m[0]), answer)
+    return rewritten, citations
 
 
 # A journal article draft, section by section (AI Summarizer > Jurnal): what each section holds.
@@ -888,12 +926,13 @@ def ai_refused(provider, code, detail):
     return RuntimeError(AI_UNAVAILABLE)            # 401/402/403: key, credits or billing — ours to fix
 
 
-def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3):
+def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3, include_thoughts=False):
     """One reply from Google's Gemini API (GEMINI_API_KEY in .env, paid tier: prompts are not
     used to train models). Thinking is kept low (GEMINI_THINKING, default "low"; empty = the
     model's own): thought tokens are billed as output and a summary needs little of it. They
     still share the output budget, so the budget is doubled (capped). A model that refuses
-    the thinking level is asked again without it."""
+    the thinking level is asked again without it. `include_thoughts=True` also asks for the
+    thought summary and returns `(answer, thoughts)` instead of just the answer string."""
     key = os.environ.get('GEMINI_API_KEY', '').strip()
     if not key:
         raise RuntimeError('AI belum diatur di server (GEMINI_API_KEY di .env).')
@@ -904,6 +943,8 @@ def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3):
         config = {'temperature': temperature, 'maxOutputTokens': min(65536, max_tokens * 2)}
         if level:
             config['thinkingConfig'] = {'thinkingLevel': level}
+            if include_thoughts:
+                config['thinkingConfig']['includeThoughts'] = True
         body = json.dumps({'systemInstruction': {'parts': [{'text': system}]},
                            'contents': [{'role': 'user', 'parts': [{'text': user}]}], 'generationConfig': config}).encode('utf-8')
         request = urllib.request.Request(f'{base}/models/{quote(model, safe="-._")}:generateContent', data=body, method='POST',
@@ -927,14 +968,19 @@ def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3):
         reason = (data.get('promptFeedback') or {}).get('blockReason') or 'tanpa jawaban'
         raise RuntimeError(f'AI tidak memproses dokumen ini ({reason}). Coba bagian lain atau ulangi.')
     parts = ((candidates[0].get('content') or {}).get('parts')) or []
-    return ''.join(p.get('text', '') for p in parts if isinstance(p, dict) and not p.get('thought'))
+    answer = ''.join(p.get('text', '') for p in parts if isinstance(p, dict) and not p.get('thought'))
+    if not include_thoughts:
+        return answer
+    return answer, ''.join(p.get('text', '') for p in parts if isinstance(p, dict) and p.get('thought'))
 
 
-def ai_chat(system, user, model, max_tokens=8000, temperature=0.3):
-    """One chat completion; returns the reply text. A model named gemini-… goes straight to
-    Google's Gemini API; any other through Sumopod (Sumopod's own Gemini is gemini/…)."""
+def ai_chat(system, user, model, max_tokens=8000, temperature=0.3, include_thoughts=False):
+    """One chat completion; returns the reply text (or `(reply, thoughts)` when
+    `include_thoughts` is set — only Gemini returns real thoughts; other models get an empty
+    one). A model named gemini-… goes straight to Google's Gemini API; any other through
+    Sumopod (Sumopod's own Gemini is gemini/…)."""
     if re.match(r'gemini-[\w.-]+$', str(model).strip().lower()):
-        return gemini_chat(system, user, model, max_tokens, temperature)
+        return gemini_chat(system, user, model, max_tokens, temperature, include_thoughts)
     key = os.environ.get('SUMOPOD_API_KEY', '').strip()
     base = os.environ.get('SUMOPOD_BASE_URL', 'https://ai.sumopod.com/v1').strip().rstrip('/')
     if not key:
@@ -950,7 +996,51 @@ def ai_chat(system, user, model, max_tokens=8000, temperature=0.3):
         raise ai_refused('sumopod', cause.code, cause.read().decode('utf-8', 'replace')) from cause
     except (urllib.error.URLError, TimeoutError, OSError) as cause:
         raise RuntimeError('Layanan AI tidak bisa dihubungi. Cek koneksi internet server.') from cause
-    return ((data.get('choices') or [{}])[0].get('message') or {}).get('content') or ''
+    reply = ((data.get('choices') or [{}])[0].get('message') or {}).get('content') or ''
+    return (reply, '') if include_thoughts else reply
+
+
+def research(query, lang='id-ID'):
+    """Web sources for a research query ("Fast Research" in the AI Summarizer's Sources panel),
+    via Gemini's built-in Google Search grounding tool — no separate search API/key, just the
+    existing GEMINI_API_KEY. Returns an ordered, deduplicated [{title, url}] (top 8)."""
+    query = ' '.join(str(query or '').split())[:300]
+    if len(query) < 2:
+        raise ValueError('Tulis topik pencarian dulu.')
+    key = os.environ.get('GEMINI_API_KEY', '').strip()
+    if not key:
+        raise RuntimeError('AI belum diatur di server (GEMINI_API_KEY di .env).')
+    base = os.environ.get('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta').strip().rstrip('/')
+    model = os.environ.get('RESEARCH_MODEL', '').strip() or os.environ.get('SUMMARY_MODEL', '').strip() or 'gemini-2.5-flash'
+    language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
+    body = json.dumps({'systemInstruction': {'parts': [{'text': f'Cari sumber web yang relevan dan jawab singkat dalam {language}.'}]},
+                       'contents': [{'role': 'user', 'parts': [{'text': query}]}],
+                       'tools': [{'google_search': {}}],
+                       'generationConfig': {'temperature': 0.2, 'maxOutputTokens': 2000}}).encode('utf-8')
+    request = urllib.request.Request(f'{base}/models/{quote(model, safe="-._")}:generateContent', data=body, method='POST',
+                                     headers={'x-goog-api-key': key, 'Content-Type': 'application/json'})
+    try:
+        with urllib.request.urlopen(request, timeout=60) as response:
+            data = json.loads(response.read().decode('utf-8'))
+    except urllib.error.HTTPError as cause:
+        raise ai_refused('gemini', cause.code, cause.read().decode('utf-8', 'replace')) from cause
+    except (urllib.error.URLError, TimeoutError, OSError) as cause:
+        raise RuntimeError('Layanan AI tidak bisa dihubungi. Cek koneksi internet server.') from cause
+    candidates = data.get('candidates') or []
+    chunks = ((candidates[0].get('groundingMetadata') or {}).get('groundingChunks')) if candidates else None
+    seen, results = set(), []
+    for chunk in chunks or []:
+        web = chunk.get('web') if isinstance(chunk, dict) else None
+        url = web.get('uri') if isinstance(web, dict) else None
+        if not url or url in seen:
+            continue
+        seen.add(url)
+        results.append({'title': str(web.get('title') or url)[:200], 'url': url})
+        if len(results) >= 8:
+            break
+    if not results:
+        raise RuntimeError('Pencarian tidak menemukan sumber web. Coba topik lain.')
+    return results
 
 
 def translate_pages(pages, target, title='Buku'):
@@ -3680,14 +3770,49 @@ class Handler(SimpleHTTPRequestHandler):
             raise ValueError('Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR dulu.')
         return text
 
+    def sources_text(self, data):
+        """One or several sources as one combined text, for summary/ask/write. Legacy shape
+        (`{title, text: {page: [lines]}}`, one document) wraps as a single source and keeps
+        `book_text`'s exact bare `[Halaman N]` tags. The new shape (`sources: [{name,
+        text: {page: [lines]}}, ...]`, AI Summarizer's multi-source Sources panel) tags each
+        page `[Sumber I: Name — Halaman N]` so the model can cite which source a fact came
+        from. Returns `(text, index, names)`: `index` maps `(source_number, page_number) ->
+        raw lines` and `names` maps `source_number -> its label`, both for `ask_citations`."""
+        raw = data.get('sources')
+        if not isinstance(raw, list) or not raw:
+            raw = [{'name': data.get('title'), 'text': data.get('text')}]
+        blocks, index, names = [], {}, {}
+        total_words = 0
+        for i, src in enumerate(raw[:20], 1):
+            if not isinstance(src, dict):
+                continue
+            name = re.sub(r'[\[\]]', '', ' '.join(str(src.get('name') or f'Sumber {i}').split()))[:150] or f'Sumber {i}'
+            names[i] = name
+            pages = src.get('text')
+            if not isinstance(pages, dict):
+                continue
+            ordered = sorted((int(k), v) for k, v in pages.items() if re.fullmatch(r'0|[1-9][0-9]*', str(k)) and isinstance(v, list))
+            for k, lines in ordered:
+                clean_lines = [str(line) for line in lines if isinstance(line, str)]
+                block = '\n'.join(clean_lines)
+                total_words += len(block.split())
+                tag = f'[Halaman {k + 1}]' if len(raw) == 1 else f'[Sumber {i}: {name} — Halaman {k + 1}]'
+                blocks.append(f'{tag}\n{block}')
+                index[(i, k + 1)] = clean_lines
+        if total_words < 40:
+            raise ValueError('Buku ini hampir tidak punya teks (hasil scan?). Jalankan OCR dulu.')
+        return '\n\n'.join(blocks), index, names
+
     def summary_route(self):
-        """POST {title, text: {page: [lines]}, lang} -> {lang, text}."""
+        """POST {title, text: {page: [lines]}, lang} -> {lang, text} (one document), or
+        {sources: [{name, text: {page: [lines]}}], lang} -> {lang, text} (several, AI
+        Summarizer's Sources panel — the summary then cites which source each point is from)."""
         try:
             size = int(self.headers.get('Content-Length', '0'))
             if not 0 < size <= 16 * 1024 * 1024:
                 raise ValueError('Teks buku kosong atau terlalu besar.')
             data = json.loads(self.rfile.read(size).decode('utf-8'))
-            text = self.book_text(data)
+            text, _, _ = self.sources_text(data)
             lang = data.get('lang') if data.get('lang') in TRANSLATE_LANGUAGES else 'id-ID'
             title = str(data.get('title') or 'Buku')[:200]
             length = data.get('length') if data.get('length') in SUMMARY_LENGTHS else 'sedang'
@@ -3708,22 +3833,28 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_json(200, result)
 
     def ask_route(self):
-        """POST {title, text: {page: [lines]}, question, history: [{role, text}]} -> {answer}."""
+        """POST {title, text: {page: [lines]}, question, history: [{role, text}]} -> {answer}
+        (one document), or {sources: [{name, text: {page: [lines]}}], question, history} ->
+        {answer, citations, thoughts} (several, AI Summarizer's Sources panel). `citations` is
+        the ordered, numbered list the answer's `[n]` markers point to; `thoughts` is Gemini's
+        thought summary (empty for other models or when thinking is off)."""
         try:
             size = int(self.headers.get('Content-Length', '0'))
             if not 0 < size <= 16 * 1024 * 1024:
                 raise ValueError('Teks dokumen kosong atau terlalu besar.')
             data = json.loads(self.rfile.read(size).decode('utf-8'))
-            text = self.book_text(data)
+            text, index, names = self.sources_text(data)
             history = data.get('history') if isinstance(data.get('history'), list) else []
-            answer = ask_document(str(data.get('title') or 'Dokumen')[:200], text, data.get('question'), history, data.get('work'))
+            answer, thoughts = ask_document(str(data.get('title') or 'Dokumen')[:200], text, data.get('question'),
+                                            history, data.get('work'), include_thoughts=True)
         except (ValueError, UnicodeDecodeError) as cause:
             self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
             return
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
             return
-        self.send_json(200, {'answer': answer, 'sources': ask_source_excerpts(data.get('text'), answer, data.get('question') or '')})
+        answer, citations = ask_citations(index, names, answer, data.get('question') or '')
+        self.send_json(200, {'answer': answer, 'citations': citations, 'thoughts': thoughts})
 
     def write_route(self):
         """POST {kind: 'journal'|'slides', title, text: {page: [lines]}, lang, work, section | count}
@@ -3735,7 +3866,7 @@ class Handler(SimpleHTTPRequestHandler):
             data = json.loads(self.rfile.read(size).decode('utf-8'))
             if not isinstance(data, dict) or data.get('kind') not in ('journal', 'slides'):
                 raise ValueError('Permintaan tidak valid.')
-            text = self.book_text(data)
+            text, _, _ = self.sources_text(data)
             title = str(data.get('title') or 'Dokumen')[:200]
             lang = data.get('lang') if data.get('lang') in TRANSLATE_LANGUAGES else 'id-ID'
             if data['kind'] == 'journal':
@@ -3750,6 +3881,24 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(502, {'error': str(cause)})
             return
         self.send_json(200, result)
+
+    def research_route(self):
+        """POST {query, lang} -> {sources: [{title, url}]} ("Fast Research" in the Sources
+        panel: the member picks which of these to actually add as sources)."""
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 2000:
+                raise ValueError('Permintaan tidak valid.')
+            data = json.loads(self.rfile.read(size).decode('utf-8'))
+            lang = data.get('lang') if isinstance(data, dict) and data.get('lang') in TRANSLATE_LANGUAGES else 'id-ID'
+            results = research(data.get('query') if isinstance(data, dict) else None, lang)
+        except (ValueError, json.JSONDecodeError, UnicodeDecodeError) as cause:
+            self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
+            return
+        except RuntimeError as cause:
+            self.send_json(502, {'error': str(cause)})
+            return
+        self.send_json(200, {'sources': results})
 
     def highlight_summary_route(self):
         """POST {text} (one highlighted passage) -> {summary}."""
@@ -4262,7 +4411,8 @@ class Handler(SimpleHTTPRequestHandler):
         # The whole-book translator is offline (no AI): every signed-in member, Free too (owner, 2026-10-19).
         feature = ('office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'translate' if self.path == '/api/translate-free'
                    else 'podcast' if self.path == '/api/podcast/script'
-                   else 'ai' if self.path in ('/api/translate', '/api/summary', '/api/highlight-summary', '/api/ask', '/api/write') else match[1] if match else None)
+                   else 'ai' if self.path in ('/api/translate', '/api/summary', '/api/highlight-summary', '/api/ask', '/api/write', '/api/research')
+                   else match[1] if match else None)
         denied = feature and self.entitlement_error(feature)
         if denied:
             self.send_json(denied[0], {'error': denied[1]})
@@ -4304,6 +4454,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == '/api/write':
             self.write_route()
+            return
+        if self.path == '/api/research':
+            self.research_route()
             return
         if self.path in OFFICE_ROUTES:
             self.convert_office()

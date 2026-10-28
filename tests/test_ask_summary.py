@@ -127,11 +127,19 @@ class AskTests(unittest.TestCase):
         self.assertIn('HANYA dari isi dokumen', system)
         self.assertIn('Pertanyaan: Apa isinya?', user); self.assertIn('Pembaca: Halo', user); self.assertIn('Asisten: Hai', user)
 
-    def test_source_excerpts_only_use_cited_selected_pages(self):
-        pages = {'0': ['Kata pembuka umum.', 'Gamelan memakai laras pelog dan slendro.'],
-                 '1': ['Isi halaman kedua.']}
-        sources = server.ask_source_excerpts(pages, 'Gamelan memakai pelog (hlm. 1), lihat juga (hlm. 9).', 'Apa laras gamelan?')
-        self.assertEqual(sources, [{'page': 1, 'excerpt': 'Gamelan memakai laras pelog dan slendro.'}])
+    def test_citations_only_use_cited_pages_and_number_them(self):
+        index = {(1, 1): ['Kata pembuka umum.', 'Gamelan memakai laras pelog dan slendro.'], (1, 2): ['Isi halaman kedua.']}
+        answer, citations = server.ask_citations(index, {1: 'Buku'}, 'Gamelan memakai pelog (hlm. 1), lihat juga (hlm. 9).', 'Apa laras gamelan?')
+        self.assertEqual(answer, 'Gamelan memakai pelog [1], lihat juga (hlm. 9).', 'an uncited page keeps its plain text')
+        self.assertEqual(citations, [{'n': 1, 'source': 'Buku', 'page': 1, 'excerpt': 'Gamelan memakai laras pelog dan slendro.'}])
+
+    def test_citations_multi_source_pairs_and_numbers_in_order(self):
+        index = {(1, 3): ['Fakta dari sumber satu.'], (2, 5): ['Fakta dari sumber dua.']}
+        names = {1: 'Jurnal A', 2: 'Jurnal B'}
+        answer, citations = server.ask_citations(index, names, 'Pertama (Sumber 2, hlm. 5), kedua (Sumber 1, hlm. 3).', 'apa')
+        self.assertEqual(answer, 'Pertama [1], kedua [2].')
+        self.assertEqual(citations, [{'n': 1, 'source': 'Jurnal B', 'page': 5, 'excerpt': 'Fakta dari sumber dua.'},
+                                      {'n': 2, 'source': 'Jurnal A', 'page': 3, 'excerpt': 'Fakta dari sumber satu.'}])
 
     def test_empty_question(self):
         with self.assertRaises(ValueError):
@@ -153,10 +161,11 @@ class AskTests(unittest.TestCase):
                     return error.code, json.loads(error.read())
         try:
             words = ' '.join(['kata'] * 60)
-            with mock.patch.object(server, 'ask_document', return_value='Jawab (hlm. 1)') as make:
+            with mock.patch.object(server, 'ask_document', return_value=('Jawab (hlm. 1)', '')) as make:
                 self.assertEqual(post({'title': 'B', 'text': {'0': [words]}, 'question': 'Apa?'}),
-                                 (200, {'answer': 'Jawab (hlm. 1)', 'sources': [{'page': 1, 'excerpt': words}]}))
+                                 (200, {'answer': 'Jawab [1]', 'citations': [{'n': 1, 'source': 'B', 'page': 1, 'excerpt': words}], 'thoughts': ''}))
                 self.assertIn('[Halaman 1]', make.call_args[0][1])
+                self.assertTrue(make.call_args.kwargs.get('include_thoughts'), 'ask_route always asks for thoughts')
                 self.assertEqual(post({'text': {'0': ['sedikit']}, 'question': 'Apa?'})[0], 400)
             self.assertEqual(post({'text': {'0': [words]}, 'question': ' '})[0], 400)
             with mock.patch.object(server, 'ask_document', side_effect=RuntimeError('AI belum diatur')):

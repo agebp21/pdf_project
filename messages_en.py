@@ -61,6 +61,8 @@ EXACT = {
     'AI belum diatur di server (SUMOPOD_API_KEY di .env).': 'AI is not set up on the server (SUMOPOD_API_KEY in .env).',
     'Layanan AI tidak bisa dihubungi. Cek koneksi internet server.': "The AI service could not be reached. Check the server's internet connection.",
     'AI tidak mengembalikan terjemahan yang valid. Coba lagi.': 'The AI did not return a valid translation. Try again.',
+    'Tulis topik pencarian dulu.': 'Write a research topic first.',
+    'Pencarian tidak menemukan sumber web. Coba topik lain.': 'The search found no web sources. Try a different topic.',
     'Teks kosong atau terlalu panjang.': 'The text is empty or too long.',
     'Teks kosong atau terlalu besar.': 'The text is empty or too large.',
     'Bahasa tujuan tidak didukung.': 'That target language is not supported.',
