@@ -81,6 +81,7 @@ class TrialTests(unittest.TestCase):
         user = fresh.json('GET', '/api/auth/me')[1]['user']
         self.assertEqual(user['trialExpired'], False)
         self.assertGreaterEqual(user['trialDaysLeft'], 6)
+        self.assertNotIn('ai', user['entitlements'])
         old = self.member('old@t.co', age_days=9)
         user = old.json('GET', '/api/auth/me')[1]['user']
         self.assertEqual(user['trialExpired'], True)
@@ -93,11 +94,14 @@ class TrialTests(unittest.TestCase):
     def test_server_gates(self):
         headers = {'X-Build-Token': server.TOKEN}
         fresh = self.member('fresh@t.co')
-        self.assertEqual(fresh.call('POST', '/api/summary', {}, headers=headers)[0], 400, 'trial: reaches validation')
+        self.assertEqual(fresh.call('POST', '/api/summary', {}, headers=headers)[0], 402, 'Basic trial cannot use AI summary')
+        self.assertEqual(fresh.call('POST', '/api/highlight-summary', {}, headers=headers)[0], 402)
+        self.assertEqual(fresh.call('POST', '/api/ask', {}, headers=headers)[0], 402)
+        self.assertEqual(fresh.call('POST', '/api/translate', {}, headers=headers)[0], 402)
         old = self.member('stale@t.co', age_days=9)
         # Plans v2: after the trial only the AI stops; Office to PDF goes on (here it reaches validation).
         status, body = old.json('POST', '/api/summary', {}, headers=headers)
-        self.assertEqual(status, 402); self.assertIn('7 hari', body['error'])
+        self.assertEqual(status, 402); self.assertIn('Medium atau Pro', body['error'])
         self.assertEqual(old.call('POST', '/api/convert/word-to-pdf', {}, headers=headers)[0], 400, 'Office to PDF stays')
         # The whole-book translator is offline (no AI): Free keeps it after the trial (owner, 2026-10-19).
         self.assertNotEqual(old.call('POST', '/api/translate-free', {}, headers=headers)[0], 402)

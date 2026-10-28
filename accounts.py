@@ -55,13 +55,12 @@ EMAIL_RE = re.compile(r'^[^@\s]{1,64}@[^@\s]{1,190}\.[^@\s]{2,}$')
 #   export  -> flipbook export (offline HTML package, also the animation editor)
 #   apk     -> Android build, exe -> Windows build (Pro)
 # Browser tools and flipbook preview / project save stay free.
-# Free trial: new Basic members try the AI (summary, translation, Ask) for
-# TRIAL_DAYS days; share links keep the first SHARE_FREE publishes.
+# Basic members do not receive AI access during the trial; share links keep
+# the first SHARE_FREE publishes.
 TRIAL_DAYS = 7
 SHARE_FREE = 3
 # Words of AI summaries a member may get per calendar month (Jakarta time) — our own usage
 # guide, not shown to members (owner, 2026-10-20); used up, the member is told to upgrade.
-# Basic members on their 7-day trial try Medium's allowance.
 SUMMARY_WORDS = {'medium': 35_000, 'pro': 60_000}
 WIB = 7 * 3600
 
@@ -617,8 +616,7 @@ class Accounts:
                     verified=bool(row['verified']) if 'verified' in row.keys() else True,
                     google=bool(row['google_sub']) if 'google_sub' in row.keys() else False,
                     planName=PLANS[plan]['name'], planExpiresAt=expires if plan != FREE_PLAN else None,
-                    # the 7-day trial includes the AI Summarizer
-                    entitlements=PLANS[plan]['entitlements'] + (['ai'] if plan == FREE_PLAN and not trial_expired else []),
+                    entitlements=PLANS[plan]['entitlements'],
                     trialDaysLeft=trial_left if plan == FREE_PLAN else None, trialExpired=trial_expired)
 
     def register(self, email, password, name=''):

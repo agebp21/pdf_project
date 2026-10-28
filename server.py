@@ -252,8 +252,10 @@ SUMMARY_ROUTES = ('/api/summary', '/api/highlight-summary')     # what counts ag
 
 def summary_words_limit(user):
     """The member's summary words per month (accounts.SUMMARY_WORDS; .env SUMMARY_WORDS_MEDIUM /
-    SUMMARY_WORDS_PRO may change them); a Basic member on the trial has Medium's."""
-    tier = user['plan'] if user['plan'] in accounts.PAID else 'medium'
+    SUMMARY_WORDS_PRO may change them)."""
+    if user['plan'] not in accounts.PAID:
+        return 0
+    tier = user['plan']
     value = os.environ.get(f'SUMMARY_WORDS_{tier.upper()}', '').strip()
     if value:
         return None if value.lower() in ('0', 'none', 'unlimited') else int(value)
@@ -3828,7 +3830,12 @@ class Handler(SimpleHTTPRequestHandler):
             return None if user else (401, 'Silakan masuk dulu untuk memakai fitur ini.')
         if not user:
             return 401, 'Silakan masuk dulu untuk memakai fitur ini.'
-        # Plans v2: after the 7-day trial Basic keeps every non-AI tool (Office to PDF within its allowance).
+        # Ringkasan AI hanya untuk paket berbayar, termasuk saat Basic masih trial.
+        if self.path in SUMMARY_ROUTES and user['plan'] not in accounts.PAID:
+            return 402, 'Ringkasan AI hanya tersedia untuk paket Medium atau Pro.'
+        if feature == 'ai' and user['plan'] not in accounts.PAID:
+            return 402, 'AI Summarizer hanya tersedia untuk paket Medium atau Pro.'
+        # Plans v2: after the 7-day trial Basic keeps Office to PDF within its allowance.
         if user.get('trialExpired') and feature in ('ai', 'podcast'):
             return 402, 'Masa coba gratis 7 hari Anda sudah habis. Upgrade ke Medium atau Pro untuk memakai fitur ini.'
         # Book translation runs on the free translator (no AI credit): only the allowance limits it.

@@ -1,5 +1,4 @@
-"""AI Summarizer is a Pro feature: Free members have it only during the 7-day trial;
-Pro and Business keep it; the price list shows it under Pro, not Free."""
+"""AI Summarizer belongs to Medium and Pro; Basic cannot use it during trial."""
 from pathlib import Path
 import sys
 import tempfile
@@ -17,7 +16,7 @@ class AiIsPro(unittest.TestCase):
 
     def test_trial_then_pro(self):
         store = accounts.Accounts.__new__(accounts.Accounts)       # public_user needs no database
-        self.assertIn('ai', store.public_user(self.row(days_old=1))['entitlements'], 'the trial includes AI')
+        self.assertNotIn('ai', store.public_user(self.row(days_old=1))['entitlements'])
         late = store.public_user(self.row(days_old=accounts.TRIAL_DAYS + 1))
         self.assertTrue(late['trialExpired']); self.assertNotIn('ai', late['entitlements'])
         medium = store.public_user(self.row('medium', days_old=60, expires=time.time() + 86400))

@@ -210,6 +210,10 @@ EXACT = {
     'Ekspor tidak ditemukan.': 'Export not found.',
     'Masa coba gratis 7 hari Anda sudah habis. Upgrade ke Medium atau Pro untuk memakai fitur ini.':
         'Your 7-day free trial has ended. Upgrade to Medium or Pro to use this feature.',
+    'Ringkasan AI hanya tersedia untuk paket Medium atau Pro.':
+        'AI summaries are available on Medium and Pro plans only.',
+    'AI Summarizer hanya tersedia untuk paket Medium atau Pro.':
+        'AI Summarizer is available on Medium and Pro plans only.',
     'Jatah 3 share gratis habis. Upgrade ke Medium atau Pro untuk share lebih banyak.':
         'Your 3 free shares are used up. Upgrade to Medium or Pro for more share links.',
     # --- Share link
