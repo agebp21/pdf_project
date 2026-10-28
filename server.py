@@ -11,7 +11,8 @@ import argparse
 import csv
 import hashlib
 import http.client
-from html import unescape
+from html import escape, unescape
+import io
 import ipaddress
 import json
 import math
@@ -27,6 +28,7 @@ import threading
 import time
 import unicodedata
 import uuid
+import wave
 import zipfile
 from concurrent.futures import ThreadPoolExecutor
 from http.server import BaseHTTPRequestHandler, HTTPServer, SimpleHTTPRequestHandler, ThreadingHTTPServer
@@ -1351,6 +1353,43 @@ def podcast_script(title, text, lang='id-ID', hosts=('Rina', 'Bima')):
     raise RuntimeError(last)
 
 
+_piper_speaker = None
+_piper_lock = threading.Lock()
+
+
+def piper_speaker():
+    """The process-wide Piper voice loader (tts.py), loaded once."""
+    global _piper_speaker
+    with _piper_lock:
+        if _piper_speaker is None:
+            import tts
+            _piper_speaker = tts.Speaker()
+    return _piper_speaker
+
+
+def synthesize_podcast(lines, lang='id-ID'):
+    """One WAV for a two-host podcast script (`podcast_script()`'s `lines`, `[{s:'A'|'B', t}]`):
+    each line read by Piper (tts.py's mixed Indonesian/English `Speaker`); host B a touch slower
+    so the two voices stay apart even where only one Piper voice exists for the language."""
+    speaker = piper_speaker()
+    if not speaker.available():
+        raise RuntimeError('Suara TTS belum terpasang di server (.data/piper).')
+    default = 'id' if lang == 'id-ID' else 'en'
+    gap = b'\x00\x00' * int(22050 * 0.35)
+    frames, rate = [], None
+    for line in lines:
+        wav_bytes = speaker.wav(line['t'], default=default, length_scale=1.0 if line['s'] == 'A' else 1.08)
+        with wave.open(io.BytesIO(wav_bytes), 'rb') as w:
+            rate = rate or w.getframerate()
+            frames.append(w.readframes(w.getnframes()))
+        frames.append(gap)
+    out = io.BytesIO()
+    with wave.open(out, 'wb') as w:
+        w.setnchannels(1); w.setsampwidth(2); w.setframerate(rate or 22050)
+        w.writeframes(b''.join(frames))
+    return out.getvalue()
+
+
 def validate_links(links, count):
     """Page links: fractions of the page box plus a target page or a web/mail URL."""
     if not isinstance(links, dict):
@@ -1653,6 +1692,138 @@ def find_chromium():
                 if base and candidate.is_file():
                     return str(candidate)
     return None
+
+
+def find_ffmpeg():
+    """Locate ffmpeg for Video Overview (slide images + narration -> one MP4)."""
+    override = os.environ.get('MYFLIPBOOK_FFMPEG')
+    if override and Path(override).is_file():
+        return override
+    found = shutil.which('ffmpeg')
+    if found:
+        return found
+    if os.name == 'nt' and os.environ.get('LOCALAPPDATA'):
+        for candidate in Path(os.environ['LOCALAPPDATA'], 'Microsoft/WinGet/Packages').glob('Gyan.FFmpeg_*/ffmpeg-*/bin/ffmpeg.exe'):
+            if candidate.is_file():
+                return str(candidate)
+    return None
+
+
+def render_slide_png(html, width, height, timeout=30):
+    """One slide's HTML, rasterized to PNG by headless Edge/Chrome — the same engine and
+    one-shot loopback pattern html_to_pdf() uses, with --screenshot instead of --print-to-pdf."""
+    browser = find_chromium()
+    if not browser:
+        raise RuntimeError('Microsoft Edge / Google Chrome tidak ditemukan di komputer ini.')
+    body = html.encode('utf-8')
+
+    class Page(BaseHTTPRequestHandler):
+        def do_GET(self):
+            if self.path.split('?')[0] != '/':
+                self.send_error(404)
+                return
+            self.send_response(200)
+            self.send_header('Content-Type', 'text/html; charset=utf-8')
+            self.send_header('Content-Length', str(len(body)))
+            self.end_headers()
+            self.wfile.write(body)
+
+        def log_message(self, *args):
+            pass
+
+    httpd = HTTPServer(('127.0.0.1', 0), Page)
+    port = httpd.server_address[1]
+    threading.Thread(target=httpd.serve_forever, daemon=True).start()
+    workdir = Path(tempfile.mkdtemp(prefix='slide-png-'))
+    output = workdir / 'slide.png'
+    args = [browser, '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
+            '--disable-extensions', '--disable-sync', '--disable-background-networking', '--mute-audio',
+            f'--user-data-dir={workdir / "profile"}', f'--window-size={width},{height}', '--force-device-scale-factor=1',
+            '--hide-scrollbars', '--virtual-time-budget=4000', f'--screenshot={output}', f'http://127.0.0.1:{port}/']
+    process = subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+    try:
+        try:
+            process.wait(timeout=timeout)
+        except subprocess.TimeoutExpired:
+            raise RuntimeError('Render slide terlalu lama.')
+        if not output.is_file():
+            raise RuntimeError('Browser gagal merender slide.')
+        return output.read_bytes()
+    finally:
+        if process.poll() is None:
+            if os.name == 'nt':
+                subprocess.run(['taskkill', '/F', '/T', '/PID', str(process.pid)], capture_output=True,
+                               creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0))
+            else:
+                process.kill()
+        httpd.shutdown(); httpd.server_close()
+        shutil.rmtree(workdir, ignore_errors=True)
+
+
+def slide_html(slide, index, total):
+    """One slide's content as a self-contained 1280x720 HTML card (Video Overview)."""
+    points = ''.join(f'<li>{escape(str(p))}</li>' for p in (slide.get('points') or []))
+    return f"""<!doctype html><html><head><meta charset="utf-8"><style>
+body{{margin:0;width:1280px;height:720px;box-sizing:border-box;background:linear-gradient(165deg,#1A3C34,#13302A);
+color:#FFF7EA;font-family:Georgia,serif;padding:70px 90px;display:flex;flex-direction:column;justify-content:center}}
+h1{{font-size:44px;line-height:1.3;margin:0 0 34px;color:#fff}}
+ul{{font-size:25px;line-height:1.65;padding-left:30px;margin:0}}
+.tag{{position:absolute;bottom:28px;right:40px;font-size:15px;color:#D6D3D1;font-family:sans-serif}}
+</style></head><body><h1>{escape(str(slide.get('title') or ''))}</h1><ul>{points}</ul><div class="tag">{index + 1} / {total}</div></body></html>"""
+
+
+def video_overview_job(job_id, title, text, lang, work):
+    """A narrated slideshow: make_slides() for content, each slide rendered to PNG and read
+    aloud with Piper (its speaker notes as the narration), ffmpeg muxes image+audio per slide
+    and concatenates the clips into one MP4. Tracks progress in JOBS like an APK/EXE build —
+    polled and downloaded through the same /api/jobs/<id> and /api/jobs/<id>/download."""
+    job, folder = JOBS[job_id], BUILD / job_id
+    try:
+        job.update(status='running', message='Menyusun slide…', progress=0.05)
+        slides = make_slides(title, text, lang, 8, work)
+        ffmpeg = find_ffmpeg()
+        if not ffmpeg:
+            raise RuntimeError('ffmpeg tidak ditemukan di komputer ini.')
+        speaker = piper_speaker()
+        if not speaker.available():
+            raise RuntimeError('Suara TTS belum terpasang di server (.data/piper).')
+        default = 'id' if lang == 'id-ID' else 'en'
+        total = len(slides)
+        clips = []
+        for i, slide in enumerate(slides):
+            job.update(message=f'Merender slide {i + 1}/{total}…', progress=0.1 + 0.6 * (i / total))
+            png_path = folder / f'slide-{i:02d}.png'
+            png_path.write_bytes(render_slide_png(slide_html(slide, i, total), 1280, 720))
+            narration = slide.get('notes') or slide.get('title') or ' '
+            wav_path = folder / f'slide-{i:02d}.wav'
+            wav_path.write_bytes(speaker.wav(narration, default=default))
+            clip_path = folder / f'clip-{i:02d}.mp4'
+            code = subprocess.run([ffmpeg, '-y', '-loop', '1', '-i', str(png_path), '-i', str(wav_path), '-r', '24',
+                                   '-pix_fmt', 'yuv420p', '-c:v', 'libx264', '-c:a', 'aac', '-shortest', str(clip_path)],
+                                  stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                                  creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0)).returncode
+            if code or not clip_path.is_file():
+                raise RuntimeError(f'ffmpeg gagal membuat klip slide {i + 1}.')
+            clips.append(clip_path)
+        job.update(message='Menggabungkan video…', progress=0.85)
+        concat_file = folder / 'concat.txt'
+        concat_file.write_text(''.join(f"file '{c.name}'\n" for c in clips), encoding='utf-8')
+        output = folder / 'video-overview.mp4'
+        code = subprocess.run([ffmpeg, '-y', '-f', 'concat', '-safe', '0', '-i', str(concat_file), '-c', 'copy', str(output)],
+                              cwd=folder, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
+                              creationflags=getattr(subprocess, 'CREATE_NO_WINDOW', 0)).returncode
+        if code or not output.is_file():
+            raise RuntimeError('ffmpeg gagal menggabungkan video.')
+        for leftover in list(folder.glob('slide-*.png')) + list(folder.glob('slide-*.wav')) + list(folder.glob('clip-*.mp4')) + [concat_file]:
+            leftover.unlink(missing_ok=True)
+        job.update(status='done', message='Video Overview selesai.', progress=1, artifact=output.name,
+                   download_name=(re.sub(r'[\\/:*?"<>|]+', '-', title)[:80] or 'Video') + ' - Video Overview.mp4',
+                   download=f'/api/jobs/{job_id}/download')
+    except Exception as cause:
+        job.update(status='failed', message=str(cause))
+    finally:
+        BUILD_LOCK.release()
 
 
 def prepare_html(raw, page_size='a4', margin_mm=12):
@@ -4208,13 +4379,15 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(503 if 'offline' in str(cause) else 502, {'error': str(cause)})
 
     def podcast_route(self):
-        """POST {title, text: {page: [lines]}, lang, hosts} -> two-host podcast script."""
+        """POST {title, text: {page: [lines]}, lang, hosts} -> two-host podcast script (one
+        document), or {sources: [{name, text: {page: [lines]}}], lang, hosts} (several, the AI
+        Summarizer's Sources panel — the podcast then covers every active source)."""
         try:
             size = int(self.headers.get('Content-Length', '0'))
             if not 0 < size <= 8 * 1024 * 1024:
                 raise ValueError('Teks buku kosong atau terlalu besar.')
             data = json.loads(self.rfile.read(size).decode('utf-8'))
-            text = self.book_text(data)
+            text, _, _ = self.sources_text(data)
             lang = data.get('lang') if data.get('lang') in PODCAST_LANGUAGES else 'id-ID'
             hosts = data.get('hosts')
             if not (isinstance(hosts, list) and len(hosts) == 2 and all(isinstance(h, str) and re.fullmatch(r'[A-Za-z]{2,20}', h) for h in hosts)):
@@ -4227,6 +4400,68 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(200, podcast_script(title, text, lang, hosts))
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
+
+    def podcast_audio_route(self):
+        """POST {lines: [{s:'A'|'B', t}], lang} -> audio/wav: the script (already made via
+        /api/podcast/script) read aloud with Piper TTS. Kept separate from script generation so
+        the member sees the transcript immediately and the audio never drifts from it."""
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 2 * 1024 * 1024:
+                raise ValueError('Naskah kosong atau terlalu besar.')
+            data = json.loads(self.rfile.read(size).decode('utf-8'))
+            lang = data.get('lang') if isinstance(data, dict) and data.get('lang') in PODCAST_LANGUAGES else 'id-ID'
+            lines = data.get('lines') if isinstance(data, dict) else None
+            clean = []
+            for row in (lines or [])[:400]:
+                if isinstance(row, dict) and row.get('s') in ('A', 'B') and isinstance(row.get('t'), str) and row['t'].strip():
+                    clean.append({'s': row['s'], 't': row['t'].strip()[:2000]})
+            if not clean:
+                raise ValueError('Naskah tidak valid.')
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as cause:
+            self.send_json(400, {'error': str(cause) if isinstance(cause, ValueError) and not isinstance(cause, json.JSONDecodeError) else 'Permintaan tidak valid.'})
+            return
+        try:
+            audio = synthesize_podcast(clean, lang)
+        except RuntimeError as cause:
+            self.send_json(502, {'error': str(cause)})
+            return
+        self.send_response(200)
+        self.send_header('Content-Type', 'audio/wav')
+        self.send_header('Content-Length', str(len(audio)))
+        self.end_headers()
+        self.wfile.write(audio)
+
+    def video_overview_route(self):
+        """POST {title, text/sources, lang, work} -> {id}: starts a background job (slides ->
+        per-slide PNG + Piper narration -> ffmpeg -> one MP4), reusing the existing
+        /api/jobs/<id> (poll) and /api/jobs/<id>/download (fetch) that APK/EXE builds use —
+        same BUILD_LOCK (one native/video job at a time on this server)."""
+        if not BUILD_LOCK.acquire(blocking=False):
+            self.send_json(409, {'error': 'Masih ada proses build berjalan. Tunggu hingga selesai.'})
+            return
+        started = False
+        try:
+            size = int(self.headers.get('Content-Length', '0'))
+            if not 0 < size <= 16 * 1024 * 1024:
+                raise ValueError('Teks dokumen kosong atau terlalu besar.')
+            data = json.loads(self.rfile.read(size).decode('utf-8'))
+            text, _, _ = self.sources_text(data)
+            title = str(data.get('title') or 'Dokumen')[:200]
+            lang = data.get('lang') if data.get('lang') in TRANSLATE_LANGUAGES else 'id-ID'
+            work = clean_work(data.get('work'))
+            prune_builds()
+            job_id = uuid.uuid4().hex
+            (BUILD / job_id).mkdir(parents=True)
+            JOBS[job_id] = dict(id=job_id, status='queued', message='Video Overview menunggu…', progress=0)
+            threading.Thread(target=video_overview_job, args=(job_id, title, text, lang, work), daemon=True).start()
+            started = True
+            self.send_json(202, {'id': job_id})
+        except (ValueError, UnicodeDecodeError, json.JSONDecodeError) as cause:
+            self.send_json(400, {'error': str(cause) if isinstance(cause, ValueError) and not isinstance(cause, json.JSONDecodeError) else 'Permintaan tidak valid.'})
+        finally:
+            if not started:
+                BUILD_LOCK.release()
 
     def entitlement_error(self, feature):
         """None when allowed, else (status, message).
@@ -4646,7 +4881,7 @@ class Handler(SimpleHTTPRequestHandler):
         match = re.fullmatch(r'/api/build/(apk|exe)', self.path)
         # The whole-book translator is offline (no AI): every signed-in member, Free too (owner, 2026-10-19).
         feature = ('office' if self.path in OFFICE_ROUTES or self.path == '/api/fetch-source' else 'translate' if self.path == '/api/translate-free'
-                   else 'podcast' if self.path == '/api/podcast/script'
+                   else 'podcast' if self.path in ('/api/podcast/script', '/api/podcast/audio', '/api/video-overview')
                    else 'ai' if self.path in ('/api/translate', '/api/summary', '/api/highlight-summary', '/api/ask', '/api/write', '/api/research')
                    else match[1] if match else None)
         denied = feature and self.entitlement_error(feature)
@@ -4673,6 +4908,9 @@ class Handler(SimpleHTTPRequestHandler):
         if self.path == '/api/podcast/script':
             self.podcast_route()
             return
+        if self.path == '/api/podcast/audio':
+            self.podcast_audio_route()
+            return
         if self.path == '/api/translate':
             self.translate_route()
             return
@@ -4693,6 +4931,9 @@ class Handler(SimpleHTTPRequestHandler):
             return
         if self.path == '/api/research':
             self.research_route()
+            return
+        if self.path == '/api/video-overview':
+            self.video_overview_route()
             return
         if self.path in OFFICE_ROUTES:
             self.convert_office()

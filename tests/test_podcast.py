@@ -11,6 +11,7 @@ import threading
 import unittest
 import urllib.error
 import urllib.request
+import wave
 from unittest import mock
 
 sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
@@ -116,6 +117,57 @@ class PodcastTests(unittest.TestCase):
             with mock.patch.object(server, 'podcast_script', side_effect=RuntimeError('Podcast AI belum diatur')):
                 status, body = post({'text': {'0': [words]}})
                 self.assertEqual(status, 502); self.assertIn('belum diatur', body['error'])
+        finally:
+            httpd.shutdown(); httpd.server_close(); thread.join()
+
+
+class PodcastAudioTests(unittest.TestCase):
+    """Audio Overview: a fake Piper Speaker (no real voice models needed in CI)."""
+    def test_synthesize_concatenates_lines_with_gaps(self):
+        class FakeSpeaker:
+            def available(self): return True
+            def wav(self, text, default='id', length_scale=1.0):
+                frames = b'\x00\x00' * int(200 * length_scale)
+                buf = io.BytesIO()
+                with wave.open(buf, 'wb') as w:
+                    w.setnchannels(1); w.setsampwidth(2); w.setframerate(22050); w.writeframes(frames)
+                return buf.getvalue()
+        with mock.patch.object(server, 'piper_speaker', return_value=FakeSpeaker()):
+            out = server.synthesize_podcast([{'s': 'A', 't': 'Halo'}, {'s': 'B', 't': 'Hai'}], 'id-ID')
+        with wave.open(io.BytesIO(out), 'rb') as w:
+            self.assertEqual(w.getnchannels(), 1)
+            self.assertGreater(w.getnframes(), 0)
+
+    def test_unavailable_voices_raise(self):
+        class FakeSpeaker:
+            def available(self): return False
+        with mock.patch.object(server, 'piper_speaker', return_value=FakeSpeaker()):
+            with self.assertRaisesRegex(RuntimeError, 'belum terpasang'):
+                server.synthesize_podcast([{'s': 'A', 't': 'Halo'}])
+
+    def test_route(self):
+        httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True); thread.start()
+        url = f'http://127.0.0.1:{httpd.server_port}/api/podcast/audio'
+
+        def post(body):
+            request = urllib.request.Request(url, data=json.dumps(body).encode(), method='POST',
+                                             headers={'Content-Type': 'application/json', 'X-Build-Token': server.TOKEN})
+            try:
+                with urllib.request.urlopen(request) as response:
+                    return response.status, response.read(), response.headers.get('Content-Type')
+            except urllib.error.HTTPError as error:
+                with error:
+                    return error.code, error.read(), None
+        try:
+            with mock.patch.object(server, 'synthesize_podcast', return_value=b'RIFF....fakewav') as make:
+                status, body, ctype = post({'lines': [{'s': 'A', 't': 'Halo'}, {'s': 'B', 't': '  '}, 'bad'], 'lang': 'ms-MY'})
+                self.assertEqual((status, body, ctype), (200, b'RIFF....fakewav', 'audio/wav'), 'a blank/malformed line is dropped')
+                self.assertEqual(make.call_args[0], ([{'s': 'A', 't': 'Halo'}], 'ms-MY'))
+            self.assertEqual(post({'lines': []})[0], 400, 'no usable lines')
+            self.assertEqual(post({'lines': [{'s': 'A', 't': 'Halo'}], 'lang': 'fr'})[0], 200, 'unknown lang falls back to id-ID')
+            with mock.patch.object(server, 'synthesize_podcast', side_effect=RuntimeError('Suara TTS belum terpasang di server (.data/piper).')):
+                self.assertEqual(post({'lines': [{'s': 'A', 't': 'Halo'}]})[0], 502)
         finally:
             httpd.shutdown(); httpd.server_close(); thread.join()
 

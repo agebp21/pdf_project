@@ -111,6 +111,7 @@ Paket v2 (2026-10-19): Basic (gratis) · Medium · Pro. Server pisanan sing mlak
 - **Ojo install Flutter/Android SDK** nang VPS — build APK/EXE lewat PC build (`build_worker.py` nang PC owner, `start-build-worker.bat`).
 - Paywall ON; pembayaran **dipause** (`PAYMENTS_PAUSED=1` nang `.env`, key Midtrans/Tripay/Lemon durung diisi) — upgrade member saiki lewat `--grant`. Nguripke: isi key gateway, tes, banjur guwang/setel `PAYMENTS_PAUSED=0` + `systemctl restart myflipbook`.
 - Ojo ngganti password root / user lewat SSH; urusan kredensial domain-e owner.
+- **Audio/Video Overview (AI Summarizer Studio, 2026-10-29):** butuh `pip install piper-tts wordfreq` + voice model Piper (`id_ID-news_tts-medium`, `en_US-lessac-medium`) nang `.data/piper/` (digitignore), lan ffmpeg nang PATH (`find_ffmpeg()` nang `server.py` goleki `MYFLIPBOOK_FFMPEG` env, PATH, banjur fallback winget package lokal nang Windows). **Durung dipasang nang VPS** — dua-duane anyar lan Video Overview melu render Chromium headless + encode ffmpeg per slide, iso abot kanggo RAM 2 GB. Entitlement `'podcast'` isih dipateni kanggo kabeh paket (owner mateni 2026-10-20); fitur iki wis siap kode tapi **tetep 402 nganti owner nguripke `'podcast'` nang `accounts.py` sacara sadar** — dudu default saka deploy iki.
 
 27 Oktober2026 09:57WIB - Codex: live `0ded5b7`. Sampul mburi katalog, buku, lan majalah saiki polos warna ijo peteng tanpa tulisan utawa logo. Cache-bust `magazine-5`; homepage, JavaScript, lan CSS HTTPS200. Backup `/root/pdf_project-code-backup-20261027095715.tgz`.
 

@@ -284,6 +284,15 @@
   .info-points{list-style:none;margin:0;padding:0;display:grid;gap:9px}
   .info-points li{position:relative;padding-left:20px;font-size:13.5px;line-height:1.55;color:#F5F1E8}
   .info-points li::before{content:'';position:absolute;left:0;top:7px;width:8px;height:8px;border-radius:50%;background:#FF9166}
+  .audio-result{max-width:640px;margin:16px auto 0;display:grid;gap:14px;justify-items:start}
+  .audio-result audio{width:100%}
+  .audio-transcript{width:100%;max-height:50vh;overflow:auto;display:grid;gap:10px;padding:14px;border:1px solid #EFE9DC;border-radius:14px;background:#FAF8F4}
+  .audio-line{display:flex;gap:8px;font-size:13px;line-height:1.5}
+  .audio-line b{flex:none;color:#C2410C}
+  .video-progress{max-width:640px;margin:14px auto 0;height:8px;border-radius:999px;background:#EFE9DC;overflow:hidden}
+  .video-bar{height:100%;width:0;background:linear-gradient(90deg,#FF7A45,#FF5C28);transition:width .4s ease}
+  .video-result{max-width:720px;margin:16px auto 0;display:grid;gap:14px;justify-items:start}
+  .video-result video{width:100%;border-radius:14px;background:#000}
   .slides{list-style:none;margin:0;padding:0;display:grid;gap:20px}
   .slide-card{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:14px;align-items:start}
   .slide-face{position:relative;container-type:inline-size;aspect-ratio:16/9;overflow:hidden;background:#fff center/cover no-repeat;border:1px solid #E8E2D6;border-radius:10px;box-shadow:0 6px 18px rgba(28,25,23,.06)}
@@ -389,6 +398,8 @@
   [data-ico=table]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%2218%22%20height%3D%2218%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M3%209h18M3%2015h18M9%203v18M15%203v18%22%2F%3E%3C%2Fsvg%3E")}
   [data-ico=mindmap]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%225%22%20cy%3D%2212%22%20r%3D%222.5%22%2F%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%225%22%20r%3D%222.5%22%2F%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%2212%22%20r%3D%222.5%22%2F%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%2219%22%20r%3D%222.5%22%2F%3E%3Cpath%20d%3D%22M7.3%2010.8%2016.7%206.2M7.5%2012h9M7.3%2013.2l9.4%204.6%22%2F%3E%3C%2Fsvg%3E")}
   [data-ico=infographic]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%203v18h18%22%2F%3E%3Crect%20x%3D%227%22%20y%3D%2213%22%20width%3D%223%22%20height%3D%225%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%229%22%20width%3D%223%22%20height%3D%229%22%2F%3E%3Crect%20x%3D%2217%22%20y%3D%225%22%20width%3D%223%22%20height%3D%2213%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=audio]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M12%202a4%204%200%200%200-4%204v6a4%204%200%200%200%208%200V6a4%204%200%200%200-4-4z%22%2F%3E%3Cpath%20d%3D%22M5%2010v2a7%207%200%200%200%2014%200v-2%22%2F%3E%3Cpath%20d%3D%22M12%2019v3%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=video]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%222%22%20y%3D%225%22%20width%3D%2214%22%20height%3D%2214%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22m22%208-6%204%206%204V8z%22%2F%3E%3C%2Fsvg%3E")}
   [data-ico=translate]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m5%208%206%206%22%2F%3E%3Cpath%20d%3D%22m4%2014%206-6%202-3%22%2F%3E%3Cpath%20d%3D%22M2%205h12%22%2F%3E%3Cpath%20d%3D%22M7%202h1%22%2F%3E%3Cpath%20d%3D%22m22%2022-5-10-5%2010%22%2F%3E%3Cpath%20d%3D%22M14%2018h6%22%2F%3E%3C%2Fsvg%3E")}
   [data-ico=ask]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M7.9%2020A9%209%200%201%200%204%2016.1L2%2022z%22%2F%3E%3C%2Fsvg%3E")}
   [data-ico=doc]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%202H6a2%202%200%200%200-2%202v16a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V7z%22%2F%3E%3Cpath%20d%3D%22M14%202v4a2%202%200%200%200%202%202h4%22%2F%3E%3C%2Fsvg%3E")}
@@ -443,6 +454,8 @@
           <button type="button" role="tab" data-view="table" hidden data-ico="table" data-en="Data table">Tabel data</button>
           <button type="button" role="tab" data-view="mindmap" hidden data-ico="mindmap" data-en="Mind map">Peta pikiran</button>
           <button type="button" role="tab" data-view="infographic" hidden data-ico="infographic" data-en="Infographic">Infografis</button>
+          <button type="button" role="tab" data-view="audio" hidden data-ico="audio" data-en="Audio Overview">Audio Overview</button>
+          <button type="button" role="tab" data-view="video" hidden data-ico="video" data-en="Video Overview">Video Overview</button>
         </div></div>
       <div class="viewer-body">
          <div id="viewer-empty" class="viewer-empty sheet"><span>✦</span><h2 data-en="Choose a PDF to start">Pilih PDF untuk mulai</h2></div>
@@ -505,6 +518,26 @@
             <h2 id="info-headline" class="info-headline"></h2>
             <div id="info-stats" class="info-stats"></div>
             <ul id="info-points" class="info-points"></ul>
+          </div>
+        </div>
+        <div class="vpanel sheet" data-panel="audio" hidden>
+          <div class="wbar"><span class="wgrow"></span><button id="audio-make" type="button" data-ico="audio" data-en="New audio overview">Audio Overview baru</button></div>
+          <p id="audio-status" class="status" role="status"></p>
+          <p id="audio-empty" class="wempty" data-en="No audio overview yet — make one from the Studio panel.">Belum ada Audio Overview — buat dari panel Studio.</p>
+          <div id="audio-result" class="audio-result" hidden>
+            <audio id="audio-player" controls></audio>
+            <a id="audio-download" class="clay-btn clay-btn-ghost" data-ico="download" data-en="Download .wav" download>Unduh .wav</a>
+            <div id="audio-transcript" class="audio-transcript"></div>
+          </div>
+        </div>
+        <div class="vpanel sheet" data-panel="video" hidden>
+          <div class="wbar"><span class="wgrow"></span><button id="video-make" type="button" data-ico="video" data-en="New video overview">Video Overview baru</button></div>
+          <p id="video-status" class="status" role="status"></p>
+          <p id="video-empty" class="wempty" data-en="No video overview yet — make one from the Studio panel.">Belum ada Video Overview — buat dari panel Studio.</p>
+          <div id="video-progress" class="video-progress" hidden><div id="video-bar" class="video-bar"></div></div>
+          <div id="video-result" class="video-result" hidden>
+            <video id="video-player" controls></video>
+            <a id="video-download" class="clay-btn clay-btn-ghost" data-ico="download" data-en="Download .mp4" download>Unduh .mp4</a>
           </div>
         </div>
         <div id="viewer-busy" class="sheet busy" hidden><p id="busy-label" class="busy-label"></p><i></i><i></i><i></i><i></i><i></i><i></i></div>
@@ -571,6 +604,14 @@
           <div class="studio-card">
             <div class="studio-card-head" data-ico="infographic"><span data-en="Infographic">Infografis</span></div>
             <button id="studio-infographic" class="clay-btn clay-btn-ghost" type="button" data-en="Open infographic">Buka infografis</button>
+          </div>
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="audio"><span data-en="Audio Overview">Audio Overview</span></div>
+            <button id="studio-audio" class="clay-btn clay-btn-ghost" type="button" data-en="Open audio overview">Buka Audio Overview</button>
+          </div>
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="video"><span data-en="Video Overview">Video Overview</span></div>
+            <button id="studio-video" class="clay-btn clay-btn-ghost" type="button" data-en="Open video overview">Buka Video Overview</button>
           </div>
         </div>
       </fieldset>
@@ -1498,6 +1539,77 @@ window.addEventListener('DOMContentLoaded', () => {
     finally { $('#infographic-pdf').disabled = false; }
   });
 
+  // ---------- Audio Overview: a two-host podcast across every active source (Gemini writes
+  // the script, Piper TTS on the server reads it aloud — see /api/podcast/script and
+  // /api/podcast/audio). Not session-persisted (the audio blob is regenerated on reload).
+  function showTranscript(script) {
+    $('#audio-transcript').replaceChildren(...script.lines.map(line => {
+      const row = document.createElement('div'); row.className = 'audio-line';
+      row.append(Object.assign(document.createElement('b'), {textContent: (line.s === 'A' ? script.hosts[0] : script.hosts[1]) + ':'}),
+                 Object.assign(document.createElement('span'), {textContent: line.t}));
+      return row;
+    }));
+  }
+  async function makeAudio() {
+    const actives = activeSources();
+    if (!actives.length) { status('#audio-status', L('Select at least one source first.', 'Pilih minimal satu sumber dulu.'), true); return; }
+    $('#audio-make').disabled = true;
+    let script;
+    const done1 = working('#audio-status', L('Writing the script…', 'Menulis naskah…'), L('Writing the podcast script', 'Menulis naskah podcast'));
+    try {
+      script = await post('/api/podcast/script', {title: actives.length > 1 ? L('These sources', 'Sumber-sumber ini') : title(), sources: sourcesPayload('all'), lang: (doc && doc.lang) || 'id-ID'});
+      done1(); showTranscript(script);
+      $('#audio-empty').hidden = true; $('#audio-result').hidden = false; viewer.show('audio');
+    } catch (cause) { done1(); failed('#audio-status', cause); $('#audio-make').disabled = false; return; }
+    const done2 = working('#audio-status', L('Recording the voices…', 'Merekam suara…'), L('Synthesizing the audio', 'Mensintesis audio'));
+    try {
+      const c = await caps();
+      const resp = await fetch('/api/podcast/audio', {method: 'POST', headers: {'Content-Type': 'application/json', 'X-Build-Token': c.token}, body: JSON.stringify({lines: script.lines, lang: script.lang})});
+      done2();
+      if (!resp.ok) throw Error((await resp.json().catch(() => ({}))).error || L('The audio could not be made.', 'Audio tidak bisa dibuat.'));
+      const blob = await resp.blob(), url = URL.createObjectURL(blob);
+      $('#audio-player').src = url;
+      $('#audio-download').href = url;
+      $('#audio-download').download = (title() + L(' - audio overview.wav', ' - audio overview.wav')).replace(/[\\/:*?"<>|]+/g, '-');
+      status('#audio-status', L('Audio Overview ready.', 'Audio Overview siap.'));
+    } catch (cause) { done2(); failed('#audio-status', cause); }
+    finally { $('#audio-make').disabled = false; }
+  }
+  $('#audio-make').addEventListener('click', makeAudio);
+  $('#studio-audio').addEventListener('click', () => { if (!$('#audio-result').hidden) viewer.show('audio'); else makeAudio(); });
+
+  // ---------- Video Overview: a narrated slideshow across every active source — a background
+  // job (slides -> per-slide PNG + Piper narration -> ffmpeg), polled like an APK/EXE build.
+  // Not session-persisted (the file lives under the job's id on the server, not in the browser).
+  async function makeVideo() {
+    const actives = activeSources();
+    if (!actives.length) { status('#video-status', L('Select at least one source first.', 'Pilih minimal satu sumber dulu.'), true); return; }
+    $('#video-make').disabled = true;
+    $('#video-empty').hidden = true; $('#video-result').hidden = true; $('#video-progress').hidden = false; $('#video-bar').style.width = '0%';
+    viewer.show('video');
+    status('#video-status', L('Starting…', 'Memulai…'));
+    try {
+      const r = await post('/api/video-overview', {title: actives.length > 1 ? L('These sources', 'Sumber-sumber ini') : title(), sources: sourcesPayload('all'), lang: (doc && doc.lang) || 'id-ID', work: window.NotebookWork ? NotebookWork.context() : ''});
+      let job = {status: 'queued', progress: 0};
+      while (job.status !== 'done') {
+        await new Promise(resolve => setTimeout(resolve, 1200));
+        const check = await fetch('/api/jobs/' + r.id);
+        if (!check.ok) throw Error(L('The job status is not available.', 'Status proses tidak tersedia.'));
+        job = await check.json();
+        status('#video-status', job.message || '');
+        $('#video-bar').style.width = Math.round((Number(job.progress) || 0) * 100) + '%';
+        if (job.status === 'failed') throw Error(job.message || L('The video could not be made.', 'Video tidak bisa dibuat.'));
+      }
+      $('#video-progress').hidden = true;
+      $('#video-player').src = job.download; $('#video-download').href = job.download;
+      $('#video-result').hidden = false;
+      status('#video-status', L('Video Overview ready.', 'Video Overview siap.'));
+    } catch (cause) { $('#video-progress').hidden = true; failed('#video-status', cause); }
+    finally { $('#video-make').disabled = false; }
+  }
+  $('#video-make').addEventListener('click', makeVideo);
+  $('#studio-video').addEventListener('click', () => { if (!$('#video-result').hidden) viewer.show('video'); else makeVideo(); });
+
   // ---------- Translation (a few pages per request; done pages are kept)
   function showTranslation() {
     if (!doc) return;
@@ -1813,7 +1925,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!c || !c.paywall) return;
     const has = new Set(c.entitlements || []);
     if (window.NotebookWork) NotebookWork.lock(!has.has('ai'));
-    for (const [sel, need, plan] of [['#summary-make', 'ai', 'Medium'], ['#translate-make', 'ai', 'Medium'], ['#ask-open', 'ai', 'Medium'], ['#research-open', 'ai', 'Medium']]) {
+    for (const [sel, need, plan] of [['#summary-make', 'ai', 'Medium'], ['#translate-make', 'ai', 'Medium'], ['#ask-open', 'ai', 'Medium'], ['#research-open', 'ai', 'Medium'], ['#studio-audio', 'podcast', 'Pro'], ['#studio-video', 'podcast', 'Pro']]) {
       const button = $(sel);
       if (!button || has.has(need)) continue;
       button.classList.add('plan-lock');
