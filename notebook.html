@@ -118,6 +118,10 @@
   .chat-new:hover{background:#FF5C28;color:#fff;border-color:#E04E1F}
   .ask-log{flex:1;overflow-y:auto;padding:24px 18px 12px;display:flex;flex-direction:column;gap:22px;scroll-behavior:smooth}
   .ask-log>*{width:100%;max-width:760px;margin:0 auto}
+  .chat-summary{padding:8px 2px 20px;border-bottom:1px solid #EFE9DC}
+  .chat-summary h2{margin:0 0 14px;font:800 21px 'Fraunces',Georgia,serif;color:#1C1917}
+  .chat-summary .result{overflow:visible}
+  .ask:has(.chat-summary:not([hidden])) .ask-hello{margin:0}
   .ask-hello{margin:auto;text-align:center;color:#57534E}
   .hello-mark{width:52px;height:52px;margin:0 auto 12px;border-radius:16px;display:grid;place-items:center;font-size:24px;color:#fff;background:linear-gradient(135deg,#FF7A45,#FF5C28);box-shadow:0 10px 24px rgba(255,92,40,.3)}
   .ask-hello h3{margin:0 0 6px;font:800 24px 'Fraunces',Georgia,serif;color:#1C1917}
@@ -371,7 +375,6 @@
       <div class="viewer-top">
         <div class="vtabs" role="tablist">
           <button type="button" role="tab" data-view="doc" hidden data-ico="doc" data-en="Document">Dokumen</button>
-          <button type="button" role="tab" data-view="summary" hidden data-ico="summary" data-en="Summary">Ringkasan</button>
           <button type="button" role="tab" data-view="translate" hidden data-ico="translate" data-en="Translation">Terjemahan</button>
           <button type="button" role="tab" data-view="ask" hidden data-ico="ask" data-en="Chat">Chat</button>
           <button type="button" role="tab" data-view="notes" hidden data-ico="note" data-en="Notes">Catatan</button>
@@ -381,7 +384,6 @@
       <div class="viewer-body">
          <div id="viewer-empty" class="viewer-empty sheet"><span>✦</span><h2 data-en="Choose a PDF to start">Pilih PDF untuk mulai</h2></div>
         <div class="vpanel" data-panel="doc" hidden><div id="doc-pages" class="doc-pages"></div></div>
-        <div class="vpanel sheet" data-panel="summary" hidden><div id="summary-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Ringkasan (bisa diedit)" data-en-aria="Summary (editable)"></div><div id="summary-tools" class="mini" hidden><button id="summary-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="summary-save" type="button" data-ico="download">.txt</button></div></div>
         <div class="vpanel sheet" data-panel="translate" hidden><div id="translate-pager" class="pager" hidden><button id="tr-prev" type="button" aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><span id="tr-page"></span><button id="tr-next" type="button" aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div><div id="translate-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Terjemahan (bisa diedit)" data-en-aria="Translation (editable)"></div><div id="translate-tools" class="mini" hidden><button id="translate-save" type="button" data-ico="download">.txt</button></div></div>
         <div class="vpanel sheet work" data-panel="notes" hidden>
           <div class="wbar" id="notes-bar"><button type="button" class="fmt" data-cmd="h3" title="Subjudul" data-en-title="Subheading">H</button><button type="button" class="fmt" data-cmd="bold" title="Tebal (Ctrl+B)" data-en-title="Bold (Ctrl+B)"><b>B</b></button><button type="button" class="fmt" data-cmd="italic" title="Miring (Ctrl+I)" data-en-title="Italic (Ctrl+I)"><i>I</i></button><button type="button" class="fmt" data-cmd="insertUnorderedList" title="Daftar" data-en-title="List">•</button><button type="button" class="fmt" data-cmd="quote" title="Kutipan" data-en-title="Quote">❝</button><span class="wsep"></span><button id="notes-quotes" type="button" data-ico="mark" data-en="Insert highlights">Sisipkan stabilo</button><button id="notes-summary" type="button" data-ico="summary" data-en="Insert AI summary">Sisipkan ringkasan AI</button><span class="wgrow"></span><button id="notes-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="notes-docx" type="button" data-ico="download">.docx</button></div>
@@ -404,6 +406,11 @@
           <div class="chat-top"><span id="chat-doc" class="chat-doc" hidden></span>
             <button type="button" id="ask-new" class="chat-new" data-en="＋ New chat">＋ Chat baru</button></div>
           <div id="ask-log" class="ask-log" aria-live="polite">
+            <section id="chat-summary" class="chat-summary" hidden aria-label="Ringkasan" data-en-aria="Summary">
+              <h2 data-en="Summary">Ringkasan</h2>
+              <div id="summary-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Ringkasan (bisa diedit)" data-en-aria="Summary (editable)"></div>
+              <div id="summary-tools" class="mini" hidden><button id="summary-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="summary-save" type="button" data-ico="download">.txt</button></div>
+            </section>
             <div id="ask-hello" class="ask-hello"><div class="hello-mark" aria-hidden="true">✦</div>
               <h3 data-en="Ask anything about this document">Tanya apa saja tentang dokumen ini</h3>
               <div id="ask-chips" class="ask-chips"></div></div>
@@ -424,7 +431,7 @@
 // below); the newest result comes to the front.
 window.addEventListener('DOMContentLoaded', () => {
   const tabs = [...document.querySelectorAll('.vtabs [data-view]')], panels = [...document.querySelectorAll('.vpanel')];
-  const boxes = {summary: '#summary-out', translate: '#translate-out'};
+  const boxes = {translate: '#translate-out'};
   let current = null, working = false;
   const show = view => {
     current = view;
@@ -647,7 +654,7 @@ window.addEventListener('DOMContentLoaded', () => {
       doc = {name, blob, pages: pdf.numPages, text, chapters: await chaptersOf(pdf), highlights: []};
       hlInfo();
       summary = null; translations = {};
-      ['#summary-out', '#summary-tools', '#translate-out', '#translate-pager', '#translate-tools'].forEach(s => { $(s).hidden = true; });
+      ['#chat-summary', '#summary-out', '#summary-tools', '#translate-out', '#translate-pager', '#translate-tools'].forEach(s => { $(s).hidden = true; });
       ['#summary-status', '#translate-status'].forEach(s => status(s, ''));
       $('#translate-make').textContent = L('Translate', 'Terjemahkan');
       askReset();
@@ -939,6 +946,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const out = $('#summary-out');
     richText(out, summary.text);
     out.hidden = false; $('#summary-tools').hidden = false;
+    $('#chat-summary').hidden = false;
+    viewer.show('ask');
+    $('#ask-log').scrollTop = 0;
   }
   const length = 'sedang';
   $('#summary-make').addEventListener('click', async () => {
