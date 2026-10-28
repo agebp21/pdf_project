@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 28 Oktober 2026 — live `dedb46c`: input rentang Pisah PDF otomatis menyorot thumbnail saat pengguna mengetik (debounce 120 ms), tanpa harus keluar dari kolom. Browser lokal/live memverifikasi `1-2,4` memilih 1/2/4 lalu `2-3` memperbarui ke 2/3 saat fokus tetap di input; tes parser rentang lulus. Backup `/root/pdf_project-code-backup-20261028-split-auto-dedb46c.tgz`; kedua layanan aktif, Organize/API HTTPS 200.
+
 - 28 Oktober 2026 — live `825a826`: panel Pisah PDF diringkas menjadi pilihan ikon Rentang/Halaman, input rentang jelas, tombol Pilih semua/Kosongkan, pratinjau kecil, dan tombol aksi di bawah panel. Rentang `1-2,4` memilih tiga halaman; klik thumbnail beralih ke mode Halaman. Hasil tetap satu PDF. JS semua lulus, Python 233/233, browser lokal/live desktop-HP lulus. Backup `/root/pdf_project-code-backup-20261028-split-simple-825a826.tgz`; kedua layanan aktif, Organize/API/admin HTTPS 200.
 
 - 28 Oktober 2026 — live `260be94`: tab Organize diurutkan Gabung, Pisah, Edit, Kompres; mode Edit menampilkan alat edit dan tombol utama membuka editor PDF. Tes Organize/toolbar desktop-HP dan Python 233/233 lulus; satu tes toolbar lama diselaraskan dengan ikon pensil homepage yang sudah disembunyikan. Browser lokal/live empat tab dan responsif lulus; backup `/root/pdf_project-code-backup-20261028-org-tabs-260be94.tgz`; kedua layanan aktif, Organize/API/admin HTTPS 200.
