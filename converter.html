@@ -68,6 +68,7 @@
   .org-side{background:#fff;border-top:1px solid #eee;display:flex;flex-direction:column;min-width:0}
   .org-side .org-foot{order:1}
   .org-side .org-cover-preview{order:2}
+  .org-side .org-merge-covers{order:2}
   .org-side .org-sel{order:3}
   @media(min-width:1024px){.org-side{border-top:0;border-left:1px solid #eee;align-self:start}}
   .org-side-title{position:relative;margin:0;padding:.75rem 1.25rem .6rem;font-size:18px;font-weight:800;text-align:center}
@@ -169,6 +170,11 @@
   .org-go{width:100%;background:#ef2d2d;color:#fff;border:0;border-radius:12px;padding:.75rem;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.35)}
   .org-cell{position:relative;min-width:0}
   #organizeGrid{grid-template-columns:repeat(auto-fill,minmax(115px,150px));gap:14px;justify-content:start}
+  #organizeGrid.merge-files{grid-template-columns:repeat(auto-fill,minmax(160px,200px))}
+  .org-merge-file-card{width:100%;text-align:center}
+  .org-merge-file-card img{width:100%;aspect-ratio:3/4;object-fit:contain;background:#f7f4ed;border-radius:4px;filter:drop-shadow(0 2px 5px rgba(0,0,0,.16))}
+  .org-merge-file-card strong{display:block;max-width:100%;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:12px}
+  .org-merge-file-card small{font-size:11px;color:#6b7280}
   .org-card{background:#fff;border:1px solid transparent;border-radius:10px;padding:12px 11px 7px;display:flex;flex-direction:column;align-items:stretch;gap:5px;cursor:move;position:relative;box-shadow:0 3px 12px rgba(31,41,55,.07);height:100%;transition:box-shadow .15s}
   .org-card:hover,.org-card:focus-within{box-shadow:0 5px 18px rgba(31,41,55,.12)}
   .org-card.sel{border-color:#36b87d;background:#fff}
@@ -206,6 +212,12 @@
   .org-cover-empty{display:block;background:#fff;border:1px solid #eee}
   .org-cover-preview [hidden]{display:none!important}
   .org-cover-preview span:last-child{font-size:12px;font-weight:700;line-height:1.4}
+  .org-merge-covers{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:12px 1.25rem 16px}
+  .org-merge-covers.single{grid-template-columns:1fr}
+  .org-merge-cover{min-width:0;padding:7px;background:#fff;border:1px solid #e7e2f2;border-radius:10px;cursor:pointer;color:#1f2937;text-align:center}
+  .org-merge-cover:hover,.org-merge-cover:focus-visible{border-color:#1a3c34;box-shadow:0 3px 12px #1a3c3426}
+  .org-merge-cover img{display:block;width:100%;max-height:220px;aspect-ratio:3/4;object-fit:contain;background:#f7f4ed;border-radius:5px}
+  .org-merge-cover span{display:block;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:700}
   #orgReaderDialog{width:min(96vw,1300px);max-width:96vw;max-height:94dvh;padding:18px 14px 14px;border:1px solid #e7e2f2;border-radius:18px;background:#fff;box-shadow:0 24px 80px #11182755;overflow:auto}
   #orgReaderDialog::backdrop{background:#111827b8}
   .org-reader-close{position:sticky;top:0;float:right;z-index:10;width:34px;height:34px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#374151;cursor:pointer;font-size:22px;line-height:1}
@@ -606,6 +618,7 @@ function renderHeader(){
           </span>
           <span>${L('Open book preview','Buka pratinjau buku')}<br><small id="orgCoverCount"></small></span>
         </button>
+        <div id="orgMergeCovers" class="org-merge-covers is-hidden" aria-label="${L('File previews','Pratinjau file')}"></div>
       </aside>
     </div>`;
   }
@@ -1572,6 +1585,40 @@ window.orgRemoveFile=(fi)=>{
 };
 // Quote-safe JS arg inside double-quoted HTML attributes ("blank-1" -> &quot;blank-1&quot;).
 const orgArg=v=>JSON.stringify(v).replace(/"/g,'&quot;');
+let orgMergeDragFi=null;
+function renderOrgMergeFileGrid(grid){
+  const groups=new Map();
+  organizeOrder.forEach(code=>{
+    if(typeof code!=='number') return;
+    const fi=Math.floor(code/1000000);
+    if(!groups.has(fi)) groups.set(fi,{first:code,count:0});
+    groups.get(fi).count++;
+  });
+  grid.replaceChildren();
+  for(const [fi,group] of groups){
+    const cell=document.createElement('div'); cell.className='org-cell'; cell.draggable=true;
+    cell.addEventListener('dragstart',e=>{ orgMergeDragFi=fi; e.dataTransfer.effectAllowed='move'; e.dataTransfer.setData('text/plain',String(fi)); });
+    cell.addEventListener('dragover',e=>{ e.preventDefault(); e.dataTransfer.dropEffect='move'; });
+    cell.addEventListener('drop',e=>{
+      e.preventDefault(); e.stopPropagation();
+      const from=orgMergeDragFi; orgMergeDragFi=null;
+      if(from===null||from===fi) return;
+      const old=organizeOrder.slice(), order=[...groups.keys()];
+      order.splice(order.indexOf(from),1); order.splice(order.indexOf(fi),0,from);
+      organizeOrder=[...order.flatMap(index=>old.filter(code=>typeof code==='number'&&Math.floor(code/1000000)===index)),...old.filter(code=>typeof code!=='number')];
+      renderOrganizeGrid();
+    });
+    cell.addEventListener('dragend',()=>{orgMergeDragFi=null;});
+    const card=document.createElement('button'); card.type='button'; card.className='org-card org-merge-file-card';
+    card.title=files[fi]?.name||'';
+    card.addEventListener('click',()=>orgMergeCoverOpen(group.first));
+    const img=document.createElement('img'); img.alt=L(`Cover of file ${fi+1}`,`Sampul file ${fi+1}`);
+    const name=document.createElement('strong'); name.textContent=files[fi]?.name||L(`File ${fi+1}`,`File ${fi+1}`);
+    const count=document.createElement('small'); count.textContent=L(`${group.count} pages`,`${group.count} halaman`);
+    card.append(img,name,count); cell.append(card); grid.append(cell);
+    orgRenderPage(group.first).then(url=>{if(img.isConnected&&url) img.src=url;});
+  }
+}
 function renderOrganizeGrid(){
   const grid=$('#organizeGrid');
   if(!grid) return;
@@ -1580,7 +1627,8 @@ function renderOrganizeGrid(){
   document.getElementById('orgEmpty')?.classList.toggle('is-hidden',hasPages);
   grid.classList.toggle('is-hidden',!hasPages);
   document.getElementById('orgSide')?.classList.toggle('is-hidden',!hasPages);
-  document.getElementById('orgCoverPreview')?.classList.toggle('is-hidden',!hasPages);
+  document.getElementById('orgCoverPreview')?.classList.toggle('is-hidden',!hasPages || orgMode==='merge');
+  document.getElementById('orgMergeCovers')?.classList.toggle('is-hidden',!hasPages || orgMode!=='merge');
   if(!hasPages){ orgReaderCloseDialog(); return; }
   paintOrgFiles();
   const nSel=organizeSelected.size;
@@ -1588,6 +1636,12 @@ function renderOrganizeGrid(){
   if(box) box.classList.toggle('is-hidden',nSel===0||orgMode!=='edit');
   const cnt=$('#orgSelCount');
   if(cnt) cnt.textContent=nSel;
+  grid.classList.toggle('merge-files',orgMode==='merge');
+  if(orgMode==='merge'){
+    renderOrgMergeFileGrid(grid);
+    orgCoverUpdate();
+    return;
+  }
   grid.innerHTML=organizeOrder.map((origIdx,pos)=>{
     const sel=organizeSelected.has(origIdx);
     const rot=organizeRotations[origIdx]||0;
@@ -1785,6 +1839,11 @@ window.orgReaderOpen=()=>{
   dialog.showModal();
   orgReaderBuild();
 };
+window.orgMergeCoverOpen=code=>{
+  orgCoverFocus=code;
+  orgReaderOpen();
+  orgFlipTo(organizeOrder.indexOf(code));
+};
 let orgCoverToken=0, orgCoverFocus=null;
 function orgCoverCode(){
   if(orgCoverFocus!==null && organizeOrder.includes(orgCoverFocus)) return orgCoverFocus;
@@ -1792,6 +1851,25 @@ function orgCoverCode(){
 }
 async function orgCoverUpdate(){
   const token=++orgCoverToken, code=orgCoverCode();
+  if(orgMode==='merge'){
+    const box=document.getElementById('orgMergeCovers');
+    if(!box) return;
+    const firstByFile=new Map();
+    organizeOrder.forEach(page=>{ if(typeof page==='number'){ const fi=Math.floor(page/1000000); if(!firstByFile.has(fi)) firstByFile.set(fi,page); } });
+    box.replaceChildren();
+    box.classList.toggle('single',firstByFile.size===1);
+    for(const [fi,page] of firstByFile){
+      const button=document.createElement('button'); button.type='button'; button.className='org-merge-cover';
+      button.title=files[fi]?.name||'';
+      button.setAttribute('aria-label',L(`Preview ${files[fi]?.name||'file'}`,`Pratinjau ${files[fi]?.name||'file'}`));
+      button.onclick=()=>orgMergeCoverOpen(page);
+      const img=document.createElement('img'); img.alt=L(`Cover of file ${fi+1}`,`Sampul file ${fi+1}`);
+      const name=document.createElement('span'); name.textContent=files[fi]?.name||L(`File ${fi+1}`,`File ${fi+1}`);
+      button.append(img,name); box.append(button);
+      orgRenderPage(page).then(url=>{ if(token===orgCoverToken && button.isConnected && url) img.src=url; });
+    }
+    return;
+  }
   const cover=document.getElementById('orgCoverPreview'), image=document.getElementById('orgCoverImage');
   if(!cover || !image || code===undefined) return;
   const pos=organizeOrder.indexOf(code), next=organizeOrder[pos+1];
@@ -2153,7 +2231,8 @@ function updateFileUI({preserveError=false}={}){
     document.getElementById('orgEmpty')?.classList.toggle('is-hidden',loaded);
     document.getElementById('organizeGrid')?.classList.toggle('is-hidden',!loaded);
     document.getElementById('orgSide')?.classList.toggle('is-hidden',!loaded);
-    document.getElementById('orgCoverPreview')?.classList.toggle('is-hidden',!loaded || !organizeOrder.length);
+    document.getElementById('orgCoverPreview')?.classList.toggle('is-hidden',!loaded || !organizeOrder.length || orgMode==='merge');
+    document.getElementById('orgMergeCovers')?.classList.toggle('is-hidden',!loaded || !organizeOrder.length || orgMode!=='merge');
     paintOrgMode();
     if(!loaded){
       organizeOrder=[]; organizeSelected.clear(); organizeRotations={}; orgThumbCache=new Map(); orgBlankSeq=0; orgBlankImg={}; orgBlankTarget=null;

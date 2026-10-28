@@ -106,6 +106,7 @@ async function main(){
   // Viewer needs real page renders: without a document it stays closed.
   w.qaViewer0();
   assert.equal(w.document.getElementById('orgViewer'),null,'no viewer without document');
+  w.orgModeSet('split');
   // "+" inserts a real blank page (not a duplicate) right after the card.
   assert.equal(JSON.stringify(w.qaBlank()),JSON.stringify([0,'blank-1',1]),'blank inserted at position 1');
   assert.ok(w.document.getElementById('organizeGrid').innerHTML.includes('Blank page'),'blank card renders');
@@ -125,11 +126,17 @@ async function main(){
   assert.ok(w.document.getElementById('drop').classList.contains('is-hidden'),'drop hidden for organize');
   w.qaTool('merge-pdf');
   assert.ok(!w.document.getElementById('drop').classList.contains('is-hidden'),'drop returns for merge');
-  // The cover appears below the mode buttons; the full book opens only on click.
+  // Merge shows one cover per source file; Split keeps the page spread.
   w.qaTool('organize-pdf');
+  w.orgModeSet('merge');
   w.qaLoad();
   w.qaPreview();
-  assert.equal(vis('orgCoverPreview'),true,'cover thumbnail shows with pages');
+  assert.equal(vis('orgMergeCovers'),true,'merge file covers show with pages');
+  assert.equal(w.document.querySelectorAll('#orgMergeCovers .org-merge-cover').length,1,'one cover for one source file');
+  assert.equal(vis('orgCoverPreview'),false,'page spread hidden in merge');
+  w.orgModeSet('split');
+  assert.equal(vis('orgCoverPreview'),true,'page spread shows in split');
+  assert.equal(vis('orgMergeCovers'),false,'merge file covers hide in split');
   assert.equal(w.document.querySelector('#orgSide > #orgCoverPreview')?.previousElementSibling?.classList.contains('org-foot'),true,'cover sits directly below sidebar action');
   w.orgReaderOpen();
   assert.equal(w.document.getElementById('orgReaderDialog').open,true,'book popup opens');
