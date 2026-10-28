@@ -195,10 +195,12 @@
   #orgFootExtra:empty{display:none}
   #orgFootExtra p{margin-top:0}
   /* Compact cover in the workspace; the full flipbook lives in a dialog. */
-  .org-cover-preview{display:flex;align-items:center;gap:12px;width:calc(100% - 2.5rem);margin:12px auto 16px;padding:8px;text-align:left;background:#fff;border:1px solid #e7e2f2;border-radius:12px;cursor:pointer;color:#1f2937}
+  .org-cover-preview{display:flex;flex-direction:column;align-items:stretch;gap:7px;width:calc(100% - 2.5rem);margin:12px auto 16px;padding:8px;text-align:center;background:#fff;border:1px solid #e7e2f2;border-radius:12px;cursor:pointer;color:#1f2937}
   .org-cover-preview:hover,.org-cover-preview:focus-visible{border-color:#1a3c34;box-shadow:0 3px 12px #1a3c3426}
-  .org-cover-preview img,.org-cover-placeholder{width:86px;height:112px;object-fit:contain;background:#f7f4ed;border-radius:7px;flex:none}
+  .org-cover-pages{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:4px;width:100%}
+  .org-cover-preview img,.org-cover-placeholder,.org-cover-empty{width:100%;aspect-ratio:3/4;object-fit:contain;background:#f7f4ed;border-radius:5px;min-width:0}
   .org-cover-placeholder{display:grid;place-items:center;color:#777;font-size:11px}
+  .org-cover-empty{display:block;background:#fff;border:1px solid #eee}
   .org-cover-preview [hidden]{display:none!important}
   .org-cover-preview span:last-child{font-size:12px;font-weight:700;line-height:1.4}
   #orgReaderDialog{width:min(96vw,1300px);max-width:96vw;max-height:94dvh;padding:18px 14px 14px;border:1px solid #e7e2f2;border-radius:18px;background:#fff;box-shadow:0 24px 80px #11182755;overflow:auto}
@@ -593,8 +595,12 @@ function renderHeader(){
         </div>
         <div class="org-foot"><div id="orgFootExtra"></div><button onclick="orgPrimaryAction()" class="org-go"><span id="orgGoText">Organize</span> <span aria-hidden="true">→</span></button></div>
         <button id="orgCoverPreview" class="org-cover-preview is-hidden" type="button" onclick="orgReaderOpen()" aria-label="${L('Open book preview','Buka pratinjau buku')}">
-          <img id="orgCoverImage" alt="${L('Book cover','Sampul buku')}" hidden>
-          <span id="orgCoverPlaceholder" class="org-cover-placeholder">${L('Cover','Sampul')}</span>
+          <span class="org-cover-pages">
+            <img id="orgCoverImage" alt="${L('Selected page','Halaman pilihan')}" hidden>
+            <span id="orgCoverPlaceholder" class="org-cover-placeholder">${L('Page','Halaman')}</span>
+            <img id="orgCoverNextImage" alt="${L('Next page','Halaman berikutnya')}" hidden>
+            <span id="orgCoverNextPlaceholder" class="org-cover-empty" aria-hidden="true"></span>
+          </span>
           <span>${L('Open book preview','Buka pratinjau buku')}<br><small id="orgCoverCount"></small></span>
         </button>
       </aside>
@@ -1776,18 +1782,29 @@ window.orgReaderOpen=()=>{
   dialog.showModal();
   orgReaderBuild();
 };
-let orgCoverToken=0;
+let orgCoverToken=0, orgCoverFocus=null;
+function orgCoverCode(){
+  if(orgCoverFocus!==null && organizeSelected.has(orgCoverFocus) && organizeOrder.includes(orgCoverFocus)) return orgCoverFocus;
+  return organizeOrder.find(code=>organizeSelected.has(code)) ?? organizeOrder[0];
+}
 async function orgCoverUpdate(){
-  const token=++orgCoverToken, code=organizeOrder[0];
+  const token=++orgCoverToken, code=orgCoverCode();
   const cover=document.getElementById('orgCoverPreview'), image=document.getElementById('orgCoverImage');
   if(!cover || !image || code===undefined) return;
+  const pos=organizeOrder.indexOf(code), next=organizeOrder[pos+1];
   const count=document.getElementById('orgCoverCount');
-  if(count) count.textContent=L(`${organizeOrder.length} pages`,`${organizeOrder.length} halaman`);
-  const url=typeof code==='number' ? await orgRenderPage(code) : (orgBlankImg[code]||'');
-  if(token!==orgCoverToken || organizeOrder[0]!==code || !cover.isConnected) return;
+  const selected=organizeSelected.has(code);
+  if(count) count.textContent=selected ? L(`Selected page ${pos+1}${next===undefined?'':`–${pos+2}`}`,`Halaman ${pos+1}${next===undefined?'':`–${pos+2}`} dipilih`) : L(`${organizeOrder.length} pages`,`${organizeOrder.length} halaman`);
+  const render=page=>page===undefined?'':typeof page==='number'?orgRenderPage(page):Promise.resolve(orgBlankImg[page]||'');
+  const [url,nextUrl]=await Promise.all([render(code),render(next)]);
+  if(token!==orgCoverToken || orgCoverCode()!==code || !cover.isConnected) return;
   image.hidden=!url;
   image.src=url||'';
   document.getElementById('orgCoverPlaceholder').hidden=!!url;
+  const nextImage=document.getElementById('orgCoverNextImage');
+  nextImage.hidden=!nextUrl;
+  nextImage.src=nextUrl||'';
+  document.getElementById('orgCoverNextPlaceholder').hidden=!!nextUrl;
 }
 function orgPrevKey(code){ return code+'|'+(organizeRotations[code]||0); }
 function orgPreviewFace(code,pos){
@@ -2020,8 +2037,8 @@ window.orgDeleteOne=(pos)=>{ const idx=organizeOrder[pos]; organizeOrder.splice(
 window.orgInsertDup=(idx)=>{ const at=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(at<0?organizeOrder.length:at+1,0,fresh); renderOrganizeGrid(); };
 window.orgInsertBlankAt=(at)=>{ at=Math.max(0,Math.min(organizeOrder.length,at)); organizeOrder.splice(at,0,'blank-'+(++orgBlankSeq)); renderOrganizeGrid(); log('Org blank page at '+(at+1)); };
 window.orgCardClick=(e,idx)=>{ if(orgDragged){ orgDragged=false; return; } if(Date.now()-orgDragEnd<350) return; if(e.target.closest('button,input')) return; if(orgMode!=='merge'){ orgCheck(idx,!organizeSelected.has(idx)); } if(!orgHand) orgFlipTo(organizeOrder.indexOf(idx)); };
-window.orgCheck=(idx, on)=>{ const input=$('#orgSplitPages'); if(input) input.value=''; if(on) organizeSelected.add(idx); else organizeSelected.delete(idx); renderOrganizeGrid(); }
-window.toggleAllOrg=(on)=>{ const input=$('#orgSplitPages'); if(input) input.value=''; if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); renderOrganizeGrid(); }
+window.orgCheck=(idx, on)=>{ const input=$('#orgSplitPages'); if(input) input.value=''; if(on){ organizeSelected.add(idx); orgCoverFocus=idx; } else { organizeSelected.delete(idx); if(orgCoverFocus===idx) orgCoverFocus=null; } renderOrganizeGrid(); }
+window.toggleAllOrg=(on)=>{ const input=$('#orgSplitPages'); if(input) input.value=''; if(on) organizeSelected=new Set(organizeOrder); else organizeSelected.clear(); orgCoverFocus=null; renderOrganizeGrid(); }
 window.orgDelete=()=>{ if(organizeSelected.size===0) return showError(L('Tick the pages to delete first','Centang dulu halaman yang mau dihapus')); organizeOrder=organizeOrder.filter(i=>!organizeSelected.has(i)); organizeSelected.clear(); orgPruneFills(); renderOrganizeGrid(); log('Org delete left '+organizeOrder.length); }
 window.orgRotate=(deg)=>{ if(organizeSelected.size===0) return showError(L('Tick pages first','Centang halaman dulu')); for(const idx of organizeSelected) organizeRotations[idx]=(organizeRotations[idx]||0)+deg; renderOrganizeGrid(); }
 window.orgDuplicate=()=>{ if(organizeSelected.size===0) return showError(L('Tick pages first','Centang halaman dulu')); const sel=[...organizeSelected].sort((a,b)=>organizeOrder.indexOf(a)-organizeOrder.indexOf(b)); sel.forEach(idx=>{ const pos=organizeOrder.indexOf(idx); const fresh=(typeof idx==='string')?('blank-'+(++orgBlankSeq)):idx; organizeOrder.splice(pos+1,0,fresh); }); renderOrganizeGrid(); }
