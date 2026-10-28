@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 28 Oktober 2026 ? live `03093ae`: mode Gabung menampilkan satu thumbnail sampul per file di area tengah dan sidebar; tambahan file muncul bersebelahan. Drag kartu memindahkan seluruh halaman file sebagai satu kelompok. Mode Pisah tetap menampilkan tiap halaman. Browser lokal dan live memverifikasi dua file, urutan drag, popup, dan 5 halaman saat beralih ke Pisah; JS 59/59 dan Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261028-mergefiles-03093ae.tgz`; kedua layanan aktif; Organize/Flipbook/API/admin HTTPS 200.
+
 - 28 Oktober 2026 ? live `57818a7`: koreksi thumbnail sidebar yang sebelumnya berada di bawah viewport; tombol utama dan pratinjau kini langsung terlihat. Klik halaman pada Gabung maupun Pisah mengganti pasangan halaman di sidebar. Browser live memverifikasi keduanya serta posisi thumbnail dalam viewport; JS 59/59 dan Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261028-visible-57818a7.tgz`; kedua layanan aktif; Organize/Flipbook/API/admin HTTPS 200.
 
 - 28 Oktober 2026 ? live `8789b21`: thumbnail sidebar Organize otomatis menampilkan halaman yang dipilih dan halaman berikutnya secara berdampingan; saat halaman terakhir dipilih sisi kanan kosong, dan saat pilihan dibatalkan kembali ke pilihan sebelumnya. Browser memverifikasi perpindahan gambar/halaman; JS 59/59 dan Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261028-spread-8789b21.tgz`; kedua layanan aktif; Organize/Flipbook/API/admin HTTPS 200.
