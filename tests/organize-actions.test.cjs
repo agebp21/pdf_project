@@ -148,7 +148,6 @@ async function main() {
   assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'split hides unrelated editing tools even with selection');
   w.orgModeSet('edit');
   assert.equal(tabActive(), 'edit', 'edit follows split in the mode tabs');
-  assert.ok(!w.document.querySelector('#orgEditTools').classList.contains('is-hidden'), 'edit tools show for loaded PDF');
   w.orgModeSet('merge');
   w.renderOrganizeGrid();
   assert.ok(w.document.querySelector('#orgSelBox').classList.contains('is-hidden'), 'merge hides the box');

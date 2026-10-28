@@ -150,12 +150,6 @@
   .org-tabs button:focus-visible{outline:2px solid #FF5C28;outline-offset:2px}
   @media (max-width:640px){.org-tabs{grid-template-columns:repeat(2,minmax(0,1fr))}.org-tabs .ot-d{white-space:normal}.org-tabs button{padding:.75rem .7rem;gap:.55rem}.org-tabs .ot-ic{width:36px;height:36px;font-size:14px}.org-tabs .ot-t{font-size:15px}.org-tabs .ot-d{font-size:11.5px}}
   /* Edit-mode toolbar above the preview: zoom, hand, text, shapes. */
-  .org-edittools{display:flex;flex-wrap:wrap;align-items:center;gap:.4rem;margin-bottom:.75rem}
-  .org-edittools button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .7rem;font-size:12px;font-weight:800;cursor:pointer;color:#374151;white-space:nowrap}
-  .org-edittools button.active{background:#FF5C28;border-color:#FF5C28;color:#fff}
-  .org-edittools input[type=text]{flex:2 1 120px;min-width:0;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .7rem;font-size:12px}
-  .org-edittools input[type=number]{flex:0 0 60px;width:60px;border:1px solid #e5e7eb;background:#fff;border-radius:999px;padding:.45rem .5rem;font-size:12px}
-  #orgZoomLabel{font-size:12px;font-weight:800;min-width:46px;text-align:center;color:#374151}
   #orgReader.org-hand{cursor:grab;overflow:auto;touch-action:none}
   #orgReader.org-hand:active{cursor:grabbing}
   #orgReader.org-zoomed{overflow:auto}
@@ -515,22 +509,6 @@ function renderHeader(){
           <button data-mode="edit" onclick="orgModeSet('edit')"><span class="ot-ic" style="background:#FAE8FF;color:#7E22CE">✎</span><span class="ot-tx"><span class="ot-t">${L('Edit','Edit')}</span><span class="ot-d">${L('Text & pictures','Teks & gambar')}</span></span></button>
           <button data-mode="compress" onclick="orgModeSet('compress')"><span class="ot-ic" style="background:#E4F3C2;color:#1A3C34">⇲</span><span class="ot-tx"><span class="ot-t">${L('Compress','Kompres')}</span><span class="ot-d">${L('Make the file smaller','Perkecil ukuran file')}</span></span></button>
         </div>
-        <div id="orgEditTools" class="org-edittools is-hidden">
-          <button onclick="orgZoomStep(-0.25)" title="Zoom out">−</button>
-          <span id="orgZoomLabel">100%</span>
-          <button onclick="orgZoomStep(0.25)" title="Zoom in">+</button>
-          <button id="orgHandBtn" onclick="orgHandToggle()" title="${L('Drag to pan','Seret untuk menggeser')}">✋ ${L('Hand','Geser')}</button>
-          <button onclick="orgOpenEditor()" title="${L('Open the editor: edit text like Word, pictures like PowerPoint','Buka editor: edit teks seperti Word, gambar seperti PowerPoint')}">✏️ ${L('Edit text & pictures','Edit teks & gambar')}</button>
-          <button onclick="orgEditTextToggle()" title="Add text">T Text</button>
-          <button onclick="orgEditShape('rect')" title="Add rectangle">▢</button>
-          <button onclick="orgEditShape('ellipse')" title="Add ellipse">⬯</button>
-          <button onclick="orgEditShape('line')" title="Add line">╲</button>
-          <span id="orgEditTextRow" class="is-hidden" style="display:contents">
-            <input id="orgEditText" type="text" maxlength="60" placeholder="Text…" aria-label="Text">
-            <input id="orgEditSize" type="number" value="14" min="1" step="1" aria-label="Size">
-            <button onclick="orgEditTextApply()">Add</button>
-          </span>
-        </div>
         <dialog id="orgReaderDialog" aria-label="${L('Book preview','Pratinjau buku')}" onclick="if(event.target===this)orgReaderCloseDialog()" onclose="orgReaderClosed()">
           <button class="org-reader-close" type="button" onclick="orgReaderCloseDialog()" aria-label="${L('Close preview','Tutup pratinjau')}">×</button>
         <div id="orgReader" class="is-hidden">
@@ -732,12 +710,6 @@ function paintOrgMode() {
   // The Merge/Split/Edit/Compress menu above the preview stays visible even
   // before a file is picked; only the mode toolboxes wait for pages.
   const loaded = files.length > 0;
-  const editTools = document.getElementById('orgEditTools');
-  if (editTools) editTools.classList.toggle('is-hidden', !loaded || orgMode !== 'edit');
-  const hand = document.getElementById('orgHandBtn');
-  if (hand) hand.classList.toggle('active', orgHand);
-  const zoom = document.getElementById('orgZoomLabel');
-  if (zoom) zoom.textContent = Math.round(orgZoom * 100) + '%';
   const split = document.getElementById('orgSplitTools');
   if (split) split.classList.toggle('is-hidden', !loaded || orgMode !== 'split');
   const goText = document.getElementById('orgGoText');
