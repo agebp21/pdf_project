@@ -29,8 +29,16 @@
   body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:-1;
     background:radial-gradient(700px 420px at 50% 0%,#EDE9FE 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
   .wrap{max-width:1500px;margin:0 auto;padding:12px 16px 56px}
-  .workspace{display:grid;grid-template-columns:320px minmax(0,1fr);grid-template-areas:"src view";gap:16px;align-items:start;margin-top:18px}
-  .sources{grid-area:src}.viewer{grid-area:view}
+  .workspace{display:grid;grid-template-columns:320px minmax(0,1fr) 320px;grid-template-areas:"src view studio";gap:16px;align-items:start;margin-top:18px}
+  .sources{grid-area:src}.viewer{grid-area:view}.studio{grid-area:studio}
+  .studio-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
+  .studio-card{border:1px solid #EAE4D9;border-radius:14px;background:#FCFAF6;padding:11px;display:grid;gap:7px;align-content:start}
+  .studio-card-head{font:800 12px 'Plus Jakarta Sans',sans-serif;color:#1C1917}
+  .studio-card .clay-btn{padding:8px 10px;font-size:12px;width:100%}
+  .studio-card .row{font-size:11.5px;gap:5px}
+  .studio-card .row select{height:30px;font-size:11.5px;padding:0 6px}
+  .studio-card .status{font-size:11px}
+  @media (max-width:1180px){.studio-grid{grid-template-columns:1fr}}
   .col-h-sub{margin-top:8px;padding-top:14px;border-top:1px solid #EFE9DC}
   .col-h{margin:0 0 2px;font:700 14px 'Plus Jakarta Sans',sans-serif;color:#1C1917}
   .viewer-top:not(:has(button:not([hidden]))){display:none}     /* no tabs yet: no empty bar */
@@ -212,7 +220,8 @@
   .vpanel .result{max-height:none;border:0;background:transparent;padding:0;font-size:15px;line-height:1.75}
   .vpanel textarea.result{width:100%;box-sizing:border-box;min-height:60vh;border:1px solid #EFE9DC;border-radius:10px;padding:12px 14px;background:#fff}
   .vpanel .mini{margin-top:14px}
-  @media (max-width:900px){.workspace{grid-template-columns:1fr;grid-template-areas:"src" "view"}.viewer{min-height:50vh}.viewer-body{max-height:none;padding:12px}.sheet{min-height:50vh;padding:10px 4px 30px}}
+  @media (max-width:1180px){.workspace{grid-template-columns:320px minmax(0,1fr);grid-template-areas:"src view" "studio studio"}}
+  @media (max-width:900px){.workspace{grid-template-columns:1fr;grid-template-areas:"src" "view" "studio"}.viewer{min-height:50vh}.viewer-body{max-height:none;padding:12px}.sheet{min-height:50vh;padding:10px 4px 30px}}
   /* The workspace: Notes, Journal draft, Slides (assets/notebook-work.js) */
   .sheet.work{max-width:860px}.sheet.work.wide{max-width:1000px}
   .wbar{position:sticky;top:-26px;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 0;margin-bottom:12px;background:#fff;border-bottom:1px solid #F1ECE2}
@@ -243,6 +252,38 @@
   .jhead button:disabled{opacity:.5;cursor:default}
   .jtitle .wdoc{font:800 26px/1.3 'Fraunces',Georgia,serif;color:#1C1917}
   .wempty{margin:48px 0;text-align:center;color:#A8A29E;font-size:13px}
+  /* Quiz, Flashcards, Data table (Studio outputs) */
+  .quiz-card{max-width:620px;margin:20px auto 0;display:grid;gap:14px}
+  .quiz-q{margin:0;font:800 19px/1.4 'Fraunces',Georgia,serif;color:#1C1917}
+  .quiz-choices{display:grid;gap:8px}
+  .quiz-choice{text-align:left;border:1.5px solid #E4DED0;background:#fff;border-radius:12px;padding:11px 14px;font:600 14px/1.4 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer}
+  .quiz-choice:hover:not(:disabled){border-color:#FF5C28}
+  .quiz-choice:disabled{cursor:default}
+  .quiz-choice.correct{border-color:#1A7A4C;background:#EAF7EF;color:#115C38}
+  .quiz-choice.wrong{border-color:#C23B3B;background:#FDEDED;color:#8F2626}
+  .quiz-explain{margin:0;padding:10px 12px;border-radius:10px;background:#FAF4E8;font-size:13px;color:#57534E}
+  .flash-card{max-width:480px;margin:30px auto 0;min-height:220px;border:1.5px solid #E4DED0;border-radius:18px;background:#fff;box-shadow:0 10px 26px rgba(28,25,23,.08);display:grid;place-items:center;padding:24px;cursor:pointer;text-align:center}
+  .flash-face{margin:0;font:600 17px/1.5 'Plus Jakarta Sans',sans-serif;color:#1C1917}
+  #flash-back{color:#44403C}
+  .table-wrap{overflow:auto;margin-top:14px}
+  #table-out{border-collapse:collapse;width:100%;font-size:13px}
+  #table-out th,#table-out td{border:1px solid #E8E2D4;padding:7px 10px;text-align:left}
+  #table-out th{background:#FAF4E8;font-weight:800}
+  .mindmap-wrap{overflow:auto;margin-top:10px;padding:10px}
+  .mm-node{fill:#FCFAF6;stroke:#E4DED0;stroke-width:1.5}
+  .mm-node.mm-root{fill:#1A3C34;stroke:#1A3C34}
+  .mm-label{font:600 11.5px 'Plus Jakarta Sans',sans-serif;fill:#1C1917;pointer-events:none}
+  .mm-root+.mm-label{fill:#FFF7EA}
+  .mm-edge{fill:none;stroke:#D6CFBF;stroke-width:1.5}
+  .infographic-card{max-width:640px;margin:16px auto 0;padding:32px;border-radius:24px;background:linear-gradient(165deg,#1A3C34,#13302A);color:#FFF7EA;box-shadow:0 20px 44px rgba(26,60,52,.25)}
+  .info-headline{margin:0 0 20px;font:800 26px/1.3 'Fraunces',Georgia,serif;color:#fff}
+  .info-stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:14px;margin-bottom:20px}
+  .info-stat{background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:14px}
+  .info-stat b{display:block;font:800 26px 'Fraunces',Georgia,serif;color:#FFB096}
+  .info-stat span{font-size:11.5px;color:#D6D3D1}
+  .info-points{list-style:none;margin:0;padding:0;display:grid;gap:9px}
+  .info-points li{position:relative;padding-left:20px;font-size:13.5px;line-height:1.55;color:#F5F1E8}
+  .info-points li::before{content:'';position:absolute;left:0;top:7px;width:8px;height:8px;border-radius:50%;background:#FF9166}
   .slides{list-style:none;margin:0;padding:0;display:grid;gap:20px}
   .slide-card{display:grid;grid-template-columns:minmax(0,1fr) 240px;gap:14px;align-items:start}
   .slide-face{position:relative;container-type:inline-size;aspect-ratio:16/9;overflow:hidden;background:#fff center/cover no-repeat;border:1px solid #E8E2D6;border-radius:10px;box-shadow:0 6px 18px rgba(28,25,23,.06)}
@@ -343,6 +384,11 @@
   [data-ico=book]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M2%204h6a4%204%200%200%201%204%204v12a3%203%200%200%200-3-3H2z%22%2F%3E%3Cpath%20d%3D%22M22%204h-6a4%204%200%200%200-4%204v12a3%203%200%200%201%203-3h7z%22%2F%3E%3C%2Fsvg%3E")}
   [data-ico=swap]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m17%203%204%204-4%204%22%2F%3E%3Cpath%20d%3D%22M21%207H9%22%2F%3E%3Cpath%20d%3D%22m7%2021-4-4%204-4%22%2F%3E%3Cpath%20d%3D%22M3%2017h12%22%2F%3E%3C%2Fsvg%3E")}
   [data-ico=summary]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M4%206h16M4%2011h16M4%2016h10M4%2021h7%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=quiz]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m9%2011%203%203L22%204%22%2F%3E%3Cpath%20d%3D%22M21%2012v7a2%202%200%200%201-2%202H5a2%202%200%200%201-2-2V5a2%202%200%200%201%202-2h11%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=cards]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m12%202-10%205%2010%205%2010-5-10-5z%22%2F%3E%3Cpath%20d%3D%22m2%2017%2010%205%2010-5%22%2F%3E%3Cpath%20d%3D%22m2%2012%2010%205%2010-5%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=table]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Crect%20x%3D%223%22%20y%3D%223%22%20width%3D%2218%22%20height%3D%2218%22%20rx%3D%222%22%2F%3E%3Cpath%20d%3D%22M3%209h18M3%2015h18M9%203v18M15%203v18%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=mindmap]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Ccircle%20cx%3D%225%22%20cy%3D%2212%22%20r%3D%222.5%22%2F%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%225%22%20r%3D%222.5%22%2F%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%2212%22%20r%3D%222.5%22%2F%3E%3Ccircle%20cx%3D%2219%22%20cy%3D%2219%22%20r%3D%222.5%22%2F%3E%3Cpath%20d%3D%22M7.3%2010.8%2016.7%206.2M7.5%2012h9M7.3%2013.2l9.4%204.6%22%2F%3E%3C%2Fsvg%3E")}
+  [data-ico=infographic]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M3%203v18h18%22%2F%3E%3Crect%20x%3D%227%22%20y%3D%2213%22%20width%3D%223%22%20height%3D%225%22%2F%3E%3Crect%20x%3D%2212%22%20y%3D%229%22%20width%3D%223%22%20height%3D%229%22%2F%3E%3Crect%20x%3D%2217%22%20y%3D%225%22%20width%3D%223%22%20height%3D%2213%22%2F%3E%3C%2Fsvg%3E")}
   [data-ico=translate]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22m5%208%206%206%22%2F%3E%3Cpath%20d%3D%22m4%2014%206-6%202-3%22%2F%3E%3Cpath%20d%3D%22M2%205h12%22%2F%3E%3Cpath%20d%3D%22M7%202h1%22%2F%3E%3Cpath%20d%3D%22m22%2022-5-10-5%2010%22%2F%3E%3Cpath%20d%3D%22M14%2018h6%22%2F%3E%3C%2Fsvg%3E")}
   [data-ico=ask]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M7.9%2020A9%209%200%201%200%204%2016.1L2%2022z%22%2F%3E%3C%2Fsvg%3E")}
   [data-ico=doc]{--ico:url("data:image/svg+xml,%3Csvg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23000%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E%3Cpath%20d%3D%22M15%202H6a2%202%200%200%200-2%202v16a2%202%200%200%200%202%202h12a2%202%200%200%200%202-2V7z%22%2F%3E%3Cpath%20d%3D%22M14%202v4a2%202%200%200%200%202%202h4%22%2F%3E%3C%2Fsvg%3E")}
@@ -378,21 +424,6 @@
       </div>
       <p id="load-status" class="status" role="status"></p>
       <button id="ocr-stop" class="ocr-stop" type="button" hidden data-en="Stop OCR (keep the pages read)">Hentikan OCR (simpan halaman yang sudah terbaca)</button>
-      <h2 class="col-h col-h-sub" data-en="AI Studio">Studio AI</h2>
-      <fieldset id="tools" disabled>
-        <div class="studio-flow">
-          <div class="studio-step"><div class="studio-step-head"><b>1</b><span data-en="Summary">Ringkasan</span></div>
-            <button id="summary-make" class="clay-btn clay-btn-primary" type="button" data-ico="summary" data-en="Make a summary">Buat ringkasan</button>
-            <p id="summary-status" class="status" role="status"></p></div>
-          <div class="studio-step"><div class="studio-step-head"><b>2</b><span data-en="AI translation">Terjemahan AI</span></div>
-            <label class="row"><span data-en="Into">Ke bahasa</span> <select id="translate-target"><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
-            <button id="translate-make" class="clay-btn clay-btn-primary" type="button" data-ico="translate" data-en="Translate">Terjemahkan</button>
-            <p id="translate-status" class="status" role="status"></p></div>
-          <div class="studio-step"><div class="studio-step-head"><b>3</b><span data-en="Contextual chat">Chat kontekstual</span></div>
-            <button id="ask-open" class="clay-btn clay-btn-primary" type="button" data-ico="ask" data-en="Open chat">Buka chat</button></div>
-          <div class="studio-extra"><button id="notes-open" class="clay-btn clay-btn-ghost" type="button" data-ico="note" data-en="Notes and writing">Catatan dan tulisan</button></div>
-        </div>
-      </fieldset>
       <div id="hl-box" class="hl-box" hidden>
         <div class="hl-head"><span id="hl-info" class="hl-info" role="status"></span><button id="hl-clear" class="link-btn" type="button" hidden data-ico="trash" data-en="Clear highlights">Hapus stabilo</button></div>
         <ol id="hl-list" class="hl-list"></ol>
@@ -407,6 +438,11 @@
           <button type="button" role="tab" data-view="notes" hidden data-ico="note" data-en="Notes">Catatan</button>
           <button type="button" role="tab" data-view="journal" hidden data-ico="journal" data-en="Journal">Jurnal</button>
           <button type="button" role="tab" data-view="slides" hidden data-ico="slides" data-en="Slides">Slide</button>
+          <button type="button" role="tab" data-view="quiz" hidden data-ico="quiz" data-en="Quiz">Kuis</button>
+          <button type="button" role="tab" data-view="flashcards" hidden data-ico="cards" data-en="Flashcards">Kartu hafalan</button>
+          <button type="button" role="tab" data-view="table" hidden data-ico="table" data-en="Data table">Tabel data</button>
+          <button type="button" role="tab" data-view="mindmap" hidden data-ico="mindmap" data-en="Mind map">Peta pikiran</button>
+          <button type="button" role="tab" data-view="infographic" hidden data-ico="infographic" data-en="Infographic">Infografis</button>
         </div></div>
       <div class="viewer-body">
          <div id="viewer-empty" class="viewer-empty sheet"><span>✦</span><h2 data-en="Choose a PDF to start">Pilih PDF untuk mulai</h2></div>
@@ -427,6 +463,49 @@
           <p id="slides-status" class="status" role="status"></p>
           <p id="slides-empty" class="wempty" data-en="No slides yet.">Belum ada slide.</p>
           <ol id="slides-list" class="slides"></ol>
+        </div>
+        <div class="vpanel sheet" data-panel="quiz" hidden>
+          <div class="wbar"><span id="quiz-progress" class="wgrow status"></span><button id="quiz-make" type="button" data-ico="quiz" data-en="New quiz">Kuis baru</button></div>
+          <p id="quiz-status" class="status" role="status"></p>
+          <p id="quiz-empty" class="wempty" data-en="No quiz yet — make one from the Studio panel.">Belum ada kuis — buat dari panel Studio.</p>
+          <div id="quiz-card" class="quiz-card" hidden>
+            <p id="quiz-q" class="quiz-q"></p>
+            <div id="quiz-choices" class="quiz-choices"></div>
+            <p id="quiz-explain" class="quiz-explain" hidden></p>
+            <div class="row"><button id="quiz-prev" type="button" data-ico="up" data-en="Previous">Sebelumnya</button><button id="quiz-next" type="button" data-ico="down" data-en="Next">Berikutnya</button></div>
+          </div>
+        </div>
+        <div class="vpanel sheet" data-panel="flashcards" hidden>
+          <div class="wbar"><span id="cards-progress" class="wgrow status"></span><button id="cards-make" type="button" data-ico="cards" data-en="New flashcards">Kartu baru</button></div>
+          <p id="cards-status" class="status" role="status"></p>
+          <p id="cards-empty" class="wempty" data-en="No flashcards yet — make them from the Studio panel.">Belum ada kartu — buat dari panel Studio.</p>
+          <div id="flash-card" class="flash-card" hidden tabindex="0" role="button" aria-label="Balik kartu" data-en-aria="Flip card">
+            <p id="flash-front" class="flash-face"></p>
+            <p id="flash-back" class="flash-face" hidden></p>
+          </div>
+          <div class="row" id="cards-nav" hidden><button id="cards-prev" type="button" data-ico="up" data-en="Previous">Sebelumnya</button><button id="cards-next" type="button" data-ico="down" data-en="Next">Berikutnya</button></div>
+        </div>
+        <div class="vpanel sheet wide" data-panel="table" hidden>
+          <div class="wbar"><span class="wgrow"></span><button id="table-make" type="button" data-ico="table" data-en="New table">Tabel baru</button><button id="table-csv" type="button" data-ico="download" hidden>.csv</button></div>
+          <p id="table-status" class="status" role="status"></p>
+          <p id="table-empty" class="wempty" data-en="No table yet — make one from the Studio panel.">Belum ada tabel — buat dari panel Studio.</p>
+          <div id="table-wrap" class="table-wrap" hidden><table id="table-out"></table></div>
+        </div>
+        <div class="vpanel sheet wide" data-panel="mindmap" hidden>
+          <div class="wbar"><span class="wgrow"></span><button id="mindmap-make" type="button" data-ico="mindmap" data-en="New mind map">Peta baru</button></div>
+          <p id="mindmap-status" class="status" role="status"></p>
+          <p id="mindmap-empty" class="wempty" data-en="No mind map yet — make one from the Studio panel.">Belum ada peta pikiran — buat dari panel Studio.</p>
+          <div id="mindmap-wrap" class="mindmap-wrap" hidden></div>
+        </div>
+        <div class="vpanel sheet" data-panel="infographic" hidden>
+          <div class="wbar"><span class="wgrow"></span><button id="infographic-make" type="button" data-ico="infographic" data-en="New infographic">Infografis baru</button><button id="infographic-pdf" type="button" data-ico="download" hidden>PDF</button></div>
+          <p id="infographic-status" class="status" role="status"></p>
+          <p id="infographic-empty" class="wempty" data-en="No infographic yet — make one from the Studio panel.">Belum ada infografis — buat dari panel Studio.</p>
+          <div id="infographic-card" class="infographic-card" hidden>
+            <h2 id="info-headline" class="info-headline"></h2>
+            <div id="info-stats" class="info-stats"></div>
+            <ul id="info-points" class="info-points"></ul>
+          </div>
         </div>
         <div id="viewer-busy" class="sheet busy" hidden><p id="busy-label" class="busy-label"></p><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="vpanel ask" data-panel="ask" hidden>
@@ -450,6 +529,52 @@
         </div>
       </div>
     </section>
+    <aside class="side studio" aria-label="Studio" data-en-aria="Studio">
+      <h2 class="col-h" data-en="Studio">Studio</h2>
+      <fieldset id="tools" disabled>
+        <div class="studio-grid">
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="summary"><span data-en="Summary">Ringkasan</span></div>
+            <button id="summary-make" class="clay-btn clay-btn-primary" type="button" data-en="Make a summary">Buat ringkasan</button>
+            <p id="summary-status" class="status" role="status"></p>
+          </div>
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="translate"><span data-en="Translation">Terjemahan</span></div>
+            <label class="row"><span data-en="Into">Ke</span> <select id="translate-target"><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
+            <button id="translate-make" class="clay-btn clay-btn-primary" type="button" data-en="Translate">Terjemahkan</button>
+            <p id="translate-status" class="status" role="status"></p>
+          </div>
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="ask"><span data-en="Chat">Chat</span></div>
+            <button id="ask-open" class="clay-btn clay-btn-primary" type="button" data-en="Open chat">Buka chat</button>
+          </div>
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="note"><span data-en="Notes">Catatan</span></div>
+            <button id="notes-open" class="clay-btn clay-btn-ghost" type="button" data-en="Open notes">Buka catatan</button>
+          </div>
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="quiz"><span data-en="Quiz">Kuis</span></div>
+            <button id="studio-quiz" class="clay-btn clay-btn-ghost" type="button" data-en="Open quiz">Buka kuis</button>
+          </div>
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="cards"><span data-en="Flashcards">Kartu hafalan</span></div>
+            <button id="studio-flashcards" class="clay-btn clay-btn-ghost" type="button" data-en="Open flashcards">Buka kartu</button>
+          </div>
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="table"><span data-en="Data table">Tabel data</span></div>
+            <button id="studio-table" class="clay-btn clay-btn-ghost" type="button" data-en="Open table">Buka tabel</button>
+          </div>
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="mindmap"><span data-en="Mind map">Peta pikiran</span></div>
+            <button id="studio-mindmap" class="clay-btn clay-btn-ghost" type="button" data-en="Open mind map">Buka peta</button>
+          </div>
+          <div class="studio-card">
+            <div class="studio-card-head" data-ico="infographic"><span data-en="Infographic">Infografis</span></div>
+            <button id="studio-infographic" class="clay-btn clay-btn-ghost" type="button" data-en="Open infographic">Buka infografis</button>
+          </div>
+        </div>
+      </fieldset>
+    </aside>
   </div>
 </div>
 <button id="hl-pop" class="hl-pop" type="button" hidden data-ico="mark" data-en="Highlight">Stabilo</button>
@@ -1139,6 +1264,240 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#summary-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(summary.text); status('#summary-status', L('Copied.', 'Disalin.')); } catch (e) { status('#summary-status', L('The browser did not allow copying.', 'Browser tidak mengizinkan menyalin.'), true); } });
   $('#summary-save').addEventListener('click', () => download(title() + L(' - summary.txt', ' - ringkasan.txt'), title() + '\n\n' + summary.text));
 
+  // ---------- Studio outputs on the open document's highlights: Quiz, Flashcards, Data table.
+  // Same pattern as Summary (/api/write, highlight-gated), one still document at a time.
+  let quiz = null, quizAt = 0, cards = null, cardAt = 0, table = null;
+  async function makeQuiz() {
+    if (!marks().length) { needMarks('#quiz-status'); return; }
+    if (quiz && !await MFDialog.confirm({title: L('Make a new quiz?', 'Buat kuis baru?'), message: L('The current quiz will be replaced.', 'Kuis sekarang akan diganti.'),
+      ok: L('Make again', 'Buat ulang'), cancel: L('Cancel', 'Batal'), icon: '❓'})) return;
+    $('#quiz-make').disabled = true;
+    const done = working('#quiz-status', L('Making the quiz…', 'Membuat kuis…'), L('Writing the quiz', 'Menulis kuis'));
+    try {
+      const r = await post('/api/write', {kind: 'quiz', title: title(), text: picked(), lang: doc.lang, count: 8, work: window.NotebookWork ? NotebookWork.context() : ''});
+      done(); quiz = r.questions; quizAt = 0; showQuiz(); remember();
+      status('#quiz-status', L(`Quiz of ${quiz.length} questions ready.`, `Kuis ${quiz.length} soal siap.`));
+    } catch (cause) { done(); failed('#quiz-status', cause); }
+    finally { $('#quiz-make').disabled = false; }
+  }
+  function showQuiz() {
+    $('#quiz-empty').hidden = !!quiz; $('#quiz-card').hidden = !quiz;
+    if (!quiz) return;
+    viewer.show('quiz'); renderQuizCard();
+  }
+  function renderQuizCard() {
+    const q = quiz[quizAt];
+    $('#quiz-progress').textContent = L(`Question ${quizAt + 1} / ${quiz.length}`, `Soal ${quizAt + 1} / ${quiz.length}`);
+    $('#quiz-q').textContent = q.q;
+    $('#quiz-explain').hidden = true;
+    $('#quiz-choices').replaceChildren(...q.choices.map((choice, i) => {
+      const b = Object.assign(document.createElement('button'), {type: 'button', className: 'quiz-choice', textContent: choice});
+      b.addEventListener('click', () => {
+        [...$('#quiz-choices').children].forEach(c => c.disabled = true);
+        b.classList.add(i === q.answer ? 'correct' : 'wrong');
+        if (i !== q.answer) $('#quiz-choices').children[q.answer].classList.add('correct');
+        if (q.explanation) { $('#quiz-explain').hidden = false; $('#quiz-explain').textContent = q.explanation; }
+      });
+      return b;
+    }));
+    $('#quiz-prev').disabled = quizAt === 0; $('#quiz-next').disabled = quizAt >= quiz.length - 1;
+  }
+  $('#quiz-prev').addEventListener('click', () => { quizAt--; renderQuizCard(); });
+  $('#quiz-next').addEventListener('click', () => { quizAt++; renderQuizCard(); });
+  $('#quiz-make').addEventListener('click', makeQuiz);
+  $('#studio-quiz').addEventListener('click', () => { if (quiz) viewer.show('quiz'); else makeQuiz(); });
+
+  async function makeFlashcards() {
+    if (!marks().length) { needMarks('#cards-status'); return; }
+    if (cards && !await MFDialog.confirm({title: L('Make new flashcards?', 'Buat kartu baru?'), message: L('The current flashcards will be replaced.', 'Kartu sekarang akan diganti.'),
+      ok: L('Make again', 'Buat ulang'), cancel: L('Cancel', 'Batal'), icon: '🗂️'})) return;
+    $('#cards-make').disabled = true;
+    const done = working('#cards-status', L('Making flashcards…', 'Membuat kartu hafalan…'), L('Writing flashcards', 'Menulis kartu hafalan'));
+    try {
+      const r = await post('/api/write', {kind: 'flashcards', title: title(), text: picked(), lang: doc.lang, count: 12, work: window.NotebookWork ? NotebookWork.context() : ''});
+      done(); cards = r.cards; cardAt = 0; showCards(); remember();
+      status('#cards-status', L(`${cards.length} flashcards ready.`, `${cards.length} kartu siap.`));
+    } catch (cause) { done(); failed('#cards-status', cause); }
+    finally { $('#cards-make').disabled = false; }
+  }
+  function showCards() {
+    $('#cards-empty').hidden = !!cards; $('#flash-card').hidden = !cards; $('#cards-nav').hidden = !cards;
+    if (!cards) return;
+    viewer.show('flashcards'); renderCard();
+  }
+  function renderCard() {
+    const c = cards[cardAt];
+    $('#cards-progress').textContent = L(`Card ${cardAt + 1} / ${cards.length}`, `Kartu ${cardAt + 1} / ${cards.length}`);
+    $('#flash-front').textContent = c.term; $('#flash-back').textContent = c.definition;
+    $('#flash-front').hidden = false; $('#flash-back').hidden = true;
+    $('#cards-prev').disabled = cardAt === 0; $('#cards-next').disabled = cardAt >= cards.length - 1;
+  }
+  $('#flash-card').addEventListener('click', () => { const flipped = !$('#flash-back').hidden; $('#flash-front').hidden = !flipped; $('#flash-back').hidden = flipped; });
+  $('#flash-card').addEventListener('keydown', e => { if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); $('#flash-card').click(); } });
+  $('#cards-prev').addEventListener('click', () => { cardAt--; renderCard(); });
+  $('#cards-next').addEventListener('click', () => { cardAt++; renderCard(); });
+  $('#cards-make').addEventListener('click', makeFlashcards);
+  $('#studio-flashcards').addEventListener('click', () => { if (cards) viewer.show('flashcards'); else makeFlashcards(); });
+
+  async function makeTable() {
+    if (!marks().length) { needMarks('#table-status'); return; }
+    if (table && !await MFDialog.confirm({title: L('Make a new table?', 'Buat tabel baru?'), message: L('The current table will be replaced.', 'Tabel sekarang akan diganti.'),
+      ok: L('Make again', 'Buat ulang'), cancel: L('Cancel', 'Batal'), icon: '📊'})) return;
+    $('#table-make').disabled = true;
+    const done = working('#table-status', L('Finding tabular data…', 'Mencari data tabel…'), L('Extracting the table', 'Mengekstrak tabel'));
+    try {
+      const r = await post('/api/write', {kind: 'table', title: title(), text: picked(), lang: doc.lang, work: window.NotebookWork ? NotebookWork.context() : ''});
+      done(); table = r.table; showTable(); remember();
+      status('#table-status', L(`Table ready: ${table.rows.length} rows.`, `Tabel siap: ${table.rows.length} baris.`));
+    } catch (cause) { done(); failed('#table-status', cause); }
+    finally { $('#table-make').disabled = false; }
+  }
+  function showTable() {
+    $('#table-empty').hidden = !!table; $('#table-wrap').hidden = !table; $('#table-csv').hidden = !table;
+    if (!table) return;
+    viewer.show('table');
+    const t = $('#table-out');
+    t.replaceChildren();
+    const thead = document.createElement('thead'), htr = document.createElement('tr');
+    table.headers.forEach(h => { const th = document.createElement('th'); th.textContent = h; htr.append(th); });
+    thead.append(htr); t.append(thead);
+    const tbody = document.createElement('tbody');
+    table.rows.forEach(row => { const tr = document.createElement('tr'); row.forEach(cell => { const td = document.createElement('td'); td.textContent = cell; tr.append(td); }); tbody.append(tr); });
+    t.append(tbody);
+  }
+  $('#table-csv').addEventListener('click', () => {
+    const esc = v => /[",\n]/.test(v) ? '"' + v.replace(/"/g, '""') + '"' : v;
+    const csv = [table.headers, ...table.rows].map(row => row.map(esc).join(',')).join('\n');
+    download(title() + L(' - table.csv', ' - tabel.csv'), csv);
+  });
+  $('#table-make').addEventListener('click', makeTable);
+  $('#studio-table').addEventListener('click', () => { if (table) viewer.show('table'); else makeTable(); });
+
+  let mindmap = null;
+  async function makeMindmap() {
+    if (!marks().length) { needMarks('#mindmap-status'); return; }
+    if (mindmap && !await MFDialog.confirm({title: L('Make a new mind map?', 'Buat peta pikiran baru?'), message: L('The current mind map will be replaced.', 'Peta pikiran sekarang akan diganti.'),
+      ok: L('Make again', 'Buat ulang'), cancel: L('Cancel', 'Batal'), icon: '🧠'})) return;
+    $('#mindmap-make').disabled = true;
+    const done = working('#mindmap-status', L('Mapping the ideas…', 'Memetakan gagasan…'), L('Drawing the mind map', 'Menggambar peta pikiran'));
+    try {
+      const r = await post('/api/write', {kind: 'mindmap', title: title(), text: picked(), lang: doc.lang, work: window.NotebookWork ? NotebookWork.context() : ''});
+      done(); mindmap = r.mindmap; showMindmap(); remember();
+      status('#mindmap-status', L('Mind map ready.', 'Peta pikiran siap.'));
+    } catch (cause) { done(); failed('#mindmap-status', cause); }
+    finally { $('#mindmap-make').disabled = false; }
+  }
+  // A left-to-right tree layout: leaves get an even vertical slot, each parent centers on its
+  // children's span, x grows with depth — no graph library, just one small recursive pass.
+  function layoutMindmap(root) {
+    const nodeH = 36, leafGap = 16, levelW = 210;
+    let leafY = 0;
+    const nodes = [];
+    function walk(node, depth, parent) {
+      let y;
+      if (!node.children.length) { y = leafY; leafY += nodeH + leafGap; }
+      else { const ys = node.children.map(c => walk(c, depth + 1, node)); y = (Math.min(...ys) + Math.max(...ys)) / 2; }
+      nodes.push({node, parent, x: depth * levelW, y});
+      return y;
+    }
+    walk(root, 0, null);
+    return nodes;
+  }
+  function renderMindmap(root) {
+    const NS = 'http://www.w3.org/2000/svg', nodeW = 180, nodeH = 36;
+    const nodes = layoutMindmap(root);
+    const pos = new Map(nodes.map(n => [n.node, n]));
+    const svg = document.createElementNS(NS, 'svg');
+    const maxX = Math.max(...nodes.map(n => n.x)) + nodeW + 16, maxY = Math.max(...nodes.map(n => n.y)) + nodeH + 16;
+    svg.setAttribute('viewBox', `0 0 ${maxX} ${maxY}`);
+    svg.style.width = maxX + 'px'; svg.style.height = maxY + 'px';
+    nodes.forEach(n => {
+      if (!n.parent) return;
+      const p = pos.get(n.parent), x1 = p.x + nodeW, y1 = p.y + nodeH / 2, x2 = n.x, y2 = n.y + nodeH / 2, mid = (x1 + x2) / 2;
+      const path = document.createElementNS(NS, 'path');
+      path.setAttribute('d', `M${x1},${y1} C${mid},${y1} ${mid},${y2} ${x2},${y2}`);
+      path.setAttribute('class', 'mm-edge');
+      svg.append(path);
+    });
+    nodes.forEach(n => {
+      const g = document.createElementNS(NS, 'g');
+      g.setAttribute('transform', `translate(${n.x},${n.y})`);
+      const rect = document.createElementNS(NS, 'rect');
+      rect.setAttribute('width', nodeW); rect.setAttribute('height', nodeH); rect.setAttribute('rx', 10);
+      rect.setAttribute('class', 'mm-node' + (n.parent ? '' : ' mm-root'));
+      const text = document.createElementNS(NS, 'text');
+      text.setAttribute('x', nodeW / 2); text.setAttribute('y', nodeH / 2 + 4); text.setAttribute('text-anchor', 'middle');
+      text.setAttribute('class', 'mm-label'); text.textContent = n.node.label;
+      const title = document.createElementNS(NS, 'title'); title.textContent = n.node.label;
+      g.append(rect, text, title); svg.append(g);
+    });
+    $('#mindmap-wrap').replaceChildren(svg);
+  }
+  function showMindmap() {
+    $('#mindmap-empty').hidden = !!mindmap; $('#mindmap-wrap').hidden = !mindmap;
+    if (!mindmap) return;
+    viewer.show('mindmap'); renderMindmap(mindmap);
+  }
+  $('#mindmap-make').addEventListener('click', makeMindmap);
+  $('#studio-mindmap').addEventListener('click', () => { if (mindmap) viewer.show('mindmap'); else makeMindmap(); });
+
+  let infographic = null;
+  const escapeHtml = s => String(s).replace(/[&<>"']/g, c => ({'&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'}[c]));
+  async function makeInfographic() {
+    if (!marks().length) { needMarks('#infographic-status'); return; }
+    if (infographic && !await MFDialog.confirm({title: L('Make a new infographic?', 'Buat infografis baru?'), message: L('The current infographic will be replaced.', 'Infografis sekarang akan diganti.'),
+      ok: L('Make again', 'Buat ulang'), cancel: L('Cancel', 'Batal'), icon: '📈'})) return;
+    $('#infographic-make').disabled = true;
+    const done = working('#infographic-status', L('Designing the infographic…', 'Merancang infografis…'), L('Writing the infographic', 'Menulis infografis'));
+    try {
+      const r = await post('/api/write', {kind: 'infographic', title: title(), text: picked(), lang: doc.lang, work: window.NotebookWork ? NotebookWork.context() : ''});
+      done(); infographic = r.infographic; showInfographic(); remember();
+      status('#infographic-status', L('Infographic ready.', 'Infografis siap.'));
+    } catch (cause) { done(); failed('#infographic-status', cause); }
+    finally { $('#infographic-make').disabled = false; }
+  }
+  function showInfographic() {
+    $('#infographic-empty').hidden = !!infographic; $('#infographic-card').hidden = !infographic; $('#infographic-pdf').hidden = !infographic;
+    if (!infographic) return;
+    viewer.show('infographic');
+    $('#info-headline').textContent = infographic.headline;
+    $('#info-stats').replaceChildren(...infographic.stats.map(s => {
+      const div = document.createElement('div'); div.className = 'info-stat';
+      div.append(Object.assign(document.createElement('b'), {textContent: s.value}), Object.assign(document.createElement('span'), {textContent: s.label}));
+      return div;
+    }));
+    $('#info-points').replaceChildren(...infographic.points.map(p => Object.assign(document.createElement('li'), {textContent: p})));
+  }
+  $('#infographic-make').addEventListener('click', makeInfographic);
+  $('#studio-infographic').addEventListener('click', () => { if (infographic) viewer.show('infographic'); else makeInfographic(); });
+  // "Download PDF": the card's own markup (inline-styled, self-contained) printed server-side —
+  // the same /api/convert/html-to-pdf a pasted .html file already uses (assets/converter.html).
+  $('#infographic-pdf').addEventListener('click', async () => {
+    if (!infographic) return;
+    $('#infographic-pdf').disabled = true;
+    status('#infographic-status', L('Preparing the PDF…', 'Menyiapkan PDF…'));
+    try {
+      const statsHtml = infographic.stats.map(s => `<div style="background:rgba(255,255,255,.08);border:1px solid rgba(255,255,255,.14);border-radius:16px;padding:14px">`
+        + `<b style="display:block;font:800 26px Georgia,serif;color:#FFB096">${escapeHtml(s.value)}</b><span style="font-size:11.5px;color:#D6D3D1">${escapeHtml(s.label)}</span></div>`).join('');
+      const pointsHtml = infographic.points.map(p => `<li style="padding-left:4px;font-size:13.5px;line-height:1.6;color:#F5F1E8">${escapeHtml(p)}</li>`).join('');
+      const html = `<!doctype html><html><head><meta charset="utf-8"><style>body{margin:0;background:#13302A;font-family:Georgia,serif}</style></head><body>`
+        + `<div style="box-sizing:border-box;width:700px;padding:40px;background:linear-gradient(165deg,#1A3C34,#13302A);color:#FFF7EA">`
+        + `<h1 style="margin:0 0 24px;font-size:30px;color:#fff">${escapeHtml(infographic.headline)}</h1>`
+        + `<div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:14px;margin-bottom:24px">${statsHtml}</div>`
+        + `<ul style="list-style:disc;margin:0;padding-left:20px;display:grid;gap:10px">${pointsHtml}</ul></div></body></html>`;
+      const c = await caps();
+      const resp = await fetch('/api/convert/html-to-pdf', {method: 'POST', headers: {'Content-Type': 'text/html', 'X-Build-Token': c.token,
+        'X-Filename': encodeURIComponent(title() + '.html'), 'X-Page-Size': 'a4', 'X-Margin': '0'}, body: html});
+      if (!resp.ok) throw Error((await resp.json().catch(() => ({}))).error || L('The PDF could not be made.', 'PDF tidak bisa dibuat.'));
+      const blob = await resp.blob();
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob);
+      a.download = (title() + L(' - infographic.pdf', ' - infografis.pdf')).replace(/[\\/:*?"<>|]+/g, '-');
+      document.body.append(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+      status('#infographic-status', L('Infographic ready.', 'Infografis siap.'));
+    } catch (cause) { status('#infographic-status', cause.message, true); }
+    finally { $('#infographic-pdf').disabled = false; }
+  });
+
   // ---------- Translation (a few pages per request; done pages are kept)
   function showTranslation() {
     if (!doc) return;
@@ -1389,7 +1748,7 @@ window.addEventListener('DOMContentLoaded', () => {
       await sessionDo('readwrite', st => st.put({
         sources: sources.map(s => ({id: s.id, name: s.name, blob: s.blob, pages: s.pages, text: s.text, chapters: s.chapters || [], highlights: s.highlights || [],
           translations: s.translations || {}, ocrDone: !!s.ocrDone, ocred: s.ocred || 0, active: s.active !== false})),
-        openId, summary, asked, work: window.NotebookWork ? NotebookWork.state() : null, savedAt: Date.now()}, 'last'));
+        openId, summary, quiz, cards, table, mindmap, infographic, asked, work: window.NotebookWork ? NotebookWork.state() : null, savedAt: Date.now()}, 'last'));
     } catch (e) {}                                       // private window / storage full: just not kept
   }
   async function restoreSession() {
@@ -1414,12 +1773,22 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#translate-target').value = Object.keys(doc.translations).find(k => Object.keys(doc.translations[k]).length) || (doc.lang === 'en-US' ? 'id-ID' : 'en-US');
     hlInfo();
     summary = saved.summary || null;
+    quiz = saved.quiz || null; quizAt = 0;
+    cards = saved.cards || null; cardAt = 0;
+    table = saved.table || null;
+    mindmap = saved.mindmap || null;
+    infographic = saved.infographic || null;
     if (window.NotebookWork) NotebookWork.load(saved.work);
     clearChat();
     (saved.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || all[i + 1].sources || [], all[i + 1].thoughts); });
     asked = (saved.asked || []).slice();
     if (asked.length) viewer.show('ask');
     showTranslation();
+    if (quiz) showQuiz();
+    if (cards) showCards();
+    if (table) showTable();
+    if (mindmap) showMindmap();
+    if (infographic) showInfographic();
     if (summary) showSummary();
     $('#tools').disabled = false;
     status('#load-status', '');

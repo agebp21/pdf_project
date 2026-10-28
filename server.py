@@ -867,6 +867,230 @@ def make_slides(title, text, lang='id-ID', count=8, work=''):
     raise RuntimeError('AI tidak menghasilkan slide. Coba lagi.')
 
 
+QUIZ_MIN, QUIZ_MAX = 3, 15
+
+
+def parse_quiz(reply):
+    """The quiz in an AI reply: [{q, choices: [...4], answer: int, explanation}]."""
+    start, end = reply.find('{'), reply.rfind('}')
+    try:
+        data = json.loads(reply[start:end + 1]) if start >= 0 < end else None
+    except json.JSONDecodeError:
+        data = None
+    rows = data.get('questions') if isinstance(data, dict) else None
+    out = []
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        q = ' '.join(str(row.get('q') or '').split())[:300]
+        choices = [' '.join(str(x).split())[:200] for x in (row.get('choices') or []) if isinstance(x, (str, int, float)) and str(x).strip()][:4]
+        answer = row.get('answer')
+        explanation = ' '.join(str(row.get('explanation') or '').split())[:500]
+        if q and len(choices) == 4 and isinstance(answer, int) and 0 <= answer < 4:
+            out.append({'q': q, 'choices': choices, 'answer': answer, 'explanation': explanation})
+    return out[:QUIZ_MAX]
+
+
+def make_quiz(title, text, lang='id-ID', count=8, work=''):
+    """A multiple-choice quiz from the highlighted source (and the member's notes): `count`
+    questions, each with exactly 4 choices, one correct answer, and a short explanation."""
+    count = max(QUIZ_MIN, min(QUIZ_MAX, int(count or 8)))
+    language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
+    work = clean_work(work)
+    system = (f'Kamu menyusun kuis pilihan ganda dalam {language} dari SUMBER (bagian dokumen yang distabilo) dan CATATAN PEMBACA. '
+              f'Buat tepat {count} soal. Tiap soal: pertanyaan jelas, persis 4 pilihan jawaban (hanya satu yang benar), indeks jawaban '
+              'benar (0-3), dan penjelasan singkat 1-2 kalimat kenapa jawaban itu benar. Setia pada isi sumber: jangan mengarang fakta '
+              'atau angka. Balas HANYA JSON valid tanpa teks lain, persis bentuk ini: '
+              '{"questions":[{"q":"...","choices":["...","...","...","..."],"answer":0,"explanation":"..."}]}')
+    user = (f'Judul dokumen: {title}\n\nSUMBER:\n{ask_pages(text, title + " " + work[:500])}'
+            + (f'\n\nCATATAN PEMBACA:\n{work}' if work else ''))
+    model = writing_model()
+    for _ in range(2):
+        quiz = parse_quiz(ai_chat(system, user, model, max_tokens=6000))
+        if len(quiz) >= min(3, count):
+            return quiz
+    raise RuntimeError('AI tidak menghasilkan kuis. Coba lagi.')
+
+
+FLASHCARD_MIN, FLASHCARD_MAX = 5, 30
+
+
+def parse_flashcards(reply):
+    """The flashcards in an AI reply: [{term, definition}]."""
+    start, end = reply.find('{'), reply.rfind('}')
+    try:
+        data = json.loads(reply[start:end + 1]) if start >= 0 < end else None
+    except json.JSONDecodeError:
+        data = None
+    rows = data.get('cards') if isinstance(data, dict) else None
+    out = []
+    for row in rows if isinstance(rows, list) else []:
+        if not isinstance(row, dict):
+            continue
+        term = ' '.join(str(row.get('term') or '').split())[:150]
+        definition = ' '.join(str(row.get('definition') or '').split())[:400]
+        if term and definition:
+            out.append({'term': term, 'definition': definition})
+    return out[:FLASHCARD_MAX]
+
+
+def make_flashcards(title, text, lang='id-ID', count=12, work=''):
+    """Term/definition flashcards from the highlighted source (and the member's notes)."""
+    count = max(FLASHCARD_MIN, min(FLASHCARD_MAX, int(count or 12)))
+    language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
+    work = clean_work(work)
+    system = (f'Kamu menyusun kartu hafalan (flashcard) dalam {language} dari SUMBER (bagian dokumen yang distabilo) dan CATATAN PEMBACA. '
+              f'Buat tepat {count} kartu: istilah atau konsep penting di satu sisi, definisi atau penjelasan singkat (1-2 kalimat) di sisi '
+              'lain. Satu istilah tidak berulang. Setia pada isi sumber: jangan mengarang definisi. Balas HANYA JSON valid tanpa teks lain, '
+              'persis bentuk ini: {"cards":[{"term":"...","definition":"..."}]}')
+    user = (f'Judul dokumen: {title}\n\nSUMBER:\n{ask_pages(text, title + " " + work[:500])}'
+            + (f'\n\nCATATAN PEMBACA:\n{work}' if work else ''))
+    model = writing_model()
+    for _ in range(2):
+        cards = parse_flashcards(ai_chat(system, user, model, max_tokens=6000))
+        if len(cards) >= min(5, count):
+            return cards
+    raise RuntimeError('AI tidak menghasilkan kartu hafalan. Coba lagi.')
+
+
+TABLE_MAX_ROWS, TABLE_MAX_COLS = 60, 10
+
+
+def parse_table(reply):
+    """The table in an AI reply: {headers: [...], rows: [[...], ...]}, every row padded/cut to
+    the header's width."""
+    start, end = reply.find('{'), reply.rfind('}')
+    try:
+        data = json.loads(reply[start:end + 1]) if start >= 0 < end else None
+    except json.JSONDecodeError:
+        data = None
+    table = data.get('table') if isinstance(data, dict) else None
+    headers = [' '.join(str(h).split())[:80] for h in (table.get('headers') or [])][:TABLE_MAX_COLS] if isinstance(table, dict) else []
+    if not headers:
+        return {'headers': [], 'rows': []}
+    width = len(headers)
+    rows = []
+    for row in (table.get('rows') or [])[:TABLE_MAX_ROWS] if isinstance(table, dict) else []:
+        if not isinstance(row, list):
+            continue
+        cells = [' '.join(str(c).split())[:200] for c in row[:width]]
+        cells += [''] * (width - len(cells))
+        rows.append(cells)
+    return {'headers': headers, 'rows': rows}
+
+
+MINDMAP_MAX_CHILDREN, MINDMAP_MAX_DEPTH = 6, 3
+
+
+def parse_mindmap(reply, depth=0):
+    """One mind-map node from an AI reply (or sub-reply): {label, children: [...]}, recursive,
+    capped at MINDMAP_MAX_DEPTH levels and MINDMAP_MAX_CHILDREN per node."""
+    if depth == 0:
+        start, end = reply.find('{'), reply.rfind('}')
+        try:
+            node = json.loads(reply[start:end + 1]) if start >= 0 < end else None
+        except json.JSONDecodeError:
+            node = None
+    else:
+        node = reply
+    if not isinstance(node, dict):
+        return None
+    label = ' '.join(str(node.get('label') or '').split())[:120]
+    if not label:
+        return None
+    children = []
+    if depth < MINDMAP_MAX_DEPTH - 1:
+        for child in (node.get('children') or [])[:MINDMAP_MAX_CHILDREN]:
+            parsed = parse_mindmap(child, depth + 1)
+            if parsed:
+                children.append(parsed)
+    return {'label': label, 'children': children}
+
+
+def make_mindmap(title, text, lang='id-ID', work=''):
+    """A mind-map outline (a root idea and branching sub-ideas) from the highlighted source
+    (and the member's notes), up to MINDMAP_MAX_DEPTH levels deep."""
+    language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
+    work = clean_work(work)
+    system = (f'Kamu menyusun peta pikiran (mind map) dalam {language} dari SUMBER (bagian dokumen yang distabilo) dan CATATAN PEMBACA. '
+              f'Buat struktur pohon: satu gagasan utama (root), sampai {MINDMAP_MAX_CHILDREN} cabang utama, tiap cabang boleh punya sampai '
+              f'{MINDMAP_MAX_CHILDREN} anak cabang (maksimal {MINDMAP_MAX_DEPTH} tingkat termasuk root). Tiap label singkat (maks. 6 kata). '
+              'Setia pada isi sumber: jangan mengarang gagasan yang tidak ada. Balas HANYA JSON valid tanpa teks lain, persis bentuk ini '
+              '(children boleh kosong []): {"label":"...","children":[{"label":"...","children":[{"label":"...","children":[]}]}]}')
+    user = f'Judul dokumen: {title}\n\nSUMBER:\n{ask_pages(text, title + " " + work[:500])}' + (f'\n\nCATATAN PEMBACA:\n{work}' if work else '')
+    model = writing_model()
+    for _ in range(2):
+        tree = parse_mindmap(ai_chat(system, user, model, max_tokens=4000))
+        if tree and tree['children']:
+            return tree
+    raise RuntimeError('AI tidak menghasilkan peta pikiran. Coba lagi.')
+
+
+INFOGRAPHIC_MAX_STATS, INFOGRAPHIC_MAX_POINTS = 6, 6
+
+
+def parse_infographic(reply):
+    """The infographic content in an AI reply: {headline, stats: [{value, label}], points: [...]}."""
+    start, end = reply.find('{'), reply.rfind('}')
+    try:
+        data = json.loads(reply[start:end + 1]) if start >= 0 < end else None
+    except json.JSONDecodeError:
+        data = None
+    if not isinstance(data, dict):
+        return {'headline': '', 'stats': [], 'points': []}
+    headline = ' '.join(str(data.get('headline') or '').split())[:120]
+    stats = []
+    for row in (data.get('stats') or [])[:INFOGRAPHIC_MAX_STATS]:
+        if not isinstance(row, dict):
+            continue
+        value = ' '.join(str(row.get('value') or '').split())[:40]
+        label = ' '.join(str(row.get('label') or '').split())[:80]
+        if value and label:
+            stats.append({'value': value, 'label': label})
+    points = [' '.join(str(p).split())[:160] for p in (data.get('points') or []) if isinstance(p, (str, int, float)) and str(p).strip()][:INFOGRAPHIC_MAX_POINTS]
+    return {'headline': headline, 'stats': stats, 'points': points}
+
+
+def make_infographic(title, text, lang='id-ID', work=''):
+    """A one-page infographic's content from the highlighted source (and the member's notes):
+    a headline, a handful of standout numbers, and a few key points."""
+    language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
+    work = clean_work(work)
+    system = (f'Kamu menyusun isi infografis satu halaman dalam {language} dari SUMBER (bagian dokumen yang distabilo) dan CATATAN PEMBACA. '
+              f'Buat: satu headline singkat (maks. 10 kata), sampai {INFOGRAPHIC_MAX_STATS} angka atau statistik mencolok dari sumber (tiap '
+              'satu nilai pendek, mis. "72%", dan label singkat penjelas), dan sampai '
+              f'{INFOGRAPHIC_MAX_POINTS} poin kunci singkat (maks. 14 kata tiap poin). Setia pada isi sumber: jangan mengarang angka. Jika '
+              'sumber tidak punya angka mencolok, kosongkan stats dan fokus ke poin kunci. Balas HANYA JSON valid tanpa teks lain, persis '
+              'bentuk ini: {"headline":"...","stats":[{"value":"...","label":"..."}],"points":["...","..."]}')
+    user = f'Judul dokumen: {title}\n\nSUMBER:\n{ask_pages(text, title + " " + work[:500])}' + (f'\n\nCATATAN PEMBACA:\n{work}' if work else '')
+    model = writing_model()
+    for _ in range(2):
+        info = parse_infographic(ai_chat(system, user, model, max_tokens=3000))
+        if info['headline'] and (info['stats'] or info['points']):
+            return info
+    raise RuntimeError('AI tidak menghasilkan infografis. Coba lagi.')
+
+
+def make_table(title, text, lang='id-ID', work=''):
+    """A data table extracted from the highlighted source (and the member's notes) — whatever
+    tabular data (figures, comparisons, a list of items with attributes) the source actually
+    has; never invented rows."""
+    language = TRANSLATE_LANGUAGES.get(lang, TRANSLATE_LANGUAGES['id-ID'])
+    work = clean_work(work)
+    system = (f'Kamu mengekstrak data tabel dalam {language} dari SUMBER (bagian dokumen yang distabilo) dan CATATAN PEMBACA. Cari data '
+              'yang berbentuk tabel, daftar perbandingan, atau angka berkelompok di sumber, lalu susun sebagai tabel (maks '
+              f'{TABLE_MAX_COLS} kolom, {TABLE_MAX_ROWS} baris). Jangan mengarang angka atau baris yang tidak ada di sumber; jika sumber '
+              'tidak punya data tabular yang jelas, buat tabel ringkasan poin-poin kunci sebagai gantinya (kolom "Poin" dan "Keterangan"). '
+              'Balas HANYA JSON valid tanpa teks lain, persis bentuk ini: {"table":{"headers":["...","..."],"rows":[["...","..."]]}}')
+    user = f'Judul dokumen: {title}\n\nSUMBER:\n{ask_pages(text, title + " " + work[:500])}' + (f'\n\nCATATAN PEMBACA:\n{work}' if work else '')
+    model = writing_model()
+    for _ in range(2):
+        table = parse_table(ai_chat(system, user, model, max_tokens=6000))
+        if table['headers'] and table['rows']:
+            return table
+    raise RuntimeError('AI tidak menemukan data tabel. Coba lagi.')
+
+
 HIGHLIGHT_MAX_CHARS = 6000
 
 
@@ -3857,23 +4081,35 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_json(200, {'answer': answer, 'citations': citations, 'thoughts': thoughts})
 
     def write_route(self):
-        """POST {kind: 'journal'|'slides', title, text: {page: [lines]}, lang, work, section | count}
-        -> {text} (one journal section) or {slides: [{title, points, notes}]}."""
+        """POST {kind: 'journal'|'slides'|'quiz'|'flashcards'|'table', title, text: {page: [lines]},
+        lang, work, section | count} -> {text} (journal) / {slides:[...]} / {questions:[...]} /
+        {cards:[...]} / {table:{...}}."""
         try:
             size = int(self.headers.get('Content-Length', '0'))
             if not 0 < size <= 16 * 1024 * 1024:
                 raise ValueError('Teks dokumen kosong atau terlalu besar.')
             data = json.loads(self.rfile.read(size).decode('utf-8'))
-            if not isinstance(data, dict) or data.get('kind') not in ('journal', 'slides'):
+            if not isinstance(data, dict) or data.get('kind') not in ('journal', 'slides', 'quiz', 'flashcards', 'table', 'mindmap', 'infographic'):
                 raise ValueError('Permintaan tidak valid.')
             text, _, _ = self.sources_text(data)
             title = str(data.get('title') or 'Dokumen')[:200]
             lang = data.get('lang') if data.get('lang') in TRANSLATE_LANGUAGES else 'id-ID'
-            if data['kind'] == 'journal':
+            count = data.get('count') if type(data.get('count')) is int else 8
+            kind = data['kind']
+            if kind == 'journal':
                 result = {'text': write_journal(title, text, data.get('section'), lang, data.get('work'))}
-            else:
-                count = data.get('count') if type(data.get('count')) is int else 8
+            elif kind == 'slides':
                 result = {'slides': make_slides(title, text, lang, count, data.get('work'))}
+            elif kind == 'quiz':
+                result = {'questions': make_quiz(title, text, lang, count, data.get('work'))}
+            elif kind == 'flashcards':
+                result = {'cards': make_flashcards(title, text, lang, count, data.get('work'))}
+            elif kind == 'mindmap':
+                result = {'mindmap': make_mindmap(title, text, lang, data.get('work'))}
+            elif kind == 'infographic':
+                result = {'infographic': make_infographic(title, text, lang, data.get('work'))}
+            else:
+                result = {'table': make_table(title, text, lang, data.get('work'))}
         except (ValueError, UnicodeDecodeError) as cause:
             self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
             return
