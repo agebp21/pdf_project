@@ -894,22 +894,19 @@ window.orgOpenEditor = async (startPos = null) => {
     if (files.length === 0) throw new Error(L('Upload a PDF first', 'Upload PDF dulu'));
     const prog = $('#progress'); if (prog) { prog.classList.remove('hidden'); prog.textContent = L('Opening the editor…', 'Membuka editor…'); }
     const singlePage = Number.isInteger(startPos);
-    const editOrder = singlePage ? [organizeOrder[startPos]] : organizeOrder;
-    if (singlePage && editOrder[0] === undefined) throw new Error(L('Page not found', 'Halaman ora ditemokake'));
-    const originalId = singlePage
-      ? await FlipbookTransfer.save(new Blob([await buildOrganizePdf(organizeOrder)], { type: 'application/pdf' }), orgBaseName() + '.pdf')
-      : '';
-    const bytes = await buildOrganizePdf(editOrder);
-    let page = 1;
+    if (singlePage && organizeOrder[startPos] === undefined) throw new Error(L('Page not found', 'Halaman ora ditemokake'));
+    // Keep the complete document in the editor so inserted/deleted/reordered pages
+    // survive saving; the selected page is still the only page opened/focused for OCR.
+    const bytes = await buildOrganizePdf(organizeOrder);
+    let page = singlePage ? startPos + 1 : 1;
     if (!singlePage) {
       try { if (orgBook) page = orgBook.getCurrentPageIndex() + 1; } catch (e) {}
       const ticked = organizeOrder.findIndex(code => organizeSelected.has(code));
       if (ticked >= 0) page = ticked + 1;
     }
-    const suffix = singlePage ? '-page-' + (startPos + 1) : '';
-    const id = await FlipbookTransfer.save(new Blob([bytes], { type: 'application/pdf' }), orgBaseName() + suffix + '.pdf');
+    const id = await FlipbookTransfer.save(new Blob([bytes], { type: 'application/pdf' }), orgBaseName() + '.pdf');
     location.href = 'editor.html?source=' + encodeURIComponent(id) + '&page=' + page + '&from=organize&mode=' + encodeURIComponent(orgMode)
-      + (originalId ? '&returnSource=' + encodeURIComponent(originalId) + '&returnPage=' + encodeURIComponent(startPos) : '');
+      ;
   } catch (e) { showError(e.message || String(e)); }
 };
 window.orgEditTextOcr = async () => {
