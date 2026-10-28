@@ -178,6 +178,10 @@
   .org-after{display:flex;flex-direction:column;gap:.45rem}
   .org-after>*{width:100%;justify-content:center;text-align:center}
   .org-go{width:100%;background:#ef2d2d;color:#fff;border:0;border-radius:12px;padding:.75rem;font-size:14px;font-weight:800;cursor:pointer;box-shadow:0 8px 18px rgba(239,45,45,.35)}
+  .org-edit-actions{display:grid;grid-template-columns:1fr 1fr;gap:.5rem}
+  .org-edit-actions button{border:1px solid #d8d1c4;border-radius:12px;background:#fff;padding:.75rem .4rem;font-size:13px;font-weight:800;cursor:pointer}
+  .org-edit-actions button:first-child{background:#1a3c34;border-color:#1a3c34;color:#fff}
+  .org-edit-actions button:disabled{opacity:.55;cursor:wait}
   .org-cell{position:relative;min-width:0}
   #organizeGrid{grid-template-columns:repeat(auto-fill,minmax(115px,150px));gap:14px;justify-content:start}
   #organizeGrid.merge-files{grid-template-columns:repeat(auto-fill,minmax(160px,200px))}
@@ -605,7 +609,7 @@ function renderHeader(){
             <button onclick="orgCompress()">${L('Compress','Kompres')}</button>
           </div>
         </div>
-        <div class="org-foot"><div id="orgFootExtra"></div><button onclick="orgPrimaryAction()" class="org-go"><span id="orgGoText">Organize</span> <span aria-hidden="true">→</span></button></div>
+        <div class="org-foot"><div id="orgFootExtra"></div><button onclick="orgPrimaryAction()" class="org-go"><span id="orgGoText">Organize</span> <span aria-hidden="true">→</span></button><div id="orgEditActions" class="org-edit-actions is-hidden"><button type="button" onclick="orgDirectAction('flipbook')" data-en="Flipbook">Flipbook</button><button type="button" onclick="orgDirectAction('download')" data-en="Download">Download</button></div></div>
         <button id="orgCoverPreview" class="org-cover-preview is-hidden" type="button" onclick="orgReaderOpen(true)" aria-label="${L('Open book preview','Buka pratinjau buku')}">
           <span class="org-cover-pages">
             <img id="orgCoverImage" alt="${L('Selected page','Halaman pilihan')}" hidden>
@@ -710,6 +714,17 @@ window.orgPrimaryAction = () => {
   if (orgMode === 'compress') return orgCompress();
   return organizePdf();
 };
+window.orgDirectAction = async kind => {
+  const buttons = [...document.querySelectorAll('#orgEditActions button')];
+  if (!files.length || !organizeOrder.length || buttons.some(button => button.disabled)) return;
+  buttons.forEach(button => { button.disabled = true; });
+  try {
+    const bytes = await buildOrganizePdf(organizeOrder);
+    downloadBlob(new Blob([bytes], { type: 'application/pdf' }), orgBaseName() + '-edited.pdf', { compact: true });
+    document.getElementById(kind === 'flipbook' ? 'makeFlipbook' : 'downloadBtn').click();
+  } catch (error) { showError(error.message || String(error)); }
+  finally { buttons.forEach(button => { button.disabled = false; }); }
+};
 function paintOrgMode() {
   document.querySelectorAll('.org-tabs button').forEach(b => b.classList.toggle('active', b.dataset.mode === orgMode));
   const side = document.getElementById('orgSide');
@@ -717,6 +732,8 @@ function paintOrgMode() {
   // The Merge/Split/Edit/Compress menu above the preview stays visible even
   // before a file is picked; only the mode toolboxes wait for pages.
   const loaded = files.length > 0;
+  side?.querySelector('.org-go')?.classList.toggle('is-hidden', loaded && orgMode === 'edit');
+  document.getElementById('orgEditActions')?.classList.toggle('is-hidden', !loaded || orgMode !== 'edit');
   const split = document.getElementById('orgSplitTools');
   if (split) split.classList.toggle('is-hidden', !loaded || orgMode !== 'split');
   const goText = document.getElementById('orgGoText');

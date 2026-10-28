@@ -16,9 +16,9 @@
 <script defer src="assets/flipbook-transfer.js"></script>
 <script defer src="assets/animation-ocr.js?v=ocr-fast-1"></script>
 <script defer src="assets/pdf-compress.js"></script>
-<script defer src="assets/page-editor-core.js?v=lasso-1"></script>
+<script defer src="assets/page-editor-core.js?v=flow-1"></script>
 <script defer src="assets/editor-templates.js"></script>
-<script defer src="assets/page-editor.js?v=lasso-1"></script>
+<script defer src="assets/page-editor.js?v=flow-1"></script>
 <style>
   body{margin:0;background:#F4F1EA;color:#1C1917;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
   .pe-wrap{max-width:1500px;margin:0 auto;padding:12px 14px 30px}
@@ -100,6 +100,7 @@
   .pe-ghost{pointer-events:none;z-index:6}
   .pe-ghost .pe-h{pointer-events:auto}
   .pe-text .pe-txt{outline:none;white-space:pre-wrap;word-wrap:break-word;min-height:1em;cursor:text}
+  .pe-text .pe-txt.pe-flow::before{content:'';display:block;float:var(--pe-flow-side);width:var(--pe-flow-width);height:var(--pe-flow-height);shape-outside:inset(var(--pe-flow-top) 0 0 0);pointer-events:none}
   .pe-text .pe-txt:empty::before{content:attr(data-ph);color:#A8A29E;pointer-events:none}
   .pe-measure{position:fixed;left:-30000px;top:0;visibility:hidden;white-space:pre-wrap;word-wrap:break-word;pointer-events:none}
   .pe-text{padding:0;cursor:text}
@@ -200,6 +201,7 @@
         <button id="pe-list-bullet" title="Daftar berpoin" data-en-title="Bulleted list">•≡</button><button id="pe-list-number" title="Daftar bernomor" data-en-title="Numbered list">1.≡</button>
         <span class="pe-sep"></span>
         <label class="pe-btn" title="Ganti gambar" data-en-title="Replace picture"><span data-en="⇄ Replace">⇄ Ganti</span><input id="pe-replace" type="file" accept="image/*" hidden></label>
+        <button id="pe-wrap-image" type="button" title="Alirkan teks di sekitar gambar ini" data-en-title="Flow text around this picture" data-en="Flow text">Teks mengalir</button>
         <button id="pe-front" title="Ke depan" data-en-title="Bring forward">⬆</button><button id="pe-back" title="Ke belakang" data-en-title="Send backward">⬇</button>
         <button id="pe-delete" title="Hapus (Delete)" data-en-title="Delete (Delete)">🗑</button>
         <button id="pe-reset" title="Kembalikan halaman ini seperti asli" data-en-title="Put this page back as it was" data-en="↺ Original">↺ Asli</button>
@@ -212,6 +214,7 @@
         <button id="pe-shapes" title="Bentuk: kotak, elips, garis, panah, segitiga" data-en-title="Shapes: rectangle, ellipse, line, arrow, triangle" data-en="⬠ Shapes ▾">⬠ Bentuk ▾</button>
         <button id="pe-cut" title="Gambar bebas mengitari objek untuk memisahkannya jadi gambar yang bisa dipindah" data-en-title="Draw freely around an object to separate it as a movable picture" data-en="✂ Lasso → picture">✂ Laso → gambar</button>
         <button id="pe-ocr-area" title="Baca tulisan pada gambar/foto di area yang dipilih menjadi teks yang bisa diedit" data-en-title="Read the words in a picture or photo inside the area as editable text" data-en="🔤 Area → text (OCR)">🔤 Area → teks (OCR)</button>
+        <button id="pe-ocr-page" type="button" title="Baca teks di halaman aktif saja" data-en-title="Read text on the current page only" data-en="OCR current page">OCR halaman ini</button>
         <button id="pe-table" title="Sisipkan tabel" data-en-title="Insert a table" data-en="▦ Table ▾">▦ Tabel ▾</button>
         <span id="pe-tbl-ops" hidden><button id="pe-row-add" title="Baris di bawah sel ini" data-en-title="Row below this cell" data-en="＋ Row">＋ Baris</button><button id="pe-col-add" title="Kolom di kanan sel ini" data-en-title="Column right of this cell" data-en="＋ Column">＋ Kolom</button><button id="pe-row-del" title="Hapus baris ini" data-en-title="Delete this row" data-en="− Row">− Baris</button><button id="pe-col-del" title="Hapus kolom ini" data-en-title="Delete this column" data-en="− Column">− Kolom</button><button id="pe-tbl-head" title="Baris pertama sebagai judul tabel" data-en-title="First row as the table header" data-en="Header row">Baris judul</button></span>
         <button id="pe-toc" title="Daftar isi otomatis dari Judul 1–3 (tekan lagi untuk memperbarui)" data-en-title="Automatic table of contents from Heading 1–3 (press again to refresh)" data-en="📑 Contents">📑 Daftar isi</button>
