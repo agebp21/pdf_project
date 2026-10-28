@@ -896,6 +896,9 @@ window.orgOpenEditor = async (startPos = null) => {
     const singlePage = Number.isInteger(startPos);
     const editOrder = singlePage ? [organizeOrder[startPos]] : organizeOrder;
     if (singlePage && editOrder[0] === undefined) throw new Error(L('Page not found', 'Halaman ora ditemokake'));
+    const originalId = singlePage
+      ? await FlipbookTransfer.save(new Blob([await buildOrganizePdf(organizeOrder)], { type: 'application/pdf' }), orgBaseName() + '.pdf')
+      : '';
     const bytes = await buildOrganizePdf(editOrder);
     let page = 1;
     if (!singlePage) {
@@ -905,7 +908,8 @@ window.orgOpenEditor = async (startPos = null) => {
     }
     const suffix = singlePage ? '-page-' + (startPos + 1) : '';
     const id = await FlipbookTransfer.save(new Blob([bytes], { type: 'application/pdf' }), orgBaseName() + suffix + '.pdf');
-    location.href = 'editor.html?source=' + encodeURIComponent(id) + '&page=' + page + '&from=organize&mode=' + encodeURIComponent(orgMode);
+    location.href = 'editor.html?source=' + encodeURIComponent(id) + '&page=' + page + '&from=organize&mode=' + encodeURIComponent(orgMode)
+      + (originalId ? '&returnSource=' + encodeURIComponent(originalId) + '&returnPage=' + encodeURIComponent(startPos) : '');
   } catch (e) { showError(e.message || String(e)); }
 };
 window.orgEditTextOcr = async () => {

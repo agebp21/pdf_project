@@ -9,7 +9,9 @@
   const L = (en, id) => (globalThis.I18N && I18N.pick ? I18N.pick(en, id) : id);
   const CSS_FONT = { sans: 'Arial, Helvetica, sans-serif', serif: '"Times New Roman", Times, serif', mono: '"Courier New", Courier, monospace' };
   const st = { pdf: null, bytes: null, name: 'dokumen.pdf', pages: [], cur: -1, sel: null, group: [], picked: new Set(), oldDocs: [], zoom: 1, past: [], future: [],
-    from: new URLSearchParams(location.search).get('from') || '' };
+    from: new URLSearchParams(location.search).get('from') || '',
+    returnSource: new URLSearchParams(location.search).get('returnSource') || '',
+    returnPage: Number(new URLSearchParams(location.search).get('returnPage')) || 0 };
   let uid = 1;
   const newId = () => 'e' + (uid++);
 
@@ -2175,6 +2177,23 @@
       const name = st.savedAs && !opts.order ? st.name : st.name.replace(/\.pdf$/i, '') + (opts.order ? L('-pages.pdf', '-halaman.pdf') : '-edit.pdf');
       const note = missing.length ? L(` Some characters are not in the PDF fonts and became "?": ${missing.join(' ')}`, ` Beberapa huruf tidak ada di font PDF dan menjadi "?": ${missing.join(' ')}`) : '';
       if ((where === 'flipbook' || where === 'organize') && window.FlipbookTransfer) {
+        if (where === 'organize' && st.returnSource) {
+          const original = await FlipbookTransfer.get(st.returnSource);
+          if (original && original.blob) {
+            const src = await PDFLib.PDFDocument.load(await original.blob.arrayBuffer(), { ignoreEncryption: true });
+            const edited = await PDFLib.PDFDocument.load(bytes, { ignoreEncryption: true });
+            const merged = await PDFLib.PDFDocument.create();
+            const replacement = (await merged.copyPages(edited, [0]))[0];
+            const originals = await merged.copyPages(src, src.getPageIndices());
+            originals.forEach((pg, i) => merged.addPage(i === st.returnPage ? replacement : pg));
+            const mergedBlob = new Blob([await merged.save()], { type: 'application/pdf' });
+            await FlipbookTransfer.remove(st.returnSource);
+            const mergedId = await FlipbookTransfer.save(mergedBlob, name);
+            dirtyLeave = false;
+            location.href = 'converter.html?tool=organize-pdf&mode=edit&source=' + encodeURIComponent(mergedId);
+            return;
+          }
+        }
         const id = await FlipbookTransfer.save(blob, where === 'organize' ? st.name : name);
         dirtyLeave = false;
         location.href = where === 'organize' ? 'converter.html?tool=organize-pdf&mode=' + encodeURIComponent(new URLSearchParams(location.search).get('mode') || 'edit') + '&source=' + encodeURIComponent(id)
