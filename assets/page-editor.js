@@ -17,6 +17,7 @@
 
   const NEW_NAME = () => L('new-document.pdf', 'dokumen-baru.pdf');
   function status(text) { const el = $('#pe-status'); if (el) el.textContent = text || ''; }
+  function ocrBusy(on) { $('#pe-ocr-loading')?.classList.toggle('on', !!on); }
   const page = () => st.pages[st.cur];
   const els = () => (page() ? page().elements : []);
   const find = id => els().find(e => e.id === id);
@@ -451,7 +452,10 @@
     // the page is read as a picture; lines the PDF already gave are not taken twice.
     if (scanned || pg.forceOcr) {
       status(L('Reading the text (OCR)…', 'Membaca teks (OCR)…'));
-      const found = await AnimationOCR.read(canvas, e => { if (e.status === 'recognizing text') status(L('OCR ', 'OCR ') + Math.round((e.progress || 0) * 100) + '%'); });
+      ocrBusy(true);
+      let found;
+      try { found = await AnimationOCR.read(canvas, e => { if (e.status === 'recognizing text') status(L('OCR ', 'OCR ') + Math.round((e.progress || 0) * 100) + '%'); }); }
+      finally { ocrBusy(false); }
       const read = found.filter(l => goodLine(l) && l.confidence >= (scanned ? 75 : 60))
         .map(l => ({ text: C.clean(l.text), x: l.bbox.x0, y: l.bbox.y0, w: l.bbox.x1 - l.bbox.x0, h: l.bbox.y1 - l.bbox.y0, size: ocrSize(l.text, l.bbox.y1 - l.bbox.y0), family: 'sans', ocr: true }));
       const overlap = (a, b) => Math.max(0, Math.min(a.x + a.w, b.x + b.w) - Math.max(a.x, b.x)) * Math.max(0, Math.min(a.y + a.h, b.y + b.h) - Math.max(a.y, b.y)) / Math.max(1, Math.min(a.w * a.h, b.w * b.h));
@@ -1839,8 +1843,11 @@
     const big = Object.assign(document.createElement('canvas'), { width: Math.round(cw * f), height: Math.round(ch * f) });
     big.getContext('2d').drawImage(crop, 0, 0, big.width, big.height);
     status(L('Reading the text (OCR)…', 'Membaca teks (OCR)…'));
-    const found = (await AnimationOCR.read(big, e => { if (e.status === 'recognizing text') status('OCR ' + Math.round((e.progress || 0) * 100) + '%'); }))
-      .filter(goodLine);
+    ocrBusy(true);
+    let found;
+    try { found = (await AnimationOCR.read(big, e => { if (e.status === 'recognizing text') status('OCR ' + Math.round((e.progress || 0) * 100) + '%'); })); }
+    finally { ocrBusy(false); }
+    found = found.filter(goodLine);
     big.width = 0;
     if (!found.length) { crop.width = 0; status(L('No text could be read in that area. Try a box closer around the words.', 'Tidak ada teks yang terbaca di area itu. Coba kotak yang lebih pas di sekitar tulisan.')); return; }
     const boxes = found.map(l => ({ x0: l.bbox.x0 / f, y0: l.bbox.y0 / f, x1: l.bbox.x1 / f, y1: l.bbox.y1 / f }));
