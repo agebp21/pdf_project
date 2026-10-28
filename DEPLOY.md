@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 28 Oktober 2026 — live `862a0b6`: popup tutorial Flipbook diperkecil lagi dari 344 ke 320 px, padding 20 px, judul 22 px. Browser lokal/live desktop dan HP memastikan tombol/teks tidak terpotong; Flipbook/CSS HTTPS 200. Backup `/root/pdf_project-code-backup-20261028-guide-320-862a0b6.tgz`; kedua layanan aktif.
+
 - 28 Oktober 2026 — live `69722b3`: popup tutorial Flipbook diperkecil ke lebar 344 px dengan tipografi dan jarak lebih ringkas. Browser lokal/live desktop dan HP memastikan tidak terpotong; Flipbook/CSS/API HTTPS 200. Backup `/root/pdf_project-code-backup-20261028-guide-small-69722b3.tgz`; kedua layanan aktif.
 
 - 28 Oktober 2026 — live `e3e9557`: ikon pensil/stabilo pada toolbar pratinjau homepage disembunyikan. Browser lokal/live memastikan tombol tidak terlihat, navigasi tetap aktif; tes sampel lulus, homepage/CSS/API HTTPS 200. Backup `/root/pdf_project-code-backup-20261028-hide-pen-e3e9557.tgz`; kedua layanan aktif.
