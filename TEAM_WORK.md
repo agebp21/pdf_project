@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-SORT-ICON (28 Okt, Codex): `aaa3ac7` live. Tombol “⇅ Urut” menjadi ikon ⇅ saja dengan label aksesibel; fungsi tetap. Organize workspace PASS, browser lokal/live ukuran 28×28. Backup `/root/pdf_project-code-backup-20261028-sort-icon.tgz`.
+
 - ORGANIZE-SPLIT-SIDEBAR (28 Okt, Codex): `7ad1613` live. Klik Pisah halaman pilihan tidak lagi membuat panel hasil/preview ulang di bawah atau menggulir halaman; pesan sukses dan tombol Unduh/Jadikan Flipbook tetap di sidebar. Browser lokal/live dengan PDF 2 halaman: result tersembunyi, unduh ada, error JS 0. Tes organize actions PASS. Backup `/root/pdf_project-code-backup-20261028-split-sidebar.tgz`.
 
 - ORGANIZE-EDIT-TOOLBAR-REMOVE (28 Okt, Codex): `cd2864a` live. Toolbar tambahan zoom/Geser/Edit teks & gambar/T Text/bentuk pada mode Edit Organize dihapus; tab Edit tetap. Tes organize actions PASS, browser lokal/live toolbar 0, tab Edit 1, tanpa error JS. Backup `/root/pdf_project-code-backup-20261028-remove-org-editbar.tgz`.
