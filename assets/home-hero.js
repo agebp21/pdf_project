@@ -15,23 +15,21 @@
     if (tools) tools.pause();
     if (catalog && !catalogPages) {
       catalogPages = [];
-      for (var i=1; i<=19; i++) {
+      for (var i=1; i<=12; i++) {
         var page = document.createElement('div'); page.className = 'hh-page hh-catalog-page'; page.dataset.density = 'soft';
-        var image = document.createElement('img'); image.src = 'assets/samples/sekar-bumi/page-' + String(i).padStart(2,'0') + '.webp'; image.alt = 'Sekar Bumi · ' + i; image.decoding = 'async';
+        var image = document.createElement('img'); image.src = 'assets/samples/catalog-1/page-' + String(i).padStart(2,'0') + '.webp'; image.alt = 'Nivora Home · ' + i; image.decoding = 'async';
         page.appendChild(image); catalogPages.push(page);
       }
-      var catalogBack = document.createElement('div'); catalogBack.className = 'hh-page hh-sample-back'; catalogBack.dataset.density = 'hard';
-      catalogPages.push(catalogBack);
+      catalogPages[catalogPages.length-1].dataset.density = 'hard';
     }
     if (magazine && !magazinePages) {
       magazinePages = [];
-      for (var m=1; m<=17; m++) {
+      for (var m=1; m<=12; m++) {
         var magazinePage = document.createElement('div'); magazinePage.className = 'hh-page hh-catalog-page'; magazinePage.dataset.density = 'soft';
-        var magazineImage = document.createElement('img'); magazineImage.src = 'assets/samples/grand-designs/page-' + String(m).padStart(2,'0') + '.webp'; magazineImage.alt = 'Grand Designs Australia · ' + m; magazineImage.decoding = 'async';
+        var magazineImage = document.createElement('img'); magazineImage.src = 'assets/samples/catalog-2/page-' + String(m).padStart(2,'0') + '.webp'; magazineImage.alt = 'RushBite Express · ' + m; magazineImage.decoding = 'async';
         magazinePage.appendChild(magazineImage); magazinePages.push(magazinePage);
       }
-      var magazineBack = document.createElement('div'); magazineBack.className = 'hh-page hh-sample-back'; magazineBack.dataset.density = 'hard';
-      magazinePages.push(magazineBack);
+      magazinePages[magazinePages.length-1].dataset.density = 'hard';
     }
     showingCatalog = catalog; showingMagazine = magazine;
     flip.updateFromHtml(catalog ? catalogPages : magazine ? magazinePages : originalPages);
