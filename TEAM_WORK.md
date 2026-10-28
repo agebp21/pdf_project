@@ -1486,3 +1486,4 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Belum commit/push.
 
 - 2026-10-28: AI Summarizer live `394e519` ? Basic/Gratis tak punya entitlement `ai` selama trial maupun setelahnya; gate API mengembalikan 402. Medium/Pro tetap punya akses. Kuota ringkasan Basic 0. Tes trial + entitlement lulus; deploy terverifikasi HTTPS 200. Backup VPS `/root/pdf_project-code-backup-20261028-ai-entitlement.tgz`.
+- 2026-10-28: AI Studio layout live `65de3ae` ? sidebar tiga langkah Ringkasan/Terjemahan/Chat, tab Tanya jadi Chat; fungsi lama dipertahankan. Tes ask 12 dan notebook work 11 lulus. Backup VPS `/root/pdf_project-code-backup-20261028-ai-layout.tgz`.
