@@ -1,6 +1,6 @@
 # Koordinasi tim AI
 
-- ORGANIZE-EDIT-DIRECT (29 Okt, Codex): mode Edit ing Organize saiki nyumputake tombol abang "Edit PDF" lan nuduhake tombol Flipbook + Download langsung. Klik kaping pindho thumbnail tetep mbukak editor halaman. Browser lokal nganggo PDF katalog 19 halaman: download file sukses, Flipbook navigasi sukses, pindhah mode Gabung mbalekake tombol proses. Siap rilis.
+- ORGANIZE-EDIT-DIRECT (29 Okt, Codex): `45f9ea1` live. Mode Edit ing Organize saiki nyumputake tombol abang "Edit PDF" lan nuduhake tombol Flipbook + Download langsung. Klik kaping pindho thumbnail tetep mbukak editor halaman. Browser lokal nganggo PDF katalog 19 halaman: download file sukses, Flipbook navigasi sukses, pindhah mode Gabung mbalekake tombol proses. Browser live HTTP 200, rong tombol tampil, tanpa JS error. Backup `/root/pdf_project-code-backup-20261029025247.tgz`.
 
 - EDITOR-FLOW-LIVE (29 Okt, Codex): `89941a1` live setelah cherry-pick perubahan editor ke update PC Wiyan `6eb9455`. Backup `/root/pdf_project-code-backup-20261029024149.tgz`; layanan dan endpoint utama 200. Tes editor lulus; tes AI lama 12 gagal karena ekspektasi akses berbeda dari kode sekarang, 2 QA homepage memerlukan instalasi Playwright lokal. Pengembangan lanjutan wrap gambar tetap lokal sampai diuji.
 
