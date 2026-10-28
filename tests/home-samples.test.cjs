@@ -10,11 +10,11 @@ const {JSDOM} = require('../.build/qa-runtime/node_modules/jsdom');
   w.I18N = {get:()=> 'id'};
   let pageCount=0;
   w.St = {PageFlip: class {
-    constructor(box) {this.box=box;this.index=0;this.handlers={};}
+    constructor(box) {this.box=box;this.index=0;this.handlers={};w.__qaFlip=this;}
     loadFromHTML(pages) {this.pages=[...pages];pageCount=this.pages.length;}
     updateFromHtml(pages) {this.pages=[...pages];this.box.replaceChildren(...pages);pageCount=pages.length;}
     getCurrentPageIndex(){return this.index;} getPageCount(){return this.pages.length;}
-    getOrientation(){return 'portrait';} getSettings(){return {flippingTime:1};}
+    getOrientation(){return 'landscape';} getSettings(){return {flippingTime:1};}
     on(name,fn){this.handlers[name]=fn;} turnToPage(i){this.index=i;this.handlers.flip?.();}
     flip(i){this.turnToPage(i);} flipNext(){this.turnToPage(this.index+1);} flipPrev(){this.turnToPage(this.index-1);}
   }};
@@ -28,6 +28,12 @@ const {JSDOM} = require('../.build/qa-runtime/node_modules/jsdom');
   click('interior'); await wait();
   assert.equal(pageCount,20);assert.equal(w.document.querySelectorAll('.hh-catalog-page').length,19);
   assert.equal(w.document.querySelectorAll('.hh-sample-back').length,1);
+  w.__qaFlip.turnToPage(18);
+  assert.equal(w.document.getElementById('hh-demo-next').disabled,false,'last content page can still close onto the back cover');
+  assert.equal(w.document.getElementById('hh-tool-end').disabled,false,'End remains available before the back cover');
+  w.document.getElementById('hh-tool-end').click();
+  assert.equal(w.__qaFlip.getCurrentPageIndex(),19,'End reaches the closed back cover');
+  assert.equal(w.document.getElementById('hh-demo-next').disabled,true,'next stops only on the back cover');
   w.document.getElementById('hh-demo-close').click();await wait();await wait();
   click('interior');await wait();assert.equal(w.document.getElementById('hh-demo').hidden,false);
   click('travel');await wait();assert.equal(pageCount,10);assert.equal(w.document.querySelectorAll('#hh-demo-book .hh-page').length,10);

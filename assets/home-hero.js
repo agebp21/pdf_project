@@ -48,7 +48,7 @@
   function engine() {
     if (!loading) {
       var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'assets/export/book-effects.css'; document.head.appendChild(css);
-      loading = load('assets/vendor/page-flip.browser.js?v=plain3').then(function () { return load('assets/export/layout.js?v=fs'); }).then(function () { return load('assets/home-hero-tools.js'); });
+      loading = load('assets/vendor/page-flip.browser.js?v=plain3').then(function () { return load('assets/export/layout.js?v=fs'); }).then(function () { return load('assets/home-hero-tools.js?v=cover-close1'); });
     }
     return loading;
   }
@@ -59,10 +59,10 @@
       : (spread && i + 1 < n - 1 ? (i + 1) + '–' + (i + 2) : String(i + 1)) + ' / ' + n;
     document.getElementById('hh-demo-status').textContent = text;
     document.getElementById('hh-demo-prev').disabled = i === 0;
-    document.getElementById('hh-demo-next').disabled = i >= n - (spread ? 2 : 1);
+    document.getElementById('hh-demo-next').disabled = i >= n - 1;
     if (showingCatalog) {
       document.getElementById('hh-tool-home').disabled = i === 0;
-      document.getElementById('hh-tool-end').disabled = i >= n - (spread ? 2 : 1);
+      document.getElementById('hh-tool-end').disabled = i >= n - 1;
       document.getElementById('hh-tool-open').disabled = document.getElementById('hh-demo-next').disabled;
       document.getElementById('hh-tool-open').textContent = i === 0 ? (EN() ? 'Open cover →' : 'Buka sampul →') : (EN() ? 'Next →' : 'Berikutnya →');
     }

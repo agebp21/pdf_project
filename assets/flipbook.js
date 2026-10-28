@@ -96,14 +96,14 @@
     const isCover = shown[0] === 0;
     const total = pageElements.length;
     // The last page on its own is the back cover (a two-page spread shows it alone, too).
-    const isBack = !visible.length || (visible.length === 1 && visible[0] === total - 1 && total > 1);
+    const isBack = shown[0] === book.getPageCount() - 1 && total > 1;
     $('#page-status').textContent = isCover ? L(`Front cover · 1 / ${total}`, `Sampul depan · 1 / ${total}`)
       : isBack ? L(`Back cover · ${total} / ${total}`, `Sampul belakang · ${total} / ${total}`)
       : L(`Pages ${visible.map(i => i + 1).join('–')} / ${total}`, `Halaman ${visible.map(i => i + 1).join('–')} / ${total}`);
     $('#next').textContent = isCover ? L('Open cover →', 'Buka sampul →') : '→';
     $('#next').setAttribute('aria-label', isCover ? 'Open cover' : 'Next page');
     $('#prev').disabled = $('#home').disabled = isCover;
-    $('#next').disabled = $('#end').disabled = shown.at(-1) === book.getPageCount() - 1;
+    $('#next').disabled = $('#end').disabled = shown[0] === book.getPageCount() - 1;
   }
   function stopAnimation() { cancelAnimationFrame(frame); frame = 0; }
   function animate(automatic = false) {

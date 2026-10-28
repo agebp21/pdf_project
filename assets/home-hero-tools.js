@@ -16,7 +16,7 @@
       clearTimeout(noticeTimer); noticeTimer = setTimeout(function () { out.hidden = true; }, 7000);
     }
     var zoom = FlipbookZoom.bind(stage, target, { button: $('hh-tool-zoom'), state: function () { return flip.getState(); }, content: function () { return $('hh-demo-book').getBoundingClientRect(); } });
-    function go(index) { zoom.snap(); if (['read', 'fold_corner'].indexOf(flip.getState()) !== -1) flip.turnToPage(Math.max(0, Math.min(pages.length - 1, index))); }
+    function go(index) { zoom.snap(); if (['read', 'fold_corner'].indexOf(flip.getState()) !== -1) flip.turnToPage(Math.max(0, Math.min(flip.getPageCount() - 1, index))); }
     var marks = FlipbookBookmarks.bind({ key: 'mf-home-demo-marks-v1', pages: pages, visible: visible, goPage: go, toggle: $('hh-tool-mark'), open: $('hh-tool-marks') });
     var notes = FlipbookNotes.bind({ key: 'mf-home-demo-notes-v1', title: 'MyFlipbook Pro — Demo', pages: pages, goPage: go, open: $('hh-tool-notes'), bookmark: function (i, on) { return marks.set(i, on); } });
     var highlights = FlipbookHighlights.bind({ key: 'mf-home-demo-highlights-v1', pages: pages, words: words, text: text, button: $('hh-tool-pen'), onQuote: function (i, quote, color) { notes.quote(i, quote, color); }, onUnquote: function (i, quote) { notes.unquote(i, quote); } });
@@ -40,7 +40,7 @@
     else audio.onclick = function () { if (speech.active()) speech.stop(); else speech.start(); };
     function pause() { speech.stop(); highlights.setMode(false); marks.close(); notes.close(); zoom.snap(); }
     $('hh-tool-home').onclick = function () { pause(); go(0); };
-    $('hh-tool-end').onclick = function () { pause(); go(pages.length - 1); };
+    $('hh-tool-end').onclick = function () { pause(); go(flip.getPageCount() - 1); };
     $('hh-tool-open').onclick = function () { pause(); if (!$('hh-demo-next').disabled) flip.flipNext(); };
     $('hh-tool-translate').onclick = function () { pause(); if (window.I18N) I18N.set(en() ? 'id' : 'en'); };
     // Fullscreen only paints descendants of its element; keep reader popovers inside it.
@@ -61,7 +61,7 @@
       marks.refresh(); notes.refresh();
       if (audio.disabled) audio.hidden = false;
       $('hh-tool-home').disabled = flip.getCurrentPageIndex() === 0;
-      $('hh-tool-end').disabled = flip.getCurrentPageIndex() >= pages.length - 1;
+      $('hh-tool-end').disabled = flip.getCurrentPageIndex() >= flip.getPageCount() - 1;
       $('hh-tool-open').disabled = $('hh-demo-next').disabled;
       $('hh-tool-open').textContent = flip.getCurrentPageIndex() === 0 ? (en() ? 'Open cover →' : 'Buka sampul →') : (en() ? 'Next →' : 'Berikutnya →');
       $('hh-tool-mark').textContent = $('hh-tool-mark').getAttribute('aria-pressed') === 'true' ? (en() ? '🔖 Marked' : '🔖 Ditandai') : (en() ? '🔖 Mark' : '🔖 Tandai');
