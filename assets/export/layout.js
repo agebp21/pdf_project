@@ -18,17 +18,19 @@
       if(hard)page.classList.add('book-board');
     });
   },
-  // Every book ends on a full spread: an odd page count ends on a
-  // right-hand page with nothing to turn it over onto (so the book could
-  // never close), and an even count ends on a lone left-hand page facing
-  // an empty dark slot — the turning sheet visibly vanishes upward into
-  // it at the end of the flip. Like a real book, add a blank back cover
-  // (engine only; it is not a page of the document).
+  // The engine reaches a closed back cover only with an even sheet count.
+  // Odd document counts need one blank sheet; even counts need two, so the
+  // last content page can turn past the open spread onto a lone back cover.
+  // These sheets belong to the reader only, never to the PDF.
   withBackCover(pages,className) {
     if(pages.length<3)return pages.slice();
-    const back=document.createElement('article');
-    back.className=className+' book-back-blank';back.setAttribute('aria-label','Back cover');
-    return pages.concat([back]);
+    const blanks=Array.from({length:pages.length%2?1:2},(_,index)=>{
+      const back=document.createElement('article');
+      back.className=className+' book-back-blank';
+      back.setAttribute('aria-label',index===0&&pages.length%2===0?'Inside back cover':'Back cover');
+      return back;
+    });
+    return pages.concat(blanks);
   },
   WIDE: 1.15,
   geometry(width,height,ratio,index,count,compact) {

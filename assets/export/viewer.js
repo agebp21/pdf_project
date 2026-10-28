@@ -44,7 +44,7 @@
     const visible = () => onScreen().filter(index => index < data.pageCount);
     function update() {
       const shown = onScreen(), pages = visible(), cover = shown[0] === 0;
-      $('#status').textContent = cover ? `Cover · 1 / ${data.pageCount}` : shown[0] === sheets.length-1 ? 'Back cover' : `${pages.map(i=>i+1).join('–')} / ${data.pageCount}`;
+      $('#status').textContent = cover ? `Cover · 1 / ${data.pageCount}` : shown[0] === sheets.length-1 ? 'Back cover' : !pages.length ? 'Inside back cover' : `${pages.map(i=>i+1).join('–')} / ${data.pageCount}`;
       $('#prev').disabled = $('#home').disabled = cover;
       $('#next').disabled = $('#end').disabled = shown[0] === sheets.length-1;
       $('#next').textContent = cover ? 'Open cover →' : '→';

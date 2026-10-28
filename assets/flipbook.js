@@ -99,6 +99,7 @@
     const isBack = shown[0] === book.getPageCount() - 1 && total > 1;
     $('#page-status').textContent = isCover ? L(`Front cover · 1 / ${total}`, `Sampul depan · 1 / ${total}`)
       : isBack ? L(`Back cover · ${total} / ${total}`, `Sampul belakang · ${total} / ${total}`)
+      : !visible.length ? L('Inside back cover','Bagian dalam sampul belakang')
       : L(`Pages ${visible.map(i => i + 1).join('–')} / ${total}`, `Halaman ${visible.map(i => i + 1).join('–')} / ${total}`);
     $('#next').textContent = isCover ? L('Open cover →', 'Buka sampul →') : '→';
     $('#next').setAttribute('aria-label', isCover ? 'Open cover' : 'Next page');

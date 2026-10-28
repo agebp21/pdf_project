@@ -46,7 +46,7 @@ async function testViewer(count,ratio,width=1200){
  let steps=0;
  while(!w.document.querySelector('#next').disabled&&steps++<count+2){w.document.querySelector('#next').click();test.pump();assert.equal(w.engine.getState(),'read');assert.ok(Math.abs(w.engine.getBoundsRect().pageWidth-originalWidth)<.01,'cover and page sizes differ')}
  assert.ok(steps<=count+1,'navigation stuck before last page');
- const last=w.engine.getCurrentPageIndex();assert.ok(last>=count-2,`last page unreachable: ${last}/${count}`);
+ const last=w.engine.getCurrentPageIndex();assert.equal(last,w.engine.getPageCount()-1,`back cover must close alone: ${last}/${w.engine.getPageCount()}`);
  w.document.querySelector('#home').click();test.pump();
  assert.equal(w.engine.getCurrentPageIndex(),0,'Home must return to cover');
  assert.equal(w.document.querySelector('#home').disabled,true);
@@ -56,7 +56,7 @@ async function testViewer(count,ratio,width=1200){
  w.engine.destroy();w.close();console.log(`PASS actual PageFlip DOM runtime: ${count} pages, ratio ${ratio}, viewport ${width}`);
 }
 async function main(){
- for(const [count,ratio,width] of [[1,.7,1200],[2,1.78,1200],[3,1,1200],[8,16/9,1200],[8,.7,390],[5,3,1200],[4,.3,1200]])await testViewer(count,ratio,width);
+ for(const [count,ratio,width] of [[1,.7,1200],[2,1.78,1200],[3,1,1200],[8,16/9,1200],[8,.7,390],[5,3,1200],[4,.3,1200],[19,.7,1200],[20,.7,1200]])await testViewer(count,ratio,width);
  const source=fixture(8,960,540);fs.writeFileSync(path.join(out,'qa-landscape.pdf'),Buffer.from(await source.arrayBuffer()));
  const pdf=await pdfjs.getDocument({data:new Uint8Array(await source.arrayBuffer()),isEvalSupported:false}).promise;
  const urls=[];
