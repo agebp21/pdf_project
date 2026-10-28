@@ -1484,3 +1484,5 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - 2026-10-07 (komplain owner "kotak numpuk"): Tesseract ngedetek baris sing podo ping 2-3 (kotak tumpuk). `orgOcrLines` saiki nggabung duplikat vertikal (>50% tumpang karo sing luwih cilik) dadi siji garis resik; tembung dobel dibuang (per-tembung, urutan wacan dijaga); baris sing tenan bedo (rapet dendeng) tetep pisah. Tes jsdom PASS (3 deteksi tumpuk jadi 1 kotak, baris bedo tetep 2, urutan wacan bener). Suite organize + export PASS, syntax + diff bersih.
 - 2026-10-07 (serah-terima): OCR diteruske sesi Claude. Sesi iki STOP ngutak-atik `converter.html`/OCR — file bebas didemok Claude. Posisi terakhir: merge-gabungan deteksi wis kepasang + dites; OCR browser asli durung tau dites.
 - Belum commit/push.
+
+- 2026-10-28: AI Summarizer live `394e519` ? Basic/Gratis tak punya entitlement `ai` selama trial maupun setelahnya; gate API mengembalikan 402. Medium/Pro tetap punya akses. Kuota ringkasan Basic 0. Tes trial + entitlement lulus; deploy terverifikasi HTTPS 200. Backup VPS `/root/pdf_project-code-backup-20261028-ai-entitlement.tgz`.
