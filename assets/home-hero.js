@@ -48,7 +48,7 @@
   function engine() {
     if (!loading) {
       var css = document.createElement('link'); css.rel = 'stylesheet'; css.href = 'assets/export/book-effects.css'; document.head.appendChild(css);
-      loading = load('assets/vendor/page-flip.browser.js?v=plain3').then(function () { return load('assets/export/layout.js?v=fs'); }).then(function () { return load('assets/home-hero-tools.js?v=cover-close1'); });
+      loading = load('assets/vendor/page-flip.browser.js?v=plain3').then(function () { return load('assets/export/layout.js?v=cover-close2'); }).then(function () { return load('assets/home-hero-tools.js?v=cover-close1'); });
     }
     return loading;
   }
