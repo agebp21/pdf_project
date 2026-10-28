@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- FLIPBOOK-GUIDE-SIZE (28 Okt, Codex): `69722b3` live. Popup tutorial lebih kecil dan rapi; browser desktop/HP lulus, detail di `DEPLOY.md`.
+
 - HOME-HIDE-PEN (28 Okt, Codex): `e3e9557` live. Tombol pensil pada menu pratinjau beranda disembunyikan. Browser lokal/live dan tes sampel lulus; detail di `DEPLOY.md`.
 
 - HOME-SAMPLE-SIZE (28 Okt, Codex): `6c61f7c` live. Tiga kartu sampel 128 px desktop, responsif HP; menu Katalog 1 disamakan. Browser lokal/live dan tes sampel lulus. Backup/verifikasi di `DEPLOY.md`.
