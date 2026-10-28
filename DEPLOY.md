@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 29 Oktober 2026 — live `89941a1` (gabung update PC Wiyan `6eb9455`): editor menambah alur teks di samping gambar, toggle Teks mengalir, OCR halaman aktif dengan indikator lingkaran, dan perbaikan kata panjang berformat. Tes editor core, editor tahap C, OCR, browser lokal dengan katalog Sekar Bumi 19 halaman lulus; 57/59 tes Node lulus, 2 tes homepage tidak berjalan karena Playwright tidak terpasang di repo ini; tes Python 223/235 lulus, 12 kegagalan pada ekspektasi akses AI lama di `test_accounts.py`/`test_ai_paid.py` yang tidak disentuh rilis editor. Backup `/root/pdf_project-code-backup-20261029024149.tgz`; layanan aktif, editor/aset/API/admin HTTPS 200. File scratch lokal owner tidak disentuh.
+
 - 28 Oktober 2026 — live `dedb46c`: input rentang Pisah PDF otomatis menyorot thumbnail saat pengguna mengetik (debounce 120 ms), tanpa harus keluar dari kolom. Browser lokal/live memverifikasi `1-2,4` memilih 1/2/4 lalu `2-3` memperbarui ke 2/3 saat fokus tetap di input; tes parser rentang lulus. Backup `/root/pdf_project-code-backup-20261028-split-auto-dedb46c.tgz`; kedua layanan aktif, Organize/API HTTPS 200.
 
 - 28 Oktober 2026 — live `825a826`: panel Pisah PDF diringkas menjadi pilihan ikon Rentang/Halaman, input rentang jelas, tombol Pilih semua/Kosongkan, pratinjau kecil, dan tombol aksi di bawah panel. Rentang `1-2,4` memilih tiga halaman; klik thumbnail beralih ke mode Halaman. Hasil tetap satu PDF. JS semua lulus, Python 233/233, browser lokal/live desktop-HP lulus. Backup `/root/pdf_project-code-backup-20261028-split-simple-825a826.tgz`; kedua layanan aktif, Organize/API/admin HTTPS 200.
