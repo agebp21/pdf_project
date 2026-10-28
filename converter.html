@@ -192,7 +192,7 @@
   #orgFootExtra:empty{display:none}
   #orgFootExtra p{margin-top:0}
   /* Compact cover in the workspace; the full flipbook lives in a dialog. */
-  .org-cover-preview{display:flex;align-items:center;gap:12px;width:min(100%,280px);margin:12px auto 16px;padding:8px;text-align:left;background:#fff;border:1px solid #e7e2f2;border-radius:12px;cursor:pointer;color:#1f2937}
+  .org-cover-preview{display:flex;align-items:center;gap:12px;width:calc(100% - 2.5rem);margin:12px auto 16px;padding:8px;text-align:left;background:#fff;border:1px solid #e7e2f2;border-radius:12px;cursor:pointer;color:#1f2937}
   .org-cover-preview:hover,.org-cover-preview:focus-visible{border-color:#1a3c34;box-shadow:0 3px 12px #1a3c3426}
   .org-cover-preview img,.org-cover-placeholder{width:86px;height:112px;object-fit:contain;background:#f7f4ed;border-radius:7px;flex:none}
   .org-cover-placeholder{display:grid;place-items:center;color:#777;font-size:11px}
@@ -479,11 +479,6 @@ function renderHeader(){
           <button data-mode="split" onclick="orgModeSet('split')"><span class="ot-ic" style="background:#FFE3D9;color:#9A3412">↗↙</span><span class="ot-tx"><span class="ot-t">${L('Split','Pisah')}</span><span class="ot-d">${L('Take out pages','Pisahkan halaman')}</span></span></button>
           <button data-mode="compress" onclick="orgModeSet('compress')"><span class="ot-ic" style="background:#E4F3C2;color:#1A3C34">⇲</span><span class="ot-tx"><span class="ot-t">${L('Compress','Kompres')}</span><span class="ot-d">${L('Make the file smaller','Perkecil ukuran file')}</span></span></button>
         </div>
-        <button id="orgCoverPreview" class="org-cover-preview is-hidden" type="button" onclick="orgReaderOpen()" aria-label="${L('Open book preview','Buka pratinjau buku')}">
-          <img id="orgCoverImage" alt="${L('Book cover','Sampul buku')}" hidden>
-          <span id="orgCoverPlaceholder" class="org-cover-placeholder">${L('Cover','Sampul')}</span>
-          <span>${L('Open book preview','Buka pratinjau buku')}<br><small id="orgCoverCount"></small></span>
-        </button>
         <div id="orgEditTools" class="org-edittools is-hidden">
           <button onclick="orgZoomStep(-0.25)" title="Zoom out">−</button>
           <span id="orgZoomLabel">100%</span>
@@ -594,6 +589,11 @@ function renderHeader(){
           </div>
         </div>
         <div class="org-foot"><div id="orgFootExtra"></div><button onclick="orgPrimaryAction()" class="org-go"><span id="orgGoText">Organize</span> <span aria-hidden="true">→</span></button></div>
+        <button id="orgCoverPreview" class="org-cover-preview is-hidden" type="button" onclick="orgReaderOpen()" aria-label="${L('Open book preview','Buka pratinjau buku')}">
+          <img id="orgCoverImage" alt="${L('Book cover','Sampul buku')}" hidden>
+          <span id="orgCoverPlaceholder" class="org-cover-placeholder">${L('Cover','Sampul')}</span>
+          <span>${L('Open book preview','Buka pratinjau buku')}<br><small id="orgCoverCount"></small></span>
+        </button>
       </aside>
     </div>`;
   }

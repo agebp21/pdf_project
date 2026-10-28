@@ -130,6 +130,7 @@ async function main(){
   w.qaLoad();
   w.qaPreview();
   assert.equal(vis('orgCoverPreview'),true,'cover thumbnail shows with pages');
+  assert.equal(w.document.querySelector('#orgSide > #orgCoverPreview')?.previousElementSibling?.classList.contains('org-foot'),true,'cover sits directly below sidebar action');
   w.orgReaderOpen();
   assert.equal(w.document.getElementById('orgReaderDialog').open,true,'book popup opens');
   w.orgReaderCloseDialog();
