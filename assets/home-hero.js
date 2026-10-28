@@ -6,12 +6,13 @@
   if (!book || !demo) return;
   var hero = demo.closest('.hh');
   var flip = null, loading = null, opener = null, settle = null, busy = false, tools = null;
-  var originalPages = null, catalogPages = null, magazinePages = null, showingCatalog = false, showingMagazine = false;
+  var originalPages = null, catalogPages = null, magazinePages = null, journalPages = null, showingCatalog = false, showingMagazine = false, showingJournal = false;
   function applySample() {
     if (!flip || busy) return;
     var catalog = hero.dataset.sample === 'interior';
     var magazine = hero.dataset.sample === 'magazine';
-    if (catalog === showingCatalog && magazine === showingMagazine) return;
+    var journal = hero.dataset.sample === 'journal';
+    if (catalog === showingCatalog && magazine === showingMagazine && journal === showingJournal) return;
     if (tools) tools.pause();
     if (catalog && !catalogPages) {
       catalogPages = [];
@@ -31,8 +32,19 @@
       }
       magazinePages[magazinePages.length-1].dataset.density = 'hard';
     }
-    showingCatalog = catalog; showingMagazine = magazine;
-    flip.updateFromHtml(catalog ? catalogPages : magazine ? magazinePages : originalPages);
+    if (journal && !journalPages) {
+      journalPages = [];
+      for (var j=1; j<=7; j++) {
+        var journalPage = document.createElement('div'); journalPage.className = 'hh-page hh-catalog-page'; journalPage.dataset.density = 'soft';
+        var journalImage = document.createElement('img'); journalImage.src = 'assets/samples/catalog-3/page-' + String(j).padStart(2,'0') + '.webp'; journalImage.alt = 'Journal sample · ' + j; journalImage.decoding = 'async';
+        journalPage.appendChild(journalImage); journalPages.push(journalPage);
+      }
+      // 7 real pages is odd; add a closing back cover so the book has an even total and closes flush.
+      var journalBack = document.createElement('div'); journalBack.className = 'hh-page hh-back hh-sample-back'; journalBack.dataset.density = 'hard';
+      journalPages.push(journalBack);
+    }
+    showingCatalog = catalog; showingMagazine = magazine; showingJournal = journal;
+    flip.updateFromHtml(catalog ? catalogPages : magazine ? magazinePages : journal ? journalPages : originalPages);
     flip.turnToPage(0); if (settle) settle(); status();
   }
   var EN = function () { return window.I18N && I18N.get && I18N.get() === 'en'; };

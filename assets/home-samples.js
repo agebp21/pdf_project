@@ -9,7 +9,8 @@
     fashion: {title:['Bentuk. Gaya. Cerita.','Form. Style. Story.'],topics:[['Koleksi harian','Everyday collection'],['Lapisan ringan','Light layers'],['Warna netral','Neutral colors'],['Detail jahitan','Stitch details'],['Padu padan','Mix and match'],['Bahan pilihan','Selected fabrics'],['Panduan ukuran','Size guide'],['Rawat koleksi Anda','Care for your collection']],intro:['Katalog konsep busana dengan potongan sederhana, warna tenang, dan pilihan gaya sehari-hari.','A fashion concept catalog with simple silhouettes, calm colors, and everyday styling ideas.']},
     travel: {title:['Jelajah Nusantara.','Explore Nusantara.'],topics:[['Awal perjalanan','Beginning the journey'],['Pesisir dan laut','Coast and sea'],['Jejak pegunungan','Mountain trails'],['Ruang budaya','Cultural spaces'],['Rasa setempat','Local flavors'],['Catatan perjalanan','Travel notes'],['Perjalanan bijak','Thoughtful travel'],['Cerita untuk dibawa pulang','Stories to take home']],intro:['Buku perjalanan contoh untuk menjelajahi bentang alam, budaya, dan cerita Nusantara.','A sample travel book exploring the landscapes, culture, and stories of the archipelago.']},
     magazine: {title:['Katalog Kuliner.','Food Catalog.'],topics:[['Menu pilihan','Featured menu'],['Rasa favorit','Favorite flavors'],['Paket hemat','Value meals'],['Minuman segar','Fresh drinks'],['Camilan','Snacks'],['Cerita rasa','Flavor stories'],['Pilihan keluarga','Family picks'],['Terima kasih','Thank you']],intro:['Sampel katalog makanan dan minuman RushBite Express.','A RushBite Express food and drink catalog sample.']},
-    learning: {title:['Belajar dari ide.','Learning through ideas.'],topics:[['Tujuan belajar','Learning goals'],['Amati sekitar','Observe your surroundings'],['Susun pertanyaan','Ask questions'],['Eksperimen kecil','Small experiments'],['Catat temuan','Record findings'],['Diskusi bersama','Discuss together'],['Coba mandiri','Practice independently'],['Refleksi belajar','Learning reflection']],intro:['Modul contoh untuk mengembangkan ide: amati, coba, catat, lalu bagikan hasil belajar.','A sample module for developing ideas: observe, experiment, record, and share what you learn.']}
+    learning: {title:['Belajar dari ide.','Learning through ideas.'],topics:[['Tujuan belajar','Learning goals'],['Amati sekitar','Observe your surroundings'],['Susun pertanyaan','Ask questions'],['Eksperimen kecil','Small experiments'],['Catat temuan','Record findings'],['Diskusi bersama','Discuss together'],['Coba mandiri','Practice independently'],['Refleksi belajar','Learning reflection']],intro:['Modul contoh untuk mengembangkan ide: amati, coba, catat, lalu bagikan hasil belajar.','A sample module for developing ideas: observe, experiment, record, and share what you learn.']},
+    journal: {title:['Jurnal ilmiah.','Academic journal.'],topics:[['Abstrak','Abstract'],['Pendahuluan','Introduction'],['Tinjauan pustaka','Literature review'],['Metode','Method'],['Pembahasan','Discussion'],['Kesimpulan','Conclusion'],['Daftar pustaka','References'],['Lampiran','Appendix']],intro:['Contoh artikel jurnal akademik dengan abstrak, kutipan, dan tata letak dua kolom.','A sample academic journal article with an abstract, citations, and a two-column layout.']}
   };
   let selected = null;
   const closedCover = document.querySelector('#hh-book .hh-cover');
@@ -25,7 +26,11 @@
         demoCover.replaceChildren();
         const cover = document.createElement('img'); cover.src = 'assets/samples/catalog-2/page-01.webp'; cover.alt = 'RushBite Express catalog cover';
         cover.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain'; demoCover.append(cover);
-      } else if (demoCover.querySelector('img[alt="RushBite Express catalog cover"]')) demoCover.innerHTML = originalDemoCover;
+      } else if (selected === 'journal') {
+        demoCover.replaceChildren();
+        const cover = document.createElement('img'); cover.src = 'assets/samples/catalog-3/page-01.webp'; cover.alt = 'Journal sample cover';
+        cover.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain'; demoCover.append(cover);
+      } else if (demoCover.querySelector('img[alt="RushBite Express catalog cover"],img[alt="Journal sample cover"]')) demoCover.innerHTML = originalDemoCover;
     }
     if (selected === 'interior') {
       if (closedCover) {
@@ -36,10 +41,14 @@
       const note = document.getElementById('hh-sample-notice'); note.removeAttribute('data-en'); note.textContent = en() ? 'Nivora Home catalog · 12 pages' : 'Katalog Nivora Home · 12 halaman';
       return;
     }
-    if (closedCover && closedCover.querySelector('.hh-catalog-cover,.hh-magazine-cover')) closedCover.innerHTML = originalCover;
+    if (closedCover && closedCover.querySelector('.hh-catalog-cover,.hh-magazine-cover,.hh-journal-cover')) closedCover.innerHTML = originalCover;
     if (selected === 'magazine' && closedCover) {
       closedCover.replaceChildren();
       const image = document.createElement('img'); image.src = 'assets/samples/catalog-2/page-01.webp'; image.alt = 'RushBite Express catalog cover'; image.className = 'hh-magazine-cover'; closedCover.append(image);
+    }
+    if (selected === 'journal' && closedCover) {
+      closedCover.replaceChildren();
+      const image = document.createElement('img'); image.src = 'assets/samples/catalog-3/page-01.webp'; image.alt = 'Journal sample cover'; image.className = 'hh-journal-cover'; closedCover.append(image);
     }
     hero.querySelectorAll('.hh-cover-title strong').forEach(node => { node.removeAttribute('data-en'); node.textContent = sample.title[lang]; });
     const pages = hero.querySelectorAll('#hh-demo-book .hh-in:not(.hh-back)');

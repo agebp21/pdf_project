@@ -13,8 +13,8 @@
 .hh-sample-cover span{font:700 7px/1.5 system-ui,sans-serif;letter-spacing:.12em}
 .hh-sample-cover:has(img){padding:0}
 .hh-sample-cover img{display:block;width:100%;height:100%;object-fit:cover}
-.hh-catalog-cover,.hh-magazine-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;background:#fff}
-.hh-magazine-cover{object-fit:cover}
+.hh-catalog-cover,.hh-magazine-cover,.hh-journal-cover{position:absolute;inset:0;width:100%;height:100%;object-fit:fill;background:#fff}
+.hh-magazine-cover,.hh-journal-cover{object-fit:cover}
 .hh-catalog-page{background:#fff;overflow:hidden}
 .hh-catalog-page img{position:absolute;inset:0;width:100%;height:100%;object-fit:contain;pointer-events:none}
 .hh-sample-back{background:#1A3C34}
