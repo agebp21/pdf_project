@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-VISIBLE-MERGE (28 Okt, Codex): `57818a7` live. Pratinjau sidebar dipindah ke area terlihat; klik halaman Gabung/Pisah memperbarui pasangan thumbnail. Browser live, JS 59/59, Python 233/233 lulus; backup/verifikasi di `DEPLOY.md`.
+
 - ORGANIZE-SELECTED-SPREAD (28 Okt, Codex): `8789b21` live. Sidebar menampilkan halaman pilihan + halaman berikutnya berdampingan, termasuk fallback saat pilihan dibatalkan. Browser, JS 59/59, Python 233/233 lulus; backup/verifikasi di `DEPLOY.md`.
 
 - ORGANIZE-THUMBS (28 Okt, Codex): `502a10a` live. Thumbnail halaman maks. 150 px, tanpa outline saat belum dipilih, terpilih hijau. Browser, JS 59/59, Python 233/233 lulus; backup/verifikasi di `DEPLOY.md`.
