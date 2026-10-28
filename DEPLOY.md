@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 28 Oktober 2026 ? live `4281c4e`: thumbnail sampul Organize dipindah tepat di bawah tombol aksi Gabung/Pisah dalam sidebar kanan; klik tetap membuka dialog buku. JS 59/59 dan Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261028-sidebar-4281c4e.tgz`; kedua layanan aktif; Organize/Flipbook/API/admin HTTPS 200.
+
 - 28 Oktober 2026 — live `080816a`: Organize PDF menampilkan thumbnail sampul kecil di bawah tombol Gabung/Pisah/Kompres; klik thumbnail membuka buku besar dalam dialog. Panah berpindah per spread, dialog dapat ditutup/dibuka lagi. Browser dengan PDF 2–4 halaman dan pemeriksaan visual lulus; JS 59/59, Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261028-organize-cover-080816a.tgz`; kedua layanan aktif; Organize/Flipbook/API/admin HTTPS 200.
 - 27 Oktober 2026 — live `6c3d2bd`: kotak “Belum ada dokumen” dan tombol Lanjutkan/Buang di sidebar Flipbook dihapus; status proses tetap tersedia bagi pembaca layar, draft tersimpan pulih otomatis tanpa prompt. Cache JS/CSS `draft-simple1`. Browser memverifikasi UI kosong dan pemulihan draft; JS 59/59, Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261027-draft-simple-6c3d2bd.tgz`; kedua layanan aktif; Flipbook/JS/CSS/API/admin HTTPS 200.
 - 27 Oktober 2026 — live `acc7b86`: tombol Edit PDF di Flipbook membuka Organize PDF pada tab baru, sambil mempertahankan buku pada tab asal; PDF aktif diteruskan via FlipbookTransfer. Jika akses ditolak atau transfer gagal, tab baru ditutup. Browser end-to-end 1 halaman lulus; JS 59/59, Python 233/233 lulus. Backup `/root/pdf_project-code-backup-20261027-edit-newtab-acc7b86.tgz`; kedua layanan aktif; Flipbook/JS/Organize/API/admin HTTPS 200.

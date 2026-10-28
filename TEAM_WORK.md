@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-COVER-SIDEBAR (28 Okt, Codex): `4281c4e` live. Thumbnail sampul dipindah tepat di bawah tombol aksi sidebar; dialog buku tetap berfungsi. JS 59/59, Python 233/233 lulus; backup/verifikasi di `DEPLOY.md`.
+
 - ORGANIZE-COVER-POPUP (28 Okt, Codex): `080816a` live. Pratinjau buku besar diganti thumbnail sampul di bawah tab mode; klik membuka dialog buku lengkap. Navigasi spread dan buka/tutup diuji browser, JS 59/59 dan Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.
 - FLIPBOOK-DRAFT-SIMPLE (27 Okt, Codex): `6c3d2bd` live. Status kosong dan tombol Lanjutkan/Buang dikeluarkan dari sidebar; draft pulih otomatis, status tetap aksesibel. Browser, JS 59/59, Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.
 - FLIPBOOK-EDIT-NEW-TAB (27 Okt, Codex): `acc7b86` live. Edit PDF membuka Organize pada tab baru dan mengirim PDF aktif. Browser end-to-end, JS 59/59, Python 233/233 lulus. Backup/verifikasi di `DEPLOY.md`.
