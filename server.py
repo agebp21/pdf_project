@@ -704,7 +704,8 @@ def ask_document(title, text, question, history=(), work=''):
               'jangan menambah fakta, angka, atau pendapat dari luar. Jika dokumen tidak membahasnya, katakan terus terang '
               'bahwa jawabannya tidak ada di dokumen. Jawab dalam bahasa yang sama dengan pertanyaan, ringkas dan jelas '
               '(paragraf pendek; boleh butir diawali "- "). Sebut halaman sumber dari penanda [Halaman N] dalam kurung, '
-              'mis. (hlm. 12) — untuk jawaban berbahasa Inggris (p. 12). Tanpa markdown lain (tanpa #, **, atau tabel).'
+              'mis. (hlm. 12) — untuk jawaban berbahasa Inggris (p. 12). Gunakan hanya nomor halaman yang ada dalam SUMBER. '
+              'Setiap poin penting harus punya rujukan halaman. Tanpa markdown lain (tanpa #, **, atau tabel).'
               + (' Pembaca juga punya hasil kerja sendiri (catatan, ringkasan, draf jurnal, slide) di bagian "HASIL KERJA PEMBACA": '
                  'pakai untuk pertanyaan tentang pekerjaannya (mis. memeriksa, melengkapi, atau membandingkan dengan dokumen), '
                  'tetapi bedakan dengan jelas mana yang dari dokumen dan mana yang dari catatan pembaca.' if work else ''))
@@ -715,6 +716,27 @@ def ask_document(title, text, question, history=(), work=''):
     if not reply:
         raise RuntimeError('AI tidak menjawab. Coba lagi.')
     return reply[:12000]
+
+
+def ask_source_excerpts(pages, answer, question, limit=3):
+    """Return literal excerpts from cited selected pages; never synthesize source text."""
+    if not isinstance(pages, dict):
+        return []
+    cited = list(dict.fromkeys(int(n) for n in re.findall(r'\b(?:hlm\.?|hal\.?|p\.?)\s*(\d+)\b', answer, re.I)))
+    wanted = set(re.findall(r'\w{4,}', (question + ' ' + answer).lower()))
+    result = []
+    for number in cited:
+        lines = pages.get(str(number - 1))
+        if not isinstance(lines, list):
+            continue
+        passages = [' '.join(str(line).split()) for line in lines if isinstance(line, str) and str(line).strip()]
+        if not passages:
+            continue
+        passage = max(passages, key=lambda line: (len(wanted & set(re.findall(r'\w{4,}', line.lower()))), min(len(line), 500)))
+        result.append({'page': number, 'excerpt': passage[:320] + ('…' if len(passage) > 320 else '')})
+        if len(result) >= limit:
+            break
+    return result
 
 
 # A journal article draft, section by section (AI Summarizer > Jurnal): what each section holds.
@@ -3697,7 +3719,7 @@ class Handler(SimpleHTTPRequestHandler):
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
             return
-        self.send_json(200, {'answer': answer})
+        self.send_json(200, {'answer': answer, 'sources': ask_source_excerpts(data.get('text'), answer, data.get('question') or '')})
 
     def write_route(self):
         """POST {kind: 'journal'|'slides', title, text: {page: [lines]}, lang, work, section | count}

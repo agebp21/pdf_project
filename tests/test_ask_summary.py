@@ -127,6 +127,12 @@ class AskTests(unittest.TestCase):
         self.assertIn('HANYA dari isi dokumen', system)
         self.assertIn('Pertanyaan: Apa isinya?', user); self.assertIn('Pembaca: Halo', user); self.assertIn('Asisten: Hai', user)
 
+    def test_source_excerpts_only_use_cited_selected_pages(self):
+        pages = {'0': ['Kata pembuka umum.', 'Gamelan memakai laras pelog dan slendro.'],
+                 '1': ['Isi halaman kedua.']}
+        sources = server.ask_source_excerpts(pages, 'Gamelan memakai pelog (hlm. 1), lihat juga (hlm. 9).', 'Apa laras gamelan?')
+        self.assertEqual(sources, [{'page': 1, 'excerpt': 'Gamelan memakai laras pelog dan slendro.'}])
+
     def test_empty_question(self):
         with self.assertRaises(ValueError):
             server.ask_document('Buku', 'teks', '  ')
@@ -148,7 +154,8 @@ class AskTests(unittest.TestCase):
         try:
             words = ' '.join(['kata'] * 60)
             with mock.patch.object(server, 'ask_document', return_value='Jawab (hlm. 1)') as make:
-                self.assertEqual(post({'title': 'B', 'text': {'0': [words]}, 'question': 'Apa?'}), (200, {'answer': 'Jawab (hlm. 1)'}))
+                self.assertEqual(post({'title': 'B', 'text': {'0': [words]}, 'question': 'Apa?'}),
+                                 (200, {'answer': 'Jawab (hlm. 1)', 'sources': [{'page': 1, 'excerpt': words}]}))
                 self.assertIn('[Halaman 1]', make.call_args[0][1])
                 self.assertEqual(post({'text': {'0': ['sedikit']}, 'question': 'Apa?'})[0], 400)
             self.assertEqual(post({'text': {'0': [words]}, 'question': ' '})[0], 400)

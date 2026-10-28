@@ -62,12 +62,12 @@
     style.id = 'mf-auth-style';
     style.textContent =
       '.mf-auth-chip{display:inline-flex;align-items:center;gap:6px;border:1px solid #E4DED0;background:#fff;color:#1C1917;' +
-      'border-radius:999px;padding:7px 12px;font:800 12px/1 "Plus Jakarta Sans",system-ui,sans-serif;text-decoration:none;' +
+      'border-radius:999px;padding:7px 12px;font:800 12px/1.3 "Plus Jakarta Sans",system-ui,sans-serif;text-decoration:none;' +
       'box-shadow:0 4px 12px rgba(28,25,23,.06);white-space:nowrap;max-width:220px;transition:transform .15s}' +
       '.mf-auth-chip:hover{transform:translateY(-1px)}' +
       '.mf-auth-chip .mf-plan{font-size:9.5px;letter-spacing:.06em;text-transform:uppercase;padding:3px 7px;border-radius:999px;background:#E4F3C2;color:#1A3C34}' +
       '.mf-auth-chip .mf-plan.paid{background:#1A3C34;color:#FFF7EA}' +
-      '.mf-auth-chip .mf-name{overflow:hidden;text-overflow:ellipsis}' +
+      '.mf-auth-chip .mf-name{min-width:0;overflow:hidden;text-overflow:ellipsis;line-height:1.35;padding-bottom:2px}' +
       // the signed-in member's menu (account, library, log out)
       '.mf-auth-wrap{position:relative;display:inline-flex}' +
       'button.mf-auth-chip{cursor:pointer;font-family:"Plus Jakarta Sans",system-ui,sans-serif}' +
