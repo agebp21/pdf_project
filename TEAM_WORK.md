@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-FOUR-TABS (28 Okt, Codex): `260be94` live. Urutan Gabung, Pisah, Edit, Kompres; Edit membuka editor PDF. Browser lokal/live desktop/HP, tes Organize/toolbar dan Python233 lulus; detail deploy di `DEPLOY.md`.
+
 - FLIPBOOK-GUIDE-320 (28 Okt, Codex): `862a0b6` live. Popup tutorial 320 px, browser desktop/HP lulus; detail di `DEPLOY.md`.
 
 - FLIPBOOK-GUIDE-SIZE (28 Okt, Codex): `69722b3` live. Popup tutorial lebih kecil dan rapi; browser desktop/HP lulus, detail di `DEPLOY.md`.
