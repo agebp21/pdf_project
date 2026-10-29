@@ -1033,8 +1033,8 @@ window.addEventListener('DOMContentLoaded', () => {
   // &embed=1 hides its page chrome and has it postMessage the chosen book back instead of
   // navigating, so the iframe never has to leave the library listing.
   const libDialog = $('#lib-dialog'), libFrame = $('#lib-frame');
-  function openLibraryDialog() { libFrame.src = 'library.html?open=notebook.html&embed=1'; libDialog.hidden = false; }
-  function closeLibraryDialog() { libDialog.hidden = true; libFrame.src = 'about:blank'; }
+  function openLibraryDialog() { libFrame.src = 'library.html?open=notebook.html&embed=1'; libDialog.hidden = false; document.body.style.overflow = 'hidden'; }
+  function closeLibraryDialog() { libDialog.hidden = true; libFrame.src = 'about:blank'; document.body.style.overflow = ''; }
   $('#library-open').addEventListener('click', openLibraryDialog);
   $('.lib-close').addEventListener('click', closeLibraryDialog);
   libDialog.addEventListener('click', e => { if (e.target === libDialog) closeLibraryDialog(); });
