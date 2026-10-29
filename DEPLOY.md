@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 29 Oktober 2026 — live `dd7e895`: pembaruan My Library dan AI Summarizer (sumber Word/PowerPoint, ringkasan dan chat, navigasi). Backup `/root/pdf_project-code-backup-20261029183604.tgz`; layanan aktif. Tes terkait, QA homepage desktop/HP, dan HTTPS halaman utama/Library/Notebook/aset lulus. Tes lengkap masih memuat kegagalan lama pada ekspektasi kebijakan AI serta Piper TTS lokal yang tidak tersedia; kedua area itu tidak berubah pada rilis ini.
+
 - 29 Oktober 2026 — live `a19617e`: card file Gabung PDF mempunyai tombol × di pojok kanan atas dengan konfirmasi MyFlipbook. Menghapus file tengah memperbarui indeks halaman dan cache; tes lokal gabungan A+C serta drag C sebelum A lulus. Browser live HTTPS 200, tombol × dan dialog konfirmasi tampil tanpa JS error. Backup `/root/pdf_project-code-backup-20261029115800.tgz`; layanan aktif.
 
 - 29 Oktober 2026 — live `0d80faf`: font OCR kini kembali ke ukuran asal setelah gambar digeser menjauh; baris OCR digabung menjadi paragraf agar tetap wrap saat gambar diubah ukurannya, lalu font hanya mengecil bila ruang benar-benar tidak cukup. Tes Catalog 1.pdf halaman 1–5: tidak ada blok teks tumpang tindih; halaman 4 font/lebarnya pulih tepat setelah gambar dipindah. PDF hasil simpan tetap 12 halaman dan memuat teks edit. Browser live halaman 4 HTTPS 200, `fit-3`, tanpa JS error. Backup `/root/pdf_project-code-backup-20261029085359.tgz`; layanan aktif.
