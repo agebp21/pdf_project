@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 29 Oktober 2026 — live `0d80faf`: font OCR kini kembali ke ukuran asal setelah gambar digeser menjauh; baris OCR digabung menjadi paragraf agar tetap wrap saat gambar diubah ukurannya, lalu font hanya mengecil bila ruang benar-benar tidak cukup. Tes Catalog 1.pdf halaman 1–5: tidak ada blok teks tumpang tindih; halaman 4 font/lebarnya pulih tepat setelah gambar dipindah. PDF hasil simpan tetap 12 halaman dan memuat teks edit. Browser live halaman 4 HTTPS 200, `fit-3`, tanpa JS error. Backup `/root/pdf_project-code-backup-20261029085359.tgz`; layanan aktif.
+
 - 29 Oktober 2026 — live `f7ba800`: teks impor PDF/OCR otomatis mengecil sesuai ruang antara gambar dan blok teks; perubahan teks tidak lagi menggeser tata letak asal. Memasukkan/memindahkan/menghapus gambar menghitung ulang ruang dan mengembalikan lebar teks bila gambar dihapus. Tes editor/OCR/ekspor lulus; Catalog 1.pdf halaman 4 (42 blok teks) tanpa tabrakan, PDF tersimpan tetap 12 halaman; SEO Audit 14 halaman berhasil dibuka. Browser live editor HTTPS 200, halaman 4 terbuka dengan kode `fit-2`, tanpa JS error. Backup `/root/pdf_project-code-backup-20261029084246.tgz`; layanan aktif.
 
 - 29 Oktober 2026 — live `45f9ea1`: mode Edit di Organize menghilangkan tombol utama Edit PDF; panel bawah kini langsung menampilkan Flipbook dan Download. Double-click halaman tetap menuju editor. Browser lokal menguji Download dan navigasi Flipbook pada katalog 19 halaman; browser live memverifikasi HTTP 200, hanya dua tombol tampil, tanpa JS error. Backup `/root/pdf_project-code-backup-20261029025247.tgz`; layanan aktif.
