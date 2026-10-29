@@ -426,7 +426,7 @@
 </head>
 <body>
 <div class="wrap">
-  <header data-site-header><a id="header-library" class="clay-btn clay-btn-ghost" href="library.html" style="padding:8px 16px;font-size:12px" hidden data-ico="book" data-en="My Library">Perpustakaan Saya</a></header>
+  <header data-site-header></header>
 
   <div class="workspace">
     <aside class="side sources" aria-label="Sumber" data-en-aria="Source">
@@ -1919,14 +1919,11 @@ window.addEventListener('DOMContentLoaded', () => {
       } catch (e) {}
     });
   }
-  // "Open My Library" (sidebar popup) and the header shortcut (straight to the page) only make
-  // sense once signed in (it's the member's own saved books).
+  // "Open My Library" only makes sense once signed in (it's the member's own saved books).
   (async () => {
     let who = null;
     try { who = window.MFAuth ? await MFAuth.me() : null; } catch (e) {}
-    const signedIn = !!(who && who.user);
-    $('#library-open').hidden = !signedIn;
-    const headerLink = $('#header-library'); if (headerLink) headerLink.hidden = !signedIn;
+    $('#library-open').hidden = !(who && who.user);
   })();
   // Crowns on the AI tools the member's plan lacks (as on the flipbook): a click goes straight
   // to the price list. Guests keep the usual login first.

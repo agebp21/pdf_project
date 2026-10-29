@@ -60,7 +60,7 @@
     slot.className = 'sh-wrap' + (slot.hasAttribute('data-static') ? '' : ' sh-sticky');
     slot.innerHTML = `<nav class="sh-nav" aria-label="Menu utama">
   <a href="/" class="sh-brand"><img src="/assets/img/logo.png?v=pro" alt="MyFlipbook Pro" width="147" height="36"><span data-i18n="nav.tag">SARVAMAYA • VERSION 1.0</span></a>
-  <div class="sh-links">${link(home ? '#grid' : '/#grid', 'nav.all', '✳ Semua alat')}${link('/flipbook.html', 'nav.flip', '▤ Flipbook')}${link('/journals.html', 'nav.journals', '🔎 Cari Jurnal &amp; Buku Digital')}${link('/notebook.html', 'nav.note', '✦ AI Ringkasan')}${link('/harga', 'nav.pricing', '★ Harga')}</div>
+  <div class="sh-links">${link(home ? '#grid' : '/#grid', 'nav.all', '✳ Semua alat')}${link('/flipbook.html', 'nav.flip', '▤ Flipbook')}${link('/journals.html', 'nav.journals', '🔎 Cari Jurnal &amp; Buku Digital')}${link('/notebook.html', 'nav.note', '✦ AI Ringkasan')}${link('/harga', 'nav.pricing', '★ Harga')}<a href="/library.html" class="sh-library-link" data-i18n="nav.library" hidden>📖 Perpustakaan Saya</a></div>
   <div class="sh-right"><span class="sh-extra"></span>
     <button type="button" class="sh-lang" data-lang-toggle title="Ganti bahasa / Switch language">ID</button>
     <span class="sh-free" data-i18n="nav.free">TOOL GRATIS</span>
@@ -89,6 +89,12 @@
     // The header sits at the top of the page, whatever wraps the placeholder.
     if (slot.parentElement !== document.body) document.body.prepend(slot);
     if (window.I18N && document.readyState !== 'loading') window.I18N.apply();
+    // "My Library" only makes sense once signed in (it's the member's own saved books) — the
+    // link and its clone in the ☰ menu both carry this class, so one fetch shows both.
+    fetch('/api/auth/me', { credentials: 'same-origin', headers: { Accept: 'application/json' } })
+      .then(function (r) { return r.ok ? r.json() : null; })
+      .then(function (data) { if (data && data.user) slot.querySelectorAll('.sh-library-link').forEach(function (a) { a.hidden = false; }); })
+      .catch(function () {});
   }
   const run = () => document.querySelectorAll('[data-site-header]').forEach(build);
   if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', run); else run();
