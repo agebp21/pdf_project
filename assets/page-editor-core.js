@@ -193,7 +193,7 @@
       }
     }
     for (const other of elements || []) {
-      if (other === el || other.type !== 'text' || other.y <= el.y + 2 / H) continue;
+      if (other === el || !['text', 'image'].includes(other.type) || other.y <= el.y + 2 / H) continue;
       const overlap = Math.min(right, other.x + other.w) - Math.max(el.x, other.x);
       if (overlap > Math.min(right - el.x, other.w) * .2) bottom = Math.min(bottom, other.y - 3 / H);
     }

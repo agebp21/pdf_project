@@ -406,6 +406,10 @@
         const neighbors = el.ocrSource ? elements : elements.filter(other => other.type !== 'image');
         const bounds = C.fixedTextBounds(el, neighbors, W, H);
         el.w = Math.min(el.w, bounds.w);
+        if (el.fixedSingleLine) {
+          const line = (el.fixedFontSize || el.fontSize) * H * (el.lineHeight || C.LINE);
+          el.fit = bounds.h * H < line * 1.85;
+        }
         measure.style.width = Math.max(1, el.w * W) + 'px';
         measure.style.whiteSpace = el.fit ? 'pre' : 'pre-wrap';
         measure.style.fontFamily = el.font ? `"${el.font}", ${CSS_FONT[el.family] || CSS_FONT.sans}` : CSS_FONT[el.family] || CSS_FONT.sans;
@@ -423,7 +427,7 @@
           for (let i = 0; i < 12; i++) { const mid = (low + high) / 2; if (fitsAt(mid)) low = mid; else high = mid; }
           el.fontSize = Math.max(0.5, low - 0.15) / H;
           measure.style.fontSize = el.fontSize * H + 'px';
-        }
+        } else el.fontSize = original / H;
         el.h = Math.min(bounds.h, Math.max(el.h, (measure.scrollHeight + 2) / H));
       }
     } finally { measure.remove(); }
@@ -583,7 +587,7 @@
 
     const blocks = [
       ...C.paragraphs(lines.filter(l => !l.ocr)),
-      ...lines.filter(l => l.ocr).map(l => ({ ...l, lines: 1 }))
+      ...C.paragraphs(lines.filter(l => l.ocr)).map(b => ({ ...b, ocr: true }))
     ].sort((a, b) => a.y - b.y || a.x - b.x);
     const measure = document.createElement('canvas').getContext('2d');
     const textEls = blocks.map(b => {
@@ -604,7 +608,7 @@
         ...(b.font ? { font: b.font } : {}), ...(b.html ? { html: C.tidyRich(b.html) } : {}),
         // A one-line piece (a label, an amount, a table cell) never wraps by itself: typing
         // more makes it longer, like a line in Word, and nothing below moves.
-        ...(b.lines === 1 ? { fit: true } : {}), ocrSource: !!b.ocr, fixedLayout: true, fixedFontSize: size / H,
+        ...(b.lines === 1 ? { fit: true } : {}), ocrSource: !!b.ocr, fixedLayout: true, fixedSingleLine: b.lines === 1, fixedFontSize: size / H,
         fixedWidth: Math.min(1 - b.x / W, (Math.max(b.w, fitted) + size * 0.6) / W) };
     });
     pg.layered = !!layer;
