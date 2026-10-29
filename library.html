@@ -340,13 +340,24 @@
     try {
       pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
       const pdf = await pdfjsLib.getDocument({data: new Uint8Array(await file.arrayBuffer())}).promise;
-      const base = (await pdf.getPage(1)).getViewport({scale: 1});
+      const first = await pdf.getPage(1), base = first.getViewport({scale: 1});
       const model = {version: 1, title, pageCount: pdf.numPages, ratio: base.width / base.height, overlays: {}};
+      // A cover thumbnail, same size/quality as flipbook.html's own coverJpeg(): page 1 rendered
+      // small (longest side 480px) rather than the full-size page the reader uses.
+      let cover = null;
+      try {
+        const view = first.getViewport({scale: Math.min(2, 480 / Math.max(base.width, base.height))});
+        const canvas = document.createElement('canvas');
+        canvas.width = Math.round(view.width); canvas.height = Math.round(view.height);
+        await first.render({canvasContext: canvas.getContext('2d'), viewport: view}).promise;
+        cover = await new Promise(resolve => canvas.toBlob(resolve, 'image/jpeg', 0.82));
+      } catch (e) {}
       await pdf.destroy();
       const project = await FlipbookExport.saveProject(model, file, () => {});
       const response = await fetch('/api/library/save', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/zip'}, body: project});
       const result = await response.json().catch(() => ({}));
       if (!response.ok) throw Error(result.error || L('Saving failed.', 'Gagal menyimpan.'));
+      if (cover) await fetch(`/api/library/${result.id}/cover`, {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'image/jpeg'}, body: cover});
       await load();
     } catch (cause) { notice(L(`"${file.name}" could not be added: `, `"${file.name}" tidak bisa ditambahkan: `) + cause.message); }
   }
