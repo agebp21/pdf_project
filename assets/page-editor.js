@@ -396,6 +396,48 @@
     return d;
   }
 
+  function fitImportedText(textEls, elements, W, H) {
+    const measure = document.createElement('div');
+    Object.assign(measure.style, { position: 'fixed', left: '-100000px', top: '0', visibility: 'hidden', boxSizing: 'border-box', padding: '0', wordBreak: 'break-word' });
+    document.body.append(measure);
+    try {
+      for (const el of textEls) {
+        if (el.fixedWidth) el.w = el.fixedWidth;
+        const neighbors = el.ocrSource ? elements : elements.filter(other => other.type !== 'image');
+        const bounds = C.fixedTextBounds(el, neighbors, W, H);
+        el.w = Math.min(el.w, bounds.w);
+        if (el.fixedSingleLine) {
+          const line = (el.fixedFontSize || el.fontSize) * H * (el.lineHeight || C.LINE);
+          el.fit = bounds.h * H < line * 1.85;
+        }
+        measure.style.width = Math.max(1, el.w * W) + 'px';
+        measure.style.whiteSpace = el.fit ? 'pre' : 'pre-wrap';
+        measure.style.fontFamily = el.font ? `"${el.font}", ${CSS_FONT[el.family] || CSS_FONT.sans}` : CSS_FONT[el.family] || CSS_FONT.sans;
+        measure.style.fontWeight = el.bold ? '700' : '400';
+        measure.style.fontStyle = el.italic ? 'italic' : 'normal';
+        measure.style.lineHeight = String(el.lineHeight || C.LINE);
+        if (el.html) measure.innerHTML = el.html; else measure.textContent = el.text;
+        const original = (el.fixedFontSize || el.fontSize) * H;
+        const fitsAt = size => {
+          measure.style.fontSize = size + 'px';
+          return measure.scrollWidth <= el.w * W + 1 && measure.scrollHeight <= bounds.h * H + 1;
+        };
+        if (!fitsAt(original)) {
+          let low = Math.min(0.5, original), high = original;
+          for (let i = 0; i < 12; i++) { const mid = (low + high) / 2; if (fitsAt(mid)) low = mid; else high = mid; }
+          el.fontSize = Math.max(0.5, low - 0.15) / H;
+          measure.style.fontSize = el.fontSize * H + 'px';
+        } else el.fontSize = original / H;
+        el.h = Math.min(bounds.h, Math.max(el.h, (measure.scrollHeight + 2) / H));
+      }
+    } finally { measure.remove(); }
+  }
+  function refitFixedTexts() {
+    const pg = page(); if (!pg || !pg.ready) return;
+    const rect = $('#pe-stage').getBoundingClientRect();
+    fitImportedText(pg.elements.filter(el => el.type === 'text' && el.fixedLayout), pg.elements, rect.width, rect.height);
+  }
+
   async function prepare(pg) {
     if (pg.ready) return;
     const p = await st.pdf.getPage(pg.index + 1), base = p.getViewport({ scale: 1 });
@@ -545,7 +587,7 @@
 
     const blocks = [
       ...C.paragraphs(lines.filter(l => !l.ocr)),
-      ...lines.filter(l => l.ocr).map(l => ({ ...l, lines: 1 }))
+      ...C.paragraphs(lines.filter(l => l.ocr)).map(b => ({ ...b, ocr: true }))
     ].sort((a, b) => a.y - b.y || a.x - b.x);
     const measure = document.createElement('canvas').getContext('2d');
     const textEls = blocks.map(b => {
@@ -557,7 +599,7 @@
       const words = b.text.split(' '), perLine = Math.ceil(words.length / b.lines);
       let widest = 0; for (let i = 0; i < words.length; i += perLine) widest = Math.max(widest, measure.measureText(words.slice(i, i + perLine).join(' ')).width);
       const fitWidth = b.w * (b.ocr ? 0.86 : 0.96);
-      if (b.lines === 1 && widest > fitWidth) size *= Math.max(0.5, fitWidth / widest);
+      if (b.lines === 1 && widest > fitWidth) size *= fitWidth / widest;
       const fitted = b.lines === 1 ? widest * size / b.size : b.w;
       // Keep the first line's baseline where it was (the editor and the PDF share this offset).
       const lh = b.lineHeight || C.LINE, top = b.y + b.size * 0.82 - size * C.baseline(lh);
@@ -566,7 +608,8 @@
         ...(b.font ? { font: b.font } : {}), ...(b.html ? { html: C.tidyRich(b.html) } : {}),
         // A one-line piece (a label, an amount, a table cell) never wraps by itself: typing
         // more makes it longer, like a line in Word, and nothing below moves.
-        ...(b.lines === 1 ? { fit: true } : {}) };
+        ...(b.lines === 1 ? { fit: true } : {}), ocrSource: !!b.ocr, fixedLayout: true, fixedSingleLine: b.lines === 1, fixedFontSize: size / H,
+        fixedWidth: Math.min(1 - b.x / W, (Math.max(b.w, fitted) + size * 0.6) / W) };
     });
     pg.layered = !!layer;
     pg.bg = canvas.toDataURL(pg.layered ? 'image/png' : 'image/jpeg', 0.9);
@@ -574,6 +617,7 @@
     pg.original = oc.toDataURL('image/jpeg', 0.9); oc.width = 0;
     canvas.width = 0;
     pg.elements = [...imgEls.map(({ clip, ...e }) => e), ...shapeEls, ...textEls];
+    fitImportedText(textEls, pg.elements, W, H);
     // A blank page gets a body text block inside the margins (2.5 cm), like a new Word page.
     if (pg.blank && !pg.elements.length) {
       const [PW, PH] = pg.size, m = st.margin || 72;
@@ -738,9 +782,17 @@
       t.addEventListener('blur', commitTyping);
       t.addEventListener('input', () => {
         if (replaying) return;
-        syncText(el, t); touched(true); statusBar(); flowAfterTyping(el, t); clearTimeout(thumbTimer); thumbTimer = setTimeout(renderThumbs, 700);
-        reflow(el, div, t, h0); h0 = t.getBoundingClientRect().height;
-        pdfFlowAfterTyping();
+        syncText(el, t); touched(true); statusBar(); clearTimeout(thumbTimer); thumbTimer = setTimeout(renderThumbs, 700);
+        if (el.fixedLayout) {
+          const rect = $('#pe-stage').getBoundingClientRect();
+          fitImportedText([el], page().elements, rect.width, rect.height);
+          styleText(t, el); place(div, el);
+          h0 = t.getBoundingClientRect().height;
+        } else {
+          flowAfterTyping(el, t);
+          reflow(el, div, t, h0); h0 = t.getBoundingClientRect().height;
+          pdfFlowAfterTyping();
+        }
       });
       t.addEventListener('beforeinput', e => {
         if (flowBusy && e.inputType === 'insertText' && e.data && e.cancelable) { e.preventDefault(); heldKeys.push(e.data); }
@@ -1537,7 +1589,11 @@
     };
     const up = () => {
       removeEventListener('pointermove', move); removeEventListener('pointerup', up);
-      if (moved) { touched(); render(); }
+      if (moved) {
+        if (el.fixedLayout && kind !== 'move') el.fixedWidth = el.w;
+        if (el.type === 'image' || el.fixedLayout) refitFixedTexts();
+        touched(); render();
+      }
       else if (group) {                                                   // a plain click leaves the group
         select(el.id);
         const t = document.querySelector(`#pe-stage [data-id="${el.id}"] .pe-txt`); if (t) t.focus();
@@ -1598,7 +1654,7 @@
     const act = document.activeElement, typing = act && act.classList.contains('pe-txt') && el.type === 'text';
     let line = 0, fromEnd = 0;
     if (typing) { const before = textBefore(act).split('\n'); line = before.length - 1; fromEnd = Math.max(0, (String(el.text).split('\n')[line] || '').length - before[line].length); }
-    commitTyping(); snapshot(); for (const o of all) fn(o); touched(); render();
+    commitTyping(); snapshot(); for (const o of all) fn(o); if (all.some(o => o.type === 'image')) refitFixedTexts(); touched(); render();
     if (all.length === 1 && el.type === 'text') {
       const t = document.querySelector(`#pe-stage [data-id="${el.id}"] .pe-txt`);
       if (t) {
@@ -1778,7 +1834,7 @@
   function add(el) {
     if (!page() || !page().ready) return;
     commitTyping(); snapshot();
-    el.id = newId(); els().push(el); touched(); st.sel = el.id; render();
+    el.id = newId(); els().push(el); if (el.type === 'image') refitFixedTexts(); touched(); st.sel = el.id; render();
     if (el.type === 'text') {
       const t = document.querySelector(`#pe-stage [data-id="${el.id}"] .pe-txt`);
       if (t) { t.focus(); const r = document.createRange(); r.selectNodeContents(t); getSelection().removeAllRanges(); getSelection().addRange(r); }
@@ -1906,7 +1962,7 @@
     snapshot();
     pg.bg = canvas.toDataURL(pg.layered ? 'image/png' : 'image/jpeg', 0.9); canvas.width = 0;
     const el = { id: newId(), type: 'image', x: b.x, y: b.y, w: b.w, h: b.h, src, rotation: 0, wrapText: true };
-    els().push(el); touched(); st.sel = el.id; render();
+    els().push(el); refitFixedTexts(); touched(); st.sel = el.id; render();
     status(L('Done: the area is now a picture — drag it, resize it or delete it.', 'Selesai: area itu sekarang gambar — seret, ubah ukuran, atau hapus.'));
   }
 
@@ -2062,7 +2118,7 @@
         const ratio = Math.round(v / (el.fontSize * page().size[1]) * 1000) / 1000;
         document.execCommand('fontSize', false, '7'); restyle(t, '[style*="xxx-large"],font[size="7"]', n => { n.style.fontSize = ratio + 'em'; });
       })) return;
-      change(el => { if (el.type === 'text' || el.type === 'table') el.fontSize = v / page().size[1]; });
+      change(el => { if (el.type === 'text' || el.type === 'table') { el.fontSize = v / page().size[1]; if (el.fixedLayout) el.fixedFontSize = el.fontSize; } });
     };
     // Bold/italic are standard-font styles: the text leaves the PDF's own font.
     // With several blocks, all follow the first one (all on, or all off).
@@ -2136,7 +2192,9 @@
   addEventListener('beforeunload', e => { if (dirtyLeave && st.pages.some(p => p.edited)) { e.preventDefault(); e.returnValue = ''; } });
   function remove() {
     const all = selected(); if (!all.length) return;
-    snapshot(); for (const el of all) els().splice(els().indexOf(el), 1); st.sel = null; st.group = []; touched(); render();
+    snapshot(); for (const el of all) els().splice(els().indexOf(el), 1);
+    if (all.some(el => el.type === 'image')) refitFixedTexts();
+    st.sel = null; st.group = []; touched(); render();
   }
   // The selected text, top to bottom, as plain text on the clipboard.
   function copyText() {

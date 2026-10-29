@@ -181,6 +181,25 @@
       && pic.x < el.x + el.w && pic.x + pic.w > el.x);
   }
 
+  // Reserve the original column for imported PDF/OCR text. Neighbouring blocks
+  // remain at their source coordinates; only this text's available box changes.
+  function fixedTextBounds(el, elements, W, H) {
+    let right = el.x + el.w, bottom = 1;
+    for (const other of elements || []) {
+      if (other === el) continue;
+      if (other.type === 'image' && other.x > el.x + 8 / W && other.x < right + 2 / W
+          && other.y < el.y + Math.max(el.h, 40 / H) && other.y + other.h > el.y) {
+        right = Math.min(right, other.x - 5 / W);
+      }
+    }
+    for (const other of elements || []) {
+      if (other === el || !['text', 'image'].includes(other.type) || other.y <= el.y + 2 / H) continue;
+      const overlap = Math.min(right, other.x + other.w) - Math.max(el.x, other.x);
+      if (overlap > Math.min(right - el.x, other.w) * .2) bottom = Math.min(bottom, other.y - 3 / H);
+    }
+    return { w: Math.max(8 / W, right - el.x), h: Math.max(4 / H, bottom - el.y) };
+  }
+
 
   // ---- rich text: words styled on their own (bold, italic, underline, colour, size, font) --------
   // A text block may carry html (from the editor) next to its plain text. Only a small
@@ -716,7 +735,7 @@
     return opts.report ? { bytes, missing: [...missing] } : bytes;
   }
 
-  globalThis.PageEditorCore = { FAMILIES, LINE, baseline, clean, family, groupLines, paragraphs, wrap, flowSpan, flowLines, flowPicture, exportPdf,
+  globalThis.PageEditorCore = { FAMILIES, LINE, baseline, clean, family, groupLines, paragraphs, wrap, flowSpan, flowLines, flowPicture, fixedTextBounds, exportPdf,
     KEY1, KEY2, keyPictures, unkey, repair, textColors, clearPaper, parseRich, isRich, plainRich, richHtml, tidyRich,
     richOf, plainOf, splitParas, joinParas, blockOf, breakPoints,
     TABLE_LINE, TABLE_PAD, colWidths, tableLayout, newTable, headingLevel, collectHeadings, tocLines };

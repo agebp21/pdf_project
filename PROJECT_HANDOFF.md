@@ -1,5 +1,9 @@
 # Handoff — PDF Project & Flipbook
 
+Update 2026-10-29: fixed OCR font not returning after moving a picture away; OCR lines now group into paragraphs for text wrap and are fitted against current image geometry. Local QA in TEAM_WORK.md.
+
+Update 2026-10-29: imported PDF/OCR text now fits inside the original column, stops before the next block, and shrinks when edited text cannot move downward. Images and neighbouring text stay put. Tested on Catalog 1.pdf page 4; details in TEAM_WORK.md.
+
 Update 2026-10-29: panel Organize mode Edit memakai dua aksi langsung Flipbook/Download di bagian bawah; tombol Edit PDF utama dihilangkan pada mode ini. Klik dua kali halaman tetap membuka editor fokus halaman.
 
 Update 2026-10-29: editor text wrap, OCR halaman aktif, dan indikator loading live di `89941a1` bersama update PC Wiyan. Keterbatasan wrap masih mengikuti kotak satu gambar per blok teks; pekerjaan untuk kontur/multi-gambar dilanjutkan lokal. Detail QA dan backup ada di `DEPLOY.md`.
