@@ -397,7 +397,7 @@
        <label id="drop" class="drop" for="file" data-en="<b data-ico=&quot;upload&quot;>Add sources</b>"><b data-ico="upload">Tambah sumber</b></label>
       <button id="add-sources" class="clay-btn clay-btn-ghost" type="button" hidden data-ico="plus" data-en="Add sources">Tambah sumber</button>
       <button id="library-open" class="clay-btn clay-btn-primary" type="button" hidden data-ico="book" data-en="Open My Library">Buka My Library</button>
-      <input id="file" type="file" accept="application/pdf,.pdf" multiple hidden>
+      <input id="file" type="file" accept=".pdf,.docx,.doc,.pptx,.ppt" multiple hidden>
       <label id="select-all-row" class="row" hidden><input id="select-all" type="checkbox"><span data-en="Select all">Pilih semua</span></label>
       <ul id="sources-list" class="src-list"></ul>
       <div id="doc" class="doc" hidden>
@@ -894,7 +894,31 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#tools').disabled = !sources.length;
     renderSources(); remember();
   }
-  const filesOf = list => [...list].filter(x => /pdf$/i.test(x.type) || /\.pdf$/i.test(x.name));
+  const SOURCE_EXT = /\.(pdf|docx|doc|pptx|ppt)$/i;
+  const filesOf = list => [...list].filter(x => SOURCE_EXT.test(x.name));
+  // A Word ("notes") or PowerPoint file is converted to PDF first, on the same server route
+  // converter.html's own Word/PowerPoint-to-PDF tools use — then handed to open() like any PDF.
+  const OFFICE_CONVERT = {docx: 'word-to-pdf', doc: 'word-to-pdf', pptx: 'pptx-to-pdf', ppt: 'pptx-to-pdf'};
+  const OFFICE_MIME = {docx: 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', doc: 'application/msword',
+    pptx: 'application/vnd.openxmlformats-officedocument.presentationml.presentation', ppt: 'application/vnd.ms-powerpoint'};
+  async function toPdfSource(file) {
+    const ext = (file.name.split('.').pop() || '').toLowerCase();
+    if (ext === 'pdf') return file;
+    const endpoint = OFFICE_CONVERT[ext];
+    if (!endpoint) throw Error(L('Only PDF, Word or PowerPoint files are supported here.', 'Hanya file PDF, Word, atau PowerPoint yang didukung di sini.'));
+    const c = await caps();
+    if (!c.office) throw Error(L('Office conversion is unavailable right now. Please try again later.', 'Konversi Office sedang tidak tersedia. Coba lagi nanti.'));
+    const r = await fetch('/api/convert/' + endpoint, {method: 'POST', credentials: 'same-origin',
+      headers: {'Content-Type': OFFICE_MIME[ext], 'X-Build-Token': c.token, 'X-Filename': encodeURIComponent(file.name)}, body: file});
+    if (!r.ok) { let m = L('Conversion failed. Please try again.', 'Konversi gagal. Coba lagi.'); try { m = (await r.json()).error || m; } catch (e) {} throw Error(m); }
+    const blob = await r.blob();
+    if ((await blob.slice(0, 5).text()) !== '%PDF-') throw Error(L('The server did not return a valid PDF.', 'Server tidak mengembalikan PDF yang valid.'));
+    return new File([blob], file.name.replace(/\.[^.]+$/, '.pdf'), {type: 'application/pdf'});
+  }
+  async function addSourceFile(file) {
+    try { const pdf = await toPdfSource(file); await open(pdf, pdf.name); }
+    catch (cause) { status('#load-status', `${file.name}: ${cause.message}`, true); }
+  }
   const viewerBox = document.querySelector('.viewer');
   ['dragenter', 'dragover'].forEach(t => viewerBox.addEventListener(t, e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); viewerBox.classList.add('over'); } }));
   viewerBox.addEventListener('dragleave', e => { if (!viewerBox.contains(e.relatedTarget)) viewerBox.classList.remove('over'); });
@@ -902,24 +926,24 @@ window.addEventListener('DOMContentLoaded', () => {
     viewerBox.classList.remove('over');
     const files = filesOf(e.dataTransfer.files || []);
     if (!files.length) return;
-    e.preventDefault(); files.forEach(f => open(f, f.name));
+    e.preventDefault(); files.forEach(addSourceFile);
   });
   // Finished results stay in this browser (the last session, below): leaving warns only mid-job.
   addEventListener('beforeunload', e => {
     if (translating || $('#ask-send').disabled || $('#summary-make').disabled) { e.preventDefault(); e.returnValue = ''; }
   });
-  $('#file').addEventListener('change', () => { filesOf($('#file').files).forEach(f => open(f, f.name)); $('#file').value = ''; });
-  // Choose one or more PDFs: the shared Add source dialog (link, upload, Google Drive, drop).
+  $('#file').addEventListener('change', () => { filesOf($('#file').files).forEach(addSourceFile); $('#file').value = ''; });
+  // Choose one or more sources: the shared Add source dialog (link, upload, Google Drive, drop).
   const addPdf = event => {
     if (!window.AddSource) return;                 // no dialog: the plain file picker (label for="file")
     if (event) event.preventDefault();
-    AddSource.open({title: L('AI Summarizer', 'AI Ringkasan'), subtitle: L('your PDFs', 'PDF Anda'), accept: '.pdf', multiple: true, onFiles: list => list.forEach(f => open(f, f.name))});
+    AddSource.open({title: L('AI Summarizer', 'AI Ringkasan'), subtitle: L('your PDF, Word or PowerPoint files', 'PDF, Word, atau PowerPoint Anda'), accept: '.pdf,.docx,.doc,.pptx,.ppt', multiple: true, onFiles: list => list.forEach(addSourceFile)});
   };
   $('#drop').addEventListener('click', addPdf);
   $('#add-sources').addEventListener('click', addPdf);
   ['dragenter', 'dragover'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.add('is-over'); }));
   ['dragleave', 'drop'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.remove('is-over'); }));
-  $('#drop').addEventListener('drop', e => { filesOf(e.dataTransfer.files).forEach(f => open(f, f.name)); });
+  $('#drop').addEventListener('drop', e => { filesOf(e.dataTransfer.files).forEach(addSourceFile); });
   // ---------- My Library: "Open My Library" opens the real library.html (the same page/covers/
   // folders/search flipbook.html's own My Library uses) in a popup, like the Add-source dialog —
   // &embed=1 hides its page chrome and has it postMessage the chosen book back instead of
