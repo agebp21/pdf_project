@@ -14,7 +14,9 @@
 <script src="assets/auth.js" defer></script>
 <script src="assets/mf-dialog.js" defer></script>
 <script src="assets/add-source.js" defer></script>
-<script src="assets/flipbook-transfer.js" defer></script>
+<script defer src="assets/vendor/pdf.min.js"></script>
+<script defer src="assets/vendor/jszip.min.js"></script>
+<script defer src="assets/flipbook-export.js"></script>
 <style>
   *{box-sizing:border-box;font-family:'Plus Jakarta Sans',system-ui,sans-serif}
   body{margin:0;min-height:100dvh;background:#FBFAF7;color:#1C1917}
@@ -322,16 +324,31 @@
       notice(L('My Library could not be loaded: ', 'Perpustakaan Saya tidak bisa dimuat: ') + e.message);
     }
   }
-  // "Add source": the same upload/Google Drive popup every other page uses (assets/add-source.js);
-  // the picked PDF is handed to flipbook.html (assets/flipbook-transfer.js, no server round-trip
-  // for the file itself) the same way notebook.html's own "Make a flipbook" button does — the new
-  // book joins My Library once it's saved there, same as the header's "＋ New book" link.
+  // "Add source": the same upload/Google Drive popup every other page uses (assets/add-source.js),
+  // multiple PDFs at once. Each becomes its own bare book straight in My Library — the minimum
+  // valid project (assets/flipbook-export.js's own validate()) with just a title, page count and
+  // page ratio (read with pdf.js, the same way flipbook.html reads a freshly opened PDF); no
+  // overlays/translations/etc., same blank starting point as a book made through the editor.
+  // Files run one at a time, each shown as it finishes (notebook.html's own Add sources does the
+  // same: the dialog closes right away, onFiles isn't awaited).
   function addSource() {
     if (!window.AddSource) return;
-    AddSource.open({title: L('My Library', 'Perpustakaan Saya'), subtitle: L('your PDF', 'PDF Anda'), accept: '.pdf', multiple: false, onFiles: async files => {
-      const id = await FlipbookTransfer.save(files[0], files[0].name);
-      location.href = 'flipbook.html?source=' + encodeURIComponent(id);
-    }});
+    AddSource.open({title: L('My Library', 'Perpustakaan Saya'), subtitle: L('your PDFs', 'PDF Anda'), accept: '.pdf', multiple: true, onFiles: files => { files.forEach(addOneSource); }});
+  }
+  async function addOneSource(file) {
+    const title = file.name.replace(/\.pdf$/i, '').slice(0, 200) || file.name;
+    try {
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
+      const pdf = await pdfjsLib.getDocument({data: new Uint8Array(await file.arrayBuffer())}).promise;
+      const base = (await pdf.getPage(1)).getViewport({scale: 1});
+      const model = {version: 1, title, pageCount: pdf.numPages, ratio: base.width / base.height, overlays: {}};
+      await pdf.destroy();
+      const project = await FlipbookExport.saveProject(model, file, () => {});
+      const response = await fetch('/api/library/save', {method: 'POST', credentials: 'same-origin', headers: {'Content-Type': 'application/zip'}, body: project});
+      const result = await response.json().catch(() => ({}));
+      if (!response.ok) throw Error(result.error || L('Saving failed.', 'Gagal menyimpan.'));
+      await load();
+    } catch (cause) { notice(L(`"${file.name}" could not be added: `, `"${file.name}" tidak bisa ditambahkan: `) + cause.message); }
   }
   // Right-click on empty space (not a book or folder): the same actions as the toolbar/book menus.
   document.querySelector('.wrap').addEventListener('contextmenu', event => {
