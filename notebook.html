@@ -640,8 +640,12 @@
 window.addEventListener('DOMContentLoaded', () => {
   const tabs = [...document.querySelectorAll('.vtabs [data-view]')], panels = [...document.querySelectorAll('.vpanel')];
   const boxes = {translate: '#translate-out'};
+  // Every view with its own tab button is allowed — derived from the markup so a tab added later
+  // never needs this list updated separately (chat/quiz/etc. were briefly left out here mid-WIP).
+  const availableViews = new Set(tabs.map(t => t.dataset.view));
   let current = null, working = false;
   const show = view => {
+    if (view && !availableViews.has(view)) return;
     current = view;
     tabs.forEach(t => { t.setAttribute('aria-selected', String(t.dataset.view === view)); });
     panels.forEach(p => { p.hidden = working || p.dataset.panel !== view; });
@@ -652,9 +656,9 @@ window.addEventListener('DOMContentLoaded', () => {
   // On a phone the viewer sits below the steps: bring it up when a result arrives.
   const reveal = () => { const box = document.querySelector('.viewer').getBoundingClientRect(); if (box.top > innerHeight * 0.6) document.querySelector('.viewer').scrollIntoView({behavior: 'smooth', block: 'start'}); };
   window.viewer = {
-    show: view => { const tab = tabs.find(t => t.dataset.view === view); if (tab) tab.hidden = false; show(view); reveal(); },
+    show: view => { if (!availableViews.has(view)) return; const tab = tabs.find(t => t.dataset.view === view); if (tab) tab.hidden = false; show(view); reveal(); },
     hide: view => { const tab = tabs.find(t => t.dataset.view === view); if (tab) tab.hidden = true; if (current === view) show(null); },
-    tab: view => { const tab = tabs.find(t => t.dataset.view === view); if (tab) tab.hidden = false; },
+    tab: view => { if (!availableViews.has(view)) return; const tab = tabs.find(t => t.dataset.view === view); if (tab) tab.hidden = false; },
     // A sheet with moving lines while the AI works; label: text, or null when done.
     busy: label => {
       working = !!label;
@@ -903,7 +907,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (thin.length && own >= 40) {
         // Enough text already: the tools open now, the scanned pages join in the background.
         docReady(source, 0); if (doc === source) $('#translate-target').value = source.lang === 'en-US' ? 'id-ID' : 'en-US';
-        source.status = ''; renderSources(); remember();
+        source.status = ''; renderSources(); remember(); queueAutoOverview();
         backgroundOcr(pdf, thin, source);
         return;
       }
@@ -925,7 +929,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       renderSources();
       if (doc === source) status('#load-status', ocred ? L(`Text read with OCR from ${ocred} scanned pages — results may need a quick check.`, `Teks dari ${ocred} halaman scan dibaca dengan OCR — hasilnya mungkin perlu dicek sekilas.`) : '');
-      remember();
+      remember(); queueAutoOverview();
     } catch (cause) {
       source.status = L('Failed', 'Gagal'); renderSources();
       if (doc === source) status('#load-status', L('The PDF could not be read: ', 'PDF tidak bisa dibaca: ') + cause.message, true);
@@ -1308,6 +1312,27 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   $('#summary-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(summary.text); status('#summary-status', L('Copied.', 'Disalin.')); } catch (e) { status('#summary-status', L('The browser did not allow copying.', 'Browser tidak mengizinkan menyalin.'), true); } });
   $('#summary-save').addEventListener('click', () => download(title() + L(' - summary.txt', ' - ringkasan.txt'), title() + '\n\n' + summary.text));
+
+  // ---------- Automatic overview (NotebookLM's own behavior): once the active sources are ready,
+  // a first AI message with a summary appears in Chat on its own — no button needed. Unlike the
+  // "Make a summary" button above, a single source doesn't need highlights first here: this is the
+  // welcome overview, not a curated re-summary. A debounce (as `remember()` uses) lets several
+  // files added together (multi-select Add sources) settle before the one overview covers them
+  // all; staying out of the way once a summary or a chat message already exists.
+  let autoOverviewTimer = 0;
+  function queueAutoOverview() { clearTimeout(autoOverviewTimer); autoOverviewTimer = setTimeout(autoOverview, 700); }
+  async function autoOverview() {
+    if (summary || asked.length || !activeSources().length) return;
+    try {
+      const actives = activeSources();
+      const r = await post('/api/summary', {title: actives.length > 1 ? L('These sources', 'Sumber-sumber ini') : title(), sources: sourcesPayload('marks'), lang: (doc && doc.lang) || 'id-ID', length, focus: '', chapters: []});
+      if (summary || asked.length) return;          // a manual summary or a chat message arrived meanwhile
+      summary = {lang: r.lang, text: r.text}; remember();
+      const {body} = message('ai', '');
+      richText(body, r.text);
+      viewer.show('ask');
+    } catch (e) {}                                   // quiet: a nicety, not something the member asked for
+  }
 
   // ---------- Studio outputs on the open document's highlights: Quiz, Flashcards, Data table.
   // Same pattern as Summary (/api/write, highlight-gated), one still document at a time.
