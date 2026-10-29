@@ -140,18 +140,10 @@
     return b;
   }
   function crown(b) { b.classList.add('plan-lock'); b.title = L('Medium feature — see the plans', 'Fitur Medium — lihat paket'); }
-  // The highlighted parts (the AI reads only these), with "highlight first" when there are none.
-  function source(where) {
-    if (!ctx.marks().length) { ctx.needMarks(where); return null; }
-    return ctx.picked();
-  }
+  // The whole document, for the AI to write from.
+  function source() { return ctx.picked(); }
 
   // ---- Notes
-  function quotesHtml() {
-    const P = L('p.', 'hlm.');
-    return ctx.marks().slice().sort((a, b) => a.page - b.page || (a.top || 0) - (b.top || 0))
-      .map(h => `<blockquote>${esc(h.whole ? L('Whole page', 'Seluruh halaman') : String(h.text).replace(/\s+/g, ' ').trim())} (${P} ${h.page + 1})</blockquote>`).join('') + '<p><br></p>';
-  }
   function summaryHtml(text) {
     return (window.FlipbookSummary ? FlipbookSummary.blocks(text) : []).map(b =>
       b.kind === 'list' ? '<ul>' + b.items.map(t => `<li>${esc(t)}</li>`).join('') + '</ul>'
@@ -162,7 +154,6 @@
     box.dataset.ph = L('Write your own notes or summary…', 'Tulis catatan atau ringkasan Anda sendiri…');
     editable(box, () => { work.notes = box.innerHTML; changed(); });
     formatBar($('#notes-bar'));
-    $('#notes-quotes').onclick = () => { if (!ctx.marks().length) { ctx.needMarks('#notes-status'); return; } insertInto(box, quotesHtml()); status('#notes-status', ''); };
     $('#notes-summary').onclick = () => {
       const s = ctx.summary();
       if (!s || !s.text) { status('#notes-status', L('Make the AI summary first (Studio › Make a summary).', 'Buat ringkasan AI dulu (Studio › Buat ringkasan).'), true); return; }
