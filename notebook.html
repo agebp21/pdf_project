@@ -102,7 +102,7 @@
   .thoughts summary::-webkit-details-marker{display:none}
   .thoughts summary::before{content:'✦ ';}
   .thoughts-text{padding:0 12px 10px;font-size:12.5px;line-height:1.6;color:#57534E;white-space:pre-wrap}
-  .viewer{background:#fff;border:1px solid #ECE7DD;border-radius:20px;overflow:hidden;min-height:72vh;display:flex;flex-direction:column}
+  .viewer{background:#fff;border:1px solid #ECE7DD;border-radius:20px;overflow:hidden;min-height:min(72vh,calc(100vh - 170px));display:flex;flex-direction:column}
   .viewer-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:10px;padding:10px 14px;background:#fff;color:#78716C;
     border-bottom:1px solid #F1ECE2;font-size:11px;font-weight:800;letter-spacing:.12em}
   .vtabs{display:flex;gap:6px;letter-spacing:0}
@@ -112,7 +112,7 @@
   .vtabs button[data-view=summary],.vtabs button[data-view=translate],.vtabs button[data-view=ask]{font-weight:800}
   .vtabs button[data-view=ask][aria-selected=true]{background:#FF5C28;border-color:#FF5C28}
   .viewer-body{flex:1;padding:26px 22px;overflow:auto;max-height:78vh;background:#fff;display:flex;flex-direction:column;align-items:center}
-  .sheet{width:100%;max-width:760px;min-height:60vh;box-sizing:border-box;background:transparent;padding:14px 8px 40px;flex:none}
+  .sheet{width:100%;max-width:760px;min-height:min(60vh,calc(100vh - 220px));box-sizing:border-box;background:transparent;padding:14px 8px 40px;flex:none}
   .viewer-empty{display:grid;place-content:center;text-align:center;color:#78716C;gap:4px}
   .vpanel[data-panel=doc]{width:100%}
   .doc-bar{max-width:800px;margin:0 auto 14px;justify-content:flex-end}
@@ -426,7 +426,7 @@
 </head>
 <body>
 <div class="wrap">
-  <header data-site-header></header>
+  <header data-site-header><a id="header-library" class="clay-btn clay-btn-ghost" href="library.html" style="padding:8px 16px;font-size:12px" hidden data-ico="book" data-en="My Library">Perpustakaan Saya</a></header>
 
   <div class="workspace">
     <aside class="side sources" aria-label="Sumber" data-en-aria="Source">
@@ -1919,11 +1919,14 @@ window.addEventListener('DOMContentLoaded', () => {
       } catch (e) {}
     });
   }
-  // "Open My Library" only makes sense once signed in (it's the member's own saved books).
+  // "Open My Library" (sidebar popup) and the header shortcut (straight to the page) only make
+  // sense once signed in (it's the member's own saved books).
   (async () => {
     let who = null;
     try { who = window.MFAuth ? await MFAuth.me() : null; } catch (e) {}
-    $('#library-open').hidden = !(who && who.user);
+    const signedIn = !!(who && who.user);
+    $('#library-open').hidden = !signedIn;
+    const headerLink = $('#header-library'); if (headerLink) headerLink.hidden = !signedIn;
   })();
   // Crowns on the AI tools the member's plan lacks (as on the flipbook): a click goes straight
   // to the price list. Guests keep the usual login first.
