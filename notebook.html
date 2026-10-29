@@ -1833,8 +1833,8 @@ window.addEventListener('DOMContentLoaded', () => {
   let saveTimer = 0;
   function remember() { clearTimeout(saveTimer); saveTimer = setTimeout(saveSession, 600); }
   async function saveSession() {
-    if (!sources.length) return;
     try {
+      if (!sources.length) { await sessionDo('readwrite', st => st.delete('last')); return; }
       await sessionDo('readwrite', st => st.put({
         sources: sources.map(s => ({id: s.id, name: s.name, blob: s.blob, pages: s.pages, text: s.text, chapters: s.chapters || [], highlights: s.highlights || [],
           translations: s.translations || {}, ocrDone: !!s.ocrDone, ocred: s.ocred || 0, active: s.active !== false})),
