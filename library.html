@@ -73,6 +73,10 @@
   .menu button:hover{background:#FFF1EA;color:#C2410C}.menu button.on{color:#1A3C34;background:#EFF6EC}
   .hint{font-size:12px;color:#78716C;margin:8px 2px 0}
   [hidden]{display:none!important}
+  /* embedded in a picker popup: lose the page chrome, keep just the library itself */
+  html.embedded body::before{display:none}
+  html.embedded .wrap{max-width:none;padding:14px 18px 20px}
+  html.embedded header[data-site-header],html.embedded h1,html.embedded .lead{display:none}
 </style>
 </head>
 <body>
@@ -125,6 +129,10 @@
   // same-site-only check assets/auth.js's safeNext uses for a post-login destination.
   const openWith = /^[a-z][a-z0-9_-]*\.html$/i.test(new URLSearchParams(location.search).get('open') || '')
     ? new URLSearchParams(location.search).get('open') : 'flipbook.html';
+  // Opened inside a picker popup (e.g. notebook.html's "Open My Library"): hide the page chrome
+  // and hand the chosen book back with postMessage instead of navigating the iframe away.
+  const embedded = new URLSearchParams(location.search).get('embed') === '1';
+  if (embedded) document.documentElement.classList.add('embedded');
   let books = [], folders = [], here = null, query = '', menu = null;     // here: the open folder's id (null: the top)
   const folderOf = id => folders.find(f => f.id === id);
   async function send(path, body) {
@@ -283,7 +291,11 @@
     };
     const where = searching && book.folder && folderOf(book.folder) ? el('span', {className: 'where', textContent: '\u{1F4C1} ' + folderOf(book.folder).name}) : null;
     const node = el('article', {className: 'clay-panel book', draggable: true, title: openWith === 'flipbook.html' ? L('Click to open in MyFlipbook', 'Klik untuk membuka editor Flipbook') : L('Click to use in AI Summarizer', 'Klik untuk dipakai di AI Summarizer')}, box, el('h3', {textContent: book.title}), where, el('div', {className: 'meta', textContent: L(`${book.pageCount || '?'} pages · ${size(book.size)} · changed ${when(book.updatedAt)}`, `${book.pageCount || '?'} halaman · ${size(book.size)} · diubah ${when(book.updatedAt)}`)}), remove);
-    node.addEventListener('click', e => { if (!e.target.closest('a,button')) location.href = `${openWith}?library=${book.id}`; });
+    node.addEventListener('click', e => {
+      if (e.target.closest('a,button')) return;
+      if (embedded) parent.postMessage({type: 'mf-library-pick', id: book.id, title: book.title}, location.origin);
+      else location.href = `${openWith}?library=${book.id}`;
+    });
     node.addEventListener('dragstart', e => { e.dataTransfer.setData('text/x-book', book.id); e.dataTransfer.effectAllowed = 'move'; node.classList.add('dragging'); });
     node.addEventListener('dragend', () => node.classList.remove('dragging'));
     node.addEventListener('contextmenu', event => {

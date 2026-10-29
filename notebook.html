@@ -224,6 +224,13 @@
   .vpanel .mini{margin-top:14px}
   @media (max-width:1180px){.workspace{grid-template-columns:320px minmax(0,1fr);grid-template-areas:"src view" "studio studio"}}
   @media (max-width:900px){.workspace{grid-template-columns:1fr;grid-template-areas:"src" "view" "studio"}.viewer{min-height:50vh}.viewer-body{max-height:none;padding:12px}.sheet{min-height:50vh;padding:10px 4px 30px}}
+  /* "Open My Library" popup — same card look as the shared Add-source dialog (assets/add-source.js) */
+  .lib-dialog{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(28,25,23,.45);backdrop-filter:blur(3px)}
+  .lib-dialog[hidden]{display:none}
+  .lib-card{position:relative;width:min(960px,100%);height:min(82vh,800px);border-radius:22px;background:#fff;border:1.5px solid #1c1917;box-shadow:5px 5px 0 #1c1917;overflow:hidden}
+  .lib-card iframe{display:block;width:100%;height:100%;border:0}
+  .lib-close{position:absolute;top:10px;right:12px;z-index:2;width:30px;height:30px;border:0;border-radius:999px;background:#fff;font-size:22px;line-height:1;color:#57534e;cursor:pointer;box-shadow:0 1px 4px rgba(0,0,0,.18)}
+  .lib-close:hover{background:#f5f0e6}
   /* The workspace: Notes, Journal draft, Slides (assets/notebook-work.js) */
   .sheet.work{max-width:860px}.sheet.work.wide{max-width:1000px}
   .wbar{position:sticky;top:-26px;z-index:3;display:flex;flex-wrap:wrap;align-items:center;gap:6px;padding:10px 0;margin-bottom:12px;background:#fff;border-bottom:1px solid #F1ECE2}
@@ -621,6 +628,12 @@
   </div>
 </div>
 <button id="hl-pop" class="hl-pop" type="button" hidden data-ico="mark" data-en="Highlight">Stabilo</button>
+<div id="lib-dialog" class="lib-dialog" hidden role="dialog" aria-modal="true" aria-label="My Library">
+  <div class="lib-card">
+    <button type="button" class="lib-close" aria-label="Close">×</button>
+    <iframe id="lib-frame" title="My Library"></iframe>
+  </div>
+</div>
 <script>
 // Results viewer: a tab appears for each result the page makes (its box shown by the script
 // below); the newest result comes to the front.
@@ -1015,11 +1028,24 @@ window.addEventListener('DOMContentLoaded', () => {
   ['dragenter', 'dragover'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.add('is-over'); }));
   ['dragleave', 'drop'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.remove('is-over'); }));
   $('#drop').addEventListener('drop', e => { filesOf(e.dataTransfer.files).forEach(f => open(f, f.name)); });
-  // ---------- My Library: "Open My Library" sends the reader to the real library.html (the
-  // same page/covers/folders/search flipbook.html's own My Library uses), which hands the
-  // chosen book back as notebook.html?library=<id> (see the handoff below) — the same
-  // `?library=<id>` flipbook.html itself reads, just a different return page.
-  $('#library-open').addEventListener('click', () => { location.href = 'library.html?open=notebook.html'; });
+  // ---------- My Library: "Open My Library" opens the real library.html (the same page/covers/
+  // folders/search flipbook.html's own My Library uses) in a popup, like the Add-source dialog —
+  // &embed=1 hides its page chrome and has it postMessage the chosen book back instead of
+  // navigating, so the iframe never has to leave the library listing.
+  const libDialog = $('#lib-dialog'), libFrame = $('#lib-frame');
+  function openLibraryDialog() { libFrame.src = 'library.html?open=notebook.html&embed=1'; libDialog.hidden = false; }
+  function closeLibraryDialog() { libDialog.hidden = true; libFrame.src = 'about:blank'; }
+  $('#library-open').addEventListener('click', openLibraryDialog);
+  $('.lib-close').addEventListener('click', closeLibraryDialog);
+  libDialog.addEventListener('click', e => { if (e.target === libDialog) closeLibraryDialog(); });
+  addEventListener('keydown', e => { if (e.key === 'Escape' && !libDialog.hidden) closeLibraryDialog(); });
+  addEventListener('message', e => {
+    if (e.source !== libFrame.contentWindow || e.origin !== location.origin || !e.data || e.data.type !== 'mf-library-pick') return;
+    closeLibraryDialog();
+    addFromLibrary(e.data.id, e.data.title);
+  });
+  // A direct notebook.html?library=<id> link (no popup involved) still works the old way too —
+  // the handoff below reads it the same as before.
   // A library entry is a `.smflipbook` project (a ZIP of project.json + source.pdf); fetched
   // and unzipped here with the same /api/library endpoints flipbook.html's own handoff uses,
   // source.pdf handed to the existing open(file, name) like any uploaded PDF.
