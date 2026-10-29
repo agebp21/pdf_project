@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- EDITOR-FIXED-TEXT (29 Okt, Codex): PDF/OCR import now fits text to available width/height before adjacent images and text; edited imported text shrinks font instead of moving nearby blocks, and adding/moving/removing images refits it. Verified locally with Catalog 1.pdf page 4 (the Nivora example): 42 text blocks, no rendered overlaps; longer edited text reduced font while next line stayed at the same position; adding an image narrowed the block and deleting it restored its width. Saved PDF retained 12 pages and the edited text. Also loaded SEO Audit (14 pages, 18 text blocks on page 1) without JS errors. Pending release.
+
 - ORGANIZE-EDIT-DIRECT (29 Okt, Codex): `45f9ea1` live. Mode Edit ing Organize saiki nyumputake tombol abang "Edit PDF" lan nuduhake tombol Flipbook + Download langsung. Klik kaping pindho thumbnail tetep mbukak editor halaman. Browser lokal nganggo PDF katalog 19 halaman: download file sukses, Flipbook navigasi sukses, pindhah mode Gabung mbalekake tombol proses. Browser live HTTP 200, rong tombol tampil, tanpa JS error. Backup `/root/pdf_project-code-backup-20261029025247.tgz`.
 
 - EDITOR-FLOW-LIVE (29 Okt, Codex): `89941a1` live setelah cherry-pick perubahan editor ke update PC Wiyan `6eb9455`. Backup `/root/pdf_project-code-backup-20261029024149.tgz`; layanan dan endpoint utama 200. Tes editor lulus; tes AI lama 12 gagal karena ekspektasi akses berbeda dari kode sekarang, 2 QA homepage memerlukan instalasi Playwright lokal. Pengembangan lanjutan wrap gambar tetap lokal sampai diuji.

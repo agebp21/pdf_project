@@ -65,6 +65,13 @@ async function main() {
   assert.ok(flowed.every(row => !row.line || row.w > 0), 'text never enters a blocked row');
   const growingText = { type: 'text', x: .1, y: .1, w: .8, h: .02, fontSize: .02, text: 'teks panjang '.repeat(30) };
   assert.ok(E.flowPicture([{ type: 'image', wrapText: true, x: .2, y: .25, w: .25, h: .1 }], growingText, 400, 600), 'edited text that grows toward a picture triggers wrapping');
+  const fixed = { type: 'text', x: .1, y: .1, w: .5, h: .06 };
+  const bounds = E.fixedTextBounds(fixed, [fixed,
+    { type: 'image', x: .4, y: .1, w: .3, h: .3 },
+    { type: 'text', x: .1, y: .18, w: .25, h: .04 }], 400, 600);
+  assert.ok(bounds.w < .3 && bounds.w > .28, 'imported text keeps clear of the neighbouring image');
+  assert.ok(bounds.h < .08 && bounds.h > .07, 'imported text stops before the next line');
+  assert.equal(E.fixedTextBounds(fixed, [fixed], 400, 600).w, .5, 'removing the image restores the original text width');
 
   // Export: page 1 edited (background + new text + image + rectangle), page 2 untouched.
   const { PDFDocument, StandardFonts, rgb } = PDFLib;
