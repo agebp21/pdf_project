@@ -13,6 +13,7 @@
 <script src="assets/pdf-ocr-layer.js"></script>
 <script src="assets/ocr-engine.js"></script>
 <script src="assets/i18n.js"></script>
+<script src="assets/mf-dialog.js"></script>
 <script src="assets/pdf-layout.js"></script>
 <script defer src="/assets/site-header.js"></script>
 <script src="assets/auth.js" defer></script>
@@ -183,6 +184,8 @@
   .org-edit-actions button:first-child{background:#1a3c34;border-color:#1a3c34;color:#fff}
   .org-edit-actions button:disabled{opacity:.55;cursor:wait}
   .org-cell{position:relative;min-width:0}
+  .org-file-x{position:absolute;top:7px;right:7px;z-index:4;width:28px;height:28px;border:1px solid #f5caca;border-radius:50%;background:#fff;color:#d62828;font-size:20px;line-height:1;font-weight:700;cursor:pointer;box-shadow:0 2px 8px #0002}
+  .org-file-x:hover{background:#fff0f0;border-color:#e74c4c}
   #organizeGrid{grid-template-columns:repeat(auto-fill,minmax(115px,150px));gap:14px;justify-content:start}
   #organizeGrid.merge-files{grid-template-columns:repeat(auto-fill,minmax(160px,200px))}
   .org-merge-file-card{width:100%;text-align:center}
@@ -1606,6 +1609,7 @@ function paintOrgFiles(){
   });
 }
 window.orgRemoveFile=(fi)=>{
+  if(fi<0||fi>=files.length)return;
   files.splice(fi,1);
   const dead=orgPdfDocs[fi];
   if(dead){ try{ const r=dead.destroy(); if(r&&r.catch) r.catch(()=>{}); }catch(e){} }
@@ -1619,9 +1623,20 @@ window.orgRemoveFile=(fi)=>{
   const rot={};
   Object.entries(organizeRotations).forEach(([k,v])=>{ if(k.indexOf('blank')===0||isNaN(+k)){ rot[k]=v; } else { const c=+k; if(keep(c)) rot[shift(c)]=v; } });
   organizeRotations=rot;
-  for(const k of [...orgThumbCache.keys()]){ if(typeof k==='number'&&Math.floor(k/1000000)===fi) orgThumbCache.delete(k); }
+  const remap=object=>Object.fromEntries(Object.entries(object).filter(([k])=>isNaN(+k)||keep(+k)).map(([k,v])=>[isNaN(+k)?k:shift(+k),v]));
+  orgOcr=remap(orgOcr); orgTextEdits=remap(orgTextEdits);
+  const keptOcrImages=[...orgOcrImg].filter(([k])=>keep(k)).map(([k,v])=>[shift(k),v]);
+  orgOcrImg.clear(); keptOcrImages.forEach(([k,v])=>orgOcrImg.set(k,v));
+  orgThumbCache.clear(); orgPrevCache.clear();
+  orgReaderClose(); orgReaderSig=''; orgCoverFocus=null;
   if(files.length===0){ updateFileUI(); } else { renderOrganizeGrid(); }
   log('Org remove file '+(fi+1)+' left '+files.length);
+};
+window.orgRemoveFileConfirm=async fi=>{
+  const name=files[fi]?.name; if(!name)return;
+  const options={title:L('Remove this file?','Hapus file ini?'),message:L(`Remove "${name}" from this workspace? The original file stays on your device.`,`Hapus "${name}" dari ruang kerja ini? File asli di perangkat Anda tetap ada.`),ok:L('Remove','Hapus'),cancel:L('Cancel','Batal'),danger:true};
+  const yes=window.MFDialog?await MFDialog.confirm(options):confirm(options.message);
+  if(yes)orgRemoveFile(fi);
 };
 // Quote-safe JS arg inside double-quoted HTML attributes ("blank-1" -> &quot;blank-1&quot;).
 const orgArg=v=>JSON.stringify(v).replace(/"/g,'&quot;');
@@ -1655,7 +1670,10 @@ function renderOrgMergeFileGrid(grid){
     const img=document.createElement('img'); img.alt=L(`Cover of file ${fi+1}`,`Sampul file ${fi+1}`);
     const name=document.createElement('strong'); name.textContent=files[fi]?.name||L(`File ${fi+1}`,`File ${fi+1}`);
     const count=document.createElement('small'); count.textContent=L(`${group.count} pages`,`${group.count} halaman`);
-    card.append(img,name,count); cell.append(card); grid.append(cell);
+    const remove=document.createElement('button'); remove.type='button'; remove.className='org-file-x'; remove.textContent='×';
+    remove.title=L('Remove this file','Hapus file ini'); remove.setAttribute('aria-label',L(`Remove ${files[fi]?.name||'file'}`,`Hapus ${files[fi]?.name||'file'}`));
+    remove.onclick=event=>{event.stopPropagation(); orgRemoveFileConfirm(fi);};
+    card.append(img,name,count); cell.append(card,remove); grid.append(cell);
     orgRenderPage(group.first).then(url=>{if(img.isConnected&&url) img.src=url;});
   }
 }
