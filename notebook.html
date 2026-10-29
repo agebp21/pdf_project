@@ -1015,69 +1015,39 @@ window.addEventListener('DOMContentLoaded', () => {
   ['dragenter', 'dragover'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.add('is-over'); }));
   ['dragleave', 'drop'].forEach(t => $('#drop').addEventListener(t, e => { e.preventDefault(); $('#drop').classList.remove('is-over'); }));
   $('#drop').addEventListener('drop', e => { filesOf(e.dataTransfer.files).forEach(f => open(f, f.name)); });
-  // ---------- My Library: pick one or more saved books as sources. A library entry is a
-  // `.smflipbook` project (a ZIP of project.json + source.pdf) — the same thing flipbook.html
-  // opens via `?library=<id>`; here it's fetched and unzipped directly, same /api/library
-  // endpoints, source.pdf handed to the existing open(file, name).
-  $('#library-open').addEventListener('click', async () => {
-    status('#load-status', L('Loading your library…', 'Memuat perpustakaan Anda…'));
-    let books;
+  // ---------- My Library: "Open My Library" sends the reader to the real library.html (the
+  // same page/covers/folders/search flipbook.html's own My Library uses), which hands the
+  // chosen book back as notebook.html?library=<id> (see the handoff below) — the same
+  // `?library=<id>` flipbook.html itself reads, just a different return page.
+  $('#library-open').addEventListener('click', () => { location.href = 'library.html?open=notebook.html'; });
+  // A library entry is a `.smflipbook` project (a ZIP of project.json + source.pdf); fetched
+  // and unzipped here with the same /api/library endpoints flipbook.html's own handoff uses,
+  // source.pdf handed to the existing open(file, name) like any uploaded PDF.
+  async function addFromLibrary(id, fallbackTitle) {
+    status('#load-status', L('Loading your library book…', 'Memuat buku dari perpustakaan…'));
     try {
-      const r = await fetch('/api/library', {credentials: 'same-origin'});
-      if (!r.ok) throw Error((await r.json().catch(() => ({}))).error || L('My Library could not be loaded.', 'My Library tidak bisa dimuat.'));
-      books = (await r.json()).books || [];
-    } catch (cause) { status('#load-status', cause.message, true); return; }
-    status('#load-status', '');
-    showLibraryPicker(books);
-  });
-  function showLibraryPicker(books) {
-    document.getElementById('library-pick')?.remove();
-    $('#sources-list').hidden = true; $('#select-all-row').hidden = true;
-    const box = document.createElement('div'); box.id = 'library-pick'; box.className = 'research-pick';
-    box.append(Object.assign(document.createElement('p'), {className: 'status', textContent: books.length
-      ? L('Pick from My Library:', 'Pilih dari My Library:') : L('My Library is empty.', 'My Library masih kosong.')}));
-    const list = document.createElement('ul'); list.className = 'src-list';
-    books.forEach(b => {
-      const li = document.createElement('li'); li.className = 'src-item';
-      const check = Object.assign(document.createElement('input'), {type: 'checkbox'});
-      const label = document.createElement('label'); label.className = 'src-main';
-      if (b.hasCover) { const img = document.createElement('img'); img.className = 'lib-cover'; img.alt = ''; img.src = `/api/library/${b.id}/cover`; label.append(img); }
-      label.append(check, Object.assign(document.createElement('span'), {className: 'src-text', textContent: b.title}),
-                   Object.assign(document.createElement('span'), {className: 'src-status', textContent: L(`${b.pageCount} pages`, `${b.pageCount} halaman`)}));
-      li.append(label); list.append(li);
-    });
-    box.append(list);
-    const actions = document.createElement('div'); actions.className = 'row';
-    const addBtn = Object.assign(document.createElement('button'), {type: 'button', className: 'clay-btn clay-btn-primary', textContent: L('Add selected', 'Tambahkan terpilih'), hidden: !books.length});
-    const cancelBtn = Object.assign(document.createElement('button'), {type: 'button', className: 'clay-btn clay-btn-ghost', textContent: L('Close', 'Tutup')});
-    actions.append(addBtn, cancelBtn); box.append(actions);
-    $('#sources-list').after(box);
-    const close = () => { box.remove(); $('#sources-list').hidden = false; renderSources(); };
-    cancelBtn.onclick = close;
-    addBtn.onclick = async () => {
-      const chosen = books.filter((b, i) => list.children[i].querySelector('input').checked);
-      close();
-      for (const b of chosen) {
-        status('#load-status', L(`Loading ${b.title}…`, `Memuat ${b.title}…`));
-        try {
-          const resp = await fetch(`/api/library/${b.id}/project`, {credentials: 'same-origin'});
-          if (!resp.ok) throw Error((await resp.json().catch(() => ({}))).error || L('This book could not be loaded.', 'Buku ini tidak bisa dimuat.'));
-          const zip = await JSZip.loadAsync(await resp.blob());
-          if (!zip.file('source.pdf')) throw Error(L('This library item has no source PDF.', 'Item perpustakaan ini tidak punya PDF sumber.'));
-          const pdfBlob = new Blob([await zip.file('source.pdf').async('arraybuffer')], {type: 'application/pdf'});
-          let name = b.title;
-          if (zip.file('project.json')) { try { name = JSON.parse(await zip.file('project.json').async('string')).title || name; } catch (e) {} }
-          await open(pdfBlob, name.replace(/\.pdf$/i, '').slice(0, 150) + '.pdf');
-        } catch (cause) { status('#load-status', `${b.title}: ${cause.message}`, true); }
-      }
-    };
+      const resp = await fetch(`/api/library/${id}/project`, {credentials: 'same-origin'});
+      if (!resp.ok) throw Error((await resp.json().catch(() => ({}))).error || L('This book could not be loaded.', 'Buku ini tidak bisa dimuat.'));
+      const zip = await JSZip.loadAsync(await resp.blob());
+      if (!zip.file('source.pdf')) throw Error(L('This library item has no source PDF.', 'Item perpustakaan ini tidak punya PDF sumber.'));
+      const pdfBlob = new Blob([await zip.file('source.pdf').async('arraybuffer')], {type: 'application/pdf'});
+      let name = fallbackTitle || L('Library book', 'Buku perpustakaan');
+      if (zip.file('project.json')) { try { name = JSON.parse(await zip.file('project.json').async('string')).title || name; } catch (e) {} }
+      await open(pdfBlob, name.replace(/\.pdf$/i, '').slice(0, 150) + '.pdf');
+      status('#load-status', '');
+    } catch (cause) { status('#load-status', cause.message, true); }
   }
   $('#to-flipbook').addEventListener('click', async () => {
     try { const id = await FlipbookTransfer.save(doc.blob, doc.name); location.href = 'flipbook.html?source=' + encodeURIComponent(id); }
     catch (cause) { status('#load-status', cause.message, true); }
   });
-  // notebook.html?link=<public PDF>&title=… (e.g. from journal search)
+  // notebook.html?library=<id> — library.html's "Open My Library" handoff (see above).
   const handed = new URLSearchParams(location.search);
+  if (/^[0-9a-f]{32}$/.test(handed.get('library') || '')) {
+    history.replaceState(null, '', location.pathname);
+    addFromLibrary(handed.get('library'));
+  }
+  // notebook.html?link=<public PDF>&title=… (e.g. from journal search)
   if (/^https?:\/\//i.test(handed.get('link') || '')) {
     (async () => {
       try {
@@ -1951,7 +1921,7 @@ window.addEventListener('DOMContentLoaded', () => {
   if (window.NotebookWork) NotebookWork.init({title, post, status, remember, marks, picked, needMarks, summary: () => summary,
     blob: () => doc && doc.blob, pages: () => (doc ? doc.pages : 0),
     lang: () => (doc && doc.lang) || 'id-ID'});
-  if (!/^https?:\/\//i.test(handed.get('link') || '')) restoreSession();      // a handed link opens that one instead
+  if (!/^https?:\/\//i.test(handed.get('link') || '') && !/^[0-9a-f]{32}$/.test(handed.get('library') || '')) restoreSession();      // a handed link/library book opens that one instead
 });
 </script>
 </body>

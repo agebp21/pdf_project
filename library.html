@@ -120,6 +120,11 @@
   const when = t => new Date(t * 1000).toLocaleString(L('en-GB', 'id-ID'), {day: 'numeric', month: 'short', year: 'numeric', hour: '2-digit', minute: '2-digit'});
   const KIND = {html: '🌐 HTML', apk: '🤖 APK', exe: '🪟 EXE'};
   const covers = [];
+  // Where clicking a book goes: flipbook.html by default, or whichever page sent the reader
+  // here (e.g. notebook.html's "Open My Library" → library.html?open=notebook.html), same
+  // same-site-only check assets/auth.js's safeNext uses for a post-login destination.
+  const openWith = /^[a-z][a-z0-9_-]*\.html$/i.test(new URLSearchParams(location.search).get('open') || '')
+    ? new URLSearchParams(location.search).get('open') : 'flipbook.html';
   let books = [], folders = [], here = null, query = '', menu = null;     // here: the open folder's id (null: the top)
   const folderOf = id => folders.find(f => f.id === id);
   async function send(path, body) {
@@ -277,8 +282,8 @@
       try { await api('POST', `/api/library/${book.id}/delete`); load(); } catch (e) { notice(e.message); remove.disabled = false; }
     };
     const where = searching && book.folder && folderOf(book.folder) ? el('span', {className: 'where', textContent: '\u{1F4C1} ' + folderOf(book.folder).name}) : null;
-    const node = el('article', {className: 'clay-panel book', draggable: true, title: L('Click to open in MyFlipbook', 'Klik untuk membuka editor Flipbook')}, box, el('h3', {textContent: book.title}), where, el('div', {className: 'meta', textContent: L(`${book.pageCount || '?'} pages · ${size(book.size)} · changed ${when(book.updatedAt)}`, `${book.pageCount || '?'} halaman · ${size(book.size)} · diubah ${when(book.updatedAt)}`)}), remove);
-    node.addEventListener('click', e => { if (!e.target.closest('a,button')) location.href = `flipbook.html?library=${book.id}`; });
+    const node = el('article', {className: 'clay-panel book', draggable: true, title: openWith === 'flipbook.html' ? L('Click to open in MyFlipbook', 'Klik untuk membuka editor Flipbook') : L('Click to use in AI Summarizer', 'Klik untuk dipakai di AI Summarizer')}, box, el('h3', {textContent: book.title}), where, el('div', {className: 'meta', textContent: L(`${book.pageCount || '?'} pages · ${size(book.size)} · changed ${when(book.updatedAt)}`, `${book.pageCount || '?'} halaman · ${size(book.size)} · diubah ${when(book.updatedAt)}`)}), remove);
+    node.addEventListener('click', e => { if (!e.target.closest('a,button')) location.href = `${openWith}?library=${book.id}`; });
     node.addEventListener('dragstart', e => { e.dataTransfer.setData('text/x-book', book.id); e.dataTransfer.effectAllowed = 'move'; node.classList.add('dragging'); });
     node.addEventListener('dragend', () => node.classList.remove('dragging'));
     node.addEventListener('contextmenu', event => {
