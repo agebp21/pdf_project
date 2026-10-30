@@ -30,8 +30,7 @@
   body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:-1;
     background:radial-gradient(700px 420px at 50% 0%,#EDE9FE 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
   .wrap{max-width:1500px;margin:0 auto;padding:12px 16px 56px}
-  .workspace{display:grid;grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"view studio" "src studio";gap:16px;align-items:start;margin-top:18px}
-  .workspace:has(#sources-list:empty){grid-template-areas:"src studio" "view studio"}
+  .workspace{display:grid;grid-template-columns:320px minmax(0,1fr) 320px;grid-template-areas:"src view studio";gap:16px;align-items:start;margin-top:18px}
   .sources{grid-area:src}.viewer{grid-area:view}.studio{grid-area:studio}
   .scope-bar{display:flex;align-items:center;gap:12px;margin:14px 0 -3px;padding:9px 13px;border:1px solid #E8E2D4;border-radius:13px;background:#fff;color:#57534E;font-size:12px}
   .scope-bar strong{color:#1A3C34;white-space:nowrap}.scope-bar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -157,6 +156,11 @@
   .chat-summary{padding:8px 2px 20px;border-bottom:1px solid #EFE9DC}
   .chat-summary h2{margin:0 0 14px;font:800 21px 'Fraunces',Georgia,serif;color:#1C1917}
   .chat-summary .result{overflow:visible}
+  .summary-sources{display:grid;gap:7px;margin-top:18px;padding-top:14px;border-top:1px solid #EFE9DC}
+  .summary-sources strong{font-size:12px;color:#57534E}
+  .summary-sources>div{display:grid;gap:7px}
+  .summary-sources button{width:100%;min-width:0;text-align:left;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;border:1px solid #E8E2D4;border-radius:10px;background:#FAF8F4;padding:9px 11px;color:#1A3C34;font:700 12px 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+  .summary-sources button:hover{border-color:#1A3C34}
   .ask:has(.chat-summary:not([hidden])) .ask-hello{margin:0}
   .ask-hello{margin:auto;text-align:center;color:#57534E}
   .hello-mark{width:52px;height:52px;margin:0 auto 12px;border-radius:16px;display:grid;place-items:center;font-size:24px;color:#fff;background:linear-gradient(135deg,#FF7A45,#FF5C28);box-shadow:0 10px 24px rgba(255,92,40,.3)}
@@ -201,8 +205,8 @@
   .vpanel .result{max-height:none;border:0;background:transparent;padding:0;font-size:15px;line-height:1.75}
   .vpanel textarea.result{width:100%;box-sizing:border-box;min-height:60vh;border:1px solid #EFE9DC;border-radius:10px;padding:12px 14px;background:#fff}
   .vpanel .mini{margin-top:14px}
-  @media (max-width:1180px){.workspace{grid-template-columns:minmax(0,1fr);grid-template-areas:"view" "src" "studio"}.workspace:has(#sources-list:empty){grid-template-areas:"src" "view" "studio"}}
-  @media (max-width:900px){.viewer{min-height:50vh}.viewer-body{max-height:none;padding:12px}.sheet{min-height:50vh;padding:10px 4px 30px}}
+  @media (max-width:1180px){.workspace{grid-template-columns:320px minmax(0,1fr);grid-template-areas:"src view" "studio studio"}}
+  @media (max-width:900px){.workspace{grid-template-columns:1fr;grid-template-areas:"src" "view" "studio"}.viewer{min-height:50vh}.viewer-body{max-height:none;padding:12px}.sheet{min-height:50vh;padding:10px 4px 30px}}
   /* "Open My Library" popup — same card look as the shared Add-source dialog (assets/add-source.js) */
   .lib-dialog{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(28,25,23,.45);backdrop-filter:blur(3px)}
   .lib-dialog[hidden]{display:none}
@@ -535,6 +539,7 @@
               <h2 data-en="Summary">Ringkasan</h2>
               <div id="summary-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Ringkasan (bisa diedit)" data-en-aria="Summary (editable)"></div>
               <div id="summary-tools" class="mini" hidden><button id="summary-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="summary-save" type="button" data-ico="download">.txt</button></div>
+              <div id="summary-sources" class="summary-sources" hidden><strong data-en="Sources">Sumber</strong><div id="summary-source-list"></div></div>
             </section>
             <div id="ask-hello" class="ask-hello"><div class="hello-mark" aria-hidden="true">✦</div>
               <h3 data-en="Ask anything about this document">Tanya apa saja tentang dokumen ini</h3>
@@ -1161,6 +1166,12 @@ window.addEventListener('DOMContentLoaded', () => {
     const out = $('#summary-out');
     richText(out, summary.text);
     out.hidden = false; $('#summary-tools').hidden = false;
+    $('#summary-source-list').replaceChildren(...activeSources().map(s => {
+      const button = Object.assign(document.createElement('button'), {type: 'button', textContent: s.name, title: s.name});
+      button.addEventListener('click', async () => { if (s.id === openId) showDocument(s); else await openSource(s.id); });
+      return button;
+    }));
+    $('#summary-sources').hidden = !activeSources().length;
     $('#chat-summary').hidden = false;
     viewer.tab('ask');
     if (focus) { viewer.show('ask'); $('#ask-log').scrollTop = 0; }
