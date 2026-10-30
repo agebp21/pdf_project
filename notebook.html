@@ -53,6 +53,11 @@
   .col-h-sub{margin-top:8px;padding-top:14px;border-top:1px solid #EFE9DC}
   .col-h{margin:0 0 2px;font:700 14px 'Plus Jakarta Sans',sans-serif;color:#1C1917}
   .viewer-top:not(:has(button:not([hidden]))){display:none}     /* no tabs yet: no empty bar */
+  .source-document{max-width:920px;padding:8px 4px 24px}
+  .source-document .pager{justify-content:center;margin:0 0 12px}
+  .source-document .pager span{flex:none;min-width:78px}
+  .source-document canvas{display:block;max-width:100%;height:auto;margin:0 auto;box-shadow:0 8px 30px rgba(28,25,23,.12);background:#fff}
+  .source-document .status{text-align:center}
   .side .clay-btn:disabled{background:#fff;color:#A8A29E;border-color:#EFE9DC;box-shadow:none;opacity:1}
   .sources .doc-btns{flex-direction:column}
   .sources .doc-btns .clay-btn{width:100%;font-size:13px;padding:9px 12px}
@@ -423,6 +428,7 @@
     <section class="viewer" aria-label="Hasil" data-en-aria="Results">
       <div class="viewer-top">
         <div class="vtabs" role="tablist">
+          <button type="button" role="tab" data-view="document" hidden data-ico="doc" data-en="Document">Dokumen</button>
           <button type="button" role="tab" data-view="translate" hidden data-ico="translate" data-en="Translation">Terjemahan</button>
           <button type="button" role="tab" data-view="ask" hidden data-ico="ask" data-en="Chat">Chat</button>
           <button type="button" role="tab" data-view="notes" hidden data-ico="note" data-en="Notes">Catatan</button>
@@ -438,6 +444,7 @@
         </div></div>
       <div class="viewer-body">
          <div id="viewer-empty" class="viewer-empty sheet"><span>✦</span><h2 data-en="Choose a PDF to start">Pilih PDF untuk mulai</h2></div>
+        <div class="vpanel sheet source-document" data-panel="document" hidden><div class="pager"><button id="source-prev" type="button" aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><span id="source-page"></span><button id="source-next" type="button" aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div><canvas id="source-canvas" aria-label="Halaman dokumen asli" data-en-aria="Original document page"></canvas><p id="source-preview-status" class="status" role="status"></p></div>
         <div class="vpanel sheet" data-panel="translate" hidden><div id="translate-pager" class="pager" hidden><button id="tr-prev" type="button" aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><span id="tr-page"></span><button id="tr-next" type="button" aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div><div id="translate-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Terjemahan (bisa diedit)" data-en-aria="Translation (editable)"></div><div id="translate-tools" class="mini" hidden><button id="translate-save" type="button" data-ico="download">.txt</button></div></div>
         <div class="vpanel sheet work" data-panel="notes" hidden>
           <div class="wbar" id="notes-bar"><button type="button" class="fmt" data-cmd="h3" title="Subjudul" data-en-title="Subheading">H</button><button type="button" class="fmt" data-cmd="bold" title="Tebal (Ctrl+B)" data-en-title="Bold (Ctrl+B)"><b>B</b></button><button type="button" class="fmt" data-cmd="italic" title="Miring (Ctrl+I)" data-en-title="Italic (Ctrl+I)"><i>I</i></button><button type="button" class="fmt" data-cmd="insertUnorderedList" title="Daftar" data-en-title="List">•</button><button type="button" class="fmt" data-cmd="quote" title="Kutipan" data-en-title="Quote">❝</button><span class="wsep"></span><button id="notes-summary" type="button" data-ico="summary" data-en="Insert AI summary">Sisipkan ringkasan AI</button><span class="wgrow"></span><button id="notes-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="notes-docx" type="button" data-ico="download">.docx</button></div>
@@ -675,7 +682,7 @@ window.addEventListener('DOMContentLoaded', () => {
     clearChat();
     (prior?.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || [], all[i + 1].thoughts); });
     asked = (prior?.asked || []).slice();
-    if (summary) showSummary();
+    if (summary) showSummary(false);
     status('#summary-status', '');
   }
   // Every active source as {id, name, text}, for /api/summary, /api/ask, /api/write — always the
@@ -714,6 +721,51 @@ window.addEventListener('DOMContentLoaded', () => {
   const title = () => doc ? doc.name.replace(/\.pdf$/i, '') : L('Document', 'Dokumen');
   const allText = (s = doc) => Object.keys(s.text).map(k => s.text[k].join(' ')).join(' ');
   const textPages = (s = doc) => Object.keys(s.text).map(Number).sort((a, b) => a - b).filter(i => s.text[i].join(' ').trim());
+  // Render the original PDF in the centre before any AI result is requested.
+  let previewPdf = null, previewSource = null, previewTask = null, previewPage = 1, previewSeq = 0;
+  async function showDocument(source = doc, pageNumber = 1) {
+    if (!source) return;
+    const seq = ++previewSeq;
+    viewer.tab('ask'); viewer.show('document');
+    previewPage = pageNumber;
+    status('#source-preview-status', L('Opening the original document…', 'Membuka dokumen asli…'));
+    try {
+      if (previewTask) { previewTask.cancel(); previewTask = null; }
+      if (previewSource !== source || !previewPdf) {
+        const old = previewPdf;
+        previewPdf = null; previewSource = source;
+        if (old) await old.destroy();
+        pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
+        const loaded = await pdfjsLib.getDocument({data: new Uint8Array(await source.blob.arrayBuffer())}).promise;
+        if (seq !== previewSeq) { await loaded.destroy(); return; }
+        previewPdf = loaded;
+      }
+      if (seq !== previewSeq) return;
+      previewPage = Math.max(1, Math.min(pageNumber, previewPdf.numPages));
+      $('#source-page').textContent = `${previewPage} / ${previewPdf.numPages}`;
+      $('#source-prev').disabled = previewPage <= 1;
+      $('#source-next').disabled = previewPage >= previewPdf.numPages;
+      const page = await previewPdf.getPage(previewPage);
+      if (seq !== previewSeq) return;
+      const canvas = $('#source-canvas'), base = page.getViewport({scale: 1});
+      const width = Math.max(100, canvas.parentElement.clientWidth - 16);
+      const scale = Math.min(2, width / base.width), pixelRatio = Math.min(devicePixelRatio || 1, 2);
+      const viewport = page.getViewport({scale: scale * pixelRatio});
+      canvas.width = Math.round(viewport.width); canvas.height = Math.round(viewport.height);
+      canvas.style.width = Math.round(viewport.width / pixelRatio) + 'px';
+      canvas.style.height = Math.round(viewport.height / pixelRatio) + 'px';
+      const task = page.render({canvasContext: canvas.getContext('2d'), viewport});
+      previewTask = task;
+      await task.promise;
+      if (seq === previewSeq) status('#source-preview-status', '');
+    } catch (cause) {
+      if (seq === previewSeq && cause?.name !== 'RenderingCancelledException')
+        status('#source-preview-status', L('The original document could not be shown.', 'Dokumen asli belum bisa ditampilkan.'), true);
+    }
+  }
+  $('#source-prev').addEventListener('click', () => showDocument(doc, previewPage - 1));
+  $('#source-next').addEventListener('click', () => showDocument(doc, previewPage + 1));
+  document.querySelector('[data-view="document"]').addEventListener('click', () => { if (doc && !previewPdf) showDocument(doc, previewPage); });
   // PDF lines → paragraphs (a line runs on unless it ends a sentence, is short, or starts a list item).
   function paragraphs(lines) {
     const clean = (lines || []).map(l => String(l).replace(/\s+/g, ' ').trim()).filter(Boolean);
@@ -815,7 +867,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const first = !sources.length;
     sources.push(source); doc = source; openId = source.id;
     renderSources();
-    if (first) viewer.show('ask');
+    showDocument(source);
     status('#load-status', L('Reading the PDF…', 'Membaca PDF…'));
     $('#tools').disabled = false;
     try {
@@ -827,13 +879,13 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       const {text} = await PdfWords.extract(pdf, {withText: true, progress: (i, n) => { if (doc === source) status('#load-status', L(`Reading text ${i} / ${n}…`, `Membaca teks ${i} / ${n}…`)); }});
       source.text = text; source.chapters = await chaptersOf(pdf);
-      if (first) { askReset(); if (window.NotebookWork) NotebookWork.reset(); }  // a brand new notebook only
+      if (first) { clearChat(); if (window.NotebookWork) NotebookWork.reset(); }  // a brand new notebook only
       const thin = window.OcrEngine ? thinPages(pdf, text) : [];
       const own = Object.keys(text).reduce((sum, k) => sum + countWords(text[k]), 0);
       if (thin.length && own >= 40) {
         // Enough text already: the tools open now, the scanned pages join in the background.
         docReady(source, 0); if (doc === source) $('#translate-target').value = source.lang === 'en-US' ? 'id-ID' : 'en-US';
-        source.status = ''; renderSources(); remember(); queueAutoOverview();
+        source.status = ''; renderSources(); remember();
         backgroundOcr(pdf, thin, source);
         return;
       }
@@ -855,7 +907,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }
       renderSources();
       if (doc === source) status('#load-status', ocred ? L(`Text read with OCR from ${ocred} scanned pages — results may need a quick check.`, `Teks dari ${ocred} halaman scan dibaca dengan OCR — hasilnya mungkin perlu dicek sekilas.`) : '');
-      remember(); queueAutoOverview();
+      remember();
     } catch (cause) {
       source.status = L('Failed', 'Gagal'); renderSources();
       if (doc === source) status('#load-status', L('The PDF could not be read: ', 'PDF tidak bisa dibaca: ') + cause.message, true);
@@ -906,6 +958,7 @@ window.addEventListener('DOMContentLoaded', () => {
     docReady(source, source.ocred || 0);
     $('#translate-target').value = Object.keys(source.translations).find(k => Object.keys(source.translations[k]).length) || (source.lang === 'en-US' ? 'id-ID' : 'en-US');
     showTranslation();
+    showDocument(source);
   }
   async function openSource(id) {
     if (id === openId) return;
@@ -917,6 +970,11 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function closeViewer() {
     doc = null; openId = null;
+    ++previewSeq;
+    if (previewTask) previewTask.cancel();
+    if (previewPdf) previewPdf.destroy();
+    previewPdf = null; previewSource = null; previewTask = null; previewPage = 1;
+    viewer.hide('document');
     $('#doc').hidden = true; $('#drop').hidden = sources.length > 0;
     ['#translate-out', '#translate-pager', '#translate-tools'].forEach(s => { $(s).hidden = true; });
   }
@@ -1040,8 +1098,8 @@ window.addEventListener('DOMContentLoaded', () => {
     })();
   }
 
-  // ---------- What the AI reads: the whole document, no curation step (the Stabilo/highlight
-  // workflow and the Document page view it lived in were removed — owner, 2026-10-29).
+  // ---------- What the AI reads: the whole document, no curation step. The Document tab above
+  // displays the original PDF; the Stabilo/highlight selection workflow stays retired.
   // {page index: [lines]} in page order, same shape the old highlight-only picked() returned.
   function picked() { return doc ? doc.text : {}; }
   const pickedPages = () => Object.keys(picked()).map(Number).sort((a, b) => a - b);
@@ -1095,13 +1153,13 @@ window.addEventListener('DOMContentLoaded', () => {
     const timer = setInterval(tick, 1000);
     return () => { clearInterval(timer); if (sheet) viewer.busy(null); };
   }
-  function showSummary() {
+  function showSummary(focus = true) {
     const out = $('#summary-out');
     richText(out, summary.text);
     out.hidden = false; $('#summary-tools').hidden = false;
     $('#chat-summary').hidden = false;
-    viewer.show('ask');
-    $('#ask-log').scrollTop = 0;
+    viewer.tab('ask');
+    if (focus) { viewer.show('ask'); $('#ask-log').scrollTop = 0; }
   }
   const length = 'sedang';
   $('#summary-make').addEventListener('click', async () => {
@@ -1126,32 +1184,6 @@ window.addEventListener('DOMContentLoaded', () => {
   });
   $('#summary-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(summary.text); status('#summary-status', L('Copied.', 'Disalin.')); } catch (e) { status('#summary-status', L('The browser did not allow copying.', 'Browser tidak mengizinkan menyalin.'), true); } });
   $('#summary-save').addEventListener('click', () => download(title() + L(' - summary.txt', ' - ringkasan.txt'), title() + '\n\n' + summary.text));
-
-  // ---------- Automatic overview (NotebookLM's own behavior): once the active sources are ready,
-  // a first AI message with a summary appears in Chat on its own — no button needed. Unlike the
-  // "Make a summary" button above, a single source doesn't need highlights first here: this is the
-  // welcome overview, not a curated re-summary. A debounce (as `remember()` uses) lets several
-  // files added together (multi-select Add sources) settle before the one overview covers them
-  // all; `summary.forSources` (which active sources it was made from — manually or automatically)
-  // is what's checked, not just whether a summary exists, so adding a source later — even to a
-  // notebook restored with an older summary already in it — still gets its own fresh overview;
-  // staying out of the way once the member has started chatting.
-  let autoOverviewTimer = 0;
-  function queueAutoOverview() { clearTimeout(autoOverviewTimer); autoOverviewTimer = setTimeout(autoOverview, 700); }
-  async function autoOverview() {
-    const key = sourceKey();
-    if (!key || asked.length || (summary && summary.forSources === key)) return;
-    try {
-      const actives = activeSources();
-      const r = await post('/api/summary', {title: notebookTitle || title(), sources: sourcesPayload(), lang: (doc && doc.lang) || 'id-ID', length, focus: '', chapters: []});
-      const freshKey = sourceKey();
-      if (freshKey !== key || asked.length || (summary && summary.forSources === freshKey)) return;   // sources or chat changed meanwhile
-      summary = {lang: r.lang, text: r.text, forSources: freshKey}; remember();
-      const {body} = message('ai', '');
-      richText(body, r.text);
-      viewer.show('ask');
-    } catch (e) {}                                   // quiet: a nicety, not something the member asked for
-  }
 
   // ---------- Studio outputs on the open document's highlights: Quiz, Flashcards, Data table.
   // Same pattern as Summary (/api/write, highlight-gated), one still document at a time.
@@ -1724,10 +1756,12 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!sessionOwner || !currentNotebookId) return;
     let saved = null;
     try { saved = await sessionDo('readonly', st => st.get(bookKey(currentNotebookId))); } catch (e) { return; }
-    notebookTitle = typeof saved?.notebookTitle === 'string' ? saved.notebookTitle.slice(0, 150) : notebookIndex.find(x => x.id === currentNotebookId)?.title || '';
+    if (sources.length) return;
+    const indexTitle = notebookIndex.find(x => x.id === currentNotebookId)?.title || '';
+    notebookTitle = typeof saved?.notebookTitle === 'string' ? saved.notebookTitle.slice(0, 150)
+      : saved ? indexTitle : (indexTitle === 'Notebook baru' || indexTitle === 'New notebook' ? '' : indexTitle);
     $('#notebook-title').value = notebookTitle;
     if (!saved) return;
-    if (sources.length) return;
     // an old, single-document session (before the Sources panel) wraps into a one-item list
     let list = saved.sources;
     if (!list && saved.blob && saved.text) list = [{id: 1, name: saved.name, blob: saved.blob, pages: saved.pages, text: saved.text, chapters: saved.chapters || [],
@@ -1757,14 +1791,15 @@ window.addEventListener('DOMContentLoaded', () => {
     const restoredTurns = matchingScope ? saved.asked || [] : [];
     restoredTurns.forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || all[i + 1].sources || [], all[i + 1].thoughts); });
     asked = restoredTurns.slice();
-    if (sources.length) viewer.show('ask');
+    if (sources.length) viewer.tab('ask');
     showTranslation();
     if (quiz) showQuiz();
     if (cards) showCards();
     if (table) showTable();
     if (mindmap) showMindmap();
     if (infographic) showInfographic();
-    if (summary) showSummary();
+    if (summary) showSummary(false);
+    showDocument(doc);
     $('#tools').disabled = false;
     status('#load-status', '');
     remember();
