@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-CHAT-BELOW (30 Okt, Codex): 6c27fbd live. Chat AI tampil tepat setelah rangkaian halaman PDF di panel tengah, dengan tab Chat sebagai jalan pintas. QA lokal/live desktop/HP dan PDF 212 halaman lulus. Backup /root/pdf_project-code-backup-chat-below-20261030174630.tgz.
+
 - NOTEBOOK-CONTINUOUS-PAGES (30 Okt, Codex): `339fd44` live. Koreksi owner: yang dimaksud “sumber susun bawah di tengah” adalah halaman PDF asli bertumpuk vertikal seperti pembaca NotebookLM, bukan daftar file. Tab Dokumen kini scroll kontinu; 212 halaman tetap ringan lewat render halaman dekat viewport. QA lokal/live desktop/HP lulus. Backup `/root/pdf_project-code-backup-continuous-pages-20261030172217.tgz`.
 
 - NOTEBOOK-SUMMARY-SOURCES-CENTER (30 Okt, Codex): `7c9440e` live. Mengoreksi posisi sumber: kontrol file tetap di kiri, sumber ringkasan ditampilkan di tengah di bawah hasil dan bisa membuka PDF. QA browser lokal/live desktop/HP lulus. Backup `/root/pdf_project-code-backup-summary-center-20261030164833.tgz`.
