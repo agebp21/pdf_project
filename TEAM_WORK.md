@@ -1,5 +1,8 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-CHAT-RESEARCH (30 Okt, Codex): 698dec2 live. Permintaan artikel/referensi eksternal di Chat diarahkan ke OpenAlex (Gemini search live 429); hasil sebagai tautan yang tersimpan bersama obrolan. Permintaan web umum tetap memakai Gemini. QA unit/browser lokal/live lulus; OpenAlex live menghasilkan 8 artikel. Backup /root/pdf_project-code-backup-chat-research-20261030234217.tgz.
+
+
 - NOTEBOOK-SUMMARY-RETRY (30 Okt, Codex): 419aa3d live. Kesalahan ringkasan muncul di panel tengah dengan tombol Coba lagi karena kartu Ringkasan Studio disembunyikan. QA lokal/live desktop/HP dengan respons 503 lalu sukses lulus. Backup /root/pdf_project-code-backup-summary-retry-20261030233312.tgz.
 
 

@@ -2,6 +2,9 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 ? live 698dec2: Chat AI Ringkasan kini mengenali permintaan eksplisit mencari/menambah artikel atau referensi eksternal, termasuk pertanyaan lanjutan seperti ?makanya kamu yang nambahin?. Artikel ilmiah dicari di OpenAlex lebih dulu dan ditampilkan sebagai tautan di jawaban Chat; referensi web umum memakai pencarian Gemini. Tautan tetap ada setelah refresh. QA unit 15 lulus, browser lokal/live desktop/HP lulus, indeks OpenAlex live menghasilkan 8 artikel, checksum cocok. Grounding Gemini sempat mengembalikan 429 kuota, sehingga artikel ilmiah dialihkan ke OpenAlex. Backup /root/pdf_project-code-backup-chat-research-20261030234217.tgz.
+
+
 - 30 Oktober 2026 ? live 419aa3d: jika ringkasan otomatis gagal, pesan error sekarang terlihat di panel tengah bersama tombol Coba lagi; pengguna dapat mengulang tanpa mengunggah PDF kembali. QA lokal/live desktop/HP: respons AI pertama 503, retry sukses, ringkasan/Chat/navigasi dan draf tetap lulus. Backup /root/pdf_project-code-backup-summary-retry-20261030233312.tgz; layanan aktif dan checksum cocok.
 
 
