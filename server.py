@@ -1146,12 +1146,15 @@ def summarize_highlight(text):
 
 AI_UNAVAILABLE = 'Layanan AI sedang tidak tersedia untuk sementara. Coba lagi nanti.'
 AI_BUSY = 'Layanan AI sedang sibuk. Coba lagi beberapa saat lagi.'
+AI_QUOTA = 'Kuota API Gemini sedang mencapai batas. Periksa pemakaian dan billing di Google AI Studio, lalu coba lagi setelah kuota tersedia.'
 
 
 def ai_refused(provider, code, detail):
     """A provider's refusal as words for the member (its details, which may name keys or
     billing, go to the server log only)."""
     print(f'[ai] {provider} refused ({code}): {" ".join(str(detail).split())[:400]}', flush=True)
+    if code == 429 and provider == 'gemini':
+        return RuntimeError(AI_QUOTA)
     if code == 429 or code >= 500:
         return RuntimeError(AI_BUSY)
     if code == 400:

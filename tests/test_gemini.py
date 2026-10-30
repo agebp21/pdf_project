@@ -91,7 +91,7 @@ class FriendlyErrors(unittest.TestCase):
     def test_member_sees_plain_words_not_the_provider(self):
         credits = '{"error": {"code": 402, "message": "Your prepayment credits are depleted.", "status": "RESOURCE_EXHAUSTED"}}'
         token = '{"error": {"message": "Invalid proxy server token passed. Received API Key = sk-...CiyQ"}}'
-        cases = [('gemini-3.8-flash', 402, credits, server.AI_UNAVAILABLE), ('gemini-3.8-flash', 429, 'slow down', server.AI_BUSY),
+        cases = [('gemini-3.8-flash', 402, credits, server.AI_UNAVAILABLE), ('gemini-3.8-flash', 429, 'slow down', server.AI_QUOTA),
                  ('gemini-3.8-flash', 503, 'overloaded', server.AI_BUSY), ('gemini/gemini-3.8-flash', 401, token, server.AI_UNAVAILABLE)]
         for model, code, body, words in cases:
             with self.subTest(model=model, code=code), mock.patch.dict(os.environ, {'GEMINI_API_KEY': 'g', 'SUMOPOD_API_KEY': 's'}),                     mock.patch('urllib.request.urlopen', side_effect=self.refusal(code, body)), mock.patch('builtins.print') as log:
