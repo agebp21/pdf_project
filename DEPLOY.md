@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 — live `ba8433e`: Chat AI Ringkasan kini memprioritaskan permintaan terakhir dan mengubah jawaban sebelumnya ke format yang diminta, misalnya prosa jurnal, tanpa mengulang daftar poin. Referensi di luar sumber tidak dikarang. Model live `gemini-3.5-flash-lite` diuji langsung dengan dua pertanyaan berbeda dan permintaan lanjutan; hasil berbeda sesuai instruksi. Tes Ask 15/15, Gemini 6/6, kompilasi Python lulus. Backup `/root/pdf_project-code-backup-ai-followup-20261030130149.tgz`; layanan aktif, notebook/capabilities/admin HTTPS 200, checksum `server.py` cocok.
+
 - 30 Oktober 2026 — live `05ff6ba`: AI Ringkasan menjadi ruang notebook per akun di browser: buat/pilih/hapus notebook, judul dan sumber aktif, ringkasan serta chat terpisah menurut pilihan sumber; draf lama dapat diimpor melalui konfirmasi. QA browser desktop/HP termasuk isolasi akun, pindah notebook, sumber, draf lama, dan hapus lulus. JS 57/59 (2 QA homepage gagal path Playwright); Python 250/263 (13 kegagalan paywall/podcast lama, di luar perubahan ini). Backup `/root/pdf_project-code-backup-notebook-20261030114645.tgz`; layanan aktif, halaman dan API HTTPS 200, checksum file VPS cocok. Notebook tersimpan lokal di browser, belum sinkron lintas perangkat.
 
 - 30 Oktober 2026 — live `3ff42d3`: popup pratinjau Organize tidak lagi otomatis memfokuskan tombol X sehingga ring browser tidak muncul saat dibuka; fokus keyboard Tab pada X memakai warna hijau. QA browser katalog: fokus awal dialog, Tab ke X, Escape menutup, flip lulus. Backup `/root/pdf_project-code-backup-20261030093253.tgz`; layanan aktif, converter HTTPS 200, checksum cocok.

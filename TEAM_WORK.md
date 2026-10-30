@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- AI-CHAT-FOLLOWUP (30 Okt, Codex): `ba8433e` live. Gemini berfungsi di server; masalah jawaban berulang pada “dalam bentuk jurnal ya” disebabkan instruksi Ask yang selalu meminta jawaban ringkas. Prompt kini mengikuti permintaan terakhir, memakai riwayat sebagai konteks, menulis prosa jurnal bila diminta, dan tidak mengarang daftar pustaka. Tes model live dan suite Ask/Gemini lulus. Backup `/root/pdf_project-code-backup-ai-followup-20261030130149.tgz`.
+
 - NOTEBOOK-WORKSPACE (30 Okt, Codex): `05ff6ba` live. AI Ringkasan kini memiliki beberapa notebook tersimpan per akun di IndexedDB lokal, dengan judul dan sumber aktif. Ringkasan/chat dipisah berdasarkan pilihan sumber. Draf format lama hanya diimpor setelah konfirmasi pemilik akun; notebook dapat dihapus dengan konfirmasi. QA browser desktop/HP lulus, API dan layanan aktif. Backup `/root/pdf_project-code-backup-notebook-20261030114645.tgz`. Penyimpanan belum sinkron antar perangkat.
 
 - ORGANIZE-CLOSE-FOCUS (30 Okt, Codex): `3ff42d3` live. Ring fokus otomatis pada X pratinjau dihapus; navigasi keyboard tetap punya fokus hijau. QA Tab/Escape/flip lulus. Backup `/root/pdf_project-code-backup-20261030093253.tgz`.
