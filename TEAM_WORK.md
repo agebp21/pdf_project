@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-NEW-DOCUMENT (30 Okt, Codex): d7e72bb live. Tombol + dekat Intisari/Dokumen untuk draf laporan/proposal/jurnal berbasis sumber, ringkasan, dan Chat; bagian terpilih bisa dikembangkan via Chat lalu dimasukkan ke draf. Draf per notebook di IndexedDB, ekspor DOCX/PDF. QA lokal/live desktop/HP lulus. Backup /root/pdf_project-code-backup-new-documents-20261030225817.tgz.
+
 - NOTEBOOK-AUTO-SUMMARY-PAGES (30 Okt, Codex): 2da6c68 live. Sidebar halaman per sumber, Intisari otomatis sebagai tampilan awal, Chat langsung tersedia, PDF asli lewat nomor halaman. Auto AI hanya untuk entitlement i setelah sumber siap. QA lokal/live desktop/HP, 212 halaman, dua sumber, Basic tanpa AI lulus. Backup /root/pdf_project-code-backup-auto-summary-pages-20261030223055.tgz.
 
 - NOTEBOOK-FROZEN-CHAT (30 Okt, Codex): df8103f live. Chat selalu terlihat ketika PDF digulir dan otomatis hadir setelah tambah sumber; tombol Buka chat di Studio dihapus. QA lokal/live desktop/HP dan 212 halaman lulus. Backup /root/pdf_project-code-backup-chat-frozen-20261030180252.tgz.
