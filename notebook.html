@@ -162,6 +162,10 @@
   .viewer.document-chat .hello-mark,.viewer.document-chat .ask-hello h3{display:none}
   .viewer.document-chat .ask-hello p{margin-bottom:8px}
   .viewer.document-chat .ask-chips button{padding:7px 10px}
+  .ask-web-sources{display:grid;gap:8px;margin:12px 0}
+  .ask-web-sources a{display:block;padding:10px 12px;border:1px solid #E8E2D4;border-radius:10px;color:#1A3C34;background:#FAF8F4;text-decoration:none;overflow-wrap:anywhere}
+  .ask-web-sources a:hover{border-color:#1A3C34;background:#F3EFE7}
+  .ask-web-sources small{display:block;color:#78716C;margin-top:3px}
   .overview h2{margin:0 0 14px;font:800 22px 'Fraunces',Georgia,serif;color:#1C1917}
   .overview .result{font-size:15px;line-height:1.75}
   .overview-wait{color:#78716C;font-size:13px;line-height:1.6}
@@ -733,7 +737,7 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#overview-retry').hidden = true;
     $('#overview-wait').textContent = L('Reading your source and preparing key points…', 'Membaca sumber dan menyiapkan intisari…');
     clearChat();
-    (prior?.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || [], all[i + 1].thoughts); });
+    (prior?.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || [], all[i + 1].thoughts, all[i + 1].webSources); });
     asked = (prior?.asked || []).slice();
     if (summary) showSummary(false);
     status('#summary-status', '');
@@ -1913,6 +1917,21 @@ window.addEventListener('DOMContentLoaded', () => {
     });
     body.append(box);
   }
+  function showWebSources(body, sources) {
+    if (!Array.isArray(sources) || !sources.length) return;
+    const box = Object.assign(document.createElement('div'), {className: 'ask-web-sources'});
+    sources.forEach(source => {
+      try {
+        const url = new URL(source.url);
+        if (!['https:', 'http:'].includes(url.protocol)) return;
+        const link = Object.assign(document.createElement('a'), {href: url.href, target: '_blank', rel: 'noopener noreferrer'});
+        link.append(Object.assign(document.createElement('strong'), {textContent: source.title || url.hostname}),
+                    Object.assign(document.createElement('small'), {textContent: url.hostname}));
+        box.append(link);
+      } catch (e) {}
+    });
+    body.append(box);
+  }
   // Gemini's thought summary, collapsed above the answer (NotebookLM's "Thoughts").
   function showThoughts(body, thoughts) {
     if (!thoughts) return;
@@ -1958,10 +1977,11 @@ window.addEventListener('DOMContentLoaded', () => {
       const r = await post('/api/ask', {title: notebookTitle || title(), sources: sourcesPayload(), question, history: asked.slice(-6), work: (window.NotebookWork ? NotebookWork.context() : '') + draftContext});
       clearInterval(timer);
       if (sourceKey() !== requestScope) return;
-      asked.push({role: 'user', text: question}, {role: 'ai', text: r.answer, citations: r.citations || [], thoughts: r.thoughts || ''}); remember();
+      asked.push({role: 'user', text: question}, {role: 'ai', text: r.answer, citations: r.citations || [], thoughts: r.thoughts || '', webSources: r.webSources || []}); remember();
       await writeOut(body, r.answer, r.citations);
       showThoughts(body, r.thoughts);
       showCitations(body, r.citations);
+      showWebSources(body, r.webSources);
       const tools = Object.assign(document.createElement('div'), {className: 'msg-tools'});
       tools.append(chatButton(L('Copy', 'Salin'), async e => {
         try { await navigator.clipboard.writeText(r.answer); e.target.textContent = L('Copied', 'Disalin'); e.target.dataset.ico = 'check'; } catch (err) { e.target.textContent = L('Not allowed', 'Tidak diizinkan'); }
@@ -1992,12 +2012,13 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#chat-doc').textContent = activeSources().length > 1 ? L(`${activeSources().length} sources`, `${activeSources().length} sumber`) : (doc ? doc.name : '');
   }
   // A saved answer shown again (restored session): its text, citations and Copy.
-  function showAnswer(question, answer, citations, thoughts) {
+  function showAnswer(question, answer, citations, thoughts, webSources) {
     message('me', question);
     const {body} = message('ai', '');
     richTextCited(body, answer, citations);
     showThoughts(body, thoughts);
     showCitations(body, citations);
+    showWebSources(body, webSources);
     const tools = Object.assign(document.createElement('div'), {className: 'msg-tools'});
     tools.append(chatButton(L('Copy', 'Salin'), async e => {
       try { await navigator.clipboard.writeText(answer); e.target.textContent = L('Copied', 'Disalin'); e.target.dataset.ico = 'check'; } catch (err) { e.target.textContent = L('Not allowed', 'Tidak diizinkan'); }
@@ -2090,7 +2111,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (window.NotebookWork) NotebookWork.load(saved.work);
     clearChat();
     const restoredTurns = matchingScope ? saved.asked || [] : [];
-    restoredTurns.forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || all[i + 1].sources || [], all[i + 1].thoughts); });
+    restoredTurns.forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || all[i + 1].sources || [], all[i + 1].thoughts, all[i + 1].webSources); });
     asked = restoredTurns.slice();
     showTranslation();
     if (quiz) showQuiz();

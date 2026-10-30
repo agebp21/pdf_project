@@ -1276,6 +1276,36 @@ def research(query, lang='id-ID'):
     return results
 
 
+def wants_external_research(question, history=()):
+    """Only use paid web grounding when the reader explicitly requests outside material."""
+    question = ' '.join(str(question or '').lower().split())
+    search = re.search(r'\b(cari(?:kan)?|temukan|tambah(?:kan)?|tambahi|carikna|golek(?:na)?)\b', question)
+    material = re.search(r'\b(artikel|jurnal|referensi|pustaka|sumber|riset|penelitian|web|internet)\b', question)
+    if search and material:
+        return question
+    if re.search(r'\b(kamu|sampeyan|anda)\b.*\b(nambah(?:in)?|tambah(?:kan|i)?|cari(?:kan)?|carikna)\b', question):
+        prior = next((str(turn.get('text') or '') for turn in reversed(list(history)[-6:])
+                      if isinstance(turn, dict) and turn.get('role') == 'user'
+                      and wants_external_research(turn.get('text'))), '')
+        return prior or None
+    return None
+
+
+def external_references(request):
+    """Find scholarly articles first; use Gemini web grounding for general web requests."""
+    topic = re.sub(r'^(?:tolong\s+)?(?:cari(?:kan)?|temukan|tambah(?:kan)?|tambahi|carikna|golek(?:na)?)\s+', '', request, flags=re.I)
+    topic = re.sub(r'\b(?:(?:yang|yg)\s+)?(?:belum|blm)\s+ada\s+di\s+sini\b', '', topic, flags=re.I).strip()
+    scholarly = bool(re.search(r'\b(artikel|jurnal|referensi|pustaka|riset|penelitian)\b', request, re.I))
+    topic = re.sub(r'^(?:(?:artikel|jurnal|referensi|pustaka|riset|penelitian)(?:\s+ilmiah)?\s+)?(?:tentang|mengenai|terkait)\s+', '', topic, flags=re.I).strip()
+    if scholarly:
+        works = openalex_search(topic or request, oa=True)['results']
+        links = [{'title': f"{work['title']} ({work['year']})" if work.get('year') else work['title'],
+                  'url': work['link']} for work in works if work.get('link', '').startswith(('https://', 'http://'))]
+        if links:
+            return links[:8], 'indeks artikel ilmiah OpenAlex'
+    return research(topic or request, 'id-ID'), 'pencarian web'
+
+
 def translate_pages(pages, target, title='Buku'):
     """{page: text} -> {page: translation} in the target language (one AI call)."""
     model = os.environ.get('TRANSLATE_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
@@ -4247,6 +4277,14 @@ class Handler(SimpleHTTPRequestHandler):
             data = json.loads(self.rfile.read(size).decode('utf-8'))
             text, index, names = self.sources_text(data)
             history = data.get('history') if isinstance(data.get('history'), list) else []
+            request = wants_external_research(data.get('question'), history)
+            if request:
+                results, origin = external_references(request)
+                answer = (f'Saya menemukan referensi dari {origin} untuk melengkapi dokumen. '
+                          'Ini sumber eksternal, belum menjadi bagian PDF atau Intisari. '
+                          'Buka tautannya untuk memeriksa isi dan kelayakannya:')
+                self.send_json(200, {'answer': answer, 'citations': [], 'thoughts': '', 'webSources': results})
+                return
             answer, thoughts = ask_document(str(data.get('title') or 'Dokumen')[:200], text, data.get('question'),
                                             history, data.get('work'), include_thoughts=True)
         except (ValueError, UnicodeDecodeError) as cause:
