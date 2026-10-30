@@ -145,7 +145,8 @@
   @media (prefers-reduced-motion:reduce){.busy i{animation:none}}
   /* Ask the document: a chat (ChatGPT / Claude style) filling the viewer */
   .viewer-body.chat{padding:0;background:#fff;overflow:hidden;display:block}
-  .viewer-body.document-chat .ask{flex:none;max-width:760px;border-top:1px solid #EFE9DC;margin-top:24px}
+  .viewer-body.document-chat .ask{flex:none;height:auto;max-width:760px;border-top:1px solid #EFE9DC;margin-top:24px}
+  .viewer-body.document-chat .ask-log{flex:none;overflow:visible}
   .viewer{scroll-margin-top:96px}
   .ask{display:flex;flex-direction:column;height:min(78vh,860px);width:100%}
   .chat-top{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:8px 14px 0;font-size:13px}
@@ -437,7 +438,6 @@
         <div class="vtabs" role="tablist">
           <button type="button" role="tab" data-view="document" hidden data-ico="doc" data-en="Document">Dokumen</button>
           <button type="button" role="tab" data-view="translate" hidden data-ico="translate" data-en="Translation">Terjemahan</button>
-          <button type="button" role="tab" data-view="ask" hidden data-ico="ask" data-en="Chat">Chat</button>
           <button type="button" role="tab" data-view="notes" hidden data-ico="note" data-en="Notes">Catatan</button>
           <button type="button" role="tab" data-view="journal" hidden data-ico="journal" data-en="Journal">Jurnal</button>
           <button type="button" role="tab" data-view="slides" hidden data-ico="slides" data-en="Slides">Slide</button>
@@ -745,7 +745,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   async function showDocument(source = doc, pageNumber = 1) {
     if (!source) return;
-    viewer.tab('ask'); viewer.show('document');
+    viewer.show('document');
     const body = document.querySelector('.viewer-body');
     if (previewState?.source === source) {
       const target = $('#source-pages').children[Math.max(0, pageNumber - 1)];
@@ -1226,8 +1226,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }));
     $('#summary-sources').hidden = !activeSources().length;
     $('#chat-summary').hidden = false;
-    viewer.tab('ask');
-    if (focus) { viewer.show('ask'); $('#ask-log').scrollTop = 0; }
+    if (focus) { viewer.show('document'); $('#chat-summary').scrollIntoView({behavior: 'smooth', block: 'start'}); }
   }
   const length = 'sedang';
   $('#summary-make').addEventListener('click', async () => {
@@ -1716,6 +1715,7 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#ask-q').value = ''; grow(); $('#ask-send').disabled = true;
     if (!retry) message('me', question);
     const {row, body} = message('ai', '');
+    if (document.querySelector('.viewer-body').classList.contains('document-chat')) row.scrollIntoView({behavior: 'smooth', block: 'nearest'});
     const sec = Object.assign(document.createElement('span'), {className: 'wait-sec'});
     body.replaceChildren(Object.assign(document.createElement('span'), {className: 'dots', innerHTML: '<i></i><i></i><i></i>'}), sec);
     const start = Date.now(), timer = setInterval(() => { sec.textContent = L(`reading the sources… ${Math.round((Date.now() - start) / 1000)} s`, `membaca sumber… ${Math.round((Date.now() - start) / 1000)} dtk`); }, 1000);
@@ -1750,8 +1750,8 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#ask-form').addEventListener('submit', e => { e.preventDefault(); ask($('#ask-q').value); });
   $('#ask-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask($('#ask-q').value); } });
   $('#ask-open').addEventListener('click', () => {
-    viewer.show('ask');
-    document.querySelector('.viewer').scrollIntoView({behavior: 'smooth', block: 'start'});      // the whole chat in view, under the header
+    viewer.show('document');
+    document.querySelector('[data-panel="ask"]').scrollIntoView({behavior: 'smooth', block: 'start'});
     $('#ask-q').focus({preventScroll: true});
   });
   $('#ask-new').addEventListener('click', () => { if (!$('#ask-send').disabled) { clearChat(); remember(); $('#ask-q').focus(); } });
@@ -1859,7 +1859,6 @@ window.addEventListener('DOMContentLoaded', () => {
     const restoredTurns = matchingScope ? saved.asked || [] : [];
     restoredTurns.forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || all[i + 1].sources || [], all[i + 1].thoughts); });
     asked = restoredTurns.slice();
-    if (sources.length) viewer.tab('ask');
     showTranslation();
     if (quiz) showQuiz();
     if (cards) showCards();
