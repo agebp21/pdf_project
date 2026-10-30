@@ -2,6 +2,9 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 ? live 9a15e6e: log server menunjukkan Gemini 429 RESOURCE_EXHAUSTED pada /api/ask (bukan error dokumen); pesan umum ?Layanan AI sedang sibuk? untuk 429 Gemini diganti menjadi petunjuk kuota API dan pemeriksaan Usage/Billing di Google AI Studio. Model live ASK_MODEL/SUMMARY_MODEL: gemini-3.5-flash-lite. Detail batas spesifik belum bisa dipastikan dari log terpotong; percobaan verifikasi tambahan timeout. QA test_gemini 6 dan test_ask_summary 15 lulus, fungsi pesan live dan checksum cocok. Backup /root/pdf_project-code-backup-gemini-quota-message-20261030235454.tgz.
+
+
 - 30 Oktober 2026 ? live 321d7de: permintaan mencari artikel di Chat kini otomatis menambahkan abstrak hingga tiga artikel ilmiah teratas sebagai Sumber PDF berlabel ?Abstrak?; tautan artikel asli tersimpan, lalu Intisari dibuat ulang untuk cakupan sumber baru. Naskah lengkap tidak diklaim tersedia; artikel yang sama tidak ditambahkan dua kali. QA unit 15 lulus, browser lokal/live desktop/HP: 1 PDF + 3 abstrak, Intisari kedua, buka PDF abstrak, pulih sesudah refresh tanpa error JS. OpenAlex live mengembalikan 8 hasil, checksum cocok. Backup /root/pdf_project-code-backup-article-sources-20261030234833.tgz.
 
 

@@ -1,5 +1,8 @@
 # Koordinasi tim AI
 
+- GEMINI-QUOTA-MESSAGE (30 Okt, Codex): 9a15e6e live. /api/ask log menunjukkan Gemini 429 RESOURCE_EXHAUSTED; pesan ke pengguna kini menyebut kuota, bukan ?sedang sibuk?. Perlu cek Usage, Rate Limits, dan Billing pada project API key aktif untuk tahu batas spesifik. Model aktif gemini-3.5-flash-lite. QA 21 unit lulus; checksum server cocok. Backup /root/pdf_project-code-backup-gemini-quota-message-20261030235454.tgz.
+
+
 - NOTEBOOK-ARTICLE-SOURCES (30 Okt, Codex): 321d7de live. Tiga abstrak artikel teratas hasil Chat otomatis masuk Sumber dengan label yang jelas dan link asli, Intisari dihitung ulang. PDF abstrak dibuat di browser; sumber dan jawaban tersimpan per notebook. QA unit/browser lokal/live desktop/HP lulus. Backup /root/pdf_project-code-backup-article-sources-20261030234833.tgz.
 
 
