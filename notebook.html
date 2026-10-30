@@ -160,6 +160,15 @@
   .overview h2{margin:0 0 14px;font:800 22px 'Fraunces',Georgia,serif;color:#1C1917}
   .overview .result{font-size:15px;line-height:1.75}
   .overview-wait{color:#78716C;font-size:13px;line-height:1.6}
+  .vtabs .draft-plus{padding:5px 11px;font-size:18px;line-height:1}
+  .draft-controls{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:12px}
+  .draft-controls input{flex:1 1 180px}.draft-controls select{flex:0 0 120px}
+  .draft-actions{display:flex;flex-wrap:wrap;gap:8px;margin:10px 0 16px}
+  .draft-actions button{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:8px 13px;font:700 12px 'Plus Jakarta Sans',sans-serif;cursor:pointer}
+  .draft-actions button:hover{border-color:#FF5C28;color:#C2410C}
+  .draft-actions .primary{background:#1A3C34;border-color:#1A3C34;color:#fff}
+  .draft-text{min-height:42vh;white-space:pre-wrap;outline:none;border:1px solid #E4DED0;border-radius:12px;padding:18px;font:400 15px/1.75 'Plus Jakarta Sans',sans-serif;color:#1C1917}
+  .draft-text:focus{border-color:#FF5C28}
   .viewer{scroll-margin-top:96px}
   .ask{display:flex;flex-direction:column;height:min(78vh,860px);width:100%}
   .chat-top{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:8px 14px 0;font-size:13px}
@@ -452,6 +461,8 @@
         <div class="vtabs" role="tablist">
           <button type="button" role="tab" data-view="overview" hidden data-ico="summary" data-en="Key points">Intisari</button>
           <button type="button" role="tab" data-view="document" hidden data-ico="doc" data-en="Document">Dokumen</button>
+          <button id="draft-tab" type="button" role="tab" data-view="draft" hidden data-ico="doc" data-en="New document">Dokumen baru</button>
+          <button id="draft-plus" class="draft-plus" type="button" hidden aria-label="Dokumen baru" title="Dokumen baru" data-en-aria="New document" data-en-title="New document">+</button>
           <button type="button" role="tab" data-view="translate" hidden data-ico="translate" data-en="Translation">Terjemahan</button>
           <button type="button" role="tab" data-view="notes" hidden data-ico="note" data-en="Notes">Catatan</button>
           <button type="button" role="tab" data-view="journal" hidden data-ico="journal" data-en="Journal">Jurnal</button>
@@ -476,6 +487,11 @@
           <p id="overview-wait" class="overview-wait" data-en="Reading your source and preparing key points…">Membaca sumber dan menyiapkan intisari…</p>
         </div>
         <div class="vpanel sheet source-document" data-panel="document" hidden><div id="source-pages" class="source-pages"></div><p id="source-preview-status" class="status" role="status"></p></div>
+        <div class="vpanel sheet" data-panel="draft" hidden>
+          <div class="draft-controls"><select id="draft-list" class="field" aria-label="Pilih dokumen" data-en-aria="Choose document"></select><select id="draft-kind" class="field" aria-label="Jenis dokumen" data-en-aria="Document type"><option value="laporan" data-en="Report">Laporan</option><option value="proposal" data-en="Proposal">Proposal</option><option value="jurnal" data-en="Journal">Jurnal</option></select><input id="draft-title" class="field" type="text" maxlength="150" placeholder="Judul dokumen" data-en-ph="Document title" aria-label="Judul dokumen" data-en-aria="Document title"></div>
+          <div class="draft-actions"><button id="draft-generate" class="primary" type="button" data-en="Create draft with AI">Buat draf dengan AI</button><button id="draft-insert" type="button" data-en="Add last chat answer">Tambah jawaban Chat</button><button id="draft-docx" type="button">DOCX</button><button id="draft-pdf" type="button">PDF</button></div>
+          <p id="draft-status" class="status" role="status"></p><div id="draft-text" class="draft-text" contenteditable="true" spellcheck="true" role="textbox" aria-multiline="true" aria-label="Isi dokumen" data-en-aria="Document content"></div>
+        </div>
         <div class="vpanel sheet" data-panel="translate" hidden><div id="translate-pager" class="pager" hidden><button id="tr-prev" type="button" aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><span id="tr-page"></span><button id="tr-next" type="button" aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div><div id="translate-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Terjemahan (bisa diedit)" data-en-aria="Translation (editable)"></div><div id="translate-tools" class="mini" hidden><button id="translate-save" type="button" data-ico="download">.txt</button></div></div>
         <div class="vpanel sheet work" data-panel="notes" hidden>
           <div class="wbar" id="notes-bar"><button type="button" class="fmt" data-cmd="h3" title="Subjudul" data-en-title="Subheading">H</button><button type="button" class="fmt" data-cmd="bold" title="Tebal (Ctrl+B)" data-en-title="Bold (Ctrl+B)"><b>B</b></button><button type="button" class="fmt" data-cmd="italic" title="Miring (Ctrl+I)" data-en-title="Italic (Ctrl+I)"><i>I</i></button><button type="button" class="fmt" data-cmd="insertUnorderedList" title="Daftar" data-en-title="List">•</button><button type="button" class="fmt" data-cmd="quote" title="Kutipan" data-en-title="Quote">❝</button><span class="wsep"></span><button id="notes-summary" type="button" data-ico="summary" data-en="Insert AI summary">Sisipkan ringkasan AI</button><span class="wgrow"></span><button id="notes-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="notes-docx" type="button" data-ico="download">.docx</button></div>
@@ -644,9 +660,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (view && !availableViews.has(view)) return;
     current = view;
     tabs.forEach(t => { t.setAttribute('aria-selected', String(t.dataset.view === view)); });
-    panels.forEach(p => { p.hidden = working || (p.dataset.panel !== view && !(p.dataset.panel === 'ask' && (view === 'document' || view === 'overview'))); });
+    panels.forEach(p => { p.hidden = working || (p.dataset.panel !== view && !(p.dataset.panel === 'ask' && (view === 'document' || view === 'overview' || view === 'draft'))); });
     document.querySelector('#viewer-empty').hidden = working || !!view;
-    document.querySelector('.viewer').classList.toggle('document-chat', (view === 'document' || view === 'overview') && !working);
+    document.querySelector('.viewer').classList.toggle('document-chat', (view === 'document' || view === 'overview' || view === 'draft') && !working);
   };
   const body = document.querySelector('.viewer-body');
   // On a phone the viewer sits below the steps: bring it up when a result arrives.
@@ -686,6 +702,8 @@ window.addEventListener('DOMContentLoaded', () => {
   // `sources`, so code that reads/writes `doc.xxx` keeps working unchanged for the open source.
   let sources = [];          // [{id, name, blob, pages, text: {page: [lines]}, lang, chapters, highlights, translations, ocrDone, ocred, active}]
   let doc = null, openId = null, nextId = 1;
+  let drafts = [], currentDraftId = null;
+  let selectedDraftText = '';
   let notebookTitle = '';
   $('#notebook-title').addEventListener('input', () => { notebookTitle = $('#notebook-title').value.trim(); remember(); });
   let summary = null, translating = false, trPage = 0;
@@ -742,6 +760,81 @@ window.addEventListener('DOMContentLoaded', () => {
     document.body.appendChild(a); a.click(); a.remove();
     setTimeout(() => URL.revokeObjectURL(a.href), 10000);
   }
+  const currentDraft = () => drafts.find(d => d.id === currentDraftId);
+  function renderDrafts() {
+    const select = $('#draft-list');
+    select.replaceChildren(...drafts.map((d, i) => Object.assign(document.createElement('option'), {value: d.id, textContent: d.title || L(`Document ${i + 1}`, `Dokumen ${i + 1}`)})));
+    const d = currentDraft();
+    selectedDraftText = '';
+    $('#draft-tab').hidden = !d;
+    if (!d) return;
+    select.value = d.id;
+    $('#draft-title').value = d.title;
+    $('#draft-kind').value = d.kind;
+    $('#draft-text').innerText = d.text;
+    $('#draft-tab').textContent = d.title || L('New document', 'Dokumen baru');
+  }
+  $('#draft-plus').addEventListener('click', () => {
+    const d = {id: crypto.randomUUID(), title: L('New document', 'Dokumen baru'), kind: 'laporan', text: '', scope: sourceKey()};
+    drafts.push(d); currentDraftId = d.id; renderDrafts(); viewer.show('draft'); remember();
+    $('#draft-title').focus({preventScroll: true}); $('#draft-title').select();
+  });
+  $('#draft-list').addEventListener('change', e => { currentDraftId = e.target.value; renderDrafts(); viewer.show('draft'); remember(); });
+  $('#draft-title').addEventListener('input', e => { const d = currentDraft(); if (!d) return; d.title = e.target.value.slice(0, 150); $('#draft-tab').textContent = d.title || L('New document', 'Dokumen baru'); renderDraftsTitle(); remember(); });
+  function renderDraftsTitle() { const d = currentDraft(); if (d) $('#draft-list').selectedOptions[0].textContent = d.title || L('New document', 'Dokumen baru'); }
+  $('#draft-kind').addEventListener('change', e => { const d = currentDraft(); if (d) { d.kind = e.target.value; remember(); } });
+  $('#draft-text').addEventListener('input', e => { const d = currentDraft(); if (d) { d.text = e.target.innerText.slice(0, 100000); remember(); } });
+  const captureDraftSelection = () => { const sel = getSelection(); if (sel?.rangeCount && $('#draft-text').contains(sel.anchorNode) && $('#draft-text').contains(sel.focusNode)) selectedDraftText = sel.toString().trim().slice(0, 3000); };
+  $('#draft-text').addEventListener('mouseup', captureDraftSelection);
+  $('#draft-text').addEventListener('keyup', captureDraftSelection);
+  $('#draft-generate').addEventListener('click', async () => {
+    const d = currentDraft(), actives = activeSources();
+    if (!d || !actives.length) { status('#draft-status', L('Add a source first.', 'Tambahkan sumber dulu.'), true); return; }
+    if (actives.some(s => s.status || !allText(s).trim())) { status('#draft-status', L('Wait until the sources have been read.', 'Tunggu sampai sumber selesai dibaca.'), true); return; }
+    if (d.text.trim() && !await MFDialog.confirm({title: L('Replace this draft?', 'Ganti draf ini?'), message: L('The current text will be replaced.', 'Teks yang ada sekarang akan diganti.'), ok: L('Replace', 'Ganti'), cancel: L('Cancel', 'Batal')})) return;
+    const button = $('#draft-generate'); button.disabled = true;
+    status('#draft-status', L('Writing the document…', 'Menyusun dokumen…'));
+    const id = d.id, scope = sourceKey();
+    try {
+      const c = await caps();
+      if (!c.entitlements?.includes('ai')) { location.href = '/harga'; return; }
+      const style = {laporan: 'laporan dengan latar belakang, pembahasan, temuan, dan kesimpulan', proposal: 'proposal dengan latar belakang, tujuan, rencana kegiatan, manfaat, dan penutup', jurnal: 'draf artikel jurnal dengan abstrak, pendahuluan, metode berdasarkan sumber, pembahasan, kesimpulan, dan daftar pustaka hanya bila tersedia di sumber'}[d.kind];
+      const question = `Buat ${style} berjudul "${d.title}". Gunakan intisari dan percakapan sebagai konteks, tetapi setiap fakta harus berasal dari sumber dengan rujukan halaman. Jika ada bagian yang perlu dikembangkan tetapi sumber tidak cukup, beri penanda [perlu dilengkapi], jangan mengarang fakta atau referensi. Tulis draf yang bisa diedit, dengan judul bagian yang jelas.`;
+      const r = await post('/api/ask', {title: notebookTitle || title(), sources: sourcesPayload(), question, history: asked.slice(-6), work: (window.NotebookWork ? NotebookWork.context() : '')});
+      if (currentDraftId !== id || sourceKey() !== scope) return;
+      d.text = String(r.answer || '').replace(/\[(\d+)\]/g, (m, n) => { const cite = (r.citations || []).find(c => c.n === +n); return cite ? `(${cite.source}, hlm. ${cite.page})` : m; });
+      $('#draft-text').innerText = d.text; remember(); status('#draft-status', L('Draft ready. Edit the text or ask Chat to develop a section.', 'Draf siap. Edit teks atau minta Chat mengembangkan bagian tertentu.'));
+    } catch (e) { failed('#draft-status', e); }
+    finally { button.disabled = false; }
+  });
+  $('#draft-insert').addEventListener('mousedown', e => e.preventDefault());
+  $('#draft-insert').addEventListener('click', () => {
+    const d = currentDraft(), answer = [...asked].reverse().find(t => t.role === 'ai')?.text;
+    if (!d || !answer) { status('#draft-status', L('Ask Chat first, then add its answer.', 'Tanya Chat dulu, lalu tambahkan jawabannya.'), true); return; }
+    const box = $('#draft-text'), selection = getSelection();
+    if (selection.rangeCount && box.contains(selection.anchorNode) && selection.toString()) document.execCommand('insertText', false, answer);
+    else if (selectedDraftText && d.text.includes(selectedDraftText)) box.innerText = d.text.replace(selectedDraftText, answer);
+    else box.innerText = (d.text ? d.text.trimEnd() + '\n\n' : '') + answer;
+    selectedDraftText = '';
+    box.dispatchEvent(new Event('input')); status('#draft-status', L('Chat answer added to the document.', 'Jawaban Chat ditambahkan ke dokumen.'));
+  });
+  $('#draft-docx').addEventListener('click', async () => {
+    const d = currentDraft(); if (!d?.text.trim()) return;
+    try {
+      if (!window.docx) await new Promise((ok, fail) => { const s = document.createElement('script'); s.src = 'https://cdn.jsdelivr.net/npm/docx@9.7.1/dist/index.iife.js'; s.onload = ok; s.onerror = fail; document.head.append(s); });
+      const {Document, Packer, Paragraph, HeadingLevel} = window.docx;
+      const lines = d.text.split(/\n+/).map(x => x.trim()).filter(Boolean);
+      const children = [new Paragraph({text: d.title, heading: HeadingLevel.TITLE}), ...lines.map(x => new Paragraph({text: x, heading: /^(abstrak|pendahuluan|metode|hasil|pembahasan|kesimpulan|daftar pustaka|latar belakang|tujuan|penutup)\b/i.test(x) ? HeadingLevel.HEADING_1 : undefined}))];
+      const blob = await Packer.toBlob(new Document({creator: 'MyFlipbook', title: d.title, sections: [{children}]}));
+      const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = d.title.replace(/[\\/:*?"<>|]+/g, '-') + '.docx'; a.click(); setTimeout(() => URL.revokeObjectURL(a.href), 10000);
+    } catch (e) { status('#draft-status', L('Could not make the Word file.', 'Gagal membuat file Word.'), true); }
+  });
+  $('#draft-pdf').addEventListener('click', () => {
+    const d = currentDraft(); if (!d?.text.trim()) return;
+    const win = window.open('', '_blank'); if (!win) { status('#draft-status', L('Allow popups to export PDF.', 'Izinkan popup untuk ekspor PDF.'), true); return; }
+    const esc = s => String(s).replace(/[&<>]/g, c => ({'&':'&amp;','<':'&lt;','>':'&gt;'}[c]));
+    win.document.write(`<!doctype html><html><head><meta charset="utf-8"><title>${esc(d.title)}</title><style>body{font:12pt/1.65 Georgia,serif;max-width:750px;margin:50px auto;color:#222}h1{text-align:center;font-size:20pt}pre{white-space:pre-wrap;font:inherit}@page{size:A4;margin:22mm}</style></head><body><h1>${esc(d.title)}</h1><pre>${esc(d.text)}</pre><script>onload=()=>print()<\/script></body></html>`); win.document.close();
+  });
   const title = () => doc ? doc.name.replace(/\.pdf$/i, '') : L('Document', 'Dokumen');
   const allText = (s = doc) => Object.keys(s.text).map(k => s.text[k].join(' ')).join(' ');
   const textPages = (s = doc) => Object.keys(s.text).map(Number).sort((a, b) => a - b).filter(i => s.text[i].join(' ').trim());
@@ -1041,6 +1134,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }));
     $('#select-all-row').hidden = sources.length < 2;
     $('#drop').hidden = sources.length > 0; $('#add-sources').hidden = sources.length === 0;
+    $('#draft-plus').hidden = sources.length === 0;
     updateSelectAll();
     syncScope();
     renderPageNav();
@@ -1771,7 +1865,8 @@ window.addEventListener('DOMContentLoaded', () => {
     body.replaceChildren(Object.assign(document.createElement('span'), {className: 'dots', innerHTML: '<i></i><i></i><i></i>'}), sec);
     const start = Date.now(), timer = setInterval(() => { sec.textContent = L(`reading the sources… ${Math.round((Date.now() - start) / 1000)} s`, `membaca sumber… ${Math.round((Date.now() - start) / 1000)} dtk`); }, 1000);
     try {
-      const r = await post('/api/ask', {title: notebookTitle || title(), sources: sourcesPayload(), question, history: asked.slice(-6), work: window.NotebookWork ? NotebookWork.context() : ''});
+      const draftContext = currentDraft()?.text.trim() ? `\n\nDRAF DOKUMEN YANG SEDANG DIEDIT:\n${currentDraft().text.slice(0, 9000)}${selectedDraftText ? `\n\nBAGIAN YANG DIPILIH PEMBACA UNTUK DIKEMBANGKAN:\n${selectedDraftText}` : ''}` : '';
+      const r = await post('/api/ask', {title: notebookTitle || title(), sources: sourcesPayload(), question, history: asked.slice(-6), work: (window.NotebookWork ? NotebookWork.context() : '') + draftContext});
       clearInterval(timer);
       if (sourceKey() !== requestScope) return;
       asked.push({role: 'user', text: question}, {role: 'ai', text: r.answer, citations: r.citations || [], thoughts: r.thoughts || ''}); remember();
@@ -1857,7 +1952,7 @@ window.addEventListener('DOMContentLoaded', () => {
       await sessionDo('readwrite', st => { const req = st.put({
         sources: sources.map(s => ({id: s.id, name: s.name, blob: s.blob, pages: s.pages, text: s.text, chapters: s.chapters || [], highlights: s.highlights || [],
           translations: s.translations || {}, ocrDone: !!s.ocrDone, ocred: s.ocred || 0, active: s.active !== false})),
-        openId, notebookTitle, scopeKey, scopeStates, summary, quiz, cards, table, mindmap, infographic, asked, work: window.NotebookWork ? NotebookWork.state() : null, savedAt: Date.now()}, bookKey(currentNotebookId));
+        openId, notebookTitle, scopeKey, scopeStates, summary, quiz, cards, table, mindmap, infographic, asked, drafts, currentDraftId, work: window.NotebookWork ? NotebookWork.state() : null, savedAt: Date.now()}, bookKey(currentNotebookId));
         st.put(notebookIndex, 'books:' + sessionOwner); st.put(currentNotebookId, 'current:' + sessionOwner); return req; });
       renderNotebookList();
       return true;
@@ -1900,6 +1995,9 @@ window.addEventListener('DOMContentLoaded', () => {
     table = saved.table || null;
     mindmap = saved.mindmap || null;
     infographic = saved.infographic || null;
+    drafts = Array.isArray(saved.drafts) ? saved.drafts.filter(d => d && typeof d.id === 'string' && ['laporan','proposal','jurnal'].includes(d.kind)).slice(0, 50).map(d => ({id:d.id, title:String(d.title || '').slice(0,150), kind:d.kind, text:String(d.text || '').slice(0,100000), scope:String(d.scope || '')})) : [];
+    currentDraftId = drafts.some(d => d.id === saved.currentDraftId) ? saved.currentDraftId : drafts[0]?.id || null;
+    renderDrafts();
     if (window.NotebookWork) NotebookWork.load(saved.work);
     clearChat();
     const restoredTurns = matchingScope ? saved.asked || [] : [];
@@ -1956,7 +2054,7 @@ window.addEventListener('DOMContentLoaded', () => {
     blob: () => doc && doc.blob, pages: () => (doc ? doc.pages : 0),
     lang: () => (doc && doc.lang) || 'id-ID'});
   function notebookReadyToSwitch() {
-    if (sources.some(s => s.status) || translating || $('#summary-make').disabled || $('#ask-send').disabled) {
+    if (sources.some(s => s.status) || translating || $('#summary-make').disabled || $('#ask-send').disabled || $('#draft-generate').disabled) {
       status('#load-status', L('Wait for the current task to finish before switching notebooks.', 'Tunggu proses saat ini selesai sebelum pindah notebook.'), true);
       return false;
     }
