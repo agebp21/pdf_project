@@ -235,7 +235,7 @@
   .org-merge-cover:hover,.org-merge-cover:focus-visible{border-color:#1a3c34;box-shadow:0 3px 12px #1a3c3426}
   .org-merge-cover img{display:block;width:100%;max-height:220px;aspect-ratio:3/4;object-fit:contain;background:#f7f4ed;border-radius:5px}
   .org-merge-cover span{display:block;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:700}
-  #orgReaderDialog{width:min(96vw,1300px);max-width:96vw;max-height:94dvh;padding:18px 14px 14px;border:1px solid #e7e2f2;border-radius:18px;background:#fff;box-shadow:0 24px 80px #11182755;overflow:auto}
+  #orgReaderDialog{width:min(94vw,1050px);max-width:94vw;max-height:94dvh;padding:18px 14px 14px;border:1px solid #e7e2f2;border-radius:18px;background:#fff;box-shadow:0 24px 80px #11182755;overflow:auto}
   #orgReaderDialog::backdrop{background:#111827b8}
   .org-reader-close{position:sticky;top:0;float:right;z-index:10;width:34px;height:34px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#374151;cursor:pointer;font-size:22px;line-height:1}
   #orgReader{background:#fff;border:0;border-radius:12px;padding:.6rem;position:relative;clear:both}
@@ -2111,7 +2111,11 @@ async function orgReaderBuild(){
   const single=avail<520;
   // Edit-toolbar zoom: rebuild the book bigger/smaller (clamped to the
   // engine limits); the wrap scrolls once it overflows (org-zoomed).
-  const PW=Math.round(Math.min(700,Math.max(140,(single?avail:Math.min(avail,640)/2)*orgZoom))), PH=Math.round(PW/Math.max(0.4,Math.min(2.5,ratio)));
+  const safeRatio=Math.max(0.4,Math.min(2.5,ratio));
+  const maxHeight=Math.max(220,Math.min(620,(window.innerHeight||800)*0.75));
+  const maxWidth=single?Math.min(460,avail):Math.min(460,avail/2);
+  const PW=Math.round(Math.max(140,Math.min(maxWidth,maxHeight*safeRatio)*orgZoom));
+  const PH=Math.round(PW/safeRatio);
   try{ await orgBookEngine(); }catch(e){
     const b0=document.getElementById('orgBook');
     if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau tidak tersedia')+'</p>';
@@ -2132,7 +2136,7 @@ async function orgReaderBuild(){
   box.innerHTML='';
   orgReaderFaces().forEach(f=>box.append(f));
   try{
-    orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'stretch',minWidth:200,maxWidth:700,minHeight:140,maxHeight:560,autoSize:true,usePortrait:true,showCover:false,useMouseEvents:!orgHand,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
+    orgBook=new St.PageFlip(box,{width:PW,height:PH,size:'fixed',flippingTime:480,maxShadowOpacity:0.22,drawShadow:true,usePortrait:true,showCover:false,useMouseEvents:!orgHand,swipeDistance:30,showPageCorners:false,disableFlipByClick:false,mobileScrollSupport:true});
     orgBook.loadFromHTML(Array.from(box.children));
   }catch(e){ box.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau tidak tersedia')+'</p>'; return; }
   orgBook.on('flip',()=>{ orgPaintReaderLabel(); try{ log('Org at '+orgBook.getCurrentPageIndex()); }catch(e){} orgRenderVisible(); });
