@@ -1,5 +1,8 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-ARTICLE-SOURCES (30 Okt, Codex): 321d7de live. Tiga abstrak artikel teratas hasil Chat otomatis masuk Sumber dengan label yang jelas dan link asli, Intisari dihitung ulang. PDF abstrak dibuat di browser; sumber dan jawaban tersimpan per notebook. QA unit/browser lokal/live desktop/HP lulus. Backup /root/pdf_project-code-backup-article-sources-20261030234833.tgz.
+
+
 - NOTEBOOK-CHAT-RESEARCH (30 Okt, Codex): 698dec2 live. Permintaan artikel/referensi eksternal di Chat diarahkan ke OpenAlex (Gemini search live 429); hasil sebagai tautan yang tersimpan bersama obrolan. Permintaan web umum tetap memakai Gemini. QA unit/browser lokal/live lulus; OpenAlex live menghasilkan 8 artikel. Backup /root/pdf_project-code-backup-chat-research-20261030234217.tgz.
 
 

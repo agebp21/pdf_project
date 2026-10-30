@@ -2,6 +2,9 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 ? live 321d7de: permintaan mencari artikel di Chat kini otomatis menambahkan abstrak hingga tiga artikel ilmiah teratas sebagai Sumber PDF berlabel ?Abstrak?; tautan artikel asli tersimpan, lalu Intisari dibuat ulang untuk cakupan sumber baru. Naskah lengkap tidak diklaim tersedia; artikel yang sama tidak ditambahkan dua kali. QA unit 15 lulus, browser lokal/live desktop/HP: 1 PDF + 3 abstrak, Intisari kedua, buka PDF abstrak, pulih sesudah refresh tanpa error JS. OpenAlex live mengembalikan 8 hasil, checksum cocok. Backup /root/pdf_project-code-backup-article-sources-20261030234833.tgz.
+
+
 - 30 Oktober 2026 ? live 698dec2: Chat AI Ringkasan kini mengenali permintaan eksplisit mencari/menambah artikel atau referensi eksternal, termasuk pertanyaan lanjutan seperti ?makanya kamu yang nambahin?. Artikel ilmiah dicari di OpenAlex lebih dulu dan ditampilkan sebagai tautan di jawaban Chat; referensi web umum memakai pencarian Gemini. Tautan tetap ada setelah refresh. QA unit 15 lulus, browser lokal/live desktop/HP lulus, indeks OpenAlex live menghasilkan 8 artikel, checksum cocok. Grounding Gemini sempat mengembalikan 429 kuota, sehingga artikel ilmiah dialihkan ke OpenAlex. Backup /root/pdf_project-code-backup-chat-research-20261030234217.tgz.
 
 
