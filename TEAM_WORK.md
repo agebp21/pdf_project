@@ -1,5 +1,8 @@
 # Koordinasi tim AI
 
+- GEMINI-FALLBACK-503 (31 Okt, Codex): e49ae47 live. Model utama gemini-3.5-flash-lite mendapat 503 high demand; fallback gemini-3.1-flash-lite aktif di .env VPS. Uji langsung model cadangan dan uji paksa 503 ? fallback sukses. Batas 60.000 kata/bulan MyFlipbook terpisah dari rate limit Gemini. Backup /root/pdf_project-code-backup-gemini-fallback-20261030235956.tgz.
+
+
 - GEMINI-QUOTA-MESSAGE (30 Okt, Codex): 9a15e6e live. /api/ask log menunjukkan Gemini 429 RESOURCE_EXHAUSTED; pesan ke pengguna kini menyebut kuota, bukan ?sedang sibuk?. Perlu cek Usage, Rate Limits, dan Billing pada project API key aktif untuk tahu batas spesifik. Model aktif gemini-3.5-flash-lite. QA 21 unit lulus; checksum server cocok. Backup /root/pdf_project-code-backup-gemini-quota-message-20261030235454.tgz.
 
 

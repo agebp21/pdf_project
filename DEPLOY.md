@@ -2,6 +2,9 @@
 
 ## Log terbaru
 
+- 31 Oktober 2026 ? live e49ae47: log terbaru /api/ask menunjukkan Gemini 503 ?model high demand?, berbeda dari 429 kuota sebelumnya; ini bukan batas 60.000 kata/bulan paket MyFlipbook. GEMINI_FALLBACK_MODEL=gemini-3.1-flash-lite dipasang di .env live; saat model utama gemini-3.5-flash-lite membalas 503, server mencoba model cadangan sekali. QA unit 7 lulus dan uji live paksa 503 ? model cadangan menjawab ?Halo!?, layanan aktif, checksum cocok. Backup /root/pdf_project-code-backup-gemini-fallback-20261030235956.tgz.
+
+
 - 30 Oktober 2026 ? live 9a15e6e: log server menunjukkan Gemini 429 RESOURCE_EXHAUSTED pada /api/ask (bukan error dokumen); pesan umum ?Layanan AI sedang sibuk? untuk 429 Gemini diganti menjadi petunjuk kuota API dan pemeriksaan Usage/Billing di Google AI Studio. Model live ASK_MODEL/SUMMARY_MODEL: gemini-3.5-flash-lite. Detail batas spesifik belum bisa dipastikan dari log terpotong; percobaan verifikasi tambahan timeout. QA test_gemini 6 dan test_ask_summary 15 lulus, fungsi pesan live dan checksum cocok. Backup /root/pdf_project-code-backup-gemini-quota-message-20261030235454.tgz.
 
 
