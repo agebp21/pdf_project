@@ -715,16 +715,23 @@ def ask_document(title, text, question, history=(), work='', include_thoughts=Fa
             'Sebut halaman sumber dari penanda [Halaman N] dalam kurung, mis. (hlm. 12) — untuk jawaban berbahasa Inggris '
             '(p. 12). Gunakan hanya nomor halaman yang ada dalam SUMBER. Setiap poin penting harus punya rujukan halaman.')
     system = ('Kamu asisten baca yang menjawab pertanyaan pembaca tentang dokumen di bawah. Jawab HANYA dari isi dokumen; '
-              'jangan menambah fakta, angka, atau pendapat dari luar. Jika dokumen tidak membahasnya, katakan terus terang '
-              'bahwa jawabannya tidak ada di dokumen. Jawab dalam bahasa yang sama dengan pertanyaan, ringkas dan jelas '
-              f'(paragraf pendek; boleh butir diawali "- "). {cite} Tanpa markdown lain (tanpa #, **, atau tabel).'
+              'jangan menambah fakta, angka, atau pendapat dari luar. Ikuti maksud pertanyaan TERAKHIR, bukan mengulang '
+              'jawaban sebelumnya. Percakapan sebelumnya hanya konteks. Jika pembaca meminta mengubah jawaban terakhir '
+              'menjadi bentuk lain (misalnya paragraf, jurnal, tinjauan pustaka, tabel, atau bahasa lain), buat hasil baru '
+              'dengan struktur dan gaya yang diminta; jangan sekadar menyalin daftar poin yang lama. Untuk permintaan '
+              'jurnal, tulis prosa dengan bagian yang relevan dan penghubung antar gagasan. Jangan mengarang daftar pustaka '
+              'atau referensi akademik yang tidak ada dalam sumber. Hanya jika permintaan TERAKHIR secara eksplisit '
+              'meminta referensi eksternal yang belum menjadi sumber, jelaskan singkat bahwa sumber tambahan perlu '
+              'dimasukkan; jangan tambahkan catatan ini pada jawaban lain. Jika dokumen tidak membahas '
+              'jawabannya, katakan terus terang. Jawab dalam bahasa yang sama dengan pertanyaan; panjang jawaban '
+              f'mengikuti bentuk yang diminta. {cite} Tanpa markdown dekoratif (** atau tabel).'
               + (' Pembaca juga punya hasil kerja sendiri (catatan, ringkasan, draf jurnal, slide) di bagian "HASIL KERJA PEMBACA": '
                  'pakai untuk pertanyaan tentang pekerjaannya (mis. memeriksa, melengkapi, atau membandingkan dengan dokumen), '
                  'tetapi bedakan dengan jelas mana yang dari dokumen dan mana yang dari catatan pembaca.' if work else ''))
     user = (f'Judul dokumen: {title}\n\n{ask_pages(text, question + " " + turns[-500:])}\n\n'
             + (f'HASIL KERJA PEMBACA:\n{work}\n\n' if work else '')
-            + (f'Percakapan sebelumnya:\n{turns}\n' if turns else '') + f'Pertanyaan: {question}')
-    reply = ai_chat(system, user, model, max_tokens=2500, include_thoughts=include_thoughts)
+            + (f'Percakapan sebelumnya:\n{turns}\n' if turns else '') + f'PERMINTAAN TERAKHIR (jawab ini): {question}')
+    reply = ai_chat(system, user, model, max_tokens=3500, include_thoughts=include_thoughts)
     thoughts = ''
     if include_thoughts:
         reply, thoughts = reply

@@ -125,7 +125,19 @@ class AskTests(unittest.TestCase):
         self.assertEqual(out, 'Jawabannya ini (hlm. 2).')
         system, user = sent(call)
         self.assertIn('HANYA dari isi dokumen', system)
-        self.assertIn('Pertanyaan: Apa isinya?', user); self.assertIn('Pembaca: Halo', user); self.assertIn('Asisten: Hai', user)
+        self.assertIn('PERMINTAAN TERAKHIR (jawab ini): Apa isinya?', user); self.assertIn('Pembaca: Halo', user); self.assertIn('Asisten: Hai', user)
+
+    def test_follow_up_format_request_gets_priority_over_old_answer(self):
+        history = [{'role': 'user', 'text': 'Apa saja jenis kerisnya?'},
+                   {'role': 'ai', 'text': '- Keris lurus (hlm. 2).\n- Keris berluk (hlm. 3).'}]
+        with mock.patch.object(server, 'ai_chat', return_value='Tinjauan pustaka\nKeris lurus dan berluk dibahas dalam sumber (hlm. 2).') as ai:
+            server.ask_document('Dhapur Keris', '[Halaman 2]\nKeris lurus.\n[Halaman 3]\nKeris berluk.',
+                                'dalam bentuk jurnal ya', history)
+        system, user = ai.call_args.args[:2]
+        self.assertIn('jangan sekadar menyalin daftar poin yang lama', system)
+        self.assertIn('Jangan mengarang daftar pustaka', system)
+        self.assertIn('Asisten: - Keris lurus', user)
+        self.assertTrue(user.endswith('PERMINTAAN TERAKHIR (jawab ini): dalam bentuk jurnal ya'))
 
     def test_citations_only_use_cited_pages_and_number_them(self):
         index = {(1, 1): ['Kata pembuka umum.', 'Gamelan memakai laras pelog dan slendro.'], (1, 2): ['Isi halaman kedua.']}
