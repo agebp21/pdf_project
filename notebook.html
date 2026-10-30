@@ -74,7 +74,7 @@
   .doc-text{display:grid;gap:2px;min-width:0}
   .doc .doc-name{font-weight:700;font-size:13.5px;line-height:1.35;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;overflow-wrap:anywhere}
   .doc .doc-meta{font-size:12px;color:#78716C}
-  .side{background:#fff;border:1px solid #ECE7DD;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:10px}
+  .side{min-width:0;background:#fff;border:1px solid #ECE7DD;border-radius:20px;padding:18px;display:flex;flex-direction:column;gap:10px}
   .side .sep{width:100%;border:0;border-top:1px solid #EFE9DC;margin:8px 0 2px}
   .side .status:empty{display:none}                   /* no reserved line while there is nothing to say */
   /* a feature the plan lacks: an orange crown after the label (a pseudo-element: scripts rewrite the labels) */
@@ -84,8 +84,8 @@
   .side .clay-btn{padding:10px 14px;font-size:13px;width:100%}
   .doc-btns{display:flex;gap:6px;width:100%}.doc-btns .clay-btn{flex:1;padding:8px 10px;font-size:12px}
   /* Sources panel (NotebookLM-style): a checkable, openable, removable list. */
-  .src-list{list-style:none;margin:0;padding:0;display:grid;gap:3px;max-height:40vh;overflow:auto}
-  .src-item{display:flex;align-items:center;gap:6px;border-radius:10px;padding:2px}
+  .src-list{min-width:0;width:100%;list-style:none;margin:0;padding:0;display:grid;gap:3px;max-height:40vh;overflow-y:auto;overflow-x:hidden}
+  .src-item{min-width:0;width:100%;display:flex;align-items:center;gap:6px;border-radius:10px;padding:2px}
   .src-item.open{background:#FFF1EA}
   .src-item input[type=checkbox]{flex:none}
   .src-main{flex:1;min-width:0;display:flex;align-items:center;gap:7px;border:0;background:none;padding:7px 4px;border-radius:8px;cursor:pointer;text-align:left;font:600 12.5px/1.3 'Plus Jakarta Sans',sans-serif;color:#1C1917}
@@ -93,7 +93,7 @@
   .src-main .doc-ico{flex:none}
   .src-text{flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
   .src-status{flex:none;font-size:11px;color:#A8A29E}
-  .src-remove{flex:none;border:0;background:none;border-radius:8px;width:22px;height:22px;color:#A8A29E;cursor:pointer;font-size:14px;line-height:1}
+  .src-remove{flex:0 0 25px;border:1px solid #E8E2D4;background:#fff;border-radius:8px;width:25px;height:25px;color:#B42318;cursor:pointer;font-size:17px;line-height:1}
   .src-remove:hover{background:#FDE8E8;color:#B91C1C}
   #select-all-row{display:flex;align-items:center;gap:7px;font-size:12px;font-weight:700;color:#57534E;padding:0 4px}
   .research-pick{display:grid;gap:8px;margin:4px 0}
@@ -939,7 +939,7 @@ window.addEventListener('DOMContentLoaded', () => {
       main.append(icon, Object.assign(document.createElement('span'), {className: 'src-text', textContent: s.name}));
       if (s.status) main.append(Object.assign(document.createElement('span'), {className: 'src-status', textContent: s.status}));
       main.addEventListener('click', () => openSource(s.id));
-      const remove = Object.assign(document.createElement('button'), {type: 'button', className: 'src-remove', textContent: '×', title: L('Remove', 'Hapus')});
+      const remove = Object.assign(document.createElement('button'), {type: 'button', className: 'src-remove', textContent: '×', title: L('Remove source', 'Hapus sumber'), ariaLabel: L(`Remove ${s.name}`, `Hapus ${s.name}`)});
       remove.addEventListener('click', e => { e.stopPropagation(); removeSource(s.id); });
       li.append(check, main, remove);
       return li;
@@ -981,6 +981,9 @@ window.addEventListener('DOMContentLoaded', () => {
   async function removeSource(id) {
     const i = sources.findIndex(s => s.id === id);
     if (i < 0) return;
+    if (!await MFDialog.confirm({title: L('Remove this source?', 'Hapus sumber ini?'),
+      message: L(`Remove “${sources[i].name}” from this notebook?`, `Hapus “${sources[i].name}” dari notebook ini?`),
+      ok: L('Remove source', 'Hapus sumber'), cancel: L('Cancel', 'Batal'), danger: true})) return;
     const [removed] = sources.splice(i, 1);
     if (doc === removed) { if (sources.length) await showSource(sources[0]); else closeViewer(); }
     $('#tools').disabled = !sources.length;
