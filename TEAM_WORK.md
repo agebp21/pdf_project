@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-DOCUMENT-FIRST (30 Okt, Codex): `48af25c` live. PDF asli muncul dulu di panel tengah dengan tab Dokumen dan navigasi halaman; auto-summary upload dihapus agar AI hanya berjalan saat user klik Buat ringkasan. Chat tetap ada. Refresh kembali ke dokumen dan menyimpan hasil manual. QA browser desktop/HP lokal/live lulus; backup `/root/pdf_project-code-backup-document-first-20261030135220.tgz`.
+
 - AI-CHAT-FOLLOWUP (30 Okt, Codex): `ba8433e` live. Gemini berfungsi di server; masalah jawaban berulang pada “dalam bentuk jurnal ya” disebabkan instruksi Ask yang selalu meminta jawaban ringkas. Prompt kini mengikuti permintaan terakhir, memakai riwayat sebagai konteks, menulis prosa jurnal bila diminta, dan tidak mengarang daftar pustaka. Tes model live dan suite Ask/Gemini lulus. Backup `/root/pdf_project-code-backup-ai-followup-20261030130149.tgz`.
 
 - NOTEBOOK-WORKSPACE (30 Okt, Codex): `05ff6ba` live. AI Ringkasan kini memiliki beberapa notebook tersimpan per akun di IndexedDB lokal, dengan judul dan sumber aktif. Ringkasan/chat dipisah berdasarkan pilihan sumber. Draf format lama hanya diimpor setelah konfirmasi pemilik akun; notebook dapat dihapus dengan konfirmasi. QA browser desktop/HP lulus, API dan layanan aktif. Backup `/root/pdf_project-code-backup-notebook-20261030114645.tgz`. Penyimpanan belum sinkron antar perangkat.
