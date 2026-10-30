@@ -151,8 +151,13 @@
   /* Ask the document: a chat (ChatGPT / Claude style) filling the viewer */
   .viewer.document-chat{height:min(calc(100dvh - 200px),920px);min-height:520px}
   .viewer.document-chat .viewer-body{min-height:0;max-height:none}
-  .viewer.document-chat .ask{flex:none;height:clamp(190px,30vh,300px);border-top:1px solid #EFE9DC;background:#fff}
-  .viewer.document-chat .ask-log{min-height:0;padding:8px 18px;gap:10px}
+  .viewer.document-chat .ask{flex:none;height:auto;background:#fff}
+  .viewer.document-chat .overview{min-height:0;padding-bottom:8px}
+  .viewer.document-chat .overview .chat-summary{border:0;padding-bottom:0}
+  .viewer.document-chat .chat-flow{width:100%;max-width:760px;padding:0 8px 24px}
+  .viewer.document-chat .chat-top{padding:0}
+  .viewer.document-chat .chat-title{display:none}
+  .viewer.document-chat .ask-log{padding:8px 0;gap:16px;overflow:visible}
   .viewer.document-chat .ask-hello{margin:0 auto}
   .viewer.document-chat .hello-mark,.viewer.document-chat .ask-hello h3{display:none}
   .viewer.document-chat .ask-hello p{margin-bottom:8px}
@@ -224,7 +229,7 @@
   .ask-send:hover:not(:disabled){background:#FF5C28;transform:translateY(-1px)}
   .ask-send:disabled{background:#D6CFBF;cursor:default}
   .composer-hint{max-width:760px;margin:6px auto 0;text-align:center;font-size:11px;color:#A8A29E}
-  @media (max-width:900px){.ask-chips{grid-template-columns:1fr}.msg.me .msg-body{max-width:90%}.viewer.document-chat{height:calc(100dvh - 96px);min-height:480px}.viewer.document-chat .ask{height:clamp(180px,34dvh,280px)}}
+  @media (max-width:900px){.ask-chips{grid-template-columns:1fr}.msg.me .msg-body{max-width:90%}.viewer.document-chat{height:calc(100dvh - 96px);min-height:480px}}
   .viewer.over .viewer-body{outline:3px dashed #FF5C28;outline-offset:-10px}
   .viewer-empty span{font-size:52px;color:#C9BFAA}.viewer-empty h2{margin:0;font:700 24px 'Fraunces',Georgia,serif;color:#1A3C34}.viewer-empty p{margin:0;font-size:13px}
   .vpanel .result{max-height:none;border:0;background:transparent;padding:0;font-size:15px;line-height:1.75}
@@ -651,6 +656,9 @@
 // below); the newest result comes to the front.
 window.addEventListener('DOMContentLoaded', () => {
   const tabs = [...document.querySelectorAll('.vtabs [data-view]')], panels = [...document.querySelectorAll('.vpanel')];
+  const chatFlow = Object.assign(document.createElement('div'), {id: 'chat-flow', className: 'chat-flow', hidden: true});
+  chatFlow.append(document.querySelector('.chat-top'), document.querySelector('#ask-log'));
+  document.querySelector('.viewer-body').append(chatFlow);
   const boxes = {translate: '#translate-out'};
   // Every view with its own tab button is allowed — derived from the markup so a tab added later
   // never needs this list updated separately (chat/quiz/etc. were briefly left out here mid-WIP).
@@ -661,6 +669,7 @@ window.addEventListener('DOMContentLoaded', () => {
     current = view;
     tabs.forEach(t => { t.setAttribute('aria-selected', String(t.dataset.view === view)); });
     panels.forEach(p => { p.hidden = working || (p.dataset.panel !== view && !(p.dataset.panel === 'ask' && (view === 'document' || view === 'overview' || view === 'draft'))); });
+    chatFlow.hidden = working || !['document','overview','draft'].includes(view);
     document.querySelector('#viewer-empty').hidden = working || !!view;
     document.querySelector('.viewer').classList.toggle('document-chat', (view === 'document' || view === 'overview' || view === 'draft') && !working);
   };
@@ -1437,6 +1446,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }));
     $('#summary-sources').hidden = !activeSources().length;
     $('#chat-summary').hidden = false;
+    $('#ask-hello').hidden = true;
     $('#overview-wait').hidden = true;
     if (focus) { viewer.show('overview'); document.querySelector('.viewer-body').scrollTop = 0; }
   }
@@ -1840,7 +1850,7 @@ window.addEventListener('DOMContentLoaded', () => {
     else { row.append(Object.assign(document.createElement('span'), {className: 'av', textContent: '✦', ariaHidden: 'true'}), body); }
     $('#ask-hello').hidden = true;
     $('#ask-log').append(row);
-    $('#ask-log').scrollTop = $('#ask-log').scrollHeight;
+    if (!$('#chat-flow').hidden) document.querySelector('.viewer-body').scrollTop = document.querySelector('.viewer-body').scrollHeight;
     return {row, body};
   }
   // A citation finds its source by the label the server gave it (the file name, sans .pdf) and
@@ -1903,7 +1913,7 @@ window.addEventListener('DOMContentLoaded', () => {
   // The answer written out word by word (like a chat), then shown with its lists, page tags and citation badges.
   function writeOut(body, text, citations) {
     return new Promise(done => {
-      const words = text.split(/(\s+)/), log = $('#ask-log');
+      const words = text.split(/(\s+)/), log = document.querySelector('.viewer-body');
       const render = () => richTextCited(body, text, citations);
       if (matchMedia('(prefers-reduced-motion: reduce)').matches || words.length < 4) { render(); done(); return; }
       const step = Math.max(2, Math.ceil(words.length / 140));         // about 2.5 s at most
@@ -1966,7 +1976,7 @@ window.addEventListener('DOMContentLoaded', () => {
   function clearChat() {
     asked = [];
     $('#ask-log').querySelectorAll('.msg').forEach(m => m.remove());
-    $('#ask-hello').hidden = false; chips();
+    $('#ask-hello').hidden = !!summary; chips();
     $('#chat-doc').textContent = activeSources().length > 1 ? L(`${activeSources().length} sources`, `${activeSources().length} sumber`) : (doc ? doc.name : '');
   }
   // A saved answer shown again (restored session): its text, citations and Copy.
