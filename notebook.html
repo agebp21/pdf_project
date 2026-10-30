@@ -490,6 +490,7 @@
             <div id="summary-sources" class="summary-sources" hidden><strong data-en="Sources">Sumber</strong><div id="summary-source-list"></div></div>
           </section>
           <p id="overview-wait" class="overview-wait" data-en="Reading your source and preparing key points…">Membaca sumber dan menyiapkan intisari…</p>
+          <button id="overview-retry" class="clay-btn clay-btn-ghost" type="button" hidden data-en="Try again">Coba lagi</button>
         </div>
         <div class="vpanel sheet source-document" data-panel="document" hidden><div id="source-pages" class="source-pages"></div><p id="source-preview-status" class="status" role="status"></p></div>
         <div class="vpanel sheet" data-panel="draft" hidden>
@@ -729,6 +730,7 @@ window.addEventListener('DOMContentLoaded', () => {
     summary = prior?.summary || null;
     $('#chat-summary').hidden = true;
     $('#overview-wait').hidden = false;
+    $('#overview-retry').hidden = true;
     $('#overview-wait').textContent = L('Reading your source and preparing key points…', 'Membaca sumber dan menyiapkan intisari…');
     clearChat();
     (prior?.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || [], all[i + 1].thoughts); });
@@ -1448,6 +1450,7 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#chat-summary').hidden = false;
     $('#ask-hello').hidden = true;
     $('#overview-wait').hidden = true;
+    $('#overview-retry').hidden = true;
     if (focus) { viewer.show('overview'); document.querySelector('.viewer-body').scrollTop = 0; }
   }
   const length = 'sedang';
@@ -1468,9 +1471,18 @@ window.addEventListener('DOMContentLoaded', () => {
       if (sourceKey() !== requestScope) return;
       done(); summary = {lang: r.lang, text: r.text, forSources: sourceKey()}; showSummary(); remember();
       status('#summary-status', actives.length > 1 ? L(`Summary of ${actives.length} sources ready.`, `Ringkasan ${actives.length} sumber siap.`) : L('Summary ready.', 'Ringkasan siap.'));
-    } catch (cause) { failed('#summary-status', cause); }
+    } catch (cause) {
+      failed('#summary-status', cause);
+      if (sourceKey() === requestScope) {
+        $('#overview-wait').textContent = cause.message || L('Could not make the summary.', 'Ringkasan gagal dibuat.');
+        $('#overview-wait').hidden = false;
+        $('#overview-retry').hidden = false;
+        viewer.show('overview');
+      }
+    }
     finally { done(); button.disabled = false; }
   });
+  $('#overview-retry').addEventListener('click', () => { $('#overview-retry').hidden = true; $('#overview-wait').textContent = L('Making the summary...', 'Membuat ringkasan...'); $('#summary-make').click(); });
   $('#summary-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(summary.text); status('#summary-status', L('Copied.', 'Disalin.')); } catch (e) { status('#summary-status', L('The browser did not allow copying.', 'Browser tidak mengizinkan menyalin.'), true); } });
   $('#summary-save').addEventListener('click', () => download(title() + L(' - summary.txt', ' - ringkasan.txt'), title() + '\n\n' + summary.text));
 
