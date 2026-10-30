@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-FROZEN-CHAT (30 Okt, Codex): df8103f live. Chat selalu terlihat ketika PDF digulir dan otomatis hadir setelah tambah sumber; tombol Buka chat di Studio dihapus. QA lokal/live desktop/HP dan 212 halaman lulus. Backup /root/pdf_project-code-backup-chat-frozen-20261030180252.tgz.
+
 - NOTEBOOK-DOCUMENT-CHAT-COMBINED (30 Okt, Codex): 20b679f live. Tab Chat dihapus; obrolan menyatu dengan halaman PDF dalam satu scroll, Studio Chat langsung melompat ke obrolan. QA lokal/live desktop/HP lulus. Backup /root/pdf_project-code-backup-chat-combined-20261030175548.tgz.
 
 - NOTEBOOK-CHAT-BELOW (30 Okt, Codex): 6c27fbd live. Chat AI tampil tepat setelah rangkaian halaman PDF di panel tengah, dengan tab Chat sebagai jalan pintas. QA lokal/live desktop/HP dan PDF 212 halaman lulus. Backup /root/pdf_project-code-backup-chat-below-20261030174630.tgz.
