@@ -1,5 +1,8 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-SUMMARY-RETRY (30 Okt, Codex): 419aa3d live. Kesalahan ringkasan muncul di panel tengah dengan tombol Coba lagi karena kartu Ringkasan Studio disembunyikan. QA lokal/live desktop/HP dengan respons 503 lalu sukses lulus. Backup /root/pdf_project-code-backup-summary-retry-20261030233312.tgz.
+
+
 - NOTEBOOK-STUDIO-TRANSLATION-ONLY (30 Okt, Codex): 4607d90 live. Sembunyikan semua kartu Studio selain Terjemahan, tanpa mengganggu ringkasan otomatis/Chat. QA lokal/live desktop/HP lulus. Backup /root/pdf_project-code-backup-studio-translate-20261030232635.tgz.
 
 

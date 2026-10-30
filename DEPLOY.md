@@ -2,6 +2,9 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 ? live 419aa3d: jika ringkasan otomatis gagal, pesan error sekarang terlihat di panel tengah bersama tombol Coba lagi; pengguna dapat mengulang tanpa mengunggah PDF kembali. QA lokal/live desktop/HP: respons AI pertama 503, retry sukses, ringkasan/Chat/navigasi dan draf tetap lulus. Backup /root/pdf_project-code-backup-summary-retry-20261030233312.tgz; layanan aktif dan checksum cocok.
+
+
 - 30 Oktober 2026 ? live 4607d90: panel Studio pada AI Ringkasan sekarang hanya menampilkan Terjemahan; kartu Ringkasan, Catatan, Kuis, Kartu hafalan, Tabel data, Peta pikiran, Infografis, Audio Overview, dan Video Overview disembunyikan. Ringkasan otomatis dan Chat tetap berjalan. QA lokal/live desktop/HP: hanya kartu Terjemahan terlihat, layout penuh, tanpa error JS; QA ringkasan dan navigasi lulus. Backup /root/pdf_project-code-backup-studio-translate-20261030232635.tgz; layanan aktif dan checksum cocok.
 
 
