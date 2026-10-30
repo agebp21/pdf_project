@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-FLIP-NO-SCROLLBAR (30 Okt, Codex): `efdc79c` live. Dialog pratinjau Organize tanpa scrollbar terlihat saat flip; buku tetap muat di desktop/HP. QA browser katalog lulus. Backup `/root/pdf_project-code-backup-20261030085600.tgz`.
+
 - ORGANIZE-LIGHT-FLIP (30 Okt, Codex): `49d082a` live. Ukuran dan transisi popup pratinjau Organize dibenahi agar halaman tidak membesar memenuhi dialog dan flip terasa ringan. QA `Catalog 1.pdf` lokal + tes Organize lulus; converter HTTPS 200, checksum cocok. Backup `/root/pdf_project-code-backup-20261030085303.tgz`.
 
 - RELEASE-20261029 (29 Okt, Codex): `dd7e895` live. Update Library dan AI Summarizer dari `v2` di-deploy setelah tes fitur terkait dan QA homepage lulus. HTTPS halaman utama, Library, Notebook, dan aset 200; checksum file live sesuai. Backup `/root/pdf_project-code-backup-20261029183604.tgz`. Tes lengkap masih punya kegagalan ekspektasi AI lama dan Piper TTS lokal; tidak terkait file yang berubah.
