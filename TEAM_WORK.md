@@ -1,5 +1,8 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-CHAT-SUMMARY-STREAM (30 Okt, Codex): 2eab641 live. Jawaban Chat tampil tepat di bawah Intisari pada satu scroll panel tengah, tanpa judul Chat terpisah; composer tetap di bawah. QA lokal/live desktop/HP serta alur draf lulus. Backup /root/pdf_project-code-backup-chat-stream-20261030232114.tgz.
+
+
 - NOTEBOOK-DRAFT-FLIPBOOK (30 Okt, Codex): 6f18e55 live. Draf aktif bisa langsung Jadi Flipbook via PDF A4 dan FlipbookTransfer, fallback browser jika Chrome server tidak ada. QA lokal/live desktop/HP, 1/5 halaman lulus. Backup /root/pdf_project-code-backup-draft-flipbook-20261030231255.tgz.
 
 - NOTEBOOK-NEW-DOCUMENT (30 Okt, Codex): d7e72bb live. Tombol + dekat Intisari/Dokumen untuk draf laporan/proposal/jurnal berbasis sumber, ringkasan, dan Chat; bagian terpilih bisa dikembangkan via Chat lalu dimasukkan ke draf. Draf per notebook di IndexedDB, ekspor DOCX/PDF. QA lokal/live desktop/HP lulus. Backup /root/pdf_project-code-backup-new-documents-20261030225817.tgz.

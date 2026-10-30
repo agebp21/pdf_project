@@ -2,6 +2,9 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 ? live 2eab641: riwayat dan jawaban Chat sekarang langsung menyambung di bawah Intisari dalam satu gulungan panel tengah; judul Chat terpisah dihilangkan, kolom pertanyaan tetap terlihat di bawah. QA browser lokal/live desktop/HP: ringkasan otomatis, urutan jawaban, navigasi halaman, Basic tanpa AI, draf/ekspor/Flipbook lulus tanpa error JS. Backup /root/pdf_project-code-backup-chat-stream-20261030232114.tgz; layanan aktif dan checksum cocok.
+
+
 - 30 Oktober 2026 — live 6f18e55: draf Dokumen baru yang aktif punya tombol Jadikan Flipbook. Teks draf dicetak ke PDF A4, disimpan melalui FlipbookTransfer, lalu langsung dibuka di Flipbook dengan judul draf. Bila mesin cetak server tidak tersedia (502/503/504), browser membuat PDF sendiri agar alur tetap jalan. QA lokal/live desktop/HP: draf aktif benar, konversi server dan fallback, buku 1 serta 5 halaman, judul, DOCX/PDF, restore lulus tanpa error JS. Backup /root/pdf_project-code-backup-draft-flipbook-20261030231255.tgz; layanan aktif dan checksum cocok.
 
 - 30 Oktober 2026 — live d7e72bb: tombol + di sebelah Intisari/Dokumen membuat dokumen baru berformat laporan, proposal, atau jurnal. Draf AI memakai sumber aktif, ringkasan, dan riwayat Chat; teks dapat diedit, bagian terpilih dikembangkan lewat Chat dan diganti dengan jawaban, beberapa draf disimpan per notebook di browser. Ekspor DOCX dan PDF tersedia. QA browser lokal/live desktop/HP: generasi, seleksi teks, Chat, sisip jawaban, simpan/restore, dua draf terpisah, DOCX/PDF, alur sumber dan 212 halaman lulus tanpa error JS. Backup /root/pdf_project-code-backup-new-documents-20261030225817.tgz; layanan aktif dan checksum cocok.
