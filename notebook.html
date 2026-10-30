@@ -54,9 +54,10 @@
   .col-h{margin:0 0 2px;font:700 14px 'Plus Jakarta Sans',sans-serif;color:#1C1917}
   .viewer-top:not(:has(button:not([hidden]))){display:none}     /* no tabs yet: no empty bar */
   .source-document{max-width:920px;padding:8px 4px 24px}
-  .source-document .pager{justify-content:center;margin:0 0 12px}
-  .source-document .pager span{flex:none;min-width:78px}
-  .source-document canvas{display:block;max-width:100%;height:auto;margin:0 auto;box-shadow:0 8px 30px rgba(28,25,23,.12);background:#fff}
+  .source-pages{display:grid;gap:18px}
+  .source-page{position:relative;width:100%;background:#fff;box-shadow:0 8px 30px rgba(28,25,23,.12)}
+  .source-page canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
+  .source-page-number{text-align:center;margin:8px 0 0;color:#78716C;font-size:11px}
   .source-document .status{text-align:center}
   .side .clay-btn:disabled{background:#fff;color:#A8A29E;border-color:#EFE9DC;box-shadow:none;opacity:1}
   .sources .doc-btns{flex-direction:column}
@@ -449,7 +450,7 @@
         </div></div>
       <div class="viewer-body">
          <div id="viewer-empty" class="viewer-empty sheet"><span>✦</span><h2 data-en="Choose a PDF to start">Pilih PDF untuk mulai</h2></div>
-        <div class="vpanel sheet source-document" data-panel="document" hidden><div class="pager"><button id="source-prev" type="button" aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><span id="source-page"></span><button id="source-next" type="button" aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div><canvas id="source-canvas" aria-label="Halaman dokumen asli" data-en-aria="Original document page"></canvas><p id="source-preview-status" class="status" role="status"></p></div>
+        <div class="vpanel sheet source-document" data-panel="document" hidden><div id="source-pages" class="source-pages"></div><p id="source-preview-status" class="status" role="status"></p></div>
         <div class="vpanel sheet" data-panel="translate" hidden><div id="translate-pager" class="pager" hidden><button id="tr-prev" type="button" aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><span id="tr-page"></span><button id="tr-next" type="button" aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div><div id="translate-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Terjemahan (bisa diedit)" data-en-aria="Translation (editable)"></div><div id="translate-tools" class="mini" hidden><button id="translate-save" type="button" data-ico="download">.txt</button></div></div>
         <div class="vpanel sheet work" data-panel="notes" hidden>
           <div class="wbar" id="notes-bar"><button type="button" class="fmt" data-cmd="h3" title="Subjudul" data-en-title="Subheading">H</button><button type="button" class="fmt" data-cmd="bold" title="Tebal (Ctrl+B)" data-en-title="Bold (Ctrl+B)"><b>B</b></button><button type="button" class="fmt" data-cmd="italic" title="Miring (Ctrl+I)" data-en-title="Italic (Ctrl+I)"><i>I</i></button><button type="button" class="fmt" data-cmd="insertUnorderedList" title="Daftar" data-en-title="List">•</button><button type="button" class="fmt" data-cmd="quote" title="Kutipan" data-en-title="Quote">❝</button><span class="wsep"></span><button id="notes-summary" type="button" data-ico="summary" data-en="Insert AI summary">Sisipkan ringkasan AI</button><span class="wgrow"></span><button id="notes-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="notes-docx" type="button" data-ico="download">.docx</button></div>
@@ -727,51 +728,104 @@ window.addEventListener('DOMContentLoaded', () => {
   const title = () => doc ? doc.name.replace(/\.pdf$/i, '') : L('Document', 'Dokumen');
   const allText = (s = doc) => Object.keys(s.text).map(k => s.text[k].join(' ')).join(' ');
   const textPages = (s = doc) => Object.keys(s.text).map(Number).sort((a, b) => a - b).filter(i => s.text[i].join(' ').trim());
-  // Render the original PDF in the centre before any AI result is requested.
-  let previewPdf = null, previewSource = null, previewTask = null, previewPage = 1, previewSeq = 0;
+  // Show every original PDF page in reading order. Only pages near the scroll position are
+  // rasterized; canvases outside that range are released so large books stay responsive.
+  let previewState = null, previewSeq = 0;
+  function clearPreview() {
+    ++previewSeq;
+    if (previewState) {
+      previewState.observer.disconnect();
+      previewState.tasks.forEach(task => task.cancel());
+      previewState.pdf.destroy();
+      previewState = null;
+    }
+    $('#source-pages').replaceChildren();
+  }
   async function showDocument(source = doc, pageNumber = 1) {
     if (!source) return;
-    const seq = ++previewSeq;
     viewer.tab('ask'); viewer.show('document');
-    previewPage = pageNumber;
+    const body = document.querySelector('.viewer-body');
+    if (previewState?.source === source) {
+      const target = $('#source-pages').children[Math.max(0, pageNumber - 1)];
+      body.scrollTop = target ? target.offsetTop - $('#source-pages').offsetTop : 0;
+      return;
+    }
+    clearPreview();
+    const seq = previewSeq;
     status('#source-preview-status', L('Opening the original document…', 'Membuka dokumen asli…'));
     try {
-      if (previewTask) { previewTask.cancel(); previewTask = null; }
-      if (previewSource !== source || !previewPdf) {
-        const old = previewPdf;
-        previewPdf = null; previewSource = source;
-        if (old) await old.destroy();
-        pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
-        const loaded = await pdfjsLib.getDocument({data: new Uint8Array(await source.blob.arrayBuffer())}).promise;
-        if (seq !== previewSeq) { await loaded.destroy(); return; }
-        previewPdf = loaded;
-      }
-      if (seq !== previewSeq) return;
-      previewPage = Math.max(1, Math.min(pageNumber, previewPdf.numPages));
-      $('#source-page').textContent = `${previewPage} / ${previewPdf.numPages}`;
-      $('#source-prev').disabled = previewPage <= 1;
-      $('#source-next').disabled = previewPage >= previewPdf.numPages;
-      const page = await previewPdf.getPage(previewPage);
-      if (seq !== previewSeq) return;
-      const canvas = $('#source-canvas'), base = page.getViewport({scale: 1});
-      const width = Math.max(100, canvas.parentElement.clientWidth - 16);
-      const scale = Math.min(2, width / base.width), pixelRatio = Math.min(devicePixelRatio || 1, 2);
-      const viewport = page.getViewport({scale: scale * pixelRatio});
-      canvas.width = Math.round(viewport.width); canvas.height = Math.round(viewport.height);
-      canvas.style.width = Math.round(viewport.width / pixelRatio) + 'px';
-      canvas.style.height = Math.round(viewport.height / pixelRatio) + 'px';
-      const task = page.render({canvasContext: canvas.getContext('2d'), viewport});
-      previewTask = task;
-      await task.promise;
-      if (seq === previewSeq) status('#source-preview-status', '');
+      pdfjsLib.GlobalWorkerOptions.workerSrc = 'assets/vendor/pdf.worker.min.js';
+      const pdf = await pdfjsLib.getDocument({data: new Uint8Array(await source.blob.arrayBuffer())}).promise;
+      if (seq !== previewSeq) { await pdf.destroy(); return; }
+      const first = await pdf.getPage(1);
+      if (seq !== previewSeq) { await pdf.destroy(); return; }
+      const base = first.getViewport({scale: 1});
+      const state = {source, pdf, tasks: new Set(), queue: [], active: 0, observer: null};
+      previewState = state;
+      const list = $('#source-pages');
+      const slots = Array.from({length: pdf.numPages}, (_, i) => {
+        const wrap = Object.assign(document.createElement('div'), {className: 'source-page-wrap'});
+        const page = Object.assign(document.createElement('div'), {className: 'source-page'});
+        page.style.aspectRatio = `${base.width} / ${base.height}`;
+        page.dataset.page = String(i + 1);
+        const canvas = Object.assign(document.createElement('canvas'), {ariaLabel: L(`Original page ${i + 1}`, `Halaman asli ${i + 1}`)});
+        canvas.width = canvas.height = 0;
+        page.append(canvas);
+        wrap.append(page, Object.assign(document.createElement('p'), {className: 'source-page-number', textContent: `${i + 1} / ${pdf.numPages}`}));
+        return wrap;
+      });
+      list.replaceChildren(...slots);
+      const pump = () => {
+        while (state.active < 2 && state.queue.length && seq === previewSeq) {
+          const slot = state.queue.shift();
+          if (slot.dataset.visible !== '1') { slot.dataset.queued = ''; continue; }
+          state.active++;
+          (async () => {
+            try {
+              const page = await pdf.getPage(+slot.dataset.page);
+              if (seq !== previewSeq || slot.dataset.visible !== '1') return;
+              const basePage = page.getViewport({scale: 1});
+              slot.style.aspectRatio = `${basePage.width} / ${basePage.height}`;
+              const ratio = Math.min(devicePixelRatio || 1, 2);
+              const viewport = page.getViewport({scale: slot.clientWidth / basePage.width * ratio});
+              const canvas = slot.querySelector('canvas');
+              canvas.width = Math.round(viewport.width); canvas.height = Math.round(viewport.height);
+              const task = page.render({canvasContext: canvas.getContext('2d'), viewport});
+              state.tasks.add(task);
+              try { await task.promise; } finally { state.tasks.delete(task); }
+              if (seq === previewSeq && slot.dataset.visible === '1') {
+                slot.dataset.rendered = '1';
+                status('#source-preview-status', '');
+              } else { canvas.width = canvas.height = 0; }
+            } catch (cause) {
+              if (seq === previewSeq && cause?.name !== 'RenderingCancelledException')
+                status('#source-preview-status', L('A page could not be shown.', 'Ada halaman yang belum bisa ditampilkan.'), true);
+            } finally { slot.dataset.queued = ''; state.active--; pump(); }
+          })();
+        }
+      };
+      state.observer = new IntersectionObserver(entries => {
+        entries.forEach(entry => {
+          const slot = entry.target;
+          slot.dataset.visible = entry.isIntersecting ? '1' : '';
+          if (entry.isIntersecting && !slot.dataset.rendered && !slot.dataset.queued) {
+            slot.dataset.queued = '1'; state.queue.push(slot);
+          } else if (!entry.isIntersecting && slot.dataset.rendered) {
+            const canvas = slot.querySelector('canvas');
+            canvas.width = canvas.height = 0;
+            slot.dataset.rendered = '';
+          }
+        });
+        pump();
+      }, {root: matchMedia('(max-width:900px)').matches ? null : body, rootMargin: '700px 0px'});
+      slots.forEach(wrap => state.observer.observe(wrap.firstChild));
+      const target = slots[Math.max(0, Math.min(pageNumber - 1, slots.length - 1))];
+      body.scrollTop = target ? target.offsetTop - list.offsetTop : 0;
     } catch (cause) {
-      if (seq === previewSeq && cause?.name !== 'RenderingCancelledException')
-        status('#source-preview-status', L('The original document could not be shown.', 'Dokumen asli belum bisa ditampilkan.'), true);
+      if (seq === previewSeq) status('#source-preview-status', L('The original document could not be shown.', 'Dokumen asli belum bisa ditampilkan.'), true);
     }
   }
-  $('#source-prev').addEventListener('click', () => showDocument(doc, previewPage - 1));
-  $('#source-next').addEventListener('click', () => showDocument(doc, previewPage + 1));
-  document.querySelector('[data-view="document"]').addEventListener('click', () => { if (doc && !previewPdf) showDocument(doc, previewPage); });
+  document.querySelector('[data-view="document"]').addEventListener('click', () => { if (doc && !previewState) showDocument(doc); });
   // PDF lines → paragraphs (a line runs on unless it ends a sentence, is short, or starts a list item).
   function paragraphs(lines) {
     const clean = (lines || []).map(l => String(l).replace(/\s+/g, ' ').trim()).filter(Boolean);
@@ -976,10 +1030,7 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function closeViewer() {
     doc = null; openId = null;
-    ++previewSeq;
-    if (previewTask) previewTask.cancel();
-    if (previewPdf) previewPdf.destroy();
-    previewPdf = null; previewSource = null; previewTask = null; previewPage = 1;
+    clearPreview();
     viewer.hide('document');
     $('#doc').hidden = true; $('#drop').hidden = sources.length > 0;
     ['#translate-out', '#translate-pager', '#translate-tools'].forEach(s => { $(s).hidden = true; });
