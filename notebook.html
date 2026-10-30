@@ -32,6 +32,16 @@
   .wrap{max-width:1500px;margin:0 auto;padding:12px 16px 56px}
   .workspace{display:grid;grid-template-columns:320px minmax(0,1fr) 320px;grid-template-areas:"src view studio";gap:16px;align-items:start;margin-top:18px}
   .sources{grid-area:src}.viewer{grid-area:view}.studio{grid-area:studio}
+  .scope-bar{display:flex;align-items:center;gap:12px;margin:14px 0 -3px;padding:9px 13px;border:1px solid #E8E2D4;border-radius:13px;background:#fff;color:#57534E;font-size:12px}
+  .scope-bar strong{color:#1A3C34;white-space:nowrap}.scope-bar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .scope-bar input{min-width:150px;max-width:260px;width:30%;border:0;background:transparent;color:#1C1917;font:800 15px 'Plus Jakarta Sans',sans-serif;outline:none}
+  .scope-bar input:focus-visible{box-shadow:0 2px #1A3C34}
+  .notebook-controls{display:flex;align-items:center;gap:7px;margin-left:auto}
+  .notebook-controls[hidden]{display:none}
+  .notebook-controls select,.notebook-controls button{height:32px;border:1px solid #E8E2D4;border-radius:9px;background:#FCFAF6;color:#1A3C34;font:700 11px 'Plus Jakarta Sans',sans-serif;padding:0 9px;cursor:pointer}
+  .notebook-controls select{max-width:180px}.notebook-controls button:hover{border-color:#1A3C34}
+  .notebook-controls .notebook-delete{width:32px;padding:0;color:#B42318;font-size:15px}
+  @media(max-width:720px){.scope-bar{flex-wrap:wrap}.scope-bar input{width:100%;max-width:none}.notebook-controls{margin-left:0;width:100%}.notebook-controls select{flex:1;max-width:none}}
   .studio-grid{display:grid;grid-template-columns:1fr 1fr;gap:8px}
   .studio-card{border:1px solid #EAE4D9;border-radius:14px;background:#FCFAF6;padding:11px;display:grid;gap:7px;align-content:start}
   .studio-card-head{font:800 12px 'Plus Jakarta Sans',sans-serif;color:#1C1917}
@@ -391,6 +401,8 @@
 <div class="wrap">
   <header data-site-header></header>
 
+  <div class="scope-bar"><input id="notebook-title" type="text" maxlength="150" aria-label="Judul notebook" data-en-aria="Notebook title" placeholder="Notebook baru" data-en-ph="New notebook"><strong data-en="Active sources">Sumber aktif</strong><span id="scope-label" role="status" data-en="Add a source to start">Tambahkan sumber untuk mulai</span><div id="notebook-controls" class="notebook-controls" hidden><select id="notebook-switch" aria-label="Pilih notebook" data-en-aria="Choose notebook" title="Tersimpan di browser ini" data-en-title="Saved in this browser"></select><button id="notebook-new" type="button" data-en="+ New notebook">+ Notebook baru</button><button id="notebook-delete" class="notebook-delete" type="button" aria-label="Hapus notebook" data-en-aria="Delete notebook" title="Hapus notebook" data-en-title="Delete notebook">×</button></div></div>
+
   <div class="workspace">
     <aside class="side sources" aria-label="Sumber" data-en-aria="Source">
       <h2 class="col-h" data-en="Sources">Sumber</h2>
@@ -645,8 +657,27 @@ window.addEventListener('DOMContentLoaded', () => {
   // `sources`, so code that reads/writes `doc.xxx` keeps working unchanged for the open source.
   let sources = [];          // [{id, name, blob, pages, text: {page: [lines]}, lang, chapters, highlights, translations, ocrDone, ocred, active}]
   let doc = null, openId = null, nextId = 1;
+  let notebookTitle = '';
+  $('#notebook-title').addEventListener('input', () => { notebookTitle = $('#notebook-title').value.trim(); remember(); });
   let summary = null, translating = false, trPage = 0;
   const activeSources = () => sources.filter(s => s.active);
+  const sourceKey = () => activeSources().map(s => s.id).sort((a, b) => a - b).join(',');
+  let scopeKey = '', scopeStates = {};
+  function syncScope() {
+    const active = activeSources(), key = sourceKey();
+    $('#scope-label').textContent = active.length ? active.map(s => s.name).join(' · ') : L('Select a source to start', 'Pilih sumber untuk mulai');
+    if (key === scopeKey) return;
+    if (scopeKey) scopeStates[scopeKey] = {summary, asked: asked.slice()};
+    scopeKey = key;
+    const prior = scopeStates[key];
+    summary = prior?.summary || null;
+    $('#chat-summary').hidden = true;
+    clearChat();
+    (prior?.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || [], all[i + 1].thoughts); });
+    asked = (prior?.asked || []).slice();
+    if (summary) showSummary();
+    status('#summary-status', '');
+  }
   // Every active source as {id, name, text}, for /api/summary, /api/ask, /api/write — always the
   // whole text (the highlight-only narrowing this used to do was removed with Stabilo).
   function sourcesPayload() {
@@ -779,10 +810,12 @@ window.addEventListener('DOMContentLoaded', () => {
   // starts reading; `source === doc` guards below skip UI writes once the reader has switched
   // to a different source while this one was still loading in the background.
   async function open(blob, name) {
+    if (!notebookTitle) { notebookTitle = name.replace(/\.pdf$/i, ''); $('#notebook-title').value = notebookTitle; }
     const source = {id: nextId++, name, blob, pages: 0, text: {}, lang: 'id-ID', chapters: [], highlights: [], translations: {}, ocrDone: false, ocred: 0, active: true, status: L('Reading…', 'Membaca…')};
     const first = !sources.length;
     sources.push(source); doc = source; openId = source.id;
     renderSources();
+    if (first) viewer.show('ask');
     status('#load-status', L('Reading the PDF…', 'Membaca PDF…'));
     $('#tools').disabled = false;
     try {
@@ -848,7 +881,7 @@ window.addEventListener('DOMContentLoaded', () => {
       const check = Object.assign(document.createElement('input'), {type: 'checkbox', checked: s.active});
       check.title = L('In scope for Summary / Ask / Write', 'Dipakai untuk Ringkasan / Tanya / Tulis');
       check.addEventListener('click', e => e.stopPropagation());
-      check.addEventListener('change', () => { s.active = check.checked; updateSelectAll(); remember(); });
+      check.addEventListener('change', () => { s.active = check.checked; renderSources(); remember(); });
       const main = Object.assign(document.createElement('button'), {type: 'button', className: 'src-main'});
       const icon = Object.assign(document.createElement('span'), {className: 'doc-ico', ariaHidden: 'true'}); icon.dataset.ico = 'doc';
       main.append(icon, Object.assign(document.createElement('span'), {className: 'src-text', textContent: s.name}));
@@ -862,6 +895,7 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#select-all-row').hidden = sources.length < 2;
     $('#drop').hidden = sources.length > 0; $('#add-sources').hidden = sources.length === 0;
     updateSelectAll();
+    syncScope();
   }
   function updateSelectAll() { $('#select-all').checked = sources.length > 0 && sources.every(s => s.active); }
   $('#select-all').addEventListener('change', () => { sources.forEach(s => s.active = $('#select-all').checked); renderSources(); remember(); });
@@ -892,7 +926,9 @@ window.addEventListener('DOMContentLoaded', () => {
     const [removed] = sources.splice(i, 1);
     if (doc === removed) { if (sources.length) await showSource(sources[0]); else closeViewer(); }
     $('#tools').disabled = !sources.length;
-    renderSources(); remember();
+    renderSources();
+    Object.keys(scopeStates).forEach(key => { if (key.split(',').includes(String(id))) delete scopeStates[key]; });
+    remember();
   }
   const SOURCE_EXT = /\.(pdf|docx|doc|pptx|ppt)$/i;
   const filesOf = list => [...list].filter(x => SOURCE_EXT.test(x.name));
@@ -1075,16 +1111,18 @@ window.addEventListener('DOMContentLoaded', () => {
       ok: L('Make again', 'Buat ulang'), cancel: L('Cancel', 'Batal'), icon: '📝'})) return;
     const button = $('#summary-make');
     button.disabled = true;
+    const requestScope = sourceKey();
     const payload = sourcesPayload();
     const long = payload.reduce((sum, s) => sum + Object.values(s.text).flat().join(' ').length, 0) > 72000;
     const done = working('#summary-status', long ? L('Long document: read chapter by chapter, about 1-5 minutes.', 'Dokumen tebal: dibaca per bab, sekitar 1-5 menit.')
                                                  : L('Making the summary… usually 15-60 seconds.', 'Membuat ringkasan… biasanya 15-60 detik.'), L('Reading the sources and writing the summary', 'Membaca sumber dan menulis ringkasan'));
     try {
-      const r = await post('/api/summary', {title: actives.length > 1 ? L('These sources', 'Sumber-sumber ini') : title(), sources: payload, lang: (doc && doc.lang) || 'id-ID', length, focus: '', chapters: []});
+      const r = await post('/api/summary', {title: notebookTitle || title(), sources: payload, lang: (doc && doc.lang) || 'id-ID', length, focus: '', chapters: []});
+      if (sourceKey() !== requestScope) return;
       done(); summary = {lang: r.lang, text: r.text, forSources: sourceKey()}; showSummary(); remember();
       status('#summary-status', actives.length > 1 ? L(`Summary of ${actives.length} sources ready.`, `Ringkasan ${actives.length} sumber siap.`) : L('Summary ready.', 'Ringkasan siap.'));
-    } catch (cause) { done(); failed('#summary-status', cause); }
-    finally { button.disabled = false; }
+    } catch (cause) { failed('#summary-status', cause); }
+    finally { done(); button.disabled = false; }
   });
   $('#summary-copy').addEventListener('click', async () => { try { await navigator.clipboard.writeText(summary.text); status('#summary-status', L('Copied.', 'Disalin.')); } catch (e) { status('#summary-status', L('The browser did not allow copying.', 'Browser tidak mengizinkan menyalin.'), true); } });
   $('#summary-save').addEventListener('click', () => download(title() + L(' - summary.txt', ' - ringkasan.txt'), title() + '\n\n' + summary.text));
@@ -1098,7 +1136,6 @@ window.addEventListener('DOMContentLoaded', () => {
   // is what's checked, not just whether a summary exists, so adding a source later — even to a
   // notebook restored with an older summary already in it — still gets its own fresh overview;
   // staying out of the way once the member has started chatting.
-  const sourceKey = () => activeSources().map(s => s.id).sort((a, b) => a - b).join(',');
   let autoOverviewTimer = 0;
   function queueAutoOverview() { clearTimeout(autoOverviewTimer); autoOverviewTimer = setTimeout(autoOverview, 700); }
   async function autoOverview() {
@@ -1106,9 +1143,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!key || asked.length || (summary && summary.forSources === key)) return;
     try {
       const actives = activeSources();
-      const r = await post('/api/summary', {title: actives.length > 1 ? L('These sources', 'Sumber-sumber ini') : title(), sources: sourcesPayload(), lang: (doc && doc.lang) || 'id-ID', length, focus: '', chapters: []});
+      const r = await post('/api/summary', {title: notebookTitle || title(), sources: sourcesPayload(), lang: (doc && doc.lang) || 'id-ID', length, focus: '', chapters: []});
       const freshKey = sourceKey();
-      if (asked.length || (summary && summary.forSources === freshKey)) return;   // a manual summary or a chat message arrived meanwhile
+      if (freshKey !== key || asked.length || (summary && summary.forSources === freshKey)) return;   // sources or chat changed meanwhile
       summary = {lang: r.lang, text: r.text, forSources: freshKey}; remember();
       const {body} = message('ai', '');
       richText(body, r.text);
@@ -1575,6 +1612,7 @@ window.addEventListener('DOMContentLoaded', () => {
     question = String(question || '').trim();
     const actives = activeSources();
     if (!question || !actives.length || $('#ask-send').disabled) return;
+    const requestScope = sourceKey();
     $('#ask-q').value = ''; grow(); $('#ask-send').disabled = true;
     if (!retry) message('me', question);
     const {row, body} = message('ai', '');
@@ -1582,8 +1620,9 @@ window.addEventListener('DOMContentLoaded', () => {
     body.replaceChildren(Object.assign(document.createElement('span'), {className: 'dots', innerHTML: '<i></i><i></i><i></i>'}), sec);
     const start = Date.now(), timer = setInterval(() => { sec.textContent = L(`reading the sources… ${Math.round((Date.now() - start) / 1000)} s`, `membaca sumber… ${Math.round((Date.now() - start) / 1000)} dtk`); }, 1000);
     try {
-      const r = await post('/api/ask', {title: actives.length > 1 ? L('These sources', 'Sumber-sumber ini') : title(), sources: sourcesPayload(), question, history: asked.slice(-6), work: window.NotebookWork ? NotebookWork.context() : ''});
+      const r = await post('/api/ask', {title: notebookTitle || title(), sources: sourcesPayload(), question, history: asked.slice(-6), work: window.NotebookWork ? NotebookWork.context() : ''});
       clearInterval(timer);
+      if (sourceKey() !== requestScope) return;
       asked.push({role: 'user', text: question}, {role: 'ai', text: r.answer, citations: r.citations || [], thoughts: r.thoughts || ''}); remember();
       await writeOut(body, r.answer, r.citations);
       showThoughts(body, r.thoughts);
@@ -1598,6 +1637,7 @@ window.addEventListener('DOMContentLoaded', () => {
       }, 'retry'));
       body.append(tools);
     } catch (cause) {
+      if (sourceKey() !== requestScope) return;
       clearInterval(timer); row.classList.add('error'); body.textContent = cause.message;
       const tools = Object.assign(document.createElement('div'), {className: 'msg-tools'});
       tools.append(chatButton(L('Try again', 'Coba lagi'), () => { if (!$('#ask-send').disabled) { row.remove(); ask(question, true); } }, 'retry'));
@@ -1636,10 +1676,9 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   function askReset() { clearChat(); viewer.hide('ask'); }
 
-  // ---------- The last session, kept in this browser only (IndexedDB, never sent): the document,
-  // its text (OCR included) and every result, so coming back from Edit PDF / Flipbook (or a
-  // reload) carries on. Kept SESSION_DAYS; a new document replaces it; Close forgets it.
-  const SESSION_DAYS = 7;
+  // ---------- Each signed-in member's local notebooks live in this browser's IndexedDB.
+  // Their PDFs and AI results stay separate by account and notebook; they are not server-synced.
+  let sessionOwner = null, currentNotebookId = null, notebookIndex = [];
   const sessionDb = () => new Promise((ok, fail) => {
     const r = indexedDB.open('mf-notebook', 1);
     r.onupgradeneeded = () => r.result.createObjectStore('s');
@@ -1656,19 +1695,39 @@ window.addEventListener('DOMContentLoaded', () => {
   }
   let saveTimer = 0;
   function remember() { clearTimeout(saveTimer); saveTimer = setTimeout(saveSession, 600); }
+  const bookKey = id => `book:${sessionOwner}:${id}`;
+  function renderNotebookList() {
+    const select = $('#notebook-switch');
+    select.replaceChildren(...notebookIndex.map(item => Object.assign(document.createElement('option'),
+      {value: item.id, textContent: item.title || L('Untitled notebook', 'Notebook tanpa judul')})));
+    select.value = currentNotebookId;
+  }
   async function saveSession() {
     try {
-      if (!sources.length) { await sessionDo('readwrite', st => st.delete('last')); return; }
-      await sessionDo('readwrite', st => st.put({
+      if (!sessionOwner || !currentNotebookId) return false;
+      if (scopeKey) scopeStates[scopeKey] = {summary, asked: asked.slice()};
+      const item = notebookIndex.find(x => x.id === currentNotebookId);
+      if (item) { item.title = notebookTitle || L('New notebook', 'Notebook baru'); item.savedAt = Date.now(); }
+      await sessionDo('readwrite', st => { const req = st.put({
         sources: sources.map(s => ({id: s.id, name: s.name, blob: s.blob, pages: s.pages, text: s.text, chapters: s.chapters || [], highlights: s.highlights || [],
           translations: s.translations || {}, ocrDone: !!s.ocrDone, ocred: s.ocred || 0, active: s.active !== false})),
-        openId, summary, quiz, cards, table, mindmap, infographic, asked, work: window.NotebookWork ? NotebookWork.state() : null, savedAt: Date.now()}, 'last'));
-    } catch (e) {}                                       // private window / storage full: just not kept
+        openId, notebookTitle, scopeKey, scopeStates, summary, quiz, cards, table, mindmap, infographic, asked, work: window.NotebookWork ? NotebookWork.state() : null, savedAt: Date.now()}, bookKey(currentNotebookId));
+        st.put(notebookIndex, 'books:' + sessionOwner); st.put(currentNotebookId, 'current:' + sessionOwner); return req; });
+      renderNotebookList();
+      return true;
+    } catch (e) {
+      status('#load-status', L('This notebook could not be saved in this browser. Free storage space and try again.', 'Notebook belum bisa disimpan di browser ini. Kosongkan ruang penyimpanan lalu coba lagi.'), true);
+      return false;
+    }
   }
   async function restoreSession() {
+    if (!sessionOwner || !currentNotebookId) return;
     let saved = null;
-    try { saved = await sessionDo('readonly', st => st.get('last')); } catch (e) { return; }
-    if (!saved || Date.now() - (saved.savedAt || 0) > SESSION_DAYS * 86400000 || sources.length) return;
+    try { saved = await sessionDo('readonly', st => st.get(bookKey(currentNotebookId))); } catch (e) { return; }
+    notebookTitle = typeof saved?.notebookTitle === 'string' ? saved.notebookTitle.slice(0, 150) : notebookIndex.find(x => x.id === currentNotebookId)?.title || '';
+    $('#notebook-title').value = notebookTitle;
+    if (!saved) return;
+    if (sources.length) return;
     // an old, single-document session (before the Sources panel) wraps into a one-item list
     let list = saved.sources;
     if (!list && saved.blob && saved.text) list = [{id: 1, name: saved.name, blob: saved.blob, pages: saved.pages, text: saved.text, chapters: saved.chapters || [],
@@ -1677,14 +1736,17 @@ window.addEventListener('DOMContentLoaded', () => {
     sources = list.filter(s => s && s.blob && s.text).map(s => ({id: s.id, name: s.name, blob: s.blob, pages: s.pages, text: s.text, chapters: s.chapters || [],
       highlights: s.highlights || [], translations: s.translations || {}, ocrDone: !!s.ocrDone, ocred: s.ocred || 0, active: s.active !== false, status: ''}));
     if (!sources.length) return;
+    if (!notebookTitle) { notebookTitle = sources[0].name.replace(/\.pdf$/i, ''); $('#notebook-title').value = notebookTitle; }
     nextId = Math.max(...sources.map(s => s.id), 0) + 1;
     openId = saved.openId && sources.some(s => s.id === saved.openId) ? saved.openId : sources[0].id;
     doc = sources.find(s => s.id === openId);
     renderSources();
+    scopeStates = saved.scopeStates && typeof saved.scopeStates === 'object' ? saved.scopeStates : {};
     $('#doc-name').textContent = doc.name; $('#drop').hidden = true; $('#doc').hidden = false;
     docReady(doc, doc.ocred);
     $('#translate-target').value = Object.keys(doc.translations).find(k => Object.keys(doc.translations[k]).length) || (doc.lang === 'en-US' ? 'id-ID' : 'en-US');
-    summary = saved.summary || null;
+    const matchingScope = !saved.scopeKey || saved.scopeKey === sourceKey();
+    summary = matchingScope ? saved.summary || null : null;
     quiz = saved.quiz || null; quizAt = 0;
     cards = saved.cards || null; cardAt = 0;
     table = saved.table || null;
@@ -1692,9 +1754,10 @@ window.addEventListener('DOMContentLoaded', () => {
     infographic = saved.infographic || null;
     if (window.NotebookWork) NotebookWork.load(saved.work);
     clearChat();
-    (saved.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || all[i + 1].sources || [], all[i + 1].thoughts); });
-    asked = (saved.asked || []).slice();
-    if (asked.length) viewer.show('ask');
+    const restoredTurns = matchingScope ? saved.asked || [] : [];
+    restoredTurns.forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || all[i + 1].sources || [], all[i + 1].thoughts); });
+    asked = restoredTurns.slice();
+    if (sources.length) viewer.show('ask');
     showTranslation();
     if (quiz) showQuiz();
     if (cards) showCards();
@@ -1704,6 +1767,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (summary) showSummary();
     $('#tools').disabled = false;
     status('#load-status', '');
+    remember();
     // the scanned pages of any source had not all been read: carry on in the background, one at a time
     sources.filter(s => !s.ocrDone).forEach(async s => {
       if (!window.OcrEngine) return;
@@ -1743,7 +1807,83 @@ window.addEventListener('DOMContentLoaded', () => {
   if (window.NotebookWork) NotebookWork.init({title, post, status, remember, picked, summary: () => summary,
     blob: () => doc && doc.blob, pages: () => (doc ? doc.pages : 0),
     lang: () => (doc && doc.lang) || 'id-ID'});
-  if (!/^https?:\/\//i.test(handed.get('link') || '') && !/^[0-9a-f]{32}$/.test(handed.get('library') || '')) restoreSession();      // a handed link/library book opens that one instead
+  function notebookReadyToSwitch() {
+    if (sources.some(s => s.status) || translating || $('#summary-make').disabled || $('#ask-send').disabled) {
+      status('#load-status', L('Wait for the current task to finish before switching notebooks.', 'Tunggu proses saat ini selesai sebelum pindah notebook.'), true);
+      return false;
+    }
+    return true;
+  }
+  $('#notebook-switch').addEventListener('change', async e => {
+    const id = e.target.value;
+    if (!notebookIndex.some(item => item.id === id) || id === currentNotebookId) return;
+    if (!notebookReadyToSwitch()) { e.target.value = currentNotebookId; return; }
+    clearTimeout(saveTimer);
+    if (!await saveSession()) { e.target.value = currentNotebookId; return; }
+    location.href = 'notebook.html?notebook=' + encodeURIComponent(id);
+  });
+  $('#notebook-new').addEventListener('click', async () => {
+    if (!notebookReadyToSwitch()) return;
+    clearTimeout(saveTimer);
+    if (!await saveSession()) return;
+    const id = crypto.randomUUID();
+    notebookIndex.push({id, title: L('New notebook', 'Notebook baru'), savedAt: Date.now()});
+    await sessionDo('readwrite', st => { st.put(notebookIndex, 'books:' + sessionOwner); return st.put(id, 'current:' + sessionOwner); });
+    location.href = 'notebook.html?notebook=' + encodeURIComponent(id);
+  });
+  $('#notebook-delete').addEventListener('click', async () => {
+    if (!sessionOwner || !currentNotebookId || !notebookReadyToSwitch()) return;
+    const name = notebookTitle || L('this notebook', 'notebook ini');
+    if (!await MFDialog.confirm({title: L('Delete notebook?', 'Hapus notebook?'),
+      message: L(`Delete “${name}” and its locally saved sources, summaries and chats from this browser?`,
+                 `Hapus “${name}” beserta sumber, ringkasan, dan chat yang tersimpan di browser ini?`),
+      ok: L('Delete notebook', 'Hapus notebook'), cancel: L('Cancel', 'Batal'), danger: true})) return;
+    clearTimeout(saveTimer);
+    const remaining = notebookIndex.filter(item => item.id !== currentNotebookId);
+    const next = remaining[0]?.id || crypto.randomUUID();
+    if (!remaining.length) remaining.push({id: next, title: L('New notebook', 'Notebook baru'), savedAt: Date.now()});
+    try {
+      await sessionDo('readwrite', st => { st.delete(bookKey(currentNotebookId)); st.put(remaining, 'books:' + sessionOwner); return st.put(next, 'current:' + sessionOwner); });
+      location.href = 'notebook.html?notebook=' + encodeURIComponent(next);
+    } catch (e) {
+      status('#load-status', L('The notebook could not be deleted. Try again.', 'Notebook belum bisa dihapus. Coba lagi.'), true);
+    }
+  });
+  (async () => {
+    try {
+      const who = window.MFAuth ? await MFAuth.me() : null;
+      sessionOwner = who && who.user && who.user.id != null ? String(who.user.id) : null;
+    } catch (e) { sessionOwner = null; }
+    if (sessionOwner) {
+      try {
+        notebookIndex = (await sessionDo('readonly', st => st.get('books:' + sessionOwner))) || [];
+        notebookIndex = notebookIndex.filter(item => item && typeof item.id === 'string');
+        const firstNotebook = notebookIndex.length === 0;
+        const requested = handed.get('notebook');
+        const previous = await sessionDo('readonly', st => st.get('current:' + sessionOwner));
+        currentNotebookId = notebookIndex.find(item => item.id === requested)?.id || notebookIndex.find(item => item.id === previous)?.id;
+        if (!currentNotebookId) {
+          currentNotebookId = crypto.randomUUID();
+          notebookIndex.push({id: currentNotebookId, title: L('New notebook', 'Notebook baru'), savedAt: Date.now()});
+          await sessionDo('readwrite', st => { st.put(notebookIndex, 'books:' + sessionOwner); return st.put(currentNotebookId, 'current:' + sessionOwner); });
+        }
+        if (requested && currentNotebookId === requested && previous !== requested) await sessionDo('readwrite', st => st.put(currentNotebookId, 'current:' + sessionOwner));
+        $('#notebook-controls').hidden = false;
+        renderNotebookList();
+        if (firstNotebook && !handed.get('link') && !handed.get('library')) {
+          const legacy = await sessionDo('readonly', st => st.get('last'));
+          if (legacy && (legacy.sources?.length || legacy.blob) && await MFDialog.confirm({
+            title: L('Restore the older local draft?', 'Pulihkan draf lokal lama?'),
+            message: L('This draft was saved before notebooks were separated by account. Import it only if the documents belong to this account.',
+                       'Draf ini disimpan sebelum notebook dipisah per akun. Impor hanya jika dokumennya milik akun ini.'),
+            ok: L('Import to this account', 'Impor ke akun ini'), cancel: L('Keep it separate', 'Biarkan terpisah')})) {
+            await sessionDo('readwrite', st => { st.put(legacy, bookKey(currentNotebookId)); return st.delete('last'); });
+          }
+        }
+      } catch (e) { sessionOwner = null; }
+    }
+    if (!/^https?:\/\//i.test(handed.get('link') || '') && !/^[0-9a-f]{32}$/.test(handed.get('library') || '')) await restoreSession();
+  })();      // handed books open on their own; local drafts belong to the signed-in member
 });
 </script>
 </body>
