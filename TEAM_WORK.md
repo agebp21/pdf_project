@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-WORKSPACE (30 Okt, Codex): `05ff6ba` live. AI Ringkasan kini memiliki beberapa notebook tersimpan per akun di IndexedDB lokal, dengan judul dan sumber aktif. Ringkasan/chat dipisah berdasarkan pilihan sumber. Draf format lama hanya diimpor setelah konfirmasi pemilik akun; notebook dapat dihapus dengan konfirmasi. QA browser desktop/HP lulus, API dan layanan aktif. Backup `/root/pdf_project-code-backup-notebook-20261030114645.tgz`. Penyimpanan belum sinkron antar perangkat.
+
 - ORGANIZE-CLOSE-FOCUS (30 Okt, Codex): `3ff42d3` live. Ring fokus otomatis pada X pratinjau dihapus; navigasi keyboard tetap punya fokus hijau. QA Tab/Escape/flip lulus. Backup `/root/pdf_project-code-backup-20261030093253.tgz`.
 
 - ORGANIZE-PREVIEW-FIT (30 Okt, Codex): `7ec6b55` live. Popup pratinjau mengikuti ukuran buku, ruang putih tepi menipis. Browser QA katalog desktop/HP lulus. Backup `/root/pdf_project-code-backup-20261030090545.tgz`.

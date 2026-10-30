@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 — live `05ff6ba`: AI Ringkasan menjadi ruang notebook per akun di browser: buat/pilih/hapus notebook, judul dan sumber aktif, ringkasan serta chat terpisah menurut pilihan sumber; draf lama dapat diimpor melalui konfirmasi. QA browser desktop/HP termasuk isolasi akun, pindah notebook, sumber, draf lama, dan hapus lulus. JS 57/59 (2 QA homepage gagal path Playwright); Python 250/263 (13 kegagalan paywall/podcast lama, di luar perubahan ini). Backup `/root/pdf_project-code-backup-notebook-20261030114645.tgz`; layanan aktif, halaman dan API HTTPS 200, checksum file VPS cocok. Notebook tersimpan lokal di browser, belum sinkron lintas perangkat.
+
 - 30 Oktober 2026 — live `3ff42d3`: popup pratinjau Organize tidak lagi otomatis memfokuskan tombol X sehingga ring browser tidak muncul saat dibuka; fokus keyboard Tab pada X memakai warna hijau. QA browser katalog: fokus awal dialog, Tab ke X, Escape menutup, flip lulus. Backup `/root/pdf_project-code-backup-20261030093253.tgz`; layanan aktif, converter HTTPS 200, checksum cocok.
 
 - 30 Oktober 2026 — live `7ec6b55`: dialog pratinjau Organize mengikuti lebar buku agar pinggiran putih tipis; tombol tutup di sudut dan navigasi dekat tepi atas. Browser QA `Catalog 1.pdf` desktop/HP: flip jalan tanpa error JS. Backup `/root/pdf_project-code-backup-20261030090545.tgz`; layanan aktif, converter HTTPS 200, checksum cocok.
