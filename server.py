@@ -1175,7 +1175,9 @@ def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3, include_t
     base = os.environ.get('GEMINI_BASE_URL', 'https://generativelanguage.googleapis.com/v1beta').strip().rstrip('/')
     thinking = os.environ.get('GEMINI_THINKING', 'low').strip().lower()
 
-    def ask(level):
+    fallback = os.environ.get('GEMINI_FALLBACK_MODEL', '').strip()
+
+    def ask(level, selected_model=model):
         config = {'temperature': temperature, 'maxOutputTokens': min(65536, max_tokens * 2)}
         if level:
             config['thinkingConfig'] = {'thinkingLevel': level}
@@ -1183,7 +1185,7 @@ def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3, include_t
                 config['thinkingConfig']['includeThoughts'] = True
         body = json.dumps({'systemInstruction': {'parts': [{'text': system}]},
                            'contents': [{'role': 'user', 'parts': [{'text': user}]}], 'generationConfig': config}).encode('utf-8')
-        request = urllib.request.Request(f'{base}/models/{quote(model, safe="-._")}:generateContent', data=body, method='POST',
+        request = urllib.request.Request(f'{base}/models/{quote(selected_model, safe="-._")}:generateContent', data=body, method='POST',
                                          headers={'x-goog-api-key': key, 'Content-Type': 'application/json'})
         with urllib.request.urlopen(request, timeout=300) as response:
             return json.loads(response.read().decode('utf-8'))
@@ -1192,9 +1194,19 @@ def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3, include_t
             data = ask(thinking)
         except urllib.error.HTTPError as cause:
             detail = cause.read().decode('utf-8', 'replace')
-            if not (thinking and cause.code == 400 and 'thinking' in detail.lower()):
+            if cause.code == 503 and fallback and fallback != model and fallback.startswith('gemini-'):
+                print(f'[ai] Gemini model {model} overloaded; trying fallback {fallback}', flush=True)
+                try:
+                    data = ask(thinking, fallback)
+                except urllib.error.HTTPError as alternate:
+                    alternate_detail = alternate.read().decode('utf-8', 'replace')
+                    if not (thinking and alternate.code == 400 and 'thinking' in alternate_detail.lower()):
+                        raise ai_refused('gemini', alternate.code, alternate_detail) from alternate
+                    data = ask('', fallback)
+            elif not (thinking and cause.code == 400 and 'thinking' in detail.lower()):
                 raise ai_refused('gemini', cause.code, detail) from cause
-            data = ask('')                                  # this model sets its own thinking
+            else:
+                data = ask('')                                  # this model sets its own thinking
     except urllib.error.HTTPError as cause:
         raise ai_refused('gemini', cause.code, cause.read().decode('utf-8', 'replace')) from cause
     except (urllib.error.URLError, TimeoutError, OSError) as cause:

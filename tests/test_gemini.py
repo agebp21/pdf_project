@@ -46,6 +46,15 @@ class Routing(unittest.TestCase):
             server.ai_chat('S', 'U', 'gemini-3.8-flash')
         self.assertNotIn('thinkingConfig', json.loads(call.call_args[0][0].data)['generationConfig'], 'empty = the model decides')
 
+    def test_overloaded_model_uses_configured_fallback(self):
+        import io, urllib.error
+        overloaded = urllib.error.HTTPError('u', 503, 'Busy', {}, io.BytesIO(b'{"error":{"status":"UNAVAILABLE"}}'))
+        with mock.patch.dict(os.environ, {'GEMINI_API_KEY': 'g', 'GEMINI_FALLBACK_MODEL': 'gemini-3.1-flash-lite'}), \
+             mock.patch('urllib.request.urlopen', side_effect=[overloaded, reply(GEMINI_OK)]) as call:
+            self.assertEqual(server.gemini_chat('S', 'U', 'gemini-3.5-flash-lite'), 'Intisari buku.')
+        self.assertIn('/gemini-3.5-flash-lite:', call.call_args_list[0].args[0].full_url)
+        self.assertIn('/gemini-3.1-flash-lite:', call.call_args_list[1].args[0].full_url)
+
     def test_other_models_stay_on_sumopod(self):
         sumopod = {'choices': [{'message': {'content': 'Halo'}}]}
         for model in ('claude-sonnet-5', 'gemini/gemini-3.8-flash'):          # Sumopod's own Gemini keeps going through Sumopod
