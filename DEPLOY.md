@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 — live `7c9440e`: sesuai koreksi owner, panel kontrol Sumber kembali ke kiri seperti NotebookLM; daftar sumber yang dipakai ringkasan kini tampil di panel tengah tepat di bawah hasil ringkasan, satu per baris, dan dapat diklik untuk membuka PDF asli. QA browser lokal/live desktop/HP: dua sumber berurutan vertikal, klik membuka tab Dokumen, refresh mempertahankan ringkasan, X sumber dan navigasi PDF tetap lulus tanpa error JS. Backup `/root/pdf_project-code-backup-summary-center-20261030164833.tgz`; layanan aktif, checksum file VPS cocok.
+
 - 30 Oktober 2026 — live `41e21b3`: panel Sumber AI Ringkasan disusun di bawah PDF/hasil ringkasan pada desktop dan HP. Saat notebook belum punya sumber, panel upload tetap tampil paling atas. QA browser lokal/live: PDF halaman 1→2, tidak ada ringkasan otomatis, ringkasan manual dan restore lulus; QA X hapus sumber tetap terlihat tanpa scrollbar mendatar. Backup `/root/pdf_project-code-backup-sources-below-20261030164333.tgz`; layanan aktif, checksum file VPS cocok.
 
 - 30 Oktober 2026 — live `98fc1ee`: daftar Sumber AI Ringkasan kini memotong nama file panjang dengan elipsis tanpa scrollbar mendatar; tombol X di kanan selalu terlihat dan meminta konfirmasi sebelum menghapus sumber dari notebook. QA browser lokal/live desktop dan HP: X terlihat, Batal mempertahankan 2 sumber, Hapus menyisakan 1, tanpa error JS. Alur Dokumen dan ringkasan manual diuji ulang. Backup `/root/pdf_project-code-backup-source-x-20261030140553.tgz`; layanan aktif, checksum file VPS cocok.

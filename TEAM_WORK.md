@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-SUMMARY-SOURCES-CENTER (30 Okt, Codex): `7c9440e` live. Mengoreksi posisi sumber: kontrol file tetap di kiri, sumber ringkasan ditampilkan di tengah di bawah hasil dan bisa membuka PDF. QA browser lokal/live desktop/HP lulus. Backup `/root/pdf_project-code-backup-summary-center-20261030164833.tgz`.
+
 - NOTEBOOK-SOURCES-BELOW (30 Okt, Codex): `41e21b3` live. Panel Sumber pindah di bawah pembaca PDF/Chat sehingga hasil utama berada di atas; ketika kosong, panel tambah sumber tetap lebih dulu. QA browser lokal/live desktop/HP lulus. Backup `/root/pdf_project-code-backup-sources-below-20261030164333.tgz`.
 
 - NOTEBOOK-SOURCE-X (30 Okt, Codex): `98fc1ee` live. Nama sumber panjang tidak lagi mendorong tombol hapus ke luar panel; X kanan tetap terlihat dan memiliki konfirmasi. QA browser desktop/HP lokal/live lulus, tanpa horizontal scroll. Backup `/root/pdf_project-code-backup-source-x-20261030140553.tgz`.
