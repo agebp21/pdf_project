@@ -30,7 +30,8 @@
   body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:-1;
     background:radial-gradient(700px 420px at 50% 0%,#EDE9FE 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
   .wrap{max-width:1500px;margin:0 auto;padding:12px 16px 56px}
-  .workspace{display:grid;grid-template-columns:320px minmax(0,1fr) 320px;grid-template-areas:"src view studio";gap:16px;align-items:start;margin-top:18px}
+  .workspace{display:grid;grid-template-columns:minmax(0,1fr) 320px;grid-template-areas:"view studio" "src studio";gap:16px;align-items:start;margin-top:18px}
+  .workspace:has(#sources-list:empty){grid-template-areas:"src studio" "view studio"}
   .sources{grid-area:src}.viewer{grid-area:view}.studio{grid-area:studio}
   .scope-bar{display:flex;align-items:center;gap:12px;margin:14px 0 -3px;padding:9px 13px;border:1px solid #E8E2D4;border-radius:13px;background:#fff;color:#57534E;font-size:12px}
   .scope-bar strong{color:#1A3C34;white-space:nowrap}.scope-bar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -200,8 +201,8 @@
   .vpanel .result{max-height:none;border:0;background:transparent;padding:0;font-size:15px;line-height:1.75}
   .vpanel textarea.result{width:100%;box-sizing:border-box;min-height:60vh;border:1px solid #EFE9DC;border-radius:10px;padding:12px 14px;background:#fff}
   .vpanel .mini{margin-top:14px}
-  @media (max-width:1180px){.workspace{grid-template-columns:320px minmax(0,1fr);grid-template-areas:"src view" "studio studio"}}
-  @media (max-width:900px){.workspace{grid-template-columns:1fr;grid-template-areas:"src" "view" "studio"}.viewer{min-height:50vh}.viewer-body{max-height:none;padding:12px}.sheet{min-height:50vh;padding:10px 4px 30px}}
+  @media (max-width:1180px){.workspace{grid-template-columns:minmax(0,1fr);grid-template-areas:"view" "src" "studio"}.workspace:has(#sources-list:empty){grid-template-areas:"src" "view" "studio"}}
+  @media (max-width:900px){.viewer{min-height:50vh}.viewer-body{max-height:none;padding:12px}.sheet{min-height:50vh;padding:10px 4px 30px}}
   /* "Open My Library" popup — same card look as the shared Add-source dialog (assets/add-source.js) */
   .lib-dialog{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(28,25,23,.45);backdrop-filter:blur(3px)}
   .lib-dialog[hidden]{display:none}
