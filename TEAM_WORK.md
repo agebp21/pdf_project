@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-LIGHT-FLIP (30 Okt, Codex): `49d082a` live. Ukuran dan transisi popup pratinjau Organize dibenahi agar halaman tidak membesar memenuhi dialog dan flip terasa ringan. QA `Catalog 1.pdf` lokal + tes Organize lulus; converter HTTPS 200, checksum cocok. Backup `/root/pdf_project-code-backup-20261030085303.tgz`.
+
 - RELEASE-20261029 (29 Okt, Codex): `dd7e895` live. Update Library dan AI Summarizer dari `v2` di-deploy setelah tes fitur terkait dan QA homepage lulus. HTTPS halaman utama, Library, Notebook, dan aset 200; checksum file live sesuai. Backup `/root/pdf_project-code-backup-20261029183604.tgz`. Tes lengkap masih punya kegagalan ekspektasi AI lama dan Piper TTS lokal; tidak terkait file yang berubah.
 
 - MERGE-CARD-REMOVE (29 Okt, Codex): `a19617e` live. Card file mode Gabung mendapat tombol × di pojok kanan atas dan konfirmasi MFDialog. Hapus file hanya dari workspace; file asli aman. Index dan cache halaman/OCR diperbarui saat file tengah dihapus. Browser lokal: batal mempertahankan 2 file; hapus file tengah dari 3 memberi output hanya A+C; hapus terakhir menampilkan empty state; drag C sebelum A setelah penghapusan tetap berhasil. Browser live tombol/dialog tampil tanpa JS error. Backup `/root/pdf_project-code-backup-20261029115800.tgz`.

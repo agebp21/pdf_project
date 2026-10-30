@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 — live `49d082a`: popup pratinjau Organize memakai ukuran buku tetap yang mengikuti ruang layar; animasi flip dipercepat menjadi 480 ms dan bayangan diperhalus. Tes Organize 2/2 lulus; browser lokal `Catalog 1.pdf` membalik 1/12 ke 3/12 tanpa error JS. Backup `/root/pdf_project-code-backup-20261030085303.tgz`; layanan aktif, HTTPS converter 200, checksum live cocok.
+
 - 29 Oktober 2026 — live `dd7e895`: pembaruan My Library dan AI Summarizer (sumber Word/PowerPoint, ringkasan dan chat, navigasi). Backup `/root/pdf_project-code-backup-20261029183604.tgz`; layanan aktif. Tes terkait, QA homepage desktop/HP, dan HTTPS halaman utama/Library/Notebook/aset lulus. Tes lengkap masih memuat kegagalan lama pada ekspektasi kebijakan AI serta Piper TTS lokal yang tidak tersedia; kedua area itu tidak berubah pada rilis ini.
 
 - 29 Oktober 2026 — live `a19617e`: card file Gabung PDF mempunyai tombol × di pojok kanan atas dengan konfirmasi MyFlipbook. Menghapus file tengah memperbarui indeks halaman dan cache; tes lokal gabungan A+C serta drag C sebelum A lulus. Browser live HTTPS 200, tombol × dan dialog konfirmasi tampil tanpa JS error. Backup `/root/pdf_project-code-backup-20261029115800.tgz`; layanan aktif.
