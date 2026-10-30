@@ -55,6 +55,11 @@
   .viewer-top:not(:has(button:not([hidden]))){display:none}     /* no tabs yet: no empty bar */
   .source-document{max-width:920px;padding:8px 4px 24px}
   .source-pages{display:grid;gap:18px}
+  .page-nav{margin-top:12px;border-top:1px solid #E8E2D6;padding-top:12px;max-height:42vh;overflow:auto}
+  .page-nav h3{margin:0 0 8px;font-size:12px;color:#1A3C34}
+  .page-nav button{display:block;width:100%;margin:0 0 5px;padding:9px 10px;text-align:left;border:1px solid #E8E2D6;border-radius:10px;background:#fff;color:#44403C;cursor:pointer;font:600 12px 'Plus Jakarta Sans',sans-serif}
+  .page-nav button:hover,.page-nav button:focus-visible{border-color:#FF5C28;background:#FFF5EE}
+  .page-nav button span{display:block;margin-top:3px;color:#78716C;font-weight:400;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .source-page{position:relative;width:100%;background:#fff;box-shadow:0 8px 30px rgba(28,25,23,.12)}
   .source-page canvas{position:absolute;inset:0;width:100%;height:100%;display:block}
   .source-page-number{text-align:center;margin:8px 0 0;color:#78716C;font-size:11px}
@@ -152,6 +157,9 @@
   .viewer.document-chat .hello-mark,.viewer.document-chat .ask-hello h3{display:none}
   .viewer.document-chat .ask-hello p{margin-bottom:8px}
   .viewer.document-chat .ask-chips button{padding:7px 10px}
+  .overview h2{margin:0 0 14px;font:800 22px 'Fraunces',Georgia,serif;color:#1C1917}
+  .overview .result{font-size:15px;line-height:1.75}
+  .overview-wait{color:#78716C;font-size:13px;line-height:1.6}
   .viewer{scroll-margin-top:96px}
   .ask{display:flex;flex-direction:column;height:min(78vh,860px);width:100%}
   .chat-top{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:8px 14px 0;font-size:13px}
@@ -430,6 +438,7 @@
       <input id="file" type="file" accept=".pdf,.docx,.doc,.pptx,.ppt" multiple hidden>
       <label id="select-all-row" class="row" hidden><input id="select-all" type="checkbox"><span data-en="Select all">Pilih semua</span></label>
       <ul id="sources-list" class="src-list"></ul>
+      <div id="page-nav" class="page-nav" hidden><h3 data-en="Pages">Halaman</h3><div id="page-nav-list"></div></div>
       <div id="doc" class="doc" hidden>
         <div class="doc-card"><span class="doc-ico" data-ico="doc" aria-hidden="true"></span><div class="doc-text"><span id="doc-name" class="doc-name"></span><span id="doc-meta" class="doc-meta"></span></div></div>
         <span class="doc-btns"><button id="to-flipbook" class="clay-btn clay-btn-ghost" type="button" data-ico="book" data-en="Make a flipbook">Jadikan Flipbook</button></span>
@@ -441,6 +450,7 @@
     <section class="viewer" aria-label="Hasil" data-en-aria="Results">
       <div class="viewer-top">
         <div class="vtabs" role="tablist">
+          <button type="button" role="tab" data-view="overview" hidden data-ico="summary" data-en="Key points">Intisari</button>
           <button type="button" role="tab" data-view="document" hidden data-ico="doc" data-en="Document">Dokumen</button>
           <button type="button" role="tab" data-view="translate" hidden data-ico="translate" data-en="Translation">Terjemahan</button>
           <button type="button" role="tab" data-view="notes" hidden data-ico="note" data-en="Notes">Catatan</button>
@@ -456,6 +466,15 @@
         </div></div>
       <div class="viewer-body">
          <div id="viewer-empty" class="viewer-empty sheet"><span>✦</span><h2 data-en="Choose a PDF to start">Pilih PDF untuk mulai</h2></div>
+        <div class="vpanel sheet overview" data-panel="overview" hidden>
+          <section id="chat-summary" class="chat-summary" hidden aria-label="Ringkasan" data-en-aria="Summary">
+            <h2 data-en="Summary">Ringkasan</h2>
+            <div id="summary-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Ringkasan (bisa diedit)" data-en-aria="Summary (editable)"></div>
+            <div id="summary-tools" class="mini" hidden><button id="summary-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="summary-save" type="button" data-ico="download">.txt</button></div>
+            <div id="summary-sources" class="summary-sources" hidden><strong data-en="Sources">Sumber</strong><div id="summary-source-list"></div></div>
+          </section>
+          <p id="overview-wait" class="overview-wait" data-en="Reading your source and preparing key points…">Membaca sumber dan menyiapkan intisari…</p>
+        </div>
         <div class="vpanel sheet source-document" data-panel="document" hidden><div id="source-pages" class="source-pages"></div><p id="source-preview-status" class="status" role="status"></p></div>
         <div class="vpanel sheet" data-panel="translate" hidden><div id="translate-pager" class="pager" hidden><button id="tr-prev" type="button" aria-label="Halaman sebelumnya" data-en-aria="Previous page">←</button><span id="tr-page"></span><button id="tr-next" type="button" aria-label="Halaman berikutnya" data-en-aria="Next page">→</button></div><div id="translate-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Terjemahan (bisa diedit)" data-en-aria="Translation (editable)"></div><div id="translate-tools" class="mini" hidden><button id="translate-save" type="button" data-ico="download">.txt</button></div></div>
         <div class="vpanel sheet work" data-panel="notes" hidden>
@@ -543,12 +562,6 @@
           <div class="chat-top"><strong class="chat-title" data-en="AI Chat">Chat AI</strong><span id="chat-doc" class="chat-doc" hidden></span>
             <button type="button" id="ask-new" class="chat-new" data-en="＋ New chat">＋ Chat baru</button></div>
           <div id="ask-log" class="ask-log" aria-live="polite">
-            <section id="chat-summary" class="chat-summary" hidden aria-label="Ringkasan" data-en-aria="Summary">
-              <h2 data-en="Summary">Ringkasan</h2>
-              <div id="summary-out" class="result" hidden title="Klik untuk mengedit" data-en-title="Click to edit" contenteditable="true" spellcheck="false" aria-label="Ringkasan (bisa diedit)" data-en-aria="Summary (editable)"></div>
-              <div id="summary-tools" class="mini" hidden><button id="summary-copy" type="button" data-ico="copy" data-en="Copy">Salin</button><button id="summary-save" type="button" data-ico="download">.txt</button></div>
-              <div id="summary-sources" class="summary-sources" hidden><strong data-en="Sources">Sumber</strong><div id="summary-source-list"></div></div>
-            </section>
             <div id="ask-hello" class="ask-hello"><div class="hello-mark" aria-hidden="true">✦</div>
               <h3 data-en="Ask anything about this document">Tanya apa saja tentang dokumen ini</h3>
               <div id="ask-chips" class="ask-chips"></div></div>
@@ -631,9 +644,9 @@ window.addEventListener('DOMContentLoaded', () => {
     if (view && !availableViews.has(view)) return;
     current = view;
     tabs.forEach(t => { t.setAttribute('aria-selected', String(t.dataset.view === view)); });
-    panels.forEach(p => { p.hidden = working || (p.dataset.panel !== view && !(view === 'document' && p.dataset.panel === 'ask')); });
+    panels.forEach(p => { p.hidden = working || (p.dataset.panel !== view && !(p.dataset.panel === 'ask' && (view === 'document' || view === 'overview'))); });
     document.querySelector('#viewer-empty').hidden = working || !!view;
-    document.querySelector('.viewer').classList.toggle('document-chat', view === 'document' && !working);
+    document.querySelector('.viewer').classList.toggle('document-chat', (view === 'document' || view === 'overview') && !working);
   };
   const body = document.querySelector('.viewer-body');
   // On a phone the viewer sits below the steps: bring it up when a result arrives.
@@ -688,6 +701,8 @@ window.addEventListener('DOMContentLoaded', () => {
     const prior = scopeStates[key];
     summary = prior?.summary || null;
     $('#chat-summary').hidden = true;
+    $('#overview-wait').hidden = false;
+    $('#overview-wait').textContent = L('Reading your source and preparing key points…', 'Membaca sumber dan menyiapkan intisari…');
     clearChat();
     (prior?.asked || []).forEach((turn, i, all) => { if (turn.role === 'user' && all[i + 1]) showAnswer(turn.text, all[i + 1].text, all[i + 1].citations || [], all[i + 1].thoughts); });
     asked = (prior?.asked || []).slice();
@@ -920,6 +935,23 @@ window.addEventListener('DOMContentLoaded', () => {
     }
     return words;
   }
+  let autoSummaryTimer = null, pendingAdds = 0;
+  function scheduleAutoSummary() {
+    clearTimeout(autoSummaryTimer);
+    const scope = sourceKey();
+    autoSummaryTimer = setTimeout(async () => {
+      if (scope !== sourceKey() || summary || pendingAdds || !activeSources().length || activeSources().some(s => s.status || allText(s).trim().split(/\s+/).length < 40)) return;
+      try {
+        const c = await caps();
+        if (scope !== sourceKey() || summary) return;
+        if (!c.entitlements?.includes('ai')) {
+          $('#overview-wait').textContent = L('AI key points are available on Medium and Pro.', 'Intisari AI tersedia untuk paket Medium dan Pro.');
+          return;
+        }
+        $('#summary-make').click();
+      } catch (e) { $('#overview-wait').textContent = e.message; }
+    }, 700);
+  }
   // Each call adds one more source (the Sources panel), shown in the viewer as soon as it
   // starts reading; `source === doc` guards below skip UI writes once the reader has switched
   // to a different source while this one was still loading in the background.
@@ -929,7 +961,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const first = !sources.length;
     sources.push(source); doc = source; openId = source.id;
     renderSources();
-    showDocument(source);
+    viewer.tab('document'); viewer.show('overview'); renderPageNav();
     status('#load-status', L('Reading the PDF…', 'Membaca PDF…'));
     $('#tools').disabled = false;
     try {
@@ -947,7 +979,7 @@ window.addEventListener('DOMContentLoaded', () => {
       if (thin.length && own >= 40) {
         // Enough text already: the tools open now, the scanned pages join in the background.
         docReady(source, 0); if (doc === source) $('#translate-target').value = source.lang === 'en-US' ? 'id-ID' : 'en-US';
-        source.status = ''; renderSources(); remember();
+        source.status = ''; renderSources(); remember(); scheduleAutoSummary();
         backgroundOcr(pdf, thin, source);
         return;
       }
@@ -964,12 +996,13 @@ window.addEventListener('DOMContentLoaded', () => {
       source.status = '';
       if (words < 40) {
         source.status = L('No text', 'Tanpa teks'); renderSources();
+        $('#overview-wait').textContent = L('No readable text was found in this source.', 'Tidak ada teks yang terbaca dari sumber ini.');
         if (doc === source) status('#load-status', L('No readable text was found in this PDF, even with OCR (a photo or a drawing?).', 'Tidak ada teks yang terbaca di PDF ini, bahkan dengan OCR (foto atau gambar?).'), true);
         return;
       }
       renderSources();
       if (doc === source) status('#load-status', ocred ? L(`Text read with OCR from ${ocred} scanned pages — results may need a quick check.`, `Teks dari ${ocred} halaman scan dibaca dengan OCR — hasilnya mungkin perlu dicek sekilas.`) : '');
-      remember();
+      remember(); scheduleAutoSummary();
     } catch (cause) {
       source.status = L('Failed', 'Gagal'); renderSources();
       if (doc === source) status('#load-status', L('The PDF could not be read: ', 'PDF tidak bisa dibaca: ') + cause.message, true);
@@ -1010,6 +1043,21 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#drop').hidden = sources.length > 0; $('#add-sources').hidden = sources.length === 0;
     updateSelectAll();
     syncScope();
+    renderPageNav();
+  }
+  function renderPageNav() {
+    const nav = $('#page-nav'), list = $('#page-nav-list');
+    nav.hidden = !doc?.pages;
+    if (nav.hidden) { list.replaceChildren(); return; }
+    list.replaceChildren(...Array.from({length: doc.pages}, (_, i) => {
+      const page = i + 1;
+      const lines = doc.text?.[page - 1] || [];
+      const snippet = Array.isArray(lines) ? lines.join(' ') : String(lines || '');
+      const button = Object.assign(document.createElement('button'), {type: 'button', textContent: L(`Page ${page}`, `Halaman ${page}`)});
+      if (snippet.trim()) button.append(Object.assign(document.createElement('span'), {textContent: snippet.replace(/\s+/g, ' ').trim().slice(0, 90)}));
+      button.addEventListener('click', () => showDocument(doc, page));
+      return button;
+    }));
   }
   function updateSelectAll() { $('#select-all').checked = sources.length > 0 && sources.every(s => s.active); }
   $('#select-all').addEventListener('change', () => { sources.forEach(s => s.active = $('#select-all').checked); renderSources(); remember(); });
@@ -1020,7 +1068,7 @@ window.addEventListener('DOMContentLoaded', () => {
     docReady(source, source.ocred || 0);
     $('#translate-target').value = Object.keys(source.translations).find(k => Object.keys(source.translations[k]).length) || (source.lang === 'en-US' ? 'id-ID' : 'en-US');
     showTranslation();
-    showDocument(source);
+    viewer.tab('document'); viewer.show('overview'); renderPageNav();
   }
   async function openSource(id) {
     if (id === openId) return;
@@ -1072,8 +1120,10 @@ window.addEventListener('DOMContentLoaded', () => {
     return new File([blob], file.name.replace(/\.[^.]+$/, '.pdf'), {type: 'application/pdf'});
   }
   async function addSourceFile(file) {
+    pendingAdds++;
     try { const pdf = await toPdfSource(file); await open(pdf, pdf.name); }
     catch (cause) { status('#load-status', `${file.name}: ${cause.message}`, true); }
+    finally { pendingAdds--; if (!pendingAdds) scheduleAutoSummary(); }
   }
   const viewerBox = document.querySelector('.viewer');
   ['dragenter', 'dragover'].forEach(t => viewerBox.addEventListener(t, e => { if ([...e.dataTransfer.types].includes('Files')) { e.preventDefault(); viewerBox.classList.add('over'); } }));
@@ -1226,7 +1276,8 @@ window.addEventListener('DOMContentLoaded', () => {
     }));
     $('#summary-sources').hidden = !activeSources().length;
     $('#chat-summary').hidden = false;
-    if (focus) { viewer.show('document'); $('#ask-log').scrollTop = 0; }
+    $('#overview-wait').hidden = true;
+    if (focus) { viewer.show('overview'); document.querySelector('.viewer-body').scrollTop = 0; }
   }
   const length = 'sedang';
   $('#summary-make').addEventListener('click', async () => {
@@ -1861,7 +1912,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (mindmap) showMindmap();
     if (infographic) showInfographic();
     if (summary) showSummary(false);
-    showDocument(doc);
+    viewer.tab('document'); viewer.show('overview'); renderPageNav();
     $('#tools').disabled = false;
     status('#load-status', '');
     remember();
