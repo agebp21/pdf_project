@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-CONTINUOUS-PAGES (30 Okt, Codex): `339fd44` live. Koreksi owner: yang dimaksud “sumber susun bawah di tengah” adalah halaman PDF asli bertumpuk vertikal seperti pembaca NotebookLM, bukan daftar file. Tab Dokumen kini scroll kontinu; 212 halaman tetap ringan lewat render halaman dekat viewport. QA lokal/live desktop/HP lulus. Backup `/root/pdf_project-code-backup-continuous-pages-20261030172217.tgz`.
+
 - NOTEBOOK-SUMMARY-SOURCES-CENTER (30 Okt, Codex): `7c9440e` live. Mengoreksi posisi sumber: kontrol file tetap di kiri, sumber ringkasan ditampilkan di tengah di bawah hasil dan bisa membuka PDF. QA browser lokal/live desktop/HP lulus. Backup `/root/pdf_project-code-backup-summary-center-20261030164833.tgz`.
 
 - NOTEBOOK-SOURCES-BELOW (30 Okt, Codex): `41e21b3` live. Panel Sumber pindah di bawah pembaca PDF/Chat sehingga hasil utama berada di atas; ketika kosong, panel tambah sumber tetap lebih dulu. QA browser lokal/live desktop/HP lulus. Backup `/root/pdf_project-code-backup-sources-below-20261030164333.tgz`.

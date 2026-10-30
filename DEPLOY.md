@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 — live `339fd44`: tab Dokumen AI Ringkasan kini menumpuk seluruh halaman PDF secara vertikal untuk dibaca dengan scroll, menggantikan pratinjau satu halaman dan tombol panah. Rendering PDF memakai IntersectionObserver; hanya 2–3 halaman dekat posisi baca diraster dan kanvas lama dibebaskan. QA browser lokal/live desktop/HP PDF 12 halaman dan PDF 212 halaman: halaman 2/terakhir tampil, kembali ke awal merender ulang, tanpa error JS. Ringkasan manual, Chat, sumber/X, dan restore tetap lulus. Backup `/root/pdf_project-code-backup-continuous-pages-20261030172217.tgz`; layanan aktif, checksum file VPS cocok.
+
 - 30 Oktober 2026 — live `7c9440e`: sesuai koreksi owner, panel kontrol Sumber kembali ke kiri seperti NotebookLM; daftar sumber yang dipakai ringkasan kini tampil di panel tengah tepat di bawah hasil ringkasan, satu per baris, dan dapat diklik untuk membuka PDF asli. QA browser lokal/live desktop/HP: dua sumber berurutan vertikal, klik membuka tab Dokumen, refresh mempertahankan ringkasan, X sumber dan navigasi PDF tetap lulus tanpa error JS. Backup `/root/pdf_project-code-backup-summary-center-20261030164833.tgz`; layanan aktif, checksum file VPS cocok.
 
 - 30 Oktober 2026 — live `41e21b3`: panel Sumber AI Ringkasan disusun di bawah PDF/hasil ringkasan pada desktop dan HP. Saat notebook belum punya sumber, panel upload tetap tampil paling atas. QA browser lokal/live: PDF halaman 1→2, tidak ada ringkasan otomatis, ringkasan manual dan restore lulus; QA X hapus sumber tetap terlihat tanpa scrollbar mendatar. Backup `/root/pdf_project-code-backup-sources-below-20261030164333.tgz`; layanan aktif, checksum file VPS cocok.
