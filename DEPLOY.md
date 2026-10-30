@@ -2,6 +2,9 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 ? live 4607d90: panel Studio pada AI Ringkasan sekarang hanya menampilkan Terjemahan; kartu Ringkasan, Catatan, Kuis, Kartu hafalan, Tabel data, Peta pikiran, Infografis, Audio Overview, dan Video Overview disembunyikan. Ringkasan otomatis dan Chat tetap berjalan. QA lokal/live desktop/HP: hanya kartu Terjemahan terlihat, layout penuh, tanpa error JS; QA ringkasan dan navigasi lulus. Backup /root/pdf_project-code-backup-studio-translate-20261030232635.tgz; layanan aktif dan checksum cocok.
+
+
 - 30 Oktober 2026 ? live 2eab641: riwayat dan jawaban Chat sekarang langsung menyambung di bawah Intisari dalam satu gulungan panel tengah; judul Chat terpisah dihilangkan, kolom pertanyaan tetap terlihat di bawah. QA browser lokal/live desktop/HP: ringkasan otomatis, urutan jawaban, navigasi halaman, Basic tanpa AI, draf/ekspor/Flipbook lulus tanpa error JS. Backup /root/pdf_project-code-backup-chat-stream-20261030232114.tgz; layanan aktif dan checksum cocok.
 
 
