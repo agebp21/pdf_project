@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 — live `3ff42d3`: popup pratinjau Organize tidak lagi otomatis memfokuskan tombol X sehingga ring browser tidak muncul saat dibuka; fokus keyboard Tab pada X memakai warna hijau. QA browser katalog: fokus awal dialog, Tab ke X, Escape menutup, flip lulus. Backup `/root/pdf_project-code-backup-20261030093253.tgz`; layanan aktif, converter HTTPS 200, checksum cocok.
+
 - 30 Oktober 2026 — live `7ec6b55`: dialog pratinjau Organize mengikuti lebar buku agar pinggiran putih tipis; tombol tutup di sudut dan navigasi dekat tepi atas. Browser QA `Catalog 1.pdf` desktop/HP: flip jalan tanpa error JS. Backup `/root/pdf_project-code-backup-20261030090545.tgz`; layanan aktif, converter HTTPS 200, checksum cocok.
 
 - 30 Oktober 2026 — live `efdc79c`: scrollbar popup Organize disembunyikan saat flip; tinggi buku dibatasi agar tetap muat di dialog. QA browser `Catalog 1.pdf` desktop/HP: flip maju tanpa error, dialog overflow hidden, scrollbar pembaca none. Backup `/root/pdf_project-code-backup-20261030085600.tgz`; layanan aktif, HTTPS converter 200, checksum cocok.
