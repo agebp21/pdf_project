@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-SOURCES-BELOW (30 Okt, Codex): `41e21b3` live. Panel Sumber pindah di bawah pembaca PDF/Chat sehingga hasil utama berada di atas; ketika kosong, panel tambah sumber tetap lebih dulu. QA browser lokal/live desktop/HP lulus. Backup `/root/pdf_project-code-backup-sources-below-20261030164333.tgz`.
+
 - NOTEBOOK-SOURCE-X (30 Okt, Codex): `98fc1ee` live. Nama sumber panjang tidak lagi mendorong tombol hapus ke luar panel; X kanan tetap terlihat dan memiliki konfirmasi. QA browser desktop/HP lokal/live lulus, tanpa horizontal scroll. Backup `/root/pdf_project-code-backup-source-x-20261030140553.tgz`.
 
 - NOTEBOOK-DOCUMENT-FIRST (30 Okt, Codex): `48af25c` live. PDF asli muncul dulu di panel tengah dengan tab Dokumen dan navigasi halaman; auto-summary upload dihapus agar AI hanya berjalan saat user klik Buat ringkasan. Chat tetap ada. Refresh kembali ke dokumen dan menyimpan hasil manual. QA browser desktop/HP lokal/live lulus; backup `/root/pdf_project-code-backup-document-first-20261030135220.tgz`.

@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 — live `41e21b3`: panel Sumber AI Ringkasan disusun di bawah PDF/hasil ringkasan pada desktop dan HP. Saat notebook belum punya sumber, panel upload tetap tampil paling atas. QA browser lokal/live: PDF halaman 1→2, tidak ada ringkasan otomatis, ringkasan manual dan restore lulus; QA X hapus sumber tetap terlihat tanpa scrollbar mendatar. Backup `/root/pdf_project-code-backup-sources-below-20261030164333.tgz`; layanan aktif, checksum file VPS cocok.
+
 - 30 Oktober 2026 — live `98fc1ee`: daftar Sumber AI Ringkasan kini memotong nama file panjang dengan elipsis tanpa scrollbar mendatar; tombol X di kanan selalu terlihat dan meminta konfirmasi sebelum menghapus sumber dari notebook. QA browser lokal/live desktop dan HP: X terlihat, Batal mempertahankan 2 sumber, Hapus menyisakan 1, tanpa error JS. Alur Dokumen dan ringkasan manual diuji ulang. Backup `/root/pdf_project-code-backup-source-x-20261030140553.tgz`; layanan aktif, checksum file VPS cocok.
 
 - 30 Oktober 2026 — live `48af25c`: AI Ringkasan membuka PDF asli pada tab Dokumen terlebih dahulu, dengan navigasi halaman; ringkasan otomatis saat upload dihapus. Tab Chat dan tombol Buat ringkasan tetap tersedia, AI dipanggil hanya setelah tindakan pengguna. Refresh membuka PDF asli dan tetap menyimpan ringkasan manual. Judul notebook baru tidak lagi tertimpa placeholder saat upload cepat. QA browser lokal dan live desktop/HP lulus: halaman 1→2, 0 panggilan ringkasan otomatis, 1 panggilan manual, pemulihan hasil, tanpa error JS. Backup `/root/pdf_project-code-backup-document-first-20261030135220.tgz`; layanan aktif, notebook/capabilities/admin HTTPS 200, checksum file VPS cocok.
