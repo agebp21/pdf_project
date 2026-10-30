@@ -145,10 +145,11 @@
   @media (prefers-reduced-motion:reduce){.busy i{animation:none}}
   /* Ask the document: a chat (ChatGPT / Claude style) filling the viewer */
   .viewer-body.chat{padding:0;background:#fff;overflow:hidden;display:block}
+  .viewer-body.document-chat .ask{flex:none;max-width:760px;border-top:1px solid #EFE9DC;margin-top:24px}
   .viewer{scroll-margin-top:96px}
   .ask{display:flex;flex-direction:column;height:min(78vh,860px);width:100%}
   .chat-top{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:8px 14px 0;font-size:13px}
-  .chat-title{font:700 15px 'Fraunces',Georgia,serif;color:#1A3C34}
+  .chat-title{margin-right:auto;font:700 15px 'Fraunces',Georgia,serif;color:#1A3C34}
   .chat-doc{flex:1;min-width:0;color:#78716C;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
   .chat-new{border:1px solid #E4DED0;background:#fff;border-radius:999px;padding:6px 12px;font:700 12px 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer}
   .chat-new:hover{background:#FF5C28;color:#fff;border-color:#E04E1F}
@@ -533,7 +534,7 @@
         </div>
         <div id="viewer-busy" class="sheet busy" hidden><p id="busy-label" class="busy-label"></p><i></i><i></i><i></i><i></i><i></i><i></i></div>
         <div class="vpanel ask" data-panel="ask" hidden>
-          <div class="chat-top"><span id="chat-doc" class="chat-doc" hidden></span>
+          <div class="chat-top"><strong class="chat-title" data-en="AI Chat">Chat AI</strong><span id="chat-doc" class="chat-doc" hidden></span>
             <button type="button" id="ask-new" class="chat-new" data-en="＋ New chat">＋ Chat baru</button></div>
           <div id="ask-log" class="ask-log" aria-live="polite">
             <section id="chat-summary" class="chat-summary" hidden aria-label="Ringkasan" data-en-aria="Summary">
@@ -629,9 +630,10 @@ window.addEventListener('DOMContentLoaded', () => {
     if (view && !availableViews.has(view)) return;
     current = view;
     tabs.forEach(t => { t.setAttribute('aria-selected', String(t.dataset.view === view)); });
-    panels.forEach(p => { p.hidden = working || p.dataset.panel !== view; });
+    panels.forEach(p => { p.hidden = working || (p.dataset.panel !== view && !(view === 'document' && p.dataset.panel === 'ask')); });
     document.querySelector('#viewer-empty').hidden = working || !!view;
     document.querySelector('.viewer-body').classList.toggle('chat', view === 'ask' && !working);
+    document.querySelector('.viewer-body').classList.toggle('document-chat', view === 'document' && !working);
   };
   const body = document.querySelector('.viewer-body');
   // On a phone the viewer sits below the steps: bring it up when a result arrives.
