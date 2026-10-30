@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- ORGANIZE-PREVIEW-FIT (30 Okt, Codex): `7ec6b55` live. Popup pratinjau mengikuti ukuran buku, ruang putih tepi menipis. Browser QA katalog desktop/HP lulus. Backup `/root/pdf_project-code-backup-20261030090545.tgz`.
+
 - ORGANIZE-FLIP-NO-SCROLLBAR (30 Okt, Codex): `efdc79c` live. Dialog pratinjau Organize tanpa scrollbar terlihat saat flip; buku tetap muat di desktop/HP. QA browser katalog lulus. Backup `/root/pdf_project-code-backup-20261030085600.tgz`.
 
 - ORGANIZE-LIGHT-FLIP (30 Okt, Codex): `49d082a` live. Ukuran dan transisi popup pratinjau Organize dibenahi agar halaman tidak membesar memenuhi dialog dan flip terasa ringan. QA `Catalog 1.pdf` lokal + tes Organize lulus; converter HTTPS 200, checksum cocok. Backup `/root/pdf_project-code-backup-20261030085303.tgz`.
