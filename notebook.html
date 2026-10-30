@@ -144,9 +144,14 @@
   @keyframes shimmer{from{background-position:200% 0}to{background-position:-200% 0}}
   @media (prefers-reduced-motion:reduce){.busy i{animation:none}}
   /* Ask the document: a chat (ChatGPT / Claude style) filling the viewer */
-  .viewer-body.chat{padding:0;background:#fff;overflow:hidden;display:block}
-  .viewer-body.document-chat .ask{flex:none;height:auto;max-width:760px;border-top:1px solid #EFE9DC;margin-top:24px}
-  .viewer-body.document-chat .ask-log{flex:none;overflow:visible}
+  .viewer.document-chat{height:min(calc(100dvh - 200px),920px);min-height:520px}
+  .viewer.document-chat .viewer-body{min-height:0;max-height:none}
+  .viewer.document-chat .ask{flex:none;height:clamp(190px,30vh,300px);border-top:1px solid #EFE9DC;background:#fff}
+  .viewer.document-chat .ask-log{min-height:0;padding:8px 18px;gap:10px}
+  .viewer.document-chat .ask-hello{margin:0 auto}
+  .viewer.document-chat .hello-mark,.viewer.document-chat .ask-hello h3{display:none}
+  .viewer.document-chat .ask-hello p{margin-bottom:8px}
+  .viewer.document-chat .ask-chips button{padding:7px 10px}
   .viewer{scroll-margin-top:96px}
   .ask{display:flex;flex-direction:column;height:min(78vh,860px);width:100%}
   .chat-top{display:flex;align-items:center;justify-content:flex-end;gap:10px;padding:8px 14px 0;font-size:13px}
@@ -202,7 +207,7 @@
   .ask-send:hover:not(:disabled){background:#FF5C28;transform:translateY(-1px)}
   .ask-send:disabled{background:#D6CFBF;cursor:default}
   .composer-hint{max-width:760px;margin:6px auto 0;text-align:center;font-size:11px;color:#A8A29E}
-  @media (max-width:900px){.ask{height:72vh}.ask-chips{grid-template-columns:1fr}.msg.me .msg-body{max-width:90%}}
+  @media (max-width:900px){.ask-chips{grid-template-columns:1fr}.msg.me .msg-body{max-width:90%}.viewer.document-chat{height:calc(100dvh - 96px);min-height:480px}.viewer.document-chat .ask{height:clamp(180px,34dvh,280px)}}
   .viewer.over .viewer-body{outline:3px dashed #FF5C28;outline-offset:-10px}
   .viewer-empty span{font-size:52px;color:#C9BFAA}.viewer-empty h2{margin:0;font:700 24px 'Fraunces',Georgia,serif;color:#1A3C34}.viewer-empty p{margin:0;font-size:13px}
   .vpanel .result{max-height:none;border:0;background:transparent;padding:0;font-size:15px;line-height:1.75}
@@ -533,6 +538,7 @@
           </div>
         </div>
         <div id="viewer-busy" class="sheet busy" hidden><p id="busy-label" class="busy-label"></p><i></i><i></i><i></i><i></i><i></i><i></i></div>
+      </div>
         <div class="vpanel ask" data-panel="ask" hidden>
           <div class="chat-top"><strong class="chat-title" data-en="AI Chat">Chat AI</strong><span id="chat-doc" class="chat-doc" hidden></span>
             <button type="button" id="ask-new" class="chat-new" data-en="＋ New chat">＋ Chat baru</button></div>
@@ -552,7 +558,6 @@
               <button id="ask-send" type="submit" class="ask-send" aria-label="Kirim" data-en-aria="Send" title="Kirim (Enter)" data-en-title="Send (Enter)"><svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><path d="M12 19V5M5.5 11.5 12 5l6.5 6.5" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round"/></svg></button></div>
           </form>
         </div>
-      </div>
     </section>
     <aside class="side studio" aria-label="Studio" data-en-aria="Studio">
       <h2 class="col-h" data-en="Studio">Studio</h2>
@@ -568,10 +573,6 @@
             <label class="row"><span data-en="Into">Ke</span> <select id="translate-target"><option value="id-ID">Indonesia</option><option value="en-US">English</option><option value="ms-MY">Melayu</option></select></label>
             <button id="translate-make" class="clay-btn clay-btn-primary" type="button" data-en="Translate">Terjemahkan</button>
             <p id="translate-status" class="status" role="status"></p>
-          </div>
-          <div class="studio-card">
-            <div class="studio-card-head" data-ico="ask"><span data-en="Chat">Chat</span></div>
-            <button id="ask-open" class="clay-btn clay-btn-primary" type="button" data-en="Open chat">Buka chat</button>
           </div>
           <div class="studio-card">
             <div class="studio-card-head" data-ico="note"><span data-en="Notes">Catatan</span></div>
@@ -632,8 +633,7 @@ window.addEventListener('DOMContentLoaded', () => {
     tabs.forEach(t => { t.setAttribute('aria-selected', String(t.dataset.view === view)); });
     panels.forEach(p => { p.hidden = working || (p.dataset.panel !== view && !(view === 'document' && p.dataset.panel === 'ask')); });
     document.querySelector('#viewer-empty').hidden = working || !!view;
-    document.querySelector('.viewer-body').classList.toggle('chat', view === 'ask' && !working);
-    document.querySelector('.viewer-body').classList.toggle('document-chat', view === 'document' && !working);
+    document.querySelector('.viewer').classList.toggle('document-chat', view === 'document' && !working);
   };
   const body = document.querySelector('.viewer-body');
   // On a phone the viewer sits below the steps: bring it up when a result arrives.
@@ -1226,7 +1226,7 @@ window.addEventListener('DOMContentLoaded', () => {
     }));
     $('#summary-sources').hidden = !activeSources().length;
     $('#chat-summary').hidden = false;
-    if (focus) { viewer.show('document'); $('#chat-summary').scrollIntoView({behavior: 'smooth', block: 'start'}); }
+    if (focus) { viewer.show('document'); $('#ask-log').scrollTop = 0; }
   }
   const length = 'sedang';
   $('#summary-make').addEventListener('click', async () => {
@@ -1711,11 +1711,11 @@ window.addEventListener('DOMContentLoaded', () => {
     question = String(question || '').trim();
     const actives = activeSources();
     if (!question || !actives.length || $('#ask-send').disabled) return;
+    if ($('#ask-send').classList.contains('plan-lock')) { location.href = '/harga'; return; }
     const requestScope = sourceKey();
     $('#ask-q').value = ''; grow(); $('#ask-send').disabled = true;
     if (!retry) message('me', question);
     const {row, body} = message('ai', '');
-    if (document.querySelector('.viewer-body').classList.contains('document-chat')) row.scrollIntoView({behavior: 'smooth', block: 'nearest'});
     const sec = Object.assign(document.createElement('span'), {className: 'wait-sec'});
     body.replaceChildren(Object.assign(document.createElement('span'), {className: 'dots', innerHTML: '<i></i><i></i><i></i>'}), sec);
     const start = Date.now(), timer = setInterval(() => { sec.textContent = L(`reading the sources… ${Math.round((Date.now() - start) / 1000)} s`, `membaca sumber… ${Math.round((Date.now() - start) / 1000)} dtk`); }, 1000);
@@ -1749,11 +1749,6 @@ window.addEventListener('DOMContentLoaded', () => {
   $('#ask-q').addEventListener('input', grow);
   $('#ask-form').addEventListener('submit', e => { e.preventDefault(); ask($('#ask-q').value); });
   $('#ask-q').addEventListener('keydown', e => { if (e.key === 'Enter' && !e.shiftKey && !e.isComposing) { e.preventDefault(); ask($('#ask-q').value); } });
-  $('#ask-open').addEventListener('click', () => {
-    viewer.show('document');
-    document.querySelector('[data-panel="ask"]').scrollIntoView({behavior: 'smooth', block: 'start'});
-    $('#ask-q').focus({preventScroll: true});
-  });
   $('#ask-new').addEventListener('click', () => { if (!$('#ask-send').disabled) { clearChat(); remember(); $('#ask-q').focus(); } });
   function clearChat() {
     asked = [];
@@ -1897,7 +1892,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!c || !c.paywall) return;
     const has = new Set(c.entitlements || []);
     if (window.NotebookWork) NotebookWork.lock(!has.has('ai'));
-    for (const [sel, need, plan] of [['#summary-make', 'ai', 'Medium'], ['#translate-make', 'ai', 'Medium'], ['#ask-open', 'ai', 'Medium'], ['#studio-audio', 'podcast', 'Pro'], ['#studio-video', 'podcast', 'Pro']]) {
+    for (const [sel, need, plan] of [['#summary-make', 'ai', 'Medium'], ['#translate-make', 'ai', 'Medium'], ['#ask-send', 'ai', 'Medium'], ['#studio-audio', 'podcast', 'Pro'], ['#studio-video', 'podcast', 'Pro']]) {
       const button = $(sel);
       if (!button || has.has(need)) continue;
       button.classList.add('plan-lock');
