@@ -235,12 +235,12 @@
   .org-merge-cover:hover,.org-merge-cover:focus-visible{border-color:#1a3c34;box-shadow:0 3px 12px #1a3c3426}
   .org-merge-cover img{display:block;width:100%;max-height:220px;aspect-ratio:3/4;object-fit:contain;background:#f7f4ed;border-radius:5px}
   .org-merge-cover span{display:block;margin-top:5px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;font-size:11px;font-weight:700}
-  #orgReaderDialog{width:min(94vw,1050px);max-width:94vw;max-height:94dvh;padding:18px 14px 14px;border:1px solid #e7e2f2;border-radius:18px;background:#fff;box-shadow:0 24px 80px #11182755;overflow:hidden}
+  #orgReaderDialog{box-sizing:border-box;width:min(94vw,1050px);max-width:94vw;max-height:94dvh;padding:10px;border:1px solid #e7e2f2;border-radius:18px;background:#fff;box-shadow:0 24px 80px #11182755;overflow:hidden}
   #orgReaderDialog::backdrop{background:#111827b8}
-  .org-reader-close{position:sticky;top:0;float:right;z-index:10;width:34px;height:34px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#374151;cursor:pointer;font-size:22px;line-height:1}
-  #orgReader{background:#fff;border:0;border-radius:12px;padding:.6rem;position:relative;clear:both;max-height:calc(94dvh - 100px);overflow:auto;scrollbar-width:none}
+  .org-reader-close{position:absolute;top:8px;right:8px;z-index:10;width:34px;height:34px;border-radius:999px;border:1px solid #e5e7eb;background:#fff;color:#374151;cursor:pointer;font-size:22px;line-height:1}
+  #orgReader{background:#fff;border:0;border-radius:12px;padding:.3rem;position:relative;max-height:calc(94dvh - 24px);overflow:auto;scrollbar-width:none}
   #orgReader::-webkit-scrollbar{display:none}
-  .org-reader-bar{display:flex;align-items:center;justify-content:center;gap:.5rem;font-size:12px;font-weight:800;margin-bottom:.5rem;color:#374151}
+  .org-reader-bar{display:flex;align-items:center;justify-content:center;gap:.5rem;font-size:12px;font-weight:800;margin-bottom:.35rem;color:#374151}
   .org-reader-bar button{border:1px solid #e5e7eb;background:#fff;border-radius:999px;min-width:30px;padding:.25rem .6rem;font-size:12px;font-weight:800;cursor:pointer;color:#374151}
   #orgBook{margin:0 auto}
   #orgBook .opf-page{background:#fff;display:grid;place-items:center;overflow:hidden}
@@ -2108,7 +2108,7 @@ async function orgReaderBuild(){
     }
     if(shapes.length){ shapes.sort((a,b)=>a-b); ratio=shapes[Math.floor(shapes.length/2)]; }
   }catch(e){}
-  const avail=Math.max(280,(wrap.clientWidth||600)-24);
+  const avail=Math.max(280,Math.min((window.innerWidth||800)*0.94,1050)-32);
   const single=avail<520;
   // Edit-toolbar zoom: rebuild the book bigger/smaller (clamped to the
   // engine limits); the wrap scrolls once it overflows (org-zoomed).
@@ -2117,6 +2117,8 @@ async function orgReaderBuild(){
   const maxWidth=single?Math.min(460,avail):Math.min(460,avail/2);
   const PW=Math.round(Math.max(140,Math.min(maxWidth,maxHeight*safeRatio)*orgZoom));
   const PH=Math.round(PW/safeRatio);
+  const dialog=document.getElementById('orgReaderDialog');
+  if(dialog) dialog.style.width=`min(94vw, ${PW*(single?1:2)+32}px)`;
   try{ await orgBookEngine(); }catch(e){
     const b0=document.getElementById('orgBook');
     if(b0) b0.innerHTML='<p class="org-reader-empty">'+L('Preview unavailable','Pratinjau tidak tersedia')+'</p>';
