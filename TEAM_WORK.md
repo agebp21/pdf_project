@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-AUTO-SUMMARY-PAGES (30 Okt, Codex): 2da6c68 live. Sidebar halaman per sumber, Intisari otomatis sebagai tampilan awal, Chat langsung tersedia, PDF asli lewat nomor halaman. Auto AI hanya untuk entitlement i setelah sumber siap. QA lokal/live desktop/HP, 212 halaman, dua sumber, Basic tanpa AI lulus. Backup /root/pdf_project-code-backup-auto-summary-pages-20261030223055.tgz.
+
 - NOTEBOOK-FROZEN-CHAT (30 Okt, Codex): df8103f live. Chat selalu terlihat ketika PDF digulir dan otomatis hadir setelah tambah sumber; tombol Buka chat di Studio dihapus. QA lokal/live desktop/HP dan 212 halaman lulus. Backup /root/pdf_project-code-backup-chat-frozen-20261030180252.tgz.
 
 - NOTEBOOK-DOCUMENT-CHAT-COMBINED (30 Okt, Codex): 20b679f live. Tab Chat dihapus; obrolan menyatu dengan halaman PDF dalam satu scroll, Studio Chat langsung melompat ke obrolan. QA lokal/live desktop/HP lulus. Backup /root/pdf_project-code-backup-chat-combined-20261030175548.tgz.

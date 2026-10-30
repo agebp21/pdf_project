@@ -2,6 +2,8 @@
 
 ## Log terbaru
 
+- 30 Oktober 2026 — live 2da6c68: setelah tambah sumber, sidebar kiri menampilkan daftar halaman beserta cuplikan teks; klik halaman membuka PDF asli pada halaman tersebut. Panel tengah membuka Intisari otomatis saat teks siap untuk akun dengan akses AI, dan Chat langsung tersedia di bawahnya. Upload beberapa sumber didebounce agar ringkasan dibuat setelah semua siap. Basic tanpa akses AI tidak memanggil model. QA lokal/live desktop/HP, PDF 212 halaman, dua sumber, tanya jawab, dan hapus sumber lulus tanpa error JS. Backup /root/pdf_project-code-backup-auto-summary-pages-20261030223055.tgz; layanan aktif dan checksum cocok.
+
 - 30 Oktober 2026 — live df8103f: Chat AI kini menetap di bawah area PDF saat halaman digulir; tambah sumber langsung membuka dokumen dan Chat tanpa tombol Buka chat. Area PDF dan riwayat Chat menggulir terpisah, kolom pertanyaan selalu terlihat. QA lokal/live desktop/HP, PDF 12/212 halaman, ringkasan manual, tanya jawab, restore, X sumber lulus tanpa error JS. Backup /root/pdf_project-code-backup-chat-frozen-20261030180252.tgz; layanan aktif dan checksum cocok.
 
 - 30 Oktober 2026 — live 20b679f: Dokumen dan Chat AI menjadi satu alur gulung di panel tengah. Tab Chat terpisah dihapus; tombol Buka chat langsung melompat ke obrolan. QA browser lokal/live desktop/HP, PDF 12/212 halaman, ringkasan dan restore lulus tanpa error JS. Backup /root/pdf_project-code-backup-chat-combined-20261030175548.tgz; layanan aktif dan checksum cocok.
