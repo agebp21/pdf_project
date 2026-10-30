@@ -182,10 +182,12 @@ class AskTests(unittest.TestCase):
             self.assertEqual(post({'text': {'0': [words]}, 'question': ' '})[0], 400)
             with mock.patch.object(server, 'ask_document', side_effect=RuntimeError('AI belum diatur')):
                 self.assertEqual(post({'text': {'0': [words]}, 'question': 'Apa?'})[0], 502)
-            with mock.patch.object(server, 'openalex_search', return_value={'results': [{'title': 'Immersive exhibition research', 'year': 2024, 'link': 'https://example.org/article'}]}) as search:
+            with mock.patch.object(server, 'openalex_search', return_value={'results': [{'title': 'Immersive exhibition research', 'year': 2024, 'link': 'https://example.org/article', 'abstract': 'Study of immersive learning. ' * 12}]}) as search:
                 first = post({'text': {'0': [words]}, 'question': 'tambah artikel tentang immersive yang blm ada di sini'})
                 self.assertEqual(first[0], 200)
                 self.assertEqual(first[1]['webSources'][0]['url'], 'https://example.org/article')
+                self.assertTrue(first[1]['autoAdd'])
+                self.assertIn('immersive learning', first[1]['webSources'][0]['abstract'])
                 self.assertEqual(search.call_args.args[0], 'immersive')
                 followup = post({'text': {'0': [words]}, 'question': 'makanya kamu yang nambahin',
                                  'history': [{'role': 'user', 'text': 'tambah artikel tentang immersive yang blm ada di sini'},

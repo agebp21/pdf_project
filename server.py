@@ -1300,7 +1300,9 @@ def external_references(request):
     if scholarly:
         works = openalex_search(topic or request, oa=True)['results']
         links = [{'title': f"{work['title']} ({work['year']})" if work.get('year') else work['title'],
-                  'url': work['link']} for work in works if work.get('link', '').startswith(('https://', 'http://'))]
+                  'url': work['link'], 'abstract': work.get('abstract') or '', 'authors': work.get('authors') or [],
+                  'journal': work.get('journal') or '', 'year': work.get('year')}
+                 for work in works if work.get('link', '').startswith(('https://', 'http://'))]
         if links:
             return links[:8], 'indeks artikel ilmiah OpenAlex'
     return research(topic or request, 'id-ID'), 'pencarian web'
@@ -4280,10 +4282,13 @@ class Handler(SimpleHTTPRequestHandler):
             request = wants_external_research(data.get('question'), history)
             if request:
                 results, origin = external_references(request)
+                auto_add = any(len(item.get('abstract', '').split()) >= 40 for item in results)
                 answer = (f'Saya menemukan referensi dari {origin} untuk melengkapi dokumen. '
-                          'Ini sumber eksternal, belum menjadi bagian PDF atau Intisari. '
-                          'Buka tautannya untuk memeriksa isi dan kelayakannya:')
-                self.send_json(200, {'answer': answer, 'citations': [], 'thoughts': '', 'webSources': results})
+                          + ('Abstrak hingga tiga artikel pertama saya masukkan ke Sumber; Intisari akan dibuat ulang. '
+                             'Yang dimasukkan adalah abstraknya, bukan naskah lengkap. ' if auto_add else
+                             'Tautan ini masih di luar Sumber. ')
+                          + 'Buka tautannya untuk memeriksa artikel asli:')
+                self.send_json(200, {'answer': answer, 'citations': [], 'thoughts': '', 'webSources': results, 'autoAdd': auto_add})
                 return
             answer, thoughts = ask_document(str(data.get('title') or 'Dokumen')[:200], text, data.get('question'),
                                             history, data.get('work'), include_thoughts=True)
