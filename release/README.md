@@ -1,52 +1,40 @@
-# Mengantre rilis MyFlipbook (untuk semua agen AI, di PC mana pun)
+# Alur kerja dan rilis MyFlipbook (untuk semua agen AI, di PC mana pun)
 
-Sejak 31 Oktober 2026 (keputusan owner) hanya sesi **Claude di PC owner** yang commit ke `v2`,
-push `v2`/`main`, dan men-deploy myflipbookpro.com. Agen lain — Codex, AI di PC lain, siapa pun —
-menyerahkan pekerjaannya lewat GitHub dengan alur ini. Tidak perlu akses ke PC owner atau VPS.
+Keputusan owner, 31 Oktober 2026:
 
-## Alur
+- **PC lain (Codex, AI lain):** kerjakan dan **uji di lokal dulu**, baru commit dan push ke
+  `v2` di GitHub.
+- **PC owner (sesi Claude):** satu-satunya yang **men-deploy ke VPS** (myflipbookpro.com) dan
+  memindahkan `main`. `main` selalu sama dengan yang sedang live.
 
-1. Ambil kode terbaru dan buat branch dari `origin/v2`:
+## Untuk agen di PC lain
 
-   ```bash
-   git fetch origin
-   git switch -c agent/<nama-agen>-<topik> origin/v2      # contoh: agent/codex-notebook-quiz
-   ```
+1. Mulai dari yang terbaru: `git fetch origin && git switch v2 && git pull --rebase origin v2`.
+2. Kerjakan, lalu **uji di lokal** sebelum commit:
+   - jalankan situs lokal (`python server.py --port <port>`; lihat README) dan coba
+     perubahannya di browser, termasuk ukuran HP;
+   - `node` untuk `tests/*.test.cjs` + `tests/qa-*.cjs` yang relevan, dan
+     `python -m unittest discover -s tests`.
+3. Commit dengan pesan yang jelas. Di badan pesan tulis **tes yang dijalankan dan hasilnya**
+   apa adanya (termasuk yang gagal atau tidak bisa dijalankan), dan bila ada: hal yang perlu
+   diperhatikan saat deploy (migrasi DB, variabel `.env` baru — tanpa isi kunci, perlu restart
+   admin, dll.).
+4. Sebelum push: `git pull --rebase origin v2`, uji ulang bila ada yang berubah, lalu
+   `git push origin v2`.
+5. Selesai. **Jangan men-deploy, jangan menyentuh VPS, jangan push ke `main`.** Bila ingin
+   perubahan segera live, beri tahu owner; PC owner yang men-deploy.
 
-2. Kerjakan dan uji di branch itu. Minimal: `node` untuk `tests/*.test.cjs` + `tests/qa-*.cjs`
-   yang relevan, dan `python -m unittest discover -s tests`. Catat hasilnya apa adanya, termasuk
-   tes yang gagal atau tidak bisa dijalankan.
-3. Tambahkan satu file `release/<nama-branch-tanpa-agent/>.md` (contoh
-   `release/codex-notebook-quiz.md`) berisi:
+Pekerjaan besar atau eksperimen boleh di branch sendiri (`agent/<nama>-<topik>`) dulu, lalu
+digabung ke `v2` setelah lulus uji lokal.
 
-   ```markdown
-   # <judul singkat>
-   - Agen / PC: <nama agen, PC mana>
-   - Dasar: origin/v2 @ <hash saat branch dibuat>
-   - Ringkasan untuk owner: <apa yang berubah, dalam bahasa sederhana>
-   - File utama: <daftar>
-   - Tes: <perintah + hasil>
-   - Perlu diperhatikan saat deploy: <migrasi DB, isi .env baru, restart admin, dll. — tanpa isi kunci>
-   ```
+## Untuk PC owner (sesi Claude) saat men-deploy
 
-4. Commit, lalu sebelum push perbarui dari `v2` lagi supaya bersih digabung:
-
-   ```bash
-   git fetch origin && git rebase origin/v2
-   git push -u origin agent/<nama-agen>-<topik>
-   ```
-
-5. Selesai. Jangan push ke `v2`/`main`, jangan merge sendiri, jangan menyentuh VPS. Bila owner
-   ingin, boleh juga membuka Pull Request di GitHub dari branch itu ke `v2` (tidak wajib).
-
-## Yang dilakukan Claude (penerima)
-
-`git fetch` → `git branch -r --list 'origin/agent/*'` → baca `release/*.md` di tiap branch →
-tinjau diff, jalankan tes penuh → gabungkan ke `v2` (file `release/<…>.md` dipindah ke catatan
-DEPLOY.md lalu dihapus) → deploy sesuai DEPLOY.md → hapus branch yang sudah dirilis.
+`git fetch` → tinjau commit baru di `origin/v2` sejak yang live (`git log origin/main..origin/v2`)
+→ jalankan tes penuh pada `git archive` dari commit yang akan dirilis → deploy sesuai DEPLOY.md
+(nama backup unik) → `main` disamakan dengan commit itu → catat di DEPLOY.md.
 
 ## Aturan yang tetap berlaku
 
 - Kunci, password, isi `.env` tidak pernah ditulis di repo atau chat.
 - Teks tampilan: Bahasa Indonesia baku + Inggris, bukan Jawa.
-- Jangan menimpa atau menghapus pekerjaan agen lain; satu branch per topik.
+- Jangan menimpa atau menghapus pekerjaan agen lain.

@@ -1,10 +1,9 @@
 # Deploy & Update myflipbookpro.com — prosedur siji kanggo kabeh agen AI
 
-> **Siapa yang men-deploy (keputusan owner, 31 Oktober 2026): hanya sesi Claude di PC owner.**
-> Agen lain, juga AI di PC lain, menyerahkan pekerjaan lewat branch `agent/<nama>-<topik>` berisi
-> `release/<nama-branch>.md` (lihat [release/README.md](release/README.md)); jangan push ke
-> `v2`/`main` dan jangan menyentuh VPS. Satu orang yang deploy =
-> tidak ada lagi dua deploy bertabrakan atau backup tertimpa (lihat log 24 Okt 00:11).
+> **Siapa yang men-deploy (keputusan owner, 31 Oktober 2026): hanya PC owner (sesi Claude).**
+> Agen di PC lain menguji di lokal lalu push ke `v2`; mereka tidak menyentuh VPS dan tidak
+> memindahkan `main`. PC owner men-deploy dari `v2`, lalu menyamakan `main` dengan yang live.
+> Lihat [release/README.md](release/README.md).
 
 ## Log terbaru
 
