@@ -198,15 +198,12 @@
 
 ## 📌 Status terkini (diperbarui 2026-10-23 oleh Claude) — BACA DULU
 
-### 🚀 Antrean rilis (diisi agen lain, dikerjakan Claude)
+### 🚀 Antrean rilis
 
-Rilis (commit ke `v2`, push, deploy) hanya oleh Claude sejak 31 Okt 2026 (keputusan owner).
-Agen lain: push branch `agent/<nama>-<topik>`, lalu tambahkan satu baris di bawah.
-Claude memindahkan baris ke DEPLOY.md setelah live.
-
-| Tanggal | Agen | Branch / commit | Ringkasan | Tes yang dijalankan |
-|---|---|---|---|---|
-| – | – | – | (kosong) | – |
+Rilis (commit ke `v2`, push, deploy) hanya oleh Claude di PC owner sejak 31 Okt 2026 (keputusan
+owner). Antrean = branch `origin/agent/*` di GitHub, masing-masing membawa
+`release/<nama-branch>.md`. Alur lengkap (berlaku juga untuk AI di PC lain):
+[release/README.md](release/README.md). File ini tidak perlu diedit untuk mengantre.
 
 
 **Tambahan lokal Codex 23 Okt — HOME-10 selesai:** tulisan merek di atas sampul diganti logo lengkap MyFlipbook Pro (badge bawah tetap ikon buku) dan prototipe hero menjadi10halaman total. Berkas dan QA ada pada catatan paling atas. **Belum commit/push/deploy; status live di bawah belum berubah.**
