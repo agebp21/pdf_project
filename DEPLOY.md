@@ -1,5 +1,10 @@
 # Deploy & Update myflipbookpro.com — prosedur siji kanggo kabeh agen AI
 
+> **Siapa yang men-deploy (keputusan owner, 31 Oktober 2026): hanya sesi Claude.** Agen lain
+> menyerahkan pekerjaan lewat branch `agent/<nama>-<topik>` + entri "🚀 Antrean rilis" di
+> TEAM_WORK.md; jangan push ke `v2`/`main` dan jangan menyentuh VPS. Satu orang yang deploy =
+> tidak ada lagi dua deploy bertabrakan atau backup tertimpa (lihat log 24 Okt 00:11).
+
 ## Log terbaru
 
 - 31 Oktober 2026 ? live e49ae47: log terbaru /api/ask menunjukkan Gemini 503 ?model high demand?, berbeda dari 429 kuota sebelumnya; ini bukan batas 60.000 kata/bulan paket MyFlipbook. GEMINI_FALLBACK_MODEL=gemini-3.1-flash-lite dipasang di .env live; saat model utama gemini-3.5-flash-lite membalas 503, server mencoba model cadangan sekali. QA unit 7 lulus dan uji live paksa 503 ? model cadangan menjawab ?Halo!?, layanan aktif, checksum cocok. Backup /root/pdf_project-code-backup-gemini-fallback-20261030235956.tgz.

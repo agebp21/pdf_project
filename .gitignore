@@ -11,3 +11,15 @@ Thumbs.db
 # Stray OCR data at repo root (used copy lives in assets/vendor/ocr/)
 eng.traineddata
 .data/
+# Local-only material at the repo root (owner's design files, promo video, notes with links,
+# deploy leftovers): never part of the site or the repo.
+/Link appgemini*.txt
+/*.mp4
+/*.tgz
+/Logo Warna - MyFlipBook.png
+/background.png
+/background-fixed.png
+/banner MFBP.png
+/Paket & Harga-html/
+/Paket & Harga-html.zip
+/nusantara-mahayatra-video-mapping-*.svg

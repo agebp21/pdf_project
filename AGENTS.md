@@ -9,8 +9,9 @@
 3. Cocokkan tugas terbaru pengguna dengan status aktual kode. Catatan handoff adalah konteks, bukan pengganti pemeriksaan kode.
 4. Untuk koordinasi beberapa AI, gunakan [TEAM_WORK.md](TEAM_WORK.md). Dokumen ini tidak otomatis memerintahkan spawning agen atau pengerjaan seluruh backlog.
 5. **Status terkini dan siapa mengerjakan apa: bagian "📌 Status terkini" di paling atas [TEAM_WORK.md](TEAM_WORK.md).** Perbarui bagian itu setiap selesai bekerja.
-6. **Sebelum menyentuh VPS / situs live (myflipbookpro.com): baca [DEPLOY.md](DEPLOY.md)** — satu prosedur deploy untuk semua agen, dan catat setiap deploy di "Log deploy". Yang di-deploy hanya commit yang sudah di-push; jangan pernah men-deploy file yang belum di-commit.
-7. Kunci, password, dan isi `.env` tidak pernah ditulis di repo atau chat.
+6. **Rilis hanya oleh Claude (keputusan owner, 31 Oktober 2026).** Commit ke `v2`, push `v2`/`main`, dan deploy ke myflipbookpro.com dikerjakan oleh sesi Claude saja. Agen lain (Codex, dll.) tetap boleh mengerjakan kode, tetapi: kerjakan di branch sendiri `agent/<nama>-<topik>` (atau worktree), commit + tes di sana, push branch itu, lalu tulis di [TEAM_WORK.md](TEAM_WORK.md) bagian **"🚀 Antrean rilis"** (branch, commit, ringkasan, tes yang sudah dijalankan). Jangan push ke `v2`/`main` dan jangan menyentuh VPS. Claude meninjau, menjalankan tes, menggabungkan, men-deploy, dan mencatat di DEPLOY.md.
+7. **Sebelum menyentuh VPS / situs live (myflipbookpro.com): baca [DEPLOY.md](DEPLOY.md)** — satu prosedur deploy untuk semua agen, dan catat setiap deploy di "Log deploy". Yang di-deploy hanya commit yang sudah di-push; jangan pernah men-deploy file yang belum di-commit.
+8. Kunci, password, dan isi `.env` tidak pernah ditulis di repo atau chat.
 
 ## Arah produk dan keputusan pengguna
 

@@ -198,6 +198,17 @@
 
 ## 📌 Status terkini (diperbarui 2026-10-23 oleh Claude) — BACA DULU
 
+### 🚀 Antrean rilis (diisi agen lain, dikerjakan Claude)
+
+Rilis (commit ke `v2`, push, deploy) hanya oleh Claude sejak 31 Okt 2026 (keputusan owner).
+Agen lain: push branch `agent/<nama>-<topik>`, lalu tambahkan satu baris di bawah.
+Claude memindahkan baris ke DEPLOY.md setelah live.
+
+| Tanggal | Agen | Branch / commit | Ringkasan | Tes yang dijalankan |
+|---|---|---|---|---|
+| – | – | – | (kosong) | – |
+
+
 **Tambahan lokal Codex 23 Okt — HOME-10 selesai:** tulisan merek di atas sampul diganti logo lengkap MyFlipbook Pro (badge bawah tetap ikon buku) dan prototipe hero menjadi10halaman total. Berkas dan QA ada pada catatan paling atas. **Belum commit/push/deploy; status live di bawah belum berubah.**
 
 **Live (2026-10-23):** https://myflipbookpro.com = commit `7827ed6`. Ringkasan lengkap 20–23 Okt (flipbook: suara kertas 2 rekaman, belok 0,45 dtk, 1 scroll = 1 belokan, mundur melengkung, teks tajam; halaman flipbook tanpa bingkai & tanpa scroll; beranda: banner dwibahasa + hero + pratinjau prototipe; PWA; API pemantauan admin untuk AI lain): **[HANDOFF_2026-10-23.md](HANDOFF_2026-10-23.md)**. AI live MATI sampai kredit Gemini / kunci Sumopod tersedia (owner). Kunci API pemantauan `audit-ai` hanya di VPS `/root/myflipbook-monitor-api-key.txt` + lokal `.data/monitor-api-key.txt` — jangan ditampilkan.
