@@ -75,8 +75,11 @@ class Quota(unittest.TestCase):
         # Medium: no office limit.
         with server.get_accounts().connect() as db:
             db.execute("UPDATE users SET plan='medium', plan_expires_at=? WHERE email='q@example.com'", (int(time.time()) + 86400,))
+        self.assertNotIn('ai', usage['quotas'], 'Basic has no AI: no AI allowance shown')
         self.assertNotEqual(convert()[0], 429)
-        self.assertIsNone(self.call('GET', '/api/auth/usage')[1]['quotas']['office']['limit'])
+        medium = self.call('GET', '/api/auth/usage')[1]['quotas']
+        self.assertIsNone(medium['office']['limit'])
+        self.assertEqual((medium['ai']['used'], medium['ai']['limit']), (0, server.QUOTAS['medium']['ai']), 'Medium sees its AI allowance')
 
     def test_ai_tools_share_one_allowance(self):
         # Summary and Ask the document spend the same AI allowance; the podcast was taken out (402, even for Pro).

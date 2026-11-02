@@ -78,6 +78,9 @@
 .book-note-chat-form input:focus{outline:2px solid #1f3d36;outline-offset:1px}
 .book-note-chat-send{flex:none;padding:9px 16px;border:0;border-radius:999px;background:#1f3d36;color:#fff;font:700 13px system-ui,sans-serif;cursor:pointer}
 .book-note-chat-send:disabled{opacity:.5;cursor:default}
+.book-note-chat-left{flex:none;margin:0;font-size:12px;color:#78716c;text-align:center}
+.book-note-chat-left[hidden]{display:none}
+.book-note-chat-left.is-out{color:#9f1d1d;font-weight:700}
 .book-note-grip{position:absolute;right:2px;bottom:2px;width:22px;height:22px;cursor:nwse-resize;touch-action:none;border-radius:0 0 12px 0;background:linear-gradient(135deg,transparent 50%,rgba(28,25,23,.28) 50%,rgba(28,25,23,.28) 58%,transparent 58%,transparent 70%,rgba(28,25,23,.28) 70%,rgba(28,25,23,.28) 78%,transparent 78%)}
 .book-note-grip:hover{background-color:rgba(28,25,23,.06)}
 .book-note-editor{width:400px}

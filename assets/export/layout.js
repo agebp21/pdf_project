@@ -1306,7 +1306,8 @@
      quoted text) → its highlight goes too,
      onAsk({page, quote, note, question, history}) → Promise<answer>: a note linked to a
      highlight opens as wide as the book with a chat under it, answered by the server's AI
-     (only where a server can answer); askLabels: {intro, placeholder, send, thinking, add}} */
+     (only where a server can answer); askLabels: {intro, placeholder, send, thinking, add},
+     allowance() → Promise<{text, out}|null>: the member's AI allowance, shown under the chat} */
   bind(options) {
     const self = this, pages = options.pages;
     let notes = self.load(options.key), editor = null, reader = null, list = null, editing = null, timer = 0, saved = true;
@@ -1540,11 +1541,20 @@
             answer.suggestions = reply && Array.isArray(reply.suggestions) ? reply.suggestions.filter(s => typeof s === 'string' && s.trim()).slice(0, 3) : [];
             if (!answer.text) { answer.text = 'No answer came back. Try again.'; answer.error = true; }
           }, cause => { answer.text = (cause && cause.message) || 'The AI could not answer. Try again.'; answer.error = true; })
-          .then(() => { answer.pending = false; if (wrap.isConnected) paint(); });
+          .then(() => { answer.pending = false; if (wrap.isConnected) { paint(); left(); } });
       };
+      // What is left of the AI allowance, under the input (hidden where there is none to show).
+      const allowance = document.createElement('p'); allowance.className = 'book-note-chat-left'; allowance.hidden = true;
+      function left() {
+        if (!options.allowance) return;
+        Promise.resolve().then(options.allowance).then(info => {
+          allowance.hidden = !(info && info.text);
+          if (info && info.text) { allowance.textContent = info.text; allowance.classList.toggle('is-out', !!info.out); }
+        }, () => { allowance.hidden = true; });
+      }
       form.appendChild(input); form.appendChild(send);
-      wrap.appendChild(scroll); wrap.appendChild(chips); wrap.appendChild(form);
-      paint();
+      wrap.appendChild(scroll); wrap.appendChild(chips); wrap.appendChild(form); wrap.appendChild(allowance);
+      paint(); left();
       return wrap;
     }
     // Writing a note (item -1 = new).

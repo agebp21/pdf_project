@@ -18,9 +18,10 @@ const pages = [0, 1].map(i => {
   return p;
 });
 Object.defineProperty(w, 'innerWidth', { value: 1200 }); Object.defineProperty(w, 'innerHeight', { value: 800 });
-const asked = []; let answer = null;
+const asked = []; let answer = null, left = 50, checks = 0;
 const notes = N.bind({ key: N.key('Chat', 2, 0.7), title: 'Chat', pages, goPage: () => {}, open: $('#notes'), blank: false,
-  onAsk: ask => { asked.push(ask); return new Promise((ok, no) => { answer = { ok, no }; }); },
+  onAsk: ask => { asked.push(ask); left--; return new Promise((ok, no) => { answer = { ok, no }; }); },
+  allowance: () => { checks++; return Promise.resolve(left ? { text: 'Sisa jatah AI: ' + left + ' dari 50' } : { text: 'Jatah AI habis', out: true }); },
   askLabels: { send: 'Kirim', add: '＋ Tambahkan ke catatan', starters: ['Beri saran praktis', 'Apa contohnya?'] } });
 const items = i => (notes.notes()[i] || { items: [] }).items;
 
@@ -37,6 +38,8 @@ const items = i => (notes.notes()[i] || { items: [] }).items;
   card.querySelector('.book-note-card-close').click();
   assert.equal($('.book-note-card'), null, '✕ closes it');
   pages[1].querySelector('.book-note-tab.has-note').click();
+  await tick(); await tick();
+  assert.equal($('.book-note-chat-left').hidden, false); assert.equal($('.book-note-chat-left').textContent, 'Sisa jatah AI: 50 dari 50', 'allowance under the chat');
 
   const input = $('.book-note-chat-form input'), form = $('.book-note-chat-form');
   const chips = () => [...w.document.querySelectorAll('.book-note-chat-chip')].map(c => c.textContent);
@@ -54,6 +57,8 @@ const items = i => (notes.notes()[i] || { items: [] }).items;
   const msgs = () => [...w.document.querySelectorAll('.book-note-chat-msg')].map(m => m.className.replace('book-note-chat-msg ', '') + ':' + m.querySelector('p').textContent);
   assert.deepEqual(msgs(), ['is-user:Beri saran praktis', 'is-assistant:Saran: mulai dari guru (hlm. 2).']);
   assert.deepEqual(chips(), ['Bagaimana caranya?', 'Siapa yang memulai?'], "the AI's follow-ups to click");
+  await tick(); await tick();
+  assert.equal($('.book-note-chat-left').textContent, 'Sisa jatah AI: 49 dari 50', 'allowance refreshed after an answer');
 
   // Add the answer to the note: the note grows, the card shows it.
   $('.book-note-chat-add').click();
@@ -71,10 +76,14 @@ const items = i => (notes.notes()[i] || { items: [] }).items;
   assert.deepEqual(asked[2].history, [{ role: 'user', text: 'Beri saran praktis' }, { role: 'assistant', text: 'Saran: mulai dari guru (hlm. 2).' }, { role: 'user', text: 'Tambah dari buku' }]);
   answer.ok('Oke.'); await tick(); await tick();
 
-  // Closed and opened again: the chat is still there (this visit).
-  notes.close();
+  // Closed and opened again: the chat is still there (this visit); the allowance is read again.
+  notes.close(); left = 0;
+  const before = checks;
   pages[1].querySelector('.book-note-tab.has-note').click();
   assert.equal(w.document.querySelectorAll('.book-note-chat-msg').length, 6);
+  await tick(); await tick();
+  assert.ok(checks > before);
+  assert.equal($('.book-note-chat-left').textContent, 'Jatah AI habis'); assert.ok($('.book-note-chat-left').classList.contains('is-out'), 'used up: shown in red');
   notes.close();
 
   // A plain quote note keeps the small card, no chat.

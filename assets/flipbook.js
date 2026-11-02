@@ -309,7 +309,7 @@
       notes?.close();
       notes = FlipbookNotes.bind({key: keyFor(FlipbookNotes.key(name, newElements.length, ratio)), title: name.replace(/\.pdf$/i, ''),
         pages: newElements, goPage, open: $('#notes'), blank: false, bookmark: (index, on) => marks.set(index, on),
-        onRemove: (index, said) => highlights?.forget(index, said), onAsk: askPassage,
+        onRemove: (index, said) => highlights?.forget(index, said), onAsk: askPassage, allowance: aiAllowance,
         askLabels: {intro: L('Ask anything, or develop this passage into new writing. The AI may draw on knowledge beyond the book.', 'Tanya apa saja, atau kembangkan bagian ini jadi tulisan baru. AI boleh memakai pengetahuan di luar buku.'),
           placeholder: L('Ask about this passage…', 'Tanya tentang bagian ini…'), send: L('Send', 'Kirim'),
           thinking: L('✨ Thinking…', '✨ Sedang menjawab…'), add: L('＋ Add to note', '＋ Tambahkan ke catatan'),
@@ -811,6 +811,19 @@
     if (!response.ok || !data.text) throw Error(data.error || L('The summary could not be made.', 'Ringkasan gagal dibuat.'));
     bookSummary = {lang: data.lang || lang, text: data.text};
     if (libraryId) archiveBook();                              // keep My Library up to date
+  }
+  // What is left of the member's AI allowance (per QUOTA_WINDOW_HOURS), for the note chat;
+  // null where there is no limit to show (Basic has no AI allowance, a local copy no limits).
+  async function aiAllowance() {
+    let u = null;
+    try { const r = await fetch('/api/auth/usage', {cache: 'no-store'}); if (r.ok) u = await r.json(); } catch (e) {}
+    const ai = u && u.limited && u.quotas && u.quotas.ai;
+    if (!ai || ai.limit == null) return null;
+    const left = Math.max(0, ai.limit - ai.used);
+    const at = ai.resetAt ? new Date(ai.resetAt * 1000).toLocaleTimeString(L('en-GB', 'id-ID'), {hour: '2-digit', minute: '2-digit'}) : '';
+    return {out: !left, text: left
+      ? L(`AI allowance: ${left} of ${ai.limit} left`, `Sisa jatah AI: ${left} dari ${ai.limit}`) + (at ? L(` · refills at ${at}`, ` · terisi lagi pukul ${at}`) : '')
+      : L(`AI allowance used up · refills at ${at}`, `Jatah AI habis · terisi lagi pukul ${at}`)};
   }
   // Chat under a highlight's note: the question about that passage, answered by the server's
   // AI (ASK_MODEL, Gemini) from its page and the pages beside it; page citations stay as "hlm. N".

@@ -110,6 +110,9 @@ class FriendlyErrors(unittest.TestCase):
             self.assertNotIn('sk-', str(caught.exception)); self.assertNotIn('prepayment', str(caught.exception))
             self.assertIn(str(code), log.call_args[0][0], 'the details go to the server log')
         self.assertEqual(messages_en.english(server.AI_UNAVAILABLE), 'The AI service is unavailable for now. Please try again later.')
+        for words in (server.AI_QUOTA, server.AI_BUSY, server.AI_UNAVAILABLE):
+            self.assertNotRegex(words, r'(?i)gemini|billing|google|api', 'members never hear of our provider')
+        self.assertEqual(messages_en.english(server.AI_QUOTA), 'MyFlipbook AI is in heavy use right now. Please wait a moment and try again.')
 
 
 if __name__ == '__main__':

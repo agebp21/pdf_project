@@ -192,6 +192,7 @@ EXACT = {
     'AI belum diatur di server (GEMINI_API_KEY di .env).': 'The AI is not set up on the server yet.',
     'Layanan AI sedang tidak tersedia untuk sementara. Coba lagi nanti.': 'The AI service is unavailable for now. Please try again later.',
     'Layanan AI sedang sibuk. Coba lagi beberapa saat lagi.': 'The AI service is busy. Please try again in a moment.',
+    'AI MyFlipbook sedang banyak dipakai. Tunggu sebentar, lalu coba lagi.': 'MyFlipbook AI is in heavy use right now. Please wait a moment and try again.',
     'AI tidak bisa memproses permintaan ini. Coba bagian dokumen yang lebih pendek.': 'The AI could not process this request. Try a shorter part of the document.',
     'Link reset tidak valid.': 'That reset link is not valid.',
     'Link reset tidak valid atau sudah kedaluwarsa. Minta link baru dari halaman masuk.': 'That reset link is invalid or has expired. Ask for a new one from the log-in page.',

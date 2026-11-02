@@ -1219,7 +1219,9 @@ def summarize_highlight(text):
 
 AI_UNAVAILABLE = 'Layanan AI sedang tidak tersedia untuk sementara. Coba lagi nanti.'
 AI_BUSY = 'Layanan AI sedang sibuk. Coba lagi beberapa saat lagi.'
-AI_QUOTA = 'Kuota API Gemini sedang mencapai batas. Periksa pemakaian dan billing di Google AI Studio, lalu coba lagi setelah kuota tersedia.'
+# Our provider's own limit (Gemini 429): the member hears it in MyFlipbook's words, never the
+# provider, keys or billing; the details stay in the server log for us.
+AI_QUOTA = 'AI MyFlipbook sedang banyak dipakai. Tunggu sebentar, lalu coba lagi.'
 
 
 def ai_refused(provider, code, detail):
@@ -3773,6 +3775,8 @@ class Handler(SimpleHTTPRequestHandler):
         window, now = quota_window(), int(time.time())
         out = {}
         for kind in QUOTA_LABELS:
+            if kind == 'ai' and user['plan'] not in accounts.PAID:
+                continue                        # AI needs Medium or Pro: no allowance to show for Basic
             limit = quota_limit(user, kind)
             used, first = get_accounts().usage_in(user['id'], kind, now - window)
             out[kind] = dict(used=used, limit=limit, resetAt=(first + window) if first else None)
