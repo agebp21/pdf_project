@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- READER-AI-CHAT (2 Nov, Claude): 4c0b50e live. Pembaca flipbook: "✨ Ringkas buku" lewat Gemini; ringkasan stabilo jadi intisari sungguhan; catatan ringkasan/terjemahan selebar buku dengan chat AI (boleh di luar buku, tanpa web search, pilihan pertanyaan lanjutan, jawaban bisa masuk catatan, tutup ✕). Catatan/stabilo masih tersimpan di browser saja (belum sinkron akun). Backup /root/pdf_project-code-backup-reader-ai-chat-20261102102427.tgz.
+
 - GEMINI-FALLBACK-503 (31 Okt, Codex): e49ae47 live. Model utama gemini-3.5-flash-lite mendapat 503 high demand; fallback gemini-3.1-flash-lite aktif di .env VPS. Uji langsung model cadangan dan uji paksa 503 ? fallback sukses. Batas 60.000 kata/bulan MyFlipbook terpisah dari rate limit Gemini. Backup /root/pdf_project-code-backup-gemini-fallback-20261030235956.tgz.
 
 

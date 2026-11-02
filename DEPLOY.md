@@ -7,6 +7,8 @@
 
 ## Log terbaru
 
+- 2 November 2026 — Claude: live `4c0b50e` (dari `v2`). AI di pembaca flipbook: tombol 📋 kini bisa "✨ Ringkas buku" (Gemini lewat /api/summary) bila buku belum punya ringkasan; ringkasan stabilo jadi intisari sungguhan (±¼ panjang teks); kartu catatan ikut berubah saat ringkasan tiba; catatan ringkasan/terjemahan terbuka selebar buku dengan chat (/api/ask + `passage`, boleh di luar buku, tanpa web search, pilihan pertanyaan, jawaban bisa ditambahkan ke catatan, tutup ✕). Tes: semua tests/*.test.cjs di tree hasil `git archive` lulus; unittest 268 dengan 12 kegagalan paywall lama yang sama seperti sebelum perubahan. Sebelum menimpa: isi live = `34f5e1d` (beda CRLF saja). Live HTTPS 200, berkas live = arsip (sha256 cocok). Backup `/root/pdf_project-code-backup-reader-ai-chat-20261102102427.tgz`. Catatan: /root berisi ±70 backup kode (aturan simpan 3 tidak dijalankan agen lain); tidak dihapus tanpa izin owner. Disk 75%.
+
 - 31 Oktober 2026 ? live e49ae47: log terbaru /api/ask menunjukkan Gemini 503 ?model high demand?, berbeda dari 429 kuota sebelumnya; ini bukan batas 60.000 kata/bulan paket MyFlipbook. GEMINI_FALLBACK_MODEL=gemini-3.1-flash-lite dipasang di .env live; saat model utama gemini-3.5-flash-lite membalas 503, server mencoba model cadangan sekali. QA unit 7 lulus dan uji live paksa 503 ? model cadangan menjawab ?Halo!?, layanan aktif, checksum cocok. Backup /root/pdf_project-code-backup-gemini-fallback-20261030235956.tgz.
 
 
