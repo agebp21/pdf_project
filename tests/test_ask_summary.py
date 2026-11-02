@@ -124,7 +124,9 @@ class AskTests(unittest.TestCase):
             out = server.ask_document('Buku', '[Halaman 2]\nIsi.', ' Apa  isinya? ', [{'role': 'user', 'text': 'Halo'}, {'role': 'ai', 'text': 'Hai'}])
         self.assertEqual(out, 'Jawabannya ini (hlm. 2).')
         system, user = sent(call)
-        self.assertIn('HANYA dari isi dokumen', system)
+        self.assertIn('UTAMAKAN isi dokumen', system)
+        self.assertIn('(di luar sumber)', system, 'beyond the sources: marked, no page numbers')
+        self.assertIn('JANGAN menulis bahwa dokumen tidak membahasnya', system, 'answers straight away')
         self.assertIn('PERMINTAAN TERAKHIR (jawab ini): Apa isinya?', user); self.assertIn('Pembaca: Halo', user); self.assertIn('Asisten: Hai', user)
 
     def test_highlighted_passage_question(self):
@@ -133,14 +135,27 @@ class AskTests(unittest.TestCase):
         system, user = sent(call)
         self.assertIn('BAGIAN YANG DISTABILO', system)
         self.assertIn('TIDAK terbatas pada isi dokumen', system, 'may answer beyond the book')
-        self.assertNotIn('Jawab HANYA dari isi dokumen', system)
+        self.assertNotIn('UTAMAKAN isi dokumen', system, 'the passage chat has its own prompt')
         self.assertIn('Jangan mengarang kutipan', system, 'still no invented references')
         self.assertIn('BAGIAN YANG DISTABILO:\nTeks yang distabilo', user)
         self.assertIn('HASIL KERJA PEMBACA:\nRingkasan catatan', user)
         with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Ya.')) as call:
             server.ask_document('Buku', '[Halaman 2]\nIsi.', 'Apa isinya?')
         self.assertNotIn('DISTABILO', sent(call)[0] + sent(call)[1], 'whole-book questions unchanged')
-        self.assertIn('Jawab HANYA dari isi dokumen', sent(call)[0], 'AI Summarizer stays inside its sources')
+        self.assertIn('UTAMAKAN isi dokumen', sent(call)[0], 'AI Summarizer: sources first')
+
+    def test_no_origin_phrases(self):
+        strip = server.strip_origin_phrases
+        self.assertEqual(strip('Berdasarkan pengetahuan umum, dhapur yang terkenal adalah Nogo Siluman (di luar sumber). '
+                               'Di dalam dokumen, Naga Siluman tercatat ber-luk 13 [77].'),
+                         'Dhapur yang terkenal adalah Nogo Siluman (di luar sumber). Naga Siluman tercatat ber-luk 13 [77].')
+        self.assertEqual(strip('Berdasarkan dokumen, ciri khusus keris (hlm. 2).\nMenurut sumber tersebut, ada naga.'),
+                         'Ciri khusus keris (hlm. 2).\nAda naga.')
+        self.assertEqual(strip('Keris ini dibuat berdasarkan dokumen kerajaan, katanya.'), 'Keris ini dibuat berdasarkan dokumen kerajaan, katanya.',
+                         'only sentence openers go')
+        with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Berdasarkan dokumen, isinya (hlm. 2).')) as call:
+            self.assertEqual(server.ask_document('Buku', '[Halaman 2]\nIsi.', 'Apa isinya?'), 'Isinya (hlm. 2).')
+        self.assertIn('JANGAN membuka atau menyelipkan frasa asal jawaban', sent(call)[0])
 
     def test_follow_ups_split_off_the_answer(self):
         self.assertEqual(server.split_follow_ups('Jawaban (hlm. 2).\nPERTANYAAN LANJUTAN: Apa contohnya? | "Siapa tokohnya?" | - Kapan terjadi?'),
@@ -152,6 +167,36 @@ class AskTests(unittest.TestCase):
         with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Ya.')) as call:
             server.ask_document('Buku', '[Halaman 2]\nIsi.', 'Ada saran?', passage='teks')
         self.assertIn('PERTANYAAN LANJUTAN:', sent(call)[0])
+
+    def test_notebook_chat_follow_ups(self):
+        # AI Summarizer chat asks for followUps: the prompt asks for them, the answer stays from the sources
+        with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Ya.')) as call:
+            server.ask_document('Buku', '[Halaman 2]\nIsi.', 'Apa isinya?', follow_ups=True)
+        system = sent(call)[0]
+        self.assertIn('PERTANYAAN LANJUTAN:', system); self.assertIn('UTAMAKAN isi dokumen', system)
+        httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True); thread.start()
+        def post(extra):
+            body = {'title': 'B', 'text': {'1': [' '.join(['kata'] * 60)]}, 'question': 'Apa isinya?', **extra}
+            request = urllib.request.Request(f'http://127.0.0.1:{httpd.server_port}/api/ask', data=json.dumps(body).encode(), method='POST',
+                                             headers={'Content-Type': 'application/json', 'X-Build-Token': server.TOKEN})
+            with urllib.request.urlopen(request) as r:
+                return json.loads(r.read())
+        try:
+            answer = ('Isinya kata (hlm. 2).\nPERTANYAAN LANJUTAN: Apa maknanya? | Siapa penulisnya?', '')
+            with mock.patch.object(server, 'ask_document', return_value=answer) as ask:
+                out = post({'followUps': True})
+                self.assertTrue(ask.call_args.kwargs['follow_ups'])
+                self.assertEqual(out['suggestions'], ['Apa maknanya?', 'Siapa penulisnya?'])
+                self.assertNotIn('PERTANYAAN', out['answer'])
+                out = post({})
+                self.assertFalse(ask.call_args.kwargs['follow_ups'])
+                self.assertNotIn('suggestions', out, 'drafts and other callers unchanged')
+        finally:
+            httpd.shutdown(); httpd.server_close(); thread.join()
+        with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Ya.')) as call:
+            server.ask_document('Buku', '[Halaman 2]\nIsi.', 'Apa isinya?')
+        self.assertNotIn('PERTANYAAN LANJUTAN', sent(call)[0], 'no follow-ups unless asked')
 
     def test_passage_question_never_searches_the_web(self):
         httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)

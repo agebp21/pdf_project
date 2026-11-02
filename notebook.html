@@ -203,6 +203,9 @@
   .ask-chips{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px;text-align:left}
   .ask-chips button{text-align:left;border:1px solid #E8E2D4;background:#fff;border-radius:14px;padding:12px 14px;font:600 13px/1.4 'Plus Jakarta Sans',sans-serif;color:#1C1917;cursor:pointer;transition:border-color .15s,box-shadow .15s,transform .15s}
   .ask-chips button:hover{border-color:#FF5C28;box-shadow:0 6px 16px rgba(28,25,23,.08);transform:translateY(-1px)}
+  .ask-followups{display:flex;flex-wrap:wrap;gap:8px;margin-top:12px}
+  .ask-followups button{border:1px solid #E8E2D4;background:#fff;border-radius:999px;padding:7px 13px;font:600 12.5px/1.35 'Plus Jakarta Sans',sans-serif;color:#1A3C34;text-align:left;cursor:pointer;transition:border-color .15s,background .15s,color .15s}
+  .ask-followups button:hover{border-color:#1A3C34;background:#1A3C34;color:#fff}
   .msg{display:flex;gap:12px;font-size:15px;line-height:1.7;color:#1C1917}
   .msg.me{justify-content:flex-end}
   .msg.me .msg-body{max-width:80%;background:#F3EFE6;border-radius:20px;padding:10px 16px;white-space:pre-wrap;overflow-wrap:anywhere}
@@ -1992,6 +1995,7 @@ window.addEventListener('DOMContentLoaded', () => {
     if ($('#ask-send').classList.contains('plan-lock')) { location.href = '/harga'; return; }
     const requestScope = sourceKey();
     $('#ask-q').value = ''; grow(); $('#ask-send').disabled = true;
+    document.querySelectorAll('#ask-log .ask-followups').forEach(el => el.remove());
     if (!retry) message('me', question);
     const {row, body} = message('ai', '');
     const sec = Object.assign(document.createElement('span'), {className: 'wait-sec'});
@@ -1999,7 +2003,7 @@ window.addEventListener('DOMContentLoaded', () => {
     const start = Date.now(), timer = setInterval(() => { sec.textContent = L(`reading the sources… ${Math.round((Date.now() - start) / 1000)} s`, `membaca sumber… ${Math.round((Date.now() - start) / 1000)} dtk`); }, 1000);
     try {
       const draftContext = currentDraft()?.text.trim() ? `\n\nDRAF DOKUMEN YANG SEDANG DIEDIT:\n${currentDraft().text.slice(0, 9000)}${selectedDraftText ? `\n\nBAGIAN YANG DIPILIH PEMBACA UNTUK DIKEMBANGKAN:\n${selectedDraftText}` : ''}` : '';
-      const r = await post('/api/ask', {title: notebookTitle || title(), sources: sourcesPayload(), question, history: asked.slice(-6), work: (window.NotebookWork ? NotebookWork.context() : '') + draftContext});
+      const r = await post('/api/ask', {title: notebookTitle || title(), sources: sourcesPayload(), question, history: asked.slice(-6), work: (window.NotebookWork ? NotebookWork.context() : '') + draftContext, followUps: true});
       clearInterval(timer);
       if (sourceKey() !== requestScope) return;
       asked.push({role: 'user', text: question}, {role: 'ai', text: r.answer, citations: r.citations || [], thoughts: r.thoughts || '', webSources: r.webSources || []}); remember();
@@ -2017,6 +2021,14 @@ window.addEventListener('DOMContentLoaded', () => {
         asked.splice(-2, 2); remember(); row.remove(); ask(question, true);
       }, 'retry'));
       body.append(tools);
+      // The AI's next questions to click (only under the newest answer).
+      const next = (r.suggestions || []).filter(q => typeof q === 'string' && q.trim()).slice(0, 3);
+      if (next.length) {
+        const box = Object.assign(document.createElement('div'), {className: 'ask-followups'});
+        box.append(...next.map(q => Object.assign(document.createElement('button'), {type: 'button', textContent: q, onclick: () => ask(q)})));
+        body.append(box);
+        if (!$('#chat-flow').hidden) document.querySelector('.viewer-body').scrollTop = document.querySelector('.viewer-body').scrollHeight;
+      }
     } catch (cause) {
       if (sourceKey() !== requestScope) return;
       clearInterval(timer); row.classList.add('error'); body.textContent = cause.message;

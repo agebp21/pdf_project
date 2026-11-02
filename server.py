@@ -694,7 +694,7 @@ def clean_work(work):
     return '\n'.join(line for line in lines if line)[:WORK_MAX_CHARS]
 
 
-def ask_document(title, text, question, history=(), work='', include_thoughts=False, passage=''):
+def ask_document(title, text, question, history=(), work='', include_thoughts=False, passage='', follow_ups=False):
     """An answer to a reader's question, from the document (and the reader's own notes on it,
     `work`) only, with source+page references. One or several sources: `text` carries bare
     `[Halaman N]` tags for one source, `[Sumber I: Name — Halaman N]` tags for several (see
@@ -714,17 +714,25 @@ def ask_document(title, text, question, history=(), work='', include_thoughts=Fa
             'yang ada dalam SUMBER. Setiap poin penting harus punya rujukan sumber dan halaman.' if multi else
             'Sebut halaman sumber dari penanda [Halaman N] dalam kurung, mis. (hlm. 12) — untuk jawaban berbahasa Inggris '
             '(p. 12). Gunakan hanya nomor halaman yang ada dalam SUMBER. Setiap poin penting harus punya rujukan halaman.')
-    system = ('Kamu asisten baca yang menjawab pertanyaan pembaca tentang dokumen di bawah. Jawab HANYA dari isi dokumen; '
-              'jangan menambah fakta, angka, atau pendapat dari luar. Ikuti maksud pertanyaan TERAKHIR, bukan mengulang '
+    system = ('Kamu asisten baca yang menjawab pertanyaan pembaca tentang dokumen di bawah. UTAMAKAN isi dokumen. Bila '
+              'dokumen tidak membahas (atau hanya sebagian membahas) yang ditanyakan, langsung jawab dari pengetahuan umum '
+              'dan tandai bagian itu "(di luar sumber)" tanpa nomor halaman. JANGAN menulis bahwa dokumen tidak membahasnya '
+              '(mis. "Dokumen tidak membahas..."), dan jangan menolak menjawab hanya karena tidak ada di dokumen. '
+              'Langsung ke isi jawaban: JANGAN membuka atau menyelipkan frasa asal jawaban seperti "Berdasarkan dokumen", '
+              '"Berdasarkan pengetahuan umum", "Menurut sumber", atau "Di dalam dokumen"; rujukan halaman dan tanda '
+              '"(di luar sumber)" sudah cukup menunjukkan asalnya. '
+              'Jangan pernah memberi nomor halaman '
+              'pada isi dari luar dokumen, dan bila tidak yakin akan suatu fakta atau angka, katakan begitu. '
+              'Ikuti maksud pertanyaan TERAKHIR, bukan mengulang '
               'jawaban sebelumnya. Percakapan sebelumnya hanya konteks. Jika pembaca meminta mengubah jawaban terakhir '
               'menjadi bentuk lain (misalnya paragraf, jurnal, tinjauan pustaka, tabel, atau bahasa lain), buat hasil baru '
               'dengan struktur dan gaya yang diminta; jangan sekadar menyalin daftar poin yang lama. Untuk permintaan '
               'jurnal, tulis prosa dengan bagian yang relevan dan penghubung antar gagasan. Jangan mengarang daftar pustaka '
               'atau referensi akademik yang tidak ada dalam sumber. Hanya jika permintaan TERAKHIR secara eksplisit '
               'meminta referensi eksternal yang belum menjadi sumber, jelaskan singkat bahwa sumber tambahan perlu '
-              'dimasukkan; jangan tambahkan catatan ini pada jawaban lain. Jika dokumen tidak membahas '
-              'jawabannya, katakan terus terang. Jawab dalam bahasa yang sama dengan pertanyaan; panjang jawaban '
-              f'mengikuti bentuk yang diminta. {cite} Tanpa markdown dekoratif (** atau tabel).'
+              'dimasukkan; jangan tambahkan catatan ini pada jawaban lain. Jawab dalam bahasa yang sama dengan pertanyaan; '
+              f'panjang jawaban mengikuti bentuk yang diminta. {cite} Aturan rujukan itu hanya untuk isi dari dokumen. '
+              'Tanpa markdown dekoratif (** atau tabel).'
               + (' Pembaca juga punya hasil kerja sendiri (catatan, ringkasan, draf jurnal, slide) di bagian "HASIL KERJA PEMBACA": '
                  'pakai untuk pertanyaan tentang pekerjaannya (mis. memeriksa, melengkapi, atau membandingkan dengan dokumen), '
                  'tetapi bedakan dengan jelas mana yang dari dokumen dan mana yang dari catatan pembaca.' if work else ''))
@@ -741,11 +749,13 @@ def ask_document(title, text, question, history=(), work='', include_thoughts=Fa
                   'suatu fakta atau angka, katakan begitu. Ikuti maksud permintaan TERAKHIR; percakapan sebelumnya hanya '
                   'konteks. Jawab dalam bahasa yang sama dengan pertanyaan; jawaban biasa ringkas dan langsung (jangan '
                   'mengulang pertanyaannya), draf artikel boleh panjang dengan judul dan paragraf. Catatan pembaca ada di '
-                  '"HASIL KERJA PEMBACA". Tanpa ** atau tabel. '
-                  f'Sesudah jawaban (juga sesudah draf artikel), tulis satu baris terakhir yang diawali "{FOLLOW_UPS}:" lalu tiga '
-                  'pertanyaan lanjutan pendek (paling banyak 8 kata) yang dipisah " | ", isinya pertanyaan nyata yang membantu '
-                  f'pembaca mengembangkan tulisannya, dalam bahasa yang sama dengan pertanyaannya. Contoh bentuk: "{FOLLOW_UPS}: '
-                  'Apa contohnya di daerah lain? | Bagaimana dampaknya bagi mahasiswa? | Siapa yang paling dirugikan?"')
+                  '"HASIL KERJA PEMBACA". Tanpa ** atau tabel.')
+    if passage or follow_ups:
+        # Three follow-up questions to click, on the answer's last line (split off by split_follow_ups).
+        system += (f' Sesudah jawaban (juga sesudah draf), tulis satu baris terakhir yang diawali "{FOLLOW_UPS}:" lalu tiga '
+                   'pertanyaan lanjutan pendek (paling banyak 8 kata) yang dipisah " | ", isinya pertanyaan nyata yang mungkin '
+                   'ingin diajukan pembaca berikutnya, dalam bahasa yang sama dengan pertanyaannya. Contoh bentuk: '
+                   f'"{FOLLOW_UPS}: Apa contohnya di daerah lain? | Bagaimana dampaknya bagi mahasiswa? | Siapa yang paling dirugikan?"')
     passage = clean_work(passage)[:HIGHLIGHT_MAX_CHARS]
     user = (f'Judul dokumen: {title}\n\n{ask_pages(text, question + " " + turns[-500:])}\n\n'
             + (f'BAGIAN YANG DISTABILO:\n{passage}\n\n' if passage else '')
@@ -756,11 +766,24 @@ def ask_document(title, text, question, history=(), work='', include_thoughts=Fa
     thoughts = ''
     if include_thoughts:
         reply, thoughts = reply
-    reply = reply.replace('**', '').replace('##', '').strip()
+    reply = strip_origin_phrases(reply.replace('**', '').replace('##', '').strip())
     if not reply:
         raise RuntimeError('AI tidak menjawab. Coba lagi.')
     reply = reply[:12000]
     return (reply, thoughts[:4000]) if include_thoughts else reply
+
+
+# "Berdasarkan dokumen, …" / "Di dalam dokumen, …" at the start of a sentence: the page
+# references and "(di luar sumber)" already say where an answer comes from.
+ORIGIN_PHRASE = re.compile(
+    r'(^|(?<=[.!?…])[ \t]+|\n[ \t]*)(?:(?:berdasarkan|menurut|sesuai(?: dengan)?) (?:isi |informasi (?:dari |dalam )?)?'
+    r'(?:dokumen|sumber|teks|pengetahuan umum)(?: (?:ini|tersebut|yang (?:ada|diberikan)))?'
+    r'|(?:di )?dalam (?:dokumen|sumber|teks)(?: (?:ini|tersebut))?),[ \t]*([a-z])?', re.I)
+
+
+def strip_origin_phrases(text):
+    """The answer without "Berdasarkan dokumen," style openers (the next word capitalized)."""
+    return ORIGIN_PHRASE.sub(lambda m: m.group(1) + (m.group(2) or '').upper(), text)
 
 
 FOLLOW_UPS = 'PERTANYAAN LANJUTAN'
@@ -4345,18 +4368,20 @@ class Handler(SimpleHTTPRequestHandler):
                           + 'Buka tautannya untuk memeriksa artikel asli:')
                 self.send_json(200, {'answer': answer, 'citations': [], 'thoughts': '', 'webSources': results, 'autoAdd': auto_add})
                 return
+            # followUps: the AI also offers three next questions to click (AI Summarizer chat)
+            follow = bool(passage) or data.get('followUps') is True
             answer, thoughts = ask_document(str(data.get('title') or 'Dokumen')[:200], text, data.get('question'),
-                                            history, data.get('work'), include_thoughts=True, passage=passage)
+                                            history, data.get('work'), include_thoughts=True, passage=passage, follow_ups=follow)
         except (ValueError, UnicodeDecodeError) as cause:
             self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
             return
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
             return
-        answer, suggestions = split_follow_ups(answer) if passage else (answer, [])
+        answer, suggestions = split_follow_ups(answer) if follow else (answer, [])
         answer, citations = ask_citations(index, names, answer, data.get('question') or '')
         self.send_json(200, {'answer': answer, 'citations': citations, 'thoughts': thoughts,
-                             **({'suggestions': suggestions} if passage else {})})
+                             **({'suggestions': suggestions} if follow else {})})
 
     def write_route(self):
         """POST {kind: 'journal'|'slides'|'quiz'|'flashcards'|'table', title, text: {page: [lines]},
