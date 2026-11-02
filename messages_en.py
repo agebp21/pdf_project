@@ -254,6 +254,9 @@ PATTERNS = [
     (r'Kuota ringkasan bulan ini sudah habis — terisi lagi (\d+) (\w+) (\d{4})\.( Upgrade ke Pro untuk kuota yang lebih besar\.)?',
      lambda m: f'This month\'s summary allowance is used up — it refills on {MONTHS_EN.get(m[2], m[2])} {m[1]}, {m[3]}.'
                + (' Upgrade to Pro for a bigger allowance.' if m[4] else '')),
+    (r'Kuota AI bulan ini sudah habis — terisi lagi (\d+) (\w+) (\d{4})\.( Upgrade ke Pro untuk kuota yang lebih besar\.)?',
+     lambda m: f'This month\'s AI allowance is used up — it refills on {MONTHS_EN.get(m[2], m[2])} {m[1]}, {m[3]}.'
+               + (' Upgrade to Pro for a bigger allowance.' if m[4] else '')),
     (r'AI tidak memproses dokumen ini \(([^)]*)\)\. Coba bagian lain atau ulangi\.', r'The AI did not process this document (\1). Try another part or again.'),
     (r'Layanan AI menolak permintaan \((\d+)\)\. ?(.*)', r'The AI service refused the request (\1). \2'),
     (r'Gambar halaman (\d+) bukan JPEG\.', r'Page image \1 is not a JPEG.'),

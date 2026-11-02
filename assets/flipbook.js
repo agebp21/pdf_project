@@ -819,11 +819,16 @@
     try { const r = await fetch('/api/auth/usage', {cache: 'no-store'}); if (r.ok) u = await r.json(); } catch (e) {}
     const ai = u && u.limited && u.quotas && u.quotas.ai;
     if (!ai || ai.limit == null) return null;
+    // the month's questions (on top of the 5-hour window): used up, that is what the member sees
+    const m = ai.month, day = m && new Date(m.resetAt * 1000).toLocaleDateString(L('en-GB', 'id-ID'), {day: 'numeric', month: 'long'});
+    if (m && m.used >= m.limit) return {out: true, used: m.limit, limit: m.limit,
+      text: L(`This month's AI quota is used up · refills on ${day}`, `Kuota AI bulan ini habis · terisi lagi ${day}`)};
     const left = Math.max(0, ai.limit - ai.used);
     const at = ai.resetAt ? new Date(ai.resetAt * 1000).toLocaleTimeString(L('en-GB', 'id-ID'), {hour: '2-digit', minute: '2-digit'}) : '';
-    return {out: !left, used: ai.used, limit: ai.limit, text: left
+    return {out: !left, used: ai.used, limit: ai.limit, text: (left
       ? L(`AI quota used: ${ai.used} of ${ai.limit}`, `Penggunaan kuota AI: ${ai.used} dari ${ai.limit}`) + (at ? L(` · refills at ${at}`, ` · terisi lagi pukul ${at}`) : '')
-      : L(`AI quota used up · refills at ${at}`, `Kuota AI habis · terisi lagi pukul ${at}`)};
+      : L(`AI quota used up · refills at ${at}`, `Kuota AI habis · terisi lagi pukul ${at}`))
+      + (m && m.used >= m.limit * 0.8 ? L(` · this month ${m.used} of ${m.limit}`, ` · bulan ini ${m.used} dari ${m.limit}`) : '')};
   }
   // Chat under a highlight's note: the question about that passage, answered by the server's
   // AI (ASK_MODEL, Gemini) from its page and the pages beside it; page citations stay as "hlm. N".

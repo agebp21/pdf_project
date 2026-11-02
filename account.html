@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="assets/img/favicon.png?v=pro">
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=pro">
 <title>Account — MyFlipbook</title>
-<script src="assets/i18n.js"></script>
+<script src="assets/i18n.js?v=ai-month1"></script>
 <link rel="stylesheet" href="assets/ui-clay.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -407,6 +407,14 @@
       const bar=el('div',{className:'bar'},el('span',{className:pct<20?'low':'',style:'width:'+pct+'%'}));
       const when=q.resetAt?t('use.refill','refills at')+' '+new Date(q.resetAt*1000).toLocaleTimeString([], {hour:'2-digit',minute:'2-digit'}):t('use.full','full');
       rows.append(el('div',{className:'row'},el('b',{textContent:names[kind]}),bar,el('span',{className:'clay-muted',textContent:left.toLocaleString()+' / '+q.limit.toLocaleString()+' '+unit+' · '+when})));
+      // AI also has a monthly limit (Medium/Pro): its own row, refilling on the 1st
+      const m=q.month;
+      if(m){
+        const mLeft=Math.max(0,m.limit-m.used), mPct=Math.min(100,mLeft/m.limit*100);
+        const mBar=el('div',{className:'bar'},el('span',{className:mPct<20?'low':'',style:'width:'+mPct+'%'}));
+        const day=new Date(m.resetAt*1000).toLocaleDateString([], {day:'numeric',month:'long'});
+        rows.append(el('div',{className:'row'},el('b',{textContent:t('use.aiMonth','AI this month')}),mBar,el('span',{className:'clay-muted',textContent:mLeft.toLocaleString()+' / '+m.limit.toLocaleString()+' '+unit+' · '+t('use.refill','refills at')+' '+day})));
+      }
     });
     $('usageTitle').textContent=t('use.title','Your allowance (every {h} hours)').replace('{h}',Math.round(u.windowHours));
     $('usage').hidden=false;

@@ -252,6 +252,10 @@ QUOTAS = {
     'pro': {'office': None, 'ai': 150, 'translate': None},
 }
 QUOTA_LABELS = {'office': 'konversi', 'ai': 'AI', 'translate': 'terjemahan buku'}
+# AI questions per calendar month (Jakarta time) on top of the 5-hour window, so a plan used
+# round the clock still costs less in Gemini than it earns (owner, 2026-11-02: ~Rp100–215 per
+# question vs Rp89.500 / Rp179.000). Change with .env QUOTA_MEDIUM_AI_MONTH / QUOTA_PRO_AI_MONTH.
+AI_MONTH = {'medium': 600, 'pro': 1500}
 SUMMARY_ROUTES = ('/api/summary', '/api/highlight-summary')     # what counts against the monthly summary words
 
 
@@ -265,6 +269,17 @@ def summary_words_limit(user):
     if value:
         return None if value.lower() in ('0', 'none', 'unlimited') else int(value)
     return accounts.SUMMARY_WORDS.get(tier)
+
+
+def ai_month_limit(user):
+    """The member's AI questions per month, None = no monthly limit (Basic has no AI at all)."""
+    tier = user['plan']
+    if tier not in accounts.PAID:
+        return None
+    value = os.environ.get(f'QUOTA_{tier.upper()}_AI_MONTH', '').strip()
+    if value:
+        return None if value.lower() in ('0', 'none', 'unlimited') else int(value)
+    return AI_MONTH.get(tier)
 
 
 def month_label(ts):
@@ -3738,6 +3753,13 @@ class Handler(SimpleHTTPRequestHandler):
         if limit is None:
             return
         store, window, now = get_accounts(), quota_window(), int(time.time())
+        month = ai_month_limit(user) if kind == 'ai' else None
+        if month is not None:
+            start, end = accounts.month_bounds(now)
+            if store.usage_in(user['id'], 'ai', start - 1)[0] + amount > month:
+                upgrade = user['plan'] != 'pro'
+                raise accounts.AccountError(429, f'Kuota AI bulan ini sudah habis — terisi lagi {month_label(end)}.'
+                                                 + (' Upgrade ke Pro untuk kuota yang lebih besar.' if upgrade else ''), upgrade=upgrade)
         used, first = store.usage_in(user['id'], kind, now - window)
         if used + amount > limit:
             back = time.strftime('%H:%M', time.localtime((first or now) + window))
@@ -3780,6 +3802,10 @@ class Handler(SimpleHTTPRequestHandler):
             limit = quota_limit(user, kind)
             used, first = get_accounts().usage_in(user['id'], kind, now - window)
             out[kind] = dict(used=used, limit=limit, resetAt=(first + window) if first else None)
+            month = ai_month_limit(user) if kind == 'ai' else None
+            if month is not None:
+                start, end = accounts.month_bounds(now)
+                out[kind]['month'] = dict(used=get_accounts().usage_in(user['id'], 'ai', start - 1)[0], limit=month, resetAt=end)
         return dict(windowHours=window / 3600, quotas=out, limited=hosted())
 
     def ref_cookie(self):

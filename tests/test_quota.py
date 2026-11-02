@@ -92,5 +92,36 @@ class Quota(unittest.TestCase):
             self.assertEqual(self.call('POST', '/api/ask', {'text': {}, 'question': 'apa?'}, {'X-Build-Token': token})[0], 429, 'shared with the other AI tools')
             self.assertEqual(self.call('POST', '/api/podcast/script', {'text': {}}, {'X-Build-Token': token})[0], 402, 'no plan has the podcast')
 
+    def test_ai_month_keeps_plans_profitable(self):
+        # On top of the 5-hour window, AI questions are capped per calendar month (Medium 600, Pro 1500):
+        # questions from earlier windows of the month still count; used up -> 429 naming the date it refills.
+        self.assertEqual((server.AI_MONTH['medium'], server.AI_MONTH['pro']), (600, 1500))
+        self.assertEqual(self.call('POST', '/api/auth/register', {'email': 'm@example.com', 'password': 'secret-pass-1'})[0], 201)
+        server.get_accounts().grant_plan('m@example.com', 'medium', 30)
+        token = self.call('GET', '/api/capabilities')[1]['token']
+        with server.get_accounts().connect() as db:
+            user = db.execute("SELECT id FROM users WHERE email='m@example.com'").fetchone()['id']
+        start, end = server.accounts.month_bounds()
+        earlier = max(start + 60, int(time.time()) - 6 * 3600)      # this month, outside the 5-hour window when it can be
+        with mock.patch.dict(os.environ, {'QUOTA_MEDIUM_AI_MONTH': '3'}), mock.patch.object(server, 'payments_live', return_value=True):
+            server.get_accounts().spend(user, 'ai', 2, earlier)
+            ask = lambda: self.call('POST', '/api/ask', {'text': {}, 'question': 'apa?'}, {'X-Build-Token': token})
+            self.assertNotEqual(ask()[0], 429, 'the third of the month')
+            ai = self.call('GET', '/api/auth/usage')[1]['quotas']['ai']
+            self.assertEqual(ai['month'], {'used': 3, 'limit': 3, 'resetAt': end})
+            self.assertEqual(ai['used'], 1 if earlier < time.time() - 5 * 3600 else 3, 'the 5-hour window counts only its own')
+            status, body = ask()
+            self.assertEqual(status, 429)
+            self.assertRegex(body['error'], r'^Kuota AI bulan ini sudah habis — terisi lagi 1 \w+ \d{4}\. Upgrade ke Pro')
+            status, body = self.call('POST', '/api/ask', {'text': {}, 'question': 'apa?'}, {'X-Build-Token': token, 'Cookie': self.cookie + '; mf_lang=en'})
+            self.assertRegex(body['error'], r"^This month's AI allowance is used up — it refills on \w+ 1, \d{4}\. Upgrade to Pro")
+        # Pro: no upgrade offered; .env can lift the monthly limit.
+        server.get_accounts().grant_plan('m@example.com', 'pro', 30)
+        with mock.patch.dict(os.environ, {'QUOTA_PRO_AI_MONTH': '3'}), mock.patch.object(server, 'payments_live', return_value=True):
+            status, body = self.call('POST', '/api/ask', {'text': {}, 'question': 'apa?'}, {'X-Build-Token': token})
+            self.assertEqual(status, 429); self.assertNotIn('Upgrade', body['error'])
+        with mock.patch.dict(os.environ, {'QUOTA_PRO_AI_MONTH': 'none'}):
+            self.assertNotIn('month', self.call('GET', '/api/auth/usage')[1]['quotas']['ai'])
+
 if __name__ == '__main__':
     unittest.main()

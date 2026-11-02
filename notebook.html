@@ -2052,13 +2052,18 @@ window.addEventListener('DOMContentLoaded', () => {
     try { const r = await fetch('/api/auth/usage', {cache: 'no-store'}); if (r.ok) u = await r.json(); } catch (e) {}
     const ai = u && u.limited && u.quotas && u.quotas.ai;
     if (!ai || ai.limit == null) { out.hidden = true; return; }
-    const left = Math.max(0, ai.limit - ai.used);
+    // the month's questions (on top of the 5-hour window): used up, that is what the member sees
+    const m = ai.month, day = m && new Date(m.resetAt * 1000).toLocaleDateString(L('en-GB', 'id-ID'), {day: 'numeric', month: 'long'});
+    const monthOut = !!m && m.used >= m.limit;
+    const left = monthOut ? 0 : Math.max(0, ai.limit - ai.used);
     const at = ai.resetAt ? new Date(ai.resetAt * 1000).toLocaleTimeString(L('en-GB', 'id-ID'), {hour: '2-digit', minute: '2-digit'}) : '';
-    const text = left
-      ? L(`AI quota used: ${ai.used} of ${ai.limit}`, `Penggunaan kuota AI: ${ai.used} dari ${ai.limit}`) + (at ? L(` · refills at ${at}`, ` · terisi lagi pukul ${at}`) : '')
-      : L(`AI quota used up · refills at ${at}`, `Kuota AI habis · terisi lagi pukul ${at}`);
+    const text = monthOut ? L(`This month's AI quota is used up · refills on ${day}`, `Kuota AI bulan ini habis · terisi lagi ${day}`)
+      : (left
+        ? L(`AI quota used: ${ai.used} of ${ai.limit}`, `Penggunaan kuota AI: ${ai.used} dari ${ai.limit}`) + (at ? L(` · refills at ${at}`, ` · terisi lagi pukul ${at}`) : '')
+        : L(`AI quota used up · refills at ${at}`, `Kuota AI habis · terisi lagi pukul ${at}`))
+        + (m && m.used >= m.limit * 0.8 ? L(` · this month ${m.used} of ${m.limit}`, ` · bulan ini ${m.used} dari ${m.limit}`) : '');
     // a bar of what is used: green, amber past 80%, red when used up
-    const pct = Math.min(100, Math.round(ai.used / ai.limit * 100));
+    const pct = monthOut ? 100 : Math.min(100, Math.round(ai.used / ai.limit * 100));
     const bar = Object.assign(document.createElement('span'), {className: 'ai-bar' + (pct >= 100 ? ' is-out' : pct >= 80 ? ' is-low' : '')});
     bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(ai.limit));
     bar.setAttribute('aria-valuenow', String(ai.used)); bar.setAttribute('aria-label', text);
