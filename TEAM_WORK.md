@@ -1,5 +1,6 @@
 # Koordinasi tim AI
 
+- AI-CREDITS (2 Nov, Claude): 70c0c55 live. Batas AI bulanan Medium 300 / Pro 700; paket Kredit AI (accounts.AI_PACKS: ai100 Rp25.000, ai300 Rp65.000) di halaman Akun, kolom users.ai_credits, dipakai setelah kuota bulan habis. Backup DB .data/myflipbook-backup-20261102152637-before-ai-credits.sqlite3; kode /root/pdf_project-code-backup-ai-credits-20261102152646.tgz. Pembelian nyata (Duitku) belum diuji.
 - AI-LOAD (2 Nov, Claude): 7221614 live. Antrean Gemini (AI_CONCURRENCY 6), 429 → model cadangan, tunggu+coba lagi (GEMINI_RETRY_SECONDS 25), catatan .data/ai-limits.jsonl + panel admin Server "Batas AI (Gemini)", ASK_MAX_CHARS 40k. Backup /root/pdf_project-code-backup-ai-load-20261102145214.tgz.
 - AI-MONTH (2 Nov, Claude): 0c2b693 live. Batas AI per bulan Medium 600 / Pro 1.500 di atas jatah 5 jam (server.AI_MONTH, .env QUOTA_<TIER>_AI_MONTH). Backup /root/pdf_project-code-backup-ai-month-20261102140846.tgz.
 - AI-QUOTA-BAR (2 Nov, Claude): 8e8132a live. "Penggunaan kuota AI" + bar pemakaian di chat AI Summarizer dan chat stabilo. Backup /root/pdf_project-code-backup-ai-quota-bar-20261102122629.tgz.
