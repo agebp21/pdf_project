@@ -125,6 +125,7 @@ class AskTests(unittest.TestCase):
         self.assertEqual(out, 'Jawabannya ini (hlm. 2).')
         system, user = sent(call)
         self.assertIn('UTAMAKAN isi dokumen', system)
+        self.assertIn(server.ANSWER_DEPTH, system, 'full, detailed answers by default')
         self.assertIn('(di luar sumber)', system, 'beyond the sources: marked, no page numbers')
         self.assertIn('JANGAN menulis bahwa dokumen tidak membahasnya', system, 'answers straight away')
         self.assertIn('PERMINTAAN TERAKHIR (jawab ini): Apa isinya?', user); self.assertIn('Pembaca: Halo', user); self.assertIn('Asisten: Hai', user)
@@ -137,6 +138,7 @@ class AskTests(unittest.TestCase):
         self.assertIn('TIDAK terbatas pada isi dokumen', system, 'may answer beyond the book')
         self.assertNotIn('UTAMAKAN isi dokumen', system, 'the passage chat has its own prompt')
         self.assertIn('Jangan mengarang kutipan', system, 'still no invented references')
+        self.assertIn(server.ANSWER_DEPTH, system); self.assertNotIn('ringkas dan langsung', system)
         self.assertIn('BAGIAN YANG DISTABILO:\nTeks yang distabilo', user)
         self.assertIn('HASIL KERJA PEMBACA:\nRingkasan catatan', user)
         with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Ya.')) as call:
@@ -156,6 +158,9 @@ class AskTests(unittest.TestCase):
         with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Berdasarkan dokumen, isinya (hlm. 2).')) as call:
             self.assertEqual(server.ask_document('Buku', '[Halaman 2]\nIsi.', 'Apa isinya?'), 'Isinya (hlm. 2).')
         self.assertIn('JANGAN membuka atau menyelipkan frasa asal jawaban', sent(call)[0])
+        with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Luk tiga belas [Halaman 77]. Naga [ Halaman 8 ].')):
+            self.assertEqual(server.ask_document('Buku', '[Halaman 77]\nIsi.', 'Ciri?'), 'Luk tiga belas (hlm. 77). Naga (hlm. 8).',
+                             'copied source tags become page references')
 
     def test_follow_ups_split_off_the_answer(self):
         self.assertEqual(server.split_follow_ups('Jawaban (hlm. 2).\nPERTANYAAN LANJUTAN: Apa contohnya? | "Siapa tokohnya?" | - Kapan terjadi?'),

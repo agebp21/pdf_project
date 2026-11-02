@@ -694,6 +694,16 @@ def clean_work(work):
     return '\n'.join(line for line in lines if line)[:WORK_MAX_CHARS]
 
 
+# How full a chat answer is, unless the reader asks for something shorter or longer.
+ANSWER_DEPTH = ('Jawaban harus LENGKAP dan RINCI, bukan satu-dua kalimat: jelaskan maksudnya, sertakan detail penting '
+                '(nama, istilah, angka, ciri, contoh, sebab-akibat, latar sejarah atau konteks) dari dokumen maupun dari '
+                'luar, dan susun dalam beberapa paragraf atau poin, umumnya sekitar 150-350 kata. Rincian tambahan tetap '
+                'jujur asalnya: nomor halaman HANYA untuk kalimat yang isinya benar-benar tertulis di dokumen; setiap '
+                'penjelasan, arti istilah, atau latar yang tidak tertulis di dokumen ditandai "(di luar sumber)" di '
+                'kalimatnya sendiri, walau satu paragraf dengan isi dokumen. Bila pembaca meminta '
+                'jawaban singkat, ikuti; bila meminta bentuk tertentu (jurnal, tabel, daftar, bahasa lain), ikuti bentuk itu.')
+
+
 def ask_document(title, text, question, history=(), work='', include_thoughts=False, passage='', follow_ups=False):
     """An answer to a reader's question, from the document (and the reader's own notes on it,
     `work`) only, with source+page references. One or several sources: `text` carries bare
@@ -731,7 +741,7 @@ def ask_document(title, text, question, history=(), work='', include_thoughts=Fa
               'atau referensi akademik yang tidak ada dalam sumber. Hanya jika permintaan TERAKHIR secara eksplisit '
               'meminta referensi eksternal yang belum menjadi sumber, jelaskan singkat bahwa sumber tambahan perlu '
               'dimasukkan; jangan tambahkan catatan ini pada jawaban lain. Jawab dalam bahasa yang sama dengan pertanyaan; '
-              f'panjang jawaban mengikuti bentuk yang diminta. {cite} Aturan rujukan itu hanya untuk isi dari dokumen. '
+              f'{ANSWER_DEPTH} {cite} Aturan rujukan itu hanya untuk isi dari dokumen. '
               'Tanpa markdown dekoratif (** atau tabel).'
               + (' Pembaca juga punya hasil kerja sendiri (catatan, ringkasan, draf jurnal, slide) di bagian "HASIL KERJA PEMBACA": '
                  'pakai untuk pertanyaan tentang pekerjaannya (mis. memeriksa, melengkapi, atau membandingkan dengan dokumen), '
@@ -747,9 +757,9 @@ def ask_document(title, text, question, history=(), work='', include_thoughts=Fa
                   'bila perlu tandai "(di luar buku)". Bila meminta saran atau pendapat, beri saran praktis dan tandai sebagai '
                   'saran. Jangan mengarang kutipan, judul buku, penulis, tautan, atau daftar pustaka; bila tidak yakin akan '
                   'suatu fakta atau angka, katakan begitu. Ikuti maksud permintaan TERAKHIR; percakapan sebelumnya hanya '
-                  'konteks. Jawab dalam bahasa yang sama dengan pertanyaan; jawaban biasa ringkas dan langsung (jangan '
-                  'mengulang pertanyaannya), draf artikel boleh panjang dengan judul dan paragraf. Catatan pembaca ada di '
-                  '"HASIL KERJA PEMBACA". Tanpa ** atau tabel.')
+                  f'konteks. Jawab dalam bahasa yang sama dengan pertanyaan (jangan mengulang pertanyaannya). {ANSWER_DEPTH} '
+                  'Draf artikel boleh panjang dengan judul dan paragraf. Catatan pembaca ada di "HASIL KERJA PEMBACA". '
+                  'Tanpa ** atau tabel.')
     if passage or follow_ups:
         # Three follow-up questions to click, on the answer's last line (split off by split_follow_ups).
         system += (f' Sesudah jawaban (juga sesudah draf), tulis satu baris terakhir yang diawali "{FOLLOW_UPS}:" lalu tiga '
@@ -767,6 +777,8 @@ def ask_document(title, text, question, history=(), work='', include_thoughts=Fa
     if include_thoughts:
         reply, thoughts = reply
     reply = strip_origin_phrases(reply.replace('**', '').replace('##', '').strip())
+    # the source's own "[Halaman N]" tags copied into the answer become "(hlm. N)" references
+    reply = re.sub(r'\[\s*Halaman\s+(\d+)\s*\]', r'(hlm. \1)', reply)
     if not reply:
         raise RuntimeError('AI tidak menjawab. Coba lagi.')
     reply = reply[:12000]
