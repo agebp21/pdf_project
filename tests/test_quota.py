@@ -93,9 +93,9 @@ class Quota(unittest.TestCase):
             self.assertEqual(self.call('POST', '/api/podcast/script', {'text': {}}, {'X-Build-Token': token})[0], 402, 'no plan has the podcast')
 
     def test_ai_month_keeps_plans_profitable(self):
-        # On top of the 5-hour window, AI questions are capped per calendar month (Medium 600, Pro 1500):
+        # On top of the 5-hour window, AI questions are capped per calendar month (Medium 300, Pro 700):
         # questions from earlier windows of the month still count; used up -> 429 naming the date it refills.
-        self.assertEqual((server.AI_MONTH['medium'], server.AI_MONTH['pro']), (600, 1500))
+        self.assertEqual((server.AI_MONTH['medium'], server.AI_MONTH['pro']), (300, 700))
         self.assertEqual(self.call('POST', '/api/auth/register', {'email': 'm@example.com', 'password': 'secret-pass-1'})[0], 201)
         server.get_accounts().grant_plan('m@example.com', 'medium', 30)
         token = self.call('GET', '/api/capabilities')[1]['token']

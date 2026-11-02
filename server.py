@@ -254,8 +254,8 @@ QUOTAS = {
 QUOTA_LABELS = {'office': 'konversi', 'ai': 'AI', 'translate': 'terjemahan buku'}
 # AI questions per calendar month (Jakarta time) on top of the 5-hour window, so a plan used
 # round the clock still costs less in Gemini than it earns (owner, 2026-11-02: ~Rp100–215 per
-# question vs Rp89.500 / Rp179.000). Change with .env QUOTA_MEDIUM_AI_MONTH / QUOTA_PRO_AI_MONTH.
-AI_MONTH = {'medium': 600, 'pro': 1500}
+# question vs Rp89.500 / Rp179.000; 300/700 keeps it under ~half). Change with .env QUOTA_MEDIUM_AI_MONTH / QUOTA_PRO_AI_MONTH.
+AI_MONTH = {'medium': 300, 'pro': 700}
 SUMMARY_ROUTES = ('/api/summary', '/api/highlight-summary')     # what counts against the monthly summary words
 
 
