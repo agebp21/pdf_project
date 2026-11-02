@@ -21,7 +21,8 @@ Object.defineProperty(w, 'innerWidth', { value: 1200 }); Object.defineProperty(w
 const asked = []; let answer = null, left = 50, checks = 0;
 const notes = N.bind({ key: N.key('Chat', 2, 0.7), title: 'Chat', pages, goPage: () => {}, open: $('#notes'), blank: false,
   onAsk: ask => { asked.push(ask); left--; return new Promise((ok, no) => { answer = { ok, no }; }); },
-  allowance: () => { checks++; return Promise.resolve(left ? { text: 'Penggunaan kuota AI: ' + (50 - left) + ' dari 50', used: 50 - left, limit: 50 } : { text: 'Kuota AI habis', out: true, used: 50, limit: 50 }); },
+  allowance: () => { checks++; return Promise.resolve(left ? { text: 'Penggunaan kuota AI: ' + (50 - left) + ' dari 50', used: 50 - left, limit: 50 }
+    : { text: 'Kuota AI habis', out: true, used: 50, limit: 50, link: { text: 'Beli kredit AI', href: 'account.html#ai-credits' } }); },
   askLabels: { send: 'Kirim', add: '＋ Tambahkan ke catatan', starters: ['Beri saran praktis', 'Apa contohnya?'] } });
 const items = i => (notes.notes()[i] || { items: [] }).items;
 
@@ -85,7 +86,8 @@ const items = i => (notes.notes()[i] || { items: [] }).items;
   assert.equal(w.document.querySelectorAll('.book-note-chat-msg').length, 6);
   await tick(); await tick();
   assert.ok(checks > before);
-  assert.equal($('.book-note-chat-left').textContent, 'Kuota AI habis'); assert.ok($('.book-note-chat-left').classList.contains('is-out'), 'used up: shown in red');
+  assert.equal($('.book-note-chat-left span').textContent, 'Kuota AI habis'); assert.ok($('.book-note-chat-left').classList.contains('is-out'), 'used up: shown in red');
+  assert.equal($('.book-note-chat-buy').getAttribute('href'), 'account.html#ai-credits'); assert.equal($('.book-note-chat-buy').textContent, 'Beli kredit AI', 'a link to buy AI credits');
   assert.equal($('.book-note-chat-bar i').style.width, '100%'); assert.ok($('.book-note-chat-bar').classList.contains('is-out'), 'full red bar');
   notes.close();
 

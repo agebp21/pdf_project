@@ -99,6 +99,19 @@ PLANS = {
                                   'My Library: 200 books'])),
 }
 PAID = ('medium', 'pro')
+# AI credit packs (owner, 2026-11-02): more AI questions for a Medium/Pro member who used up the
+# month's allowance (server.AI_MONTH). Rupiah only; credits never expire but are spent only while
+# the plan is active. ~Rp125 of Gemini per question, so a pack keeps about half as margin.
+AI_PACKS = {'ai100': dict(name='Kredit AI 100', questions=100, amount=25_000),
+            'ai300': dict(name='Kredit AI 300', questions=300, amount=65_000)}
+
+
+def order_name(order):
+    """What an order bought, for gateways and invoices: "Medium (monthly)" or "Kredit AI 100"."""
+    pack = AI_PACKS.get(order['plan'])
+    if pack:
+        return pack['name']
+    return f'{PLANS[order["plan"]]["name"]} ({order["cycle"]})'
 FREE_PLAN = 'basic'
 
 
@@ -214,7 +227,7 @@ class TripayProvider:
             'method': method, 'merchant_ref': order['id'], 'amount': order['amount'],
             'customer_name': (user['name'] or user['email'].split('@')[0])[:100], 'customer_email': user['email'],
             'order_items[0][sku]': f'{order["plan"]}-{order["cycle"]}',
-            'order_items[0][name]': f'MyFlipbook {PLANS[order["plan"]]["name"]} ({order["cycle"]})',
+            'order_items[0][name]': f'MyFlipbook {order_name(order)}',
             'order_items[0][price]': order['amount'], 'order_items[0][quantity]': 1,
             'callback_url': f'{base_url}/api/billing/tripay/callback',
             'return_url': f'{base_url}/account.html?order={order["id"]}',
@@ -321,7 +334,8 @@ class DuitkuProvider:
         if method and method not in {m['code'] for m in self.methods()}:
             raise AccountError(400, 'Pilih metode pembayaran.')
         # What the buyer reads on Duitku's page and receipt, in Indonesian.
-        item = f'MyFlipbook Pro - paket {PLANS[order["plan"]]["name"]} ({"tahunan" if order["cycle"] == "yearly" else "bulanan"})'
+        item = (f'MyFlipbook Pro - {AI_PACKS[order["plan"]]["name"]}' if order['plan'] in AI_PACKS else
+                f'MyFlipbook Pro - paket {PLANS[order["plan"]]["name"]} ({"tahunan" if order["cycle"] == "yearly" else "bulanan"})')
         body = {
             'paymentAmount': order['amount'], 'merchantOrderId': order['id'], 'productDetails': item,
             'email': user['email'], 'customerVaName': (user['name'] or user['email'].split('@')[0])[:20],
@@ -445,7 +459,7 @@ class MidtransProvider:
         body = dict(
             transaction_details=dict(order_id=order['id'], gross_amount=order['amount']),
             item_details=[dict(id=f'{order["plan"]}-{order["cycle"]}', price=order['amount'], quantity=1,
-                               name=f'MyFlipbook {PLANS[order["plan"]]["name"]} ({order["cycle"]})'[:50])],
+                               name=f'MyFlipbook {order_name(order)}'[:50])],
             customer_details=dict(email=user['email'], first_name=(user['name'] or user['email'])[:50]),
             callbacks=dict(finish=f'{base_url}/account.html?order={order["id"]}'),
         )
@@ -556,6 +570,8 @@ class Accounts:
                 db.execute('ALTER TABLE users ADD COLUMN ref_code TEXT')
             if 'referred_by' not in columns:
                 db.execute('ALTER TABLE users ADD COLUMN referred_by INTEGER')
+            if 'ai_credits' not in columns:
+                db.execute('ALTER TABLE users ADD COLUMN ai_credits INTEGER NOT NULL DEFAULT 0')
             db.executescript('''
                 CREATE UNIQUE INDEX IF NOT EXISTS users_ref_code ON users(ref_code) WHERE ref_code IS NOT NULL;
                 CREATE INDEX IF NOT EXISTS users_referred_by ON users(referred_by);
@@ -856,10 +872,17 @@ class Accounts:
         return self.provider.methods() if hasattr(self.provider, 'methods') else []
 
     def checkout(self, user, plan, cycle, base_url='', method=None, currency='IDR'):
-        if plan not in PLANS or plan == FREE_PLAN or cycle not in CYCLE_SECONDS:
+        if plan in AI_PACKS:
+            if currency != 'IDR':
+                raise AccountError(400, 'Kredit AI hanya bisa dibeli dalam Rupiah.')
+            if user['plan'] not in PAID:
+                raise AccountError(403, 'Kredit AI hanya untuk member Medium atau Pro yang aktif.', upgrade=True)
+            cycle = 'credit'
+        elif plan not in PLANS or plan == FREE_PLAN or cycle not in CYCLE_SECONDS:
             raise AccountError(400, 'Paket atau periode tidak valid.')
         provider = self.provider_for(currency)
-        amount = PLANS[plan]['usd_' + cycle] if currency == 'USD' else PLANS[plan][cycle]
+        amount = (AI_PACKS[plan]['amount'] if plan in AI_PACKS else
+                  PLANS[plan]['usd_' + cycle] if currency == 'USD' else PLANS[plan][cycle])
         order = dict(id=f'MF-{int(time.time())}-{secrets.token_hex(4)}', plan=plan, cycle=cycle,
                      amount=amount, currency=currency)
         with self.connect() as db:
@@ -884,7 +907,7 @@ class Accounts:
             db.execute("UPDATE orders SET status=? WHERE id=? AND status!='paid'", (status, order_id))
 
     def mark_paid(self, order_id, amount=None):
-        """Idempotent: extends the plan exactly once per order."""
+        """Idempotent: extends the plan (or adds an AI credit pack) exactly once per order."""
         now = int(time.time())
         with self.connect() as db:
             db.execute('BEGIN IMMEDIATE')
@@ -896,6 +919,10 @@ class Accounts:
             if order['status'] == 'paid':
                 return False
             user = db.execute('SELECT * FROM users WHERE id=?', (order['user_id'],)).fetchone()
+            if order['plan'] in AI_PACKS:
+                db.execute('UPDATE users SET ai_credits=ai_credits+? WHERE id=?', (AI_PACKS[order['plan']]['questions'], user['id']))
+                db.execute("UPDATE orders SET status='paid', paid_at=? WHERE id=?", (now, order_id))
+                return True
             active = user['plan'] == order['plan'] and (user['plan_expires_at'] or 0) > now
             start = user['plan_expires_at'] if active else now
             db.execute('UPDATE users SET plan=?, plan_expires_at=? WHERE id=?',
@@ -904,6 +931,18 @@ class Accounts:
             if order['plan'] in PAID and user['referred_by']:
                 self._reward_referrer(db, user['referred_by'], now)
         return True
+
+    # ---- AI credit packs (AI_PACKS) ------------------------------------------
+    def ai_credits(self, user_id):
+        with self.connect() as db:
+            row = db.execute('SELECT ai_credits FROM users WHERE id=?', (user_id,)).fetchone()
+        return row['ai_credits'] if row else 0
+
+    def use_ai_credits(self, user_id, amount=1):
+        """Spend `amount` credits; False (nothing spent) when there are not enough."""
+        with self.connect() as db:
+            return db.execute('UPDATE users SET ai_credits=ai_credits-? WHERE id=? AND ai_credits>=?',
+                              (amount, user_id, amount)).rowcount == 1
 
     # ---- usage quotas (rolling window, like Claude's limits) -----------------
     def usage_in(self, user_id, kind, since):

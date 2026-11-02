@@ -1307,8 +1307,9 @@
      onAsk({page, quote, note, question, history}) → Promise<answer>: a note linked to a
      highlight opens as wide as the book with a chat under it, answered by the server's AI
      (only where a server can answer); askLabels: {intro, placeholder, send, thinking, add},
-     allowance() → Promise<{text, out, used, limit}|null>: the member's AI allowance, shown
-     under the chat (with a bar of what is used when used / limit are given)} */
+     allowance() → Promise<{text, out, used, limit, link?: {text, href}}|null>: the member's AI
+     allowance, shown under the chat (with a bar of what is used when used / limit are given,
+     and a link, e.g. to buy AI credits)} */
   bind(options) {
     const self = this, pages = options.pages;
     let notes = self.load(options.key), editor = null, reader = null, list = null, editing = null, timer = 0, saved = true;
@@ -1554,6 +1555,12 @@
           const line = document.createElement('span'); line.textContent = info.text;
           while (allowance.firstChild) allowance.removeChild(allowance.firstChild);
           allowance.appendChild(line);
+          if (info.link && info.link.href) {
+            // e.g. "Beli kredit AI" when the month's AI questions are used up
+            const a = document.createElement('a'); a.className = 'book-note-chat-buy';
+            a.href = info.link.href; a.textContent = info.link.text || info.link.href; a.target = '_blank'; a.rel = 'noopener';
+            allowance.appendChild(a);
+          }
           if (info.limit > 0) {
             // used: amber past 80%, red when used up
             const pct = Math.min(100, Math.round((info.used || 0) / info.limit * 100));

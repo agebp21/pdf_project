@@ -821,14 +821,18 @@
     if (!ai || ai.limit == null) return null;
     // the month's questions (on top of the 5-hour window): used up, that is what the member sees
     const m = ai.month, day = m && new Date(m.resetAt * 1000).toLocaleDateString(L('en-GB', 'id-ID'), {day: 'numeric', month: 'long'});
-    if (m && m.used >= m.limit) return {out: true, used: m.limit, limit: m.limit,
-      text: L(`This month's AI quota is used up · refills on ${day}`, `Kuota AI bulan ini habis · terisi lagi ${day}`)};
+    // past it, bought AI credits go on (accounts.AI_PACKS); none left: a link to buy them
+    const credits = ai.credits || 0, monthOut = !!m && m.used >= m.limit;
+    if (monthOut && !credits) return {out: true, used: m.limit, limit: m.limit,
+      text: L(`This month's AI quota is used up · refills on ${day}`, `Kuota AI bulan ini habis · terisi lagi ${day}`),
+      link: {text: L('Buy AI credits', 'Beli kredit AI'), href: 'account.html#ai-credits'}};
     const left = Math.max(0, ai.limit - ai.used);
     const at = ai.resetAt ? new Date(ai.resetAt * 1000).toLocaleTimeString(L('en-GB', 'id-ID'), {hour: '2-digit', minute: '2-digit'}) : '';
     return {out: !left, used: ai.used, limit: ai.limit, text: (left
       ? L(`AI quota used: ${ai.used} of ${ai.limit}`, `Penggunaan kuota AI: ${ai.used} dari ${ai.limit}`) + (at ? L(` · refills at ${at}`, ` · terisi lagi pukul ${at}`) : '')
       : L(`AI quota used up · refills at ${at}`, `Kuota AI habis · terisi lagi pukul ${at}`))
-      + (m && m.used >= m.limit * 0.8 ? L(` · this month ${m.used} of ${m.limit}`, ` · bulan ini ${m.used} dari ${m.limit}`) : '')};
+      + (monthOut ? L(` · using AI credits: ${credits} left`, ` · memakai kredit AI: sisa ${credits}`)
+        : m && m.used >= m.limit * 0.8 ? L(` · this month ${m.used} of ${m.limit}`, ` · bulan ini ${m.used} dari ${m.limit}`) : '')};
   }
   // Chat under a highlight's note: the question about that passage, answered by the server's
   // AI (ASK_MODEL, Gemini) from its page and the pages beside it; page citations stay as "hlm. N".

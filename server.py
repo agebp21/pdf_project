@@ -3821,18 +3821,20 @@ class Handler(SimpleHTTPRequestHandler):
         if limit is None:
             return
         store, window, now = get_accounts(), quota_window(), int(time.time())
-        month = ai_month_limit(user) if kind == 'ai' else None
-        if month is not None:
-            start, end = accounts.month_bounds(now)
-            if store.usage_in(user['id'], 'ai', start - 1)[0] + amount > month:
-                upgrade = user['plan'] != 'pro'
-                raise accounts.AccountError(429, f'Kuota AI bulan ini sudah habis — terisi lagi {month_label(end)}.'
-                                                 + (' Upgrade ke Pro untuk kuota yang lebih besar.' if upgrade else ''), upgrade=upgrade)
         used, first = store.usage_in(user['id'], kind, now - window)
         if used + amount > limit:
             back = time.strftime('%H:%M', time.localtime((first or now) + window))
             raise accounts.AccountError(429, f'Jatah {QUOTA_LABELS[kind]} habis untuk sementara — terisi lagi pukul {back}. '
                                              'Upgrade ke Medium atau Pro untuk jatah lebih besar.')
+        month = ai_month_limit(user) if kind == 'ai' else None
+        if month is not None:
+            start, end = accounts.month_bounds(now)
+            # past the month's questions, an AI credit pack (accounts.AI_PACKS) pays for them
+            if store.usage_in(user['id'], 'ai', start - 1)[0] + amount > month and not store.use_ai_credits(user['id'], amount):
+                upgrade = user['plan'] != 'pro'
+                raise accounts.AccountError(429, f'Kuota AI bulan ini sudah habis — terisi lagi {month_label(end)}. '
+                                                 + ('Beli kredit AI di halaman Akun, atau upgrade ke Pro.' if upgrade else
+                                                    'Beli kredit AI di halaman Akun untuk lanjut sekarang.'), upgrade=upgrade)
         store.spend(user['id'], kind, amount, now)
 
     def summary_words(self, user):
@@ -3874,6 +3876,7 @@ class Handler(SimpleHTTPRequestHandler):
             if month is not None:
                 start, end = accounts.month_bounds(now)
                 out[kind]['month'] = dict(used=get_accounts().usage_in(user['id'], 'ai', start - 1)[0], limit=month, resetAt=end)
+                out[kind]['credits'] = get_accounts().ai_credits(user['id'])
         return dict(windowHours=window / 3600, quotas=out, limited=hosted())
 
     def ref_cookie(self):
@@ -4201,6 +4204,7 @@ class Handler(SimpleHTTPRequestHandler):
             providers = {c: store.provider_for(c).name for c in accounts.CURRENCIES}
             paused = payments_paused(self.current_user())
             self.send_json(200, {'plans': store.plans(), 'provider': store.provider.name, 'providers': providers,
+                                 'aiPacks': [dict(id=k, name=p['name'], questions=p['questions'], amount=p['amount']) for k, p in accounts.AI_PACKS.items()],
                                  'paymentsEnabled': {c: name != 'none' and not paused for c, name in providers.items()},
                                  'paymentsPaused': paused})
         elif re.fullmatch(r'/api/billing/orders/[A-Za-z0-9-]{1,64}/invoice\.pdf', path):

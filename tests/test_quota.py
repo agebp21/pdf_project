@@ -112,16 +112,58 @@ class Quota(unittest.TestCase):
             self.assertEqual(ai['used'], 1 if earlier < time.time() - 5 * 3600 else 3, 'the 5-hour window counts only its own')
             status, body = ask()
             self.assertEqual(status, 429)
-            self.assertRegex(body['error'], r'^Kuota AI bulan ini sudah habis — terisi lagi 1 \w+ \d{4}\. Upgrade ke Pro')
+            self.assertRegex(body['error'], r'^Kuota AI bulan ini sudah habis — terisi lagi 1 \w+ \d{4}\. Beli kredit AI di halaman Akun, atau upgrade ke Pro\.$')
             status, body = self.call('POST', '/api/ask', {'text': {}, 'question': 'apa?'}, {'X-Build-Token': token, 'Cookie': self.cookie + '; mf_lang=en'})
-            self.assertRegex(body['error'], r"^This month's AI allowance is used up — it refills on \w+ 1, \d{4}\. Upgrade to Pro")
-        # Pro: no upgrade offered; .env can lift the monthly limit.
+            self.assertRegex(body['error'], r"^This month's AI allowance is used up — it refills on \w+ 1, \d{4}\. Buy AI credits on the Account page, or upgrade to Pro\.$")
+        # Pro: no upgrade offered, only credits; .env can lift the monthly limit.
         server.get_accounts().grant_plan('m@example.com', 'pro', 30)
         with mock.patch.dict(os.environ, {'QUOTA_PRO_AI_MONTH': '3'}), mock.patch.object(server, 'payments_live', return_value=True):
             status, body = self.call('POST', '/api/ask', {'text': {}, 'question': 'apa?'}, {'X-Build-Token': token})
-            self.assertEqual(status, 429); self.assertNotIn('Upgrade', body['error'])
+            self.assertEqual(status, 429); self.assertNotIn('upgrade', body['error'])
+            self.assertTrue(body['error'].endswith('Beli kredit AI di halaman Akun untuk lanjut sekarang.'))
         with mock.patch.dict(os.environ, {'QUOTA_PRO_AI_MONTH': 'none'}):
             self.assertNotIn('month', self.call('GET', '/api/auth/usage')[1]['quotas']['ai'])
+
+    def test_ai_credits_go_on_past_the_month(self):
+        # A Medium/Pro member buys an AI credit pack (Rupiah, once); paid, its questions are added and
+        # spent only after the month's run out. Basic cannot buy one; dollars are refused.
+        self.assertEqual({k: (p['questions'], p['amount']) for k, p in server.accounts.AI_PACKS.items()},
+                         {'ai100': (100, 25_000), 'ai300': (300, 65_000)})
+        mocked = mock.patch.dict(os.environ, {'MYFLIPBOOK_MOCK_PAYMENTS': '1'}); mocked.start(); self.addCleanup(mocked.stop)
+        self.assertEqual(self.call('POST', '/api/auth/register', {'email': 'c@example.com', 'password': 'secret-pass-1'})[0], 201)
+        buy = lambda pack, currency='IDR': self.call('POST', '/api/billing/checkout', {'plan': pack, 'cycle': 'credit', 'currency': currency})
+        status, body = buy('ai100')
+        self.assertEqual(status, 403); self.assertIn('Medium atau Pro', body['error'])
+        server.get_accounts().grant_plan('c@example.com', 'medium', 30)
+        self.assertEqual(buy('ai100', 'USD')[0], 400, 'Rupiah only')
+        self.assertEqual(buy('nope')[0], 400)
+        packs = self.call('GET', '/api/billing/plans')[1]['aiPacks']
+        self.assertEqual([(p['id'], p['questions'], p['amount']) for p in packs], [('ai100', 100, 25_000), ('ai300', 300, 65_000)])
+        self.assertNotIn('ai100', [p['id'] for p in self.call('GET', '/api/billing/plans')[1]['plans']], 'not a plan on the price list')
+        status, order = buy('ai100')
+        self.assertEqual((status, order['amount']), (200, 25_000))
+        store = server.get_accounts()
+        self.assertTrue(store.mark_paid(order['orderId'], 25_000))
+        self.assertFalse(store.mark_paid(order['orderId'], 25_000), 'credited once')
+        with store.connect() as db:
+            user = db.execute("SELECT id, plan, plan_expires_at FROM users WHERE email='c@example.com'").fetchone()
+        self.assertEqual(user['plan'], 'medium', 'the plan stays as it was')
+        self.assertEqual(store.ai_credits(user['id']), 100)
+        [row] = self.call('GET', '/api/billing/orders')[1]['orders']
+        self.assertEqual((row['plan'], row['cycle'], row['status']), ('ai100', 'credit', 'paid'))
+        self.assertEqual(server.accounts.order_name(row), 'Kredit AI 100')
+        import invoice
+        self.assertTrue(invoice.build(dict(row, user_id=user['id'], reference=None), {'email': 'c@example.com', 'name': ''}, []).startswith(b'%PDF'))
+        token = self.call('GET', '/api/capabilities')[1]['token']
+        with mock.patch.dict(os.environ, {'QUOTA_MEDIUM_AI_MONTH': '1'}), mock.patch.object(server, 'payments_live', return_value=True):
+            ask = lambda: self.call('POST', '/api/ask', {'text': {}, 'question': 'apa?'}, {'X-Build-Token': token})[0]
+            self.assertNotEqual(ask(), 429); self.assertEqual(store.ai_credits(user['id']), 100, 'the month first')
+            self.assertNotEqual(ask(), 429); self.assertEqual(store.ai_credits(user['id']), 99, 'then a credit')
+            ai = self.call('GET', '/api/auth/usage')[1]['quotas']['ai']
+            self.assertEqual((ai['month']['used'], ai['credits']), (2, 99))
+            with store.connect() as db:
+                db.execute('UPDATE users SET ai_credits=0 WHERE id=?', (user['id'],))
+            self.assertEqual(ask(), 429, 'no credits left')
 
 if __name__ == '__main__':
     unittest.main()

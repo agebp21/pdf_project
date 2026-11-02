@@ -6,7 +6,7 @@
 <link rel="icon" type="image/png" href="assets/img/favicon.png?v=pro">
 <link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png?v=pro">
 <title>Account — MyFlipbook</title>
-<script src="assets/i18n.js?v=ai-month1"></script>
+<script src="assets/i18n.js?v=ai-credits1"></script>
 <link rel="stylesheet" href="assets/ui-clay.css">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link href="https://fonts.googleapis.com/css2?family=Fraunces:ital,opsz,wght@0,9..144,700;0,9..144,900;1,9..144,700&family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap" rel="stylesheet">
@@ -87,6 +87,11 @@
   .usage .bar span{display:block;height:100%;background:#1a3c34;border-radius:999px}
   .usage .bar span.low{background:#e8590c}
   @media (max-width:560px){.usage .row{grid-template-columns:1fr;gap:4px}}
+  .credits{padding:16px 22px;margin:18px 0}
+  .credits h2{margin:0 0 6px;font-size:17px}
+  .credits .packs{display:flex;flex-wrap:wrap;gap:10px;margin-top:10px}
+  .credits .pack{display:grid;gap:2px;text-align:left;padding:10px 16px}
+  .credits .pack small{font-weight:400;opacity:.85}
   .referral{padding:18px 22px;margin:18px 0}
   .referral h2{margin:0 0 4px;font-size:18px}
   .referral .ref-link{display:flex;gap:8px;margin:12px 0;flex-wrap:wrap}
@@ -120,6 +125,11 @@
   <div class="clay-panel usage" id="usage" hidden>
     <h2 class="clay-h" id="usageTitle"></h2>
     <div id="usageRows"></div>
+  </div>
+  <div class="clay-panel credits" id="ai-credits" hidden>
+    <h2 class="clay-h" data-i18n="cred.title">AI credits</h2>
+    <p class="clay-muted" id="creditsNote"></p>
+    <div class="packs" id="creditPacks"></div>
   </div>
   <div class="clay-panel referral" id="referral" hidden>
     <h2 class="clay-h" data-i18n="ref.title">Invite friends, get Medium free</h2>
@@ -175,7 +185,7 @@
   let savedCurrency=null;try{savedCurrency=localStorage.getItem('mf-currency');}catch(e){}
   const date=s=>new Date(s*1000).toLocaleDateString(lang(),{day:'numeric',month:'short',year:'numeric'});
   const orderParam=new URLSearchParams(location.search).get('order');
-  let state={user:null,plans:[],providers:{},paymentsEnabled:{},orders:[],cycle:new URLSearchParams(location.search).get('cycle')==='yearly'?'yearly':'monthly',methods:[],
+  let state={user:null,plans:[],aiPacks:[],providers:{},paymentsEnabled:{},orders:[],cycle:new URLSearchParams(location.search).get('cycle')==='yearly'?'yearly':'monthly',methods:[],
     currency:savedCurrency==='IDR'||savedCurrency==='USD'?savedCurrency:defaultCurrency()};
   const payable=()=>state.paymentsEnabled[state.currency]!==false;
   const priceOf=(plan,cycle)=>state.currency==='USD'?plan.usd[cycle]:plan[cycle];
@@ -285,7 +295,7 @@
       const plan=state.plans.find(p=>p.id===o.plan);
       body.append(el('tr',{},
         el('td',{textContent:date(o.created_at)}),
-        el('td',{textContent:(plan?plan.name:o.plan)+' · '+t('acct.'+o.cycle,o.cycle)}),
+        el('td',{textContent:o.cycle==='credit'?t('cred.order','AI credits')+' · '+((state.aiPacks.find(p=>p.id===o.plan)||{}).questions||'')+' '+t('cred.questions','questions'):(plan?plan.name:o.plan)+' · '+t('acct.'+o.cycle,o.cycle)}),
         el('td',{textContent:money(o.amount,o.currency)}),
         el('td',{textContent:t('status.'+o.status,o.status)}),
         el('td',{},o.status==='paid'?el('span',{className:'invoice-tools'},
@@ -346,11 +356,13 @@
     },4000);
   }
 
-  async function checkout(plan,button){
+  async function checkout(plan,button,cycle){
     button.disabled=true;
     try{
-      const method=state.currency==='IDR'&&state.methods.length?$('method').value:undefined;
-      const result=await MFAuth.api('POST','/api/billing/checkout',{plan,cycle:state.cycle,method,currency:state.currency});
+      // an AI credit pack is paid in Rupiah, once (cycle "credit")
+      const currency=cycle==='credit'?'IDR':state.currency;
+      const method=currency==='IDR'&&state.methods.length?$('method').value:undefined;
+      const result=await MFAuth.api('POST','/api/billing/checkout',{plan,cycle:cycle||state.cycle,method,currency});
       location.href=result.redirectUrl; // Gateway payment page (Duitku/Midtrans/Tripay), or back here (mock) with ?order=
     }catch(error){notice('err',error.message);button.disabled=false;}
   }
@@ -373,7 +385,7 @@
     }
     $('ordersSection').hidden=false;
     const [plans,orders]=await Promise.all([MFAuth.api('GET','/api/billing/plans'),MFAuth.api('GET','/api/billing/orders')]);
-    state=Object.assign(state,{user:me.user,plans:plans.plans,providers:plans.providers||{},paymentsEnabled:plans.paymentsEnabled||{},orders:orders.orders});
+    state=Object.assign(state,{user:me.user,plans:plans.plans,aiPacks:plans.aiPacks||[],providers:plans.providers||{},paymentsEnabled:plans.paymentsEnabled||{},orders:orders.orders});
     if((state.providers.IDR==='tripay'||state.providers.IDR==='duitku')&&!state.methods.length){
       // Gateway channels (QRIS, VA, e-wallet) grouped as the gateway reports them.
       state.methods=(await MFAuth.api('GET','/api/billing/methods')).methods;
@@ -414,10 +426,26 @@
         const mBar=el('div',{className:'bar'},el('span',{className:mPct<20?'low':'',style:'width:'+mPct+'%'}));
         const day=new Date(m.resetAt*1000).toLocaleDateString([], {day:'numeric',month:'long'});
         rows.append(el('div',{className:'row'},el('b',{textContent:t('use.aiMonth','AI this month')}),mBar,el('span',{className:'clay-muted',textContent:mLeft.toLocaleString()+' / '+m.limit.toLocaleString()+' '+unit+' · '+t('use.refill','refills at')+' '+day})));
+        renderCredits(q.credits||0,mLeft);
       }
     });
     $('usageTitle').textContent=t('use.title','Your allowance (every {h} hours)').replace('{h}',Math.round(u.windowHours));
     $('usage').hidden=false;
+  }
+  // AI credits (Medium/Pro): more AI questions once the month's are used up; bought here, in Rupiah.
+  function renderCredits(credits,monthLeft){
+    const box=$('ai-credits'),packs=$('creditPacks');
+    if(!state.aiPacks||!state.aiPacks.length||state.paymentsEnabled.IDR===false){box.hidden=true;return;}
+    $('creditsNote').textContent=t('cred.balance','Balance: {n} questions.').replace('{n}',credits.toLocaleString())+' '
+      +(monthLeft?t('cred.note','Used only after this month\'s AI quota runs out; credits never expire.'):t('cred.now','This month\'s AI quota is used up: buy credits to go on now.'));
+    packs.replaceChildren(...state.aiPacks.map(p=>{
+      const b=el('button',{className:'clay-btn clay-btn-dark pack',type:'button'},
+        el('b',{textContent:p.questions+' '+t('cred.questions','questions')}),el('small',{textContent:money(p.amount,'IDR')}));
+      b.addEventListener('click',()=>checkout(p.id,b,'credit'));
+      return b;
+    }));
+    box.hidden=false;
+    if(location.hash==='#ai-credits')box.scrollIntoView({block:'center'});
   }
   // Invite friends: every 10 friends who subscribe through the link = 1 month free.
   async function renderReferral(){

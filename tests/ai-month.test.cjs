@@ -33,7 +33,17 @@ const at = n => ({ limited: true, quotas: { ai: { used: 3, limit: 50, resetAt: n
   assert.equal(a.out, false);
   usage = at(600);
   a = await allowance();
-  assert.deepEqual(a, { out: true, used: 600, limit: 600, text: `Kuota AI bulan ini habis · terisi lagi ${day}` }, 'month used up');
+  assert.deepEqual(a, { out: true, used: 600, limit: 600, text: `Kuota AI bulan ini habis · terisi lagi ${day}`,
+    link: { text: 'Beli kredit AI', href: 'account.html#ai-credits' } }, 'month used up: a link to buy AI credits');
+  // bought credits go on past the month
+  usage = at(600); usage.quotas.ai.credits = 42;
+  a = await allowance();
+  assert.equal(a.out, false); assert.equal(a.link, undefined);
+  assert.equal(a.text, 'Penggunaan kuota AI: 3 dari 50 · memakai kredit AI: sisa 42');
+  await aiLeft();
+  assert.equal(w.document.querySelector('#ai-left span').textContent, 'Penggunaan kuota AI: 3 dari 50 · memakai kredit AI: sisa 42');
+  assert.equal(w.document.querySelector('#ai-left .ai-buy'), null);
+  usage = at(600);
 
   await aiLeft();
   const out = w.document.querySelector('#ai-left');
@@ -41,6 +51,8 @@ const at = n => ({ limited: true, quotas: { ai: { used: 3, limit: 50, resetAt: n
   assert.equal(out.querySelector('span').textContent, `Kuota AI bulan ini habis · terisi lagi ${day}`);
   assert.ok(out.classList.contains('is-out'));
   assert.equal(out.querySelector('.ai-bar i').style.width, '100%');
+  assert.equal(out.querySelector('.ai-buy').getAttribute('href'), 'account.html#ai-credits');
+  assert.equal(out.querySelector('.ai-buy').textContent, 'Beli kredit AI');
   assert.ok(out.querySelector('.ai-bar').classList.contains('is-out'));
   usage = at(500);
   await aiLeft();

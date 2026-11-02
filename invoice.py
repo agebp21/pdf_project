@@ -11,7 +11,9 @@ import zlib
 PAGE_W, PAGE_H = 595, 842  # A4 in points
 INK, MUTED, ACCENT, LINE = (0.11, 0.10, 0.09), (0.47, 0.44, 0.42), (0.10, 0.24, 0.20), (0.90, 0.87, 0.82)
 PROVIDERS = {'duitku': 'Duitku', 'tripay': 'Tripay', 'midtrans': 'Midtrans', 'lemonsqueezy': 'Lemon Squeezy', 'mock': 'Local simulation'}
-CYCLES = {'monthly': 'Monthly subscription (30 days)', 'yearly': 'Yearly subscription (365 days)'}
+CYCLES = {'monthly': 'Monthly subscription (30 days)', 'yearly': 'Yearly subscription (365 days)',
+          'credit': 'AI questions beyond the monthly allowance (no expiry)'}
+PACKS = {'ai100': 'AI credits: 100 questions', 'ai300': 'AI credits: 300 questions'}
 
 
 def _text(value):
@@ -106,7 +108,7 @@ def build(order, user, seller_lines, issued_at=None):
     c.text(PAGE_W - m - 10, y + 2, 'AMOUNT', 8, True, MUTED, right=True)
     y -= 30
     plan = str(order['plan']).capitalize()
-    c.text(m + 10, y, f'MyFlipbook {plan} plan', 11, True)
+    c.text(m + 10, y, f'MyFlipbook {PACKS[order["plan"]]}' if order['plan'] in PACKS else f'MyFlipbook {plan} plan', 11, True)
     c.text(m + 10, y - 15, CYCLES.get(order['cycle'], order['cycle']), 9, False, MUTED)
     c.text(PAGE_W - m - 10, y, money(order['amount'], currency), 11, True, right=True)
     y -= 34

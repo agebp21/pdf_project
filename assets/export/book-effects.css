@@ -85,6 +85,8 @@
 .book-note-chat-bar i{display:block;height:100%;border-radius:inherit;background:#1f3d36;transition:width .4s ease}
 .book-note-chat-bar.is-low i{background:#d97706}
 .book-note-chat-bar.is-out i{background:#9f1d1d}
+.book-note-chat-buy{justify-self:center;padding:5px 14px;border-radius:999px;background:#1f3d36;color:#fff;font-weight:700;text-decoration:none}
+.book-note-chat-buy:hover{background:#2b5249}
 .book-note-grip{position:absolute;right:2px;bottom:2px;width:22px;height:22px;cursor:nwse-resize;touch-action:none;border-radius:0 0 12px 0;background:linear-gradient(135deg,transparent 50%,rgba(28,25,23,.28) 50%,rgba(28,25,23,.28) 58%,transparent 58%,transparent 70%,rgba(28,25,23,.28) 70%,rgba(28,25,23,.28) 78%,transparent 78%)}
 .book-note-grip:hover{background-color:rgba(28,25,23,.06)}
 .book-note-editor{width:400px}
