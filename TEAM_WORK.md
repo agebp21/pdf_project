@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- AI-QUOTA-BAR (2 Nov, Claude): 8e8132a live. "Penggunaan kuota AI" + bar pemakaian di chat AI Summarizer dan chat stabilo. Backup /root/pdf_project-code-backup-ai-quota-bar-20261102122629.tgz.
+
 - AI-ALLOWANCE (2 Nov, Claude): 565a1f1 live. Sisa jatah AI tampil di kedua chat; Basic tidak lagi diberi tampilan jatah AI; pesan Gemini 429 ke member jadi bahasa MyFlipbook. Belum: model cadangan saat 429 (hanya 503 yang pindah model). Backup /root/pdf_project-code-backup-ai-allowance-20261102121505.tgz.
 
 - CHAT-DETAIL (2 Nov, Claude): dfbb2ce live. Jawaban chat lebih rinci (±150-350 kata), tanda asal per kalimat (halaman vs "(di luar sumber)"), "[Halaman N]" → "(hlm. N)". Backup /root/pdf_project-code-backup-chat-detail-20261102115446.tgz.
