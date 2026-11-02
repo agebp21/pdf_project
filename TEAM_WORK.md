@@ -1,5 +1,6 @@
 # Koordinasi tim AI
 
+- AI-LOAD (2 Nov, Claude): 7221614 live. Antrean Gemini (AI_CONCURRENCY 6), 429 → model cadangan, tunggu+coba lagi (GEMINI_RETRY_SECONDS 25), catatan .data/ai-limits.jsonl + panel admin Server "Batas AI (Gemini)", ASK_MAX_CHARS 40k. Backup /root/pdf_project-code-backup-ai-load-20261102145214.tgz.
 - AI-MONTH (2 Nov, Claude): 0c2b693 live. Batas AI per bulan Medium 600 / Pro 1.500 di atas jatah 5 jam (server.AI_MONTH, .env QUOTA_<TIER>_AI_MONTH). Backup /root/pdf_project-code-backup-ai-month-20261102140846.tgz.
 - AI-QUOTA-BAR (2 Nov, Claude): 8e8132a live. "Penggunaan kuota AI" + bar pemakaian di chat AI Summarizer dan chat stabilo. Backup /root/pdf_project-code-backup-ai-quota-bar-20261102122629.tgz.
 
