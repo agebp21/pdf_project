@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- CHAT-DETAIL (2 Nov, Claude): dfbb2ce live. Jawaban chat lebih rinci (±150-350 kata), tanda asal per kalimat (halaman vs "(di luar sumber)"), "[Halaman N]" → "(hlm. N)". Backup /root/pdf_project-code-backup-chat-detail-20261102115446.tgz.
+
 - NOTEBOOK-FOLLOWUPS (2 Nov, Claude): d9b5c0c live. Chat AI Summarizer memberi 3 pertanyaan lanjutan untuk diklik; menjawab di luar sumber dengan tanda "(di luar sumber)" (sumber tetap diutamakan, dengan halaman); tanpa pembuka "Berdasarkan dokumen". Jawaban di luar sumber berasal dari pengetahuan Gemini, belum dicek ke web. Backup /root/pdf_project-code-backup-notebook-followups-20261102113751.tgz.
 
 - HOME-NO-NOTE-TABS (2 Nov, Claude): eea00d5 live. Buku contoh beranda tanpa tab catatan di tepi halaman (CSS `.hh-demo .book-note-stack`). Backup /root/pdf_project-code-backup-home-no-note-tabs-20261102110133.tgz.

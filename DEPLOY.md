@@ -7,6 +7,8 @@
 
 ## Log terbaru
 
+- 2 November 2026 — Claude: live `dfbb2ce`. Jawaban chat (AI Summarizer + chat stabilo) lebih lengkap: `ANSWER_DEPTH` ±150-350 kata kecuali diminta singkat; halaman hanya untuk kalimat yang tertulis di dokumen, tambahan bertanda "(di luar sumber)"; "[Halaman N]" jadi "(hlm. N)". Tes: tests/*.test.cjs di tree arsip lulus; unittest 268 dengan 12 kegagalan paywall lama yang sama. Isi live sebelum menimpa = `544f2fe`. Live 200, berkas = arsip, uji Gemini di VPS OK. Backup `/root/pdf_project-code-backup-chat-detail-20261102115446.tgz` (simpan 3).
+
 - 2 November 2026 — Claude: live `d9b5c0c`. Chat AI Summarizer: usulan 3 pertanyaan lanjutan (`followUps` → `suggestions`, tanpa panggilan AI tambahan); sumber diutamakan, bila sumber tidak membahas AI tetap menjawab dari pengetahuan umum bertanda "(di luar sumber)"; tanpa pembuka "Berdasarkan dokumen" (`strip_origin_phrases`). Tes: tests/*.test.cjs di tree arsip lulus; unittest 268 dengan 12 kegagalan paywall lama yang sama. Isi live sebelum menimpa = `5137153`. Live 200, berkas = arsip, uji Gemini di VPS OK. Backup `/root/pdf_project-code-backup-notebook-followups-20261102113751.tgz`; backup kode di /root dirapikan jadi 3 terbaru (izin owner).
 
 - 2 November 2026 — Claude: live `eea00d5`. Buku contoh beranda tanpa tab catatan di tepi halaman (catatan tetap lewat tombol 📝); pembaca member tidak berubah. Semua tests/*.test.cjs di tree arsip lulus; isi live sebelum menimpa = `a226a44`. Live HTTPS 200, berkas = arsip (sha256 cocok). Backup `/root/pdf_project-code-backup-home-no-note-tabs-20261102110133.tgz`.
