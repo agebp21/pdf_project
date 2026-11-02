@@ -175,3 +175,5 @@
   .hh-demo-stage{height:calc(min(350px,100vw - 40px) / .72);min-height:0}
   .hh-book-wrap{min-height:calc(min(350px,100vw - 40px) / .72 + 104px)}
 }
+/* Sample book: no note tabs on the page edges (notes stay in the 📝 list). */
+.hh-demo .book-note-stack{display:none}
