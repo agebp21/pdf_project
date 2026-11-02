@@ -764,14 +764,30 @@ async function loadVisits(days) {
   filterVisitRows();
 }
 
+// Gemini "busy" (its limit per minute/day): absorbed by the other model or a retry, or a member told to wait.
+function aiLimitsPanel(a) {
+  if (!a) return '';
+  const when = a.last ? new Date(a.last * 1000).toLocaleString('id-ID', {day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit'}) : '—';
+  const quotas = Object.entries(a.quotas || {}).sort((x, y) => y[1] - x[1]);
+  const advice = a.week.failed ? (a.day.failed >= 5 ? 'Member sering diminta menunggu: saatnya menaikkan tier Gemini (billing Google).' : 'Sesekali member diminta menunggu; pantau terus.')
+    : 'Belum ada member yang ditolak karena batas AI.';
+  return `<div class="panel"><h3>Batas AI (Gemini)</h3>
+    <p class="muted">Saat Gemini penuh, server pindah model dan mencoba lagi sendiri. "Tertangani" = member tetap dijawab; "Member menunggu" = member mendapat pesan "AI MyFlipbook sedang banyak dipakai".</p>
+    <div class="grid">${card(num(a.day.hits), 'Tertangani 24 jam')}${card(num(a.day.failed), 'Member menunggu 24 jam')}
+      ${card(num(a.week.hits), 'Tertangani 7 hari')}${card(num(a.week.failed), 'Member menunggu 7 hari')}</div>
+    <p>${esc(advice)} Terakhir: ${esc(when)}.</p>
+    ${quotas.length ? `<table><tr><th>Batas yang kena</th><th>7 hari</th></tr>${quotas.map(([q, n]) => `<tr><td>${esc(q)}</td><td>${num(n)}</td></tr>`).join('')}</table>` : ''}</div>`;
+}
+
 async function loadServer() {
   const d = await api('/api/server');
   const NAMES = {GOOGLE_CLIENT_ID: 'Login Google (Client ID)', GOOGLE_API_KEY: 'Google Drive (API key)', SMTP_HOST: 'Email (SMTP host)', SMTP_USER: 'Email (SMTP user)',
-    SUMOPOD_API_KEY: 'AI (Sumopod)', MIDTRANS_SERVER_KEY: 'Pembayaran Rupiah (Midtrans)', TRIPAY_API_KEY: 'Pembayaran Rupiah (Tripay)',
+    GEMINI_API_KEY: 'AI (Gemini)', SUMOPOD_API_KEY: 'AI (Sumopod)', MIDTRANS_SERVER_KEY: 'Pembayaran Rupiah (Midtrans)', TRIPAY_API_KEY: 'Pembayaran Rupiah (Tripay)',
     LEMONSQUEEZY_API_KEY: 'Pembayaran USD (LemonSqueezy)', YOUTUBE_API_KEY: 'YouTube API'};
   $('[data-view="server"]').innerHTML = `<h2>Server</h2>
     <div class="grid">${d.disk ? card(size(d.disk.free), 'Disk kosong dari ' + size(d.disk.total)) : ''}${card(size(d.database), 'Database akun')}
       ${card(size(d.library), 'File My Library')}${card(size(d.visitsDb), 'Database pengunjung')}</div>
+    ${aiLimitsPanel(d.aiLimits)}
     <div class="panel"><h3>Pengaturan (.env)</h3><p class="muted">Hanya terisi / belum — isinya tidak pernah ditampilkan.</p>
       <table>${Object.entries(d.settings).map(([k, on]) => `<tr><td>${esc(NAMES[k] || k)}</td><td class="${on ? 'yes' : 'no'}">${on ? '✓ terisi' : '— belum'}</td></tr>`).join('')}</table></div>`;
 }

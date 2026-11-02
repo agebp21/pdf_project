@@ -524,7 +524,7 @@ def report_pdf(days=30, now=None):
 
 def server_status():
     """Which settings are filled in (never their values) and the disk."""
-    keys = ['GOOGLE_CLIENT_ID', 'GOOGLE_API_KEY', 'SMTP_HOST', 'SMTP_USER', 'SUMOPOD_API_KEY', 'DUITKU_MERCHANT_CODE', 'DUITKU_API_KEY', 'MIDTRANS_SERVER_KEY',
+    keys = ['GOOGLE_CLIENT_ID', 'GOOGLE_API_KEY', 'SMTP_HOST', 'SMTP_USER', 'GEMINI_API_KEY', 'SUMOPOD_API_KEY', 'DUITKU_MERCHANT_CODE', 'DUITKU_API_KEY', 'MIDTRANS_SERVER_KEY',
             'TRIPAY_API_KEY', 'LEMONSQUEEZY_API_KEY', 'YOUTUBE_API_KEY']
     try:
         import shutil
@@ -536,7 +536,39 @@ def server_status():
     size = lambda p: p.stat().st_size if p.is_file() else 0
     library = sum(f.stat().st_size for f in (folder / 'library').rglob('*') if f.is_file()) if (folder / 'library').exists() else 0
     return dict(settings={k: bool(os.environ.get(k, '').strip()) for k in keys}, disk=disk,
-                database=size(folder / db_path().name), visitsDb=size(folder / 'visits.sqlite3'), library=library)
+                database=size(folder / db_path().name), visitsDb=size(folder / 'visits.sqlite3'), library=library,
+                aiLimits=ai_limits())
+
+
+def ai_limits(now=None):
+    """How often Gemini said "busy" (server.note_ai_limit -> .data/ai-limits.jsonl) in the last day
+    and week: `hits` absorbed by the other model or a retry, `failed` = a member was told to wait;
+    by limit (quotaId: per minute / per day …), and the last time. When `failed` keeps growing,
+    it is time for a higher Gemini tier."""
+    now = int(now or time.time())
+    out = dict(day=dict(hits=0, failed=0), week=dict(hits=0, failed=0), quotas={}, last=None)
+    path = db_path().parent / 'ai-limits.jsonl'
+    try:
+        lines = path.read_text(encoding='utf-8').splitlines() if path.is_file() else []
+    except OSError:
+        lines = []
+    for line in lines:
+        try:
+            e = json.loads(line)
+            at = int(e['at'])
+        except (ValueError, KeyError, TypeError):
+            continue
+        if at <= now - 7 * 86400:
+            continue
+        kind = 'failed' if e.get('failed') else 'hits'
+        out['week'][kind] += 1
+        if at > now - 86400:
+            out['day'][kind] += 1
+        if kind == 'hits':
+            for q in e.get('quota') or ['-']:
+                out['quotas'][str(q)] = out['quotas'].get(str(q), 0) + 1
+        out['last'] = max(out['last'] or 0, at)
+    return out
 
 
 # ---------- monitoring API keys ---------------------------------------------

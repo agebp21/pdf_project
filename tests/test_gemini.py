@@ -48,8 +48,11 @@ class Routing(unittest.TestCase):
 
     def test_overloaded_model_uses_configured_fallback(self):
         import io, urllib.error
+        import tempfile
         overloaded = urllib.error.HTTPError('u', 503, 'Busy', {}, io.BytesIO(b'{"error":{"status":"UNAVAILABLE"}}'))
-        with mock.patch.dict(os.environ, {'GEMINI_API_KEY': 'g', 'GEMINI_FALLBACK_MODEL': 'gemini-3.1-flash-lite'}), \
+        tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True); self.addCleanup(tmp.cleanup)
+        with mock.patch.dict(os.environ, {'GEMINI_API_KEY': 'g', 'GEMINI_FALLBACK_MODEL': 'gemini-3.1-flash-lite',
+                                          'MYFLIPBOOK_DB': str(Path(tmp.name) / 'a.sqlite3')}), mock.patch('builtins.print'), \
              mock.patch('urllib.request.urlopen', side_effect=[overloaded, reply(GEMINI_OK)]) as call:
             self.assertEqual(server.gemini_chat('S', 'U', 'gemini-3.5-flash-lite'), 'Intisari buku.')
         self.assertIn('/gemini-3.5-flash-lite:', call.call_args_list[0].args[0].full_url)
@@ -93,6 +96,11 @@ class Routing(unittest.TestCase):
 
 
 class FriendlyErrors(unittest.TestCase):
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(self.tmp.cleanup)
+
     def refusal(self, code, body):
         import io, urllib.error
         return urllib.error.HTTPError('u', code, 'x', {}, io.BytesIO(body.encode()))
@@ -103,7 +111,8 @@ class FriendlyErrors(unittest.TestCase):
         cases = [('gemini-3.8-flash', 402, credits, server.AI_UNAVAILABLE), ('gemini-3.8-flash', 429, 'slow down', server.AI_QUOTA),
                  ('gemini-3.8-flash', 503, 'overloaded', server.AI_BUSY), ('gemini/gemini-3.8-flash', 401, token, server.AI_UNAVAILABLE)]
         for model, code, body, words in cases:
-            with self.subTest(model=model, code=code), mock.patch.dict(os.environ, {'GEMINI_API_KEY': 'g', 'SUMOPOD_API_KEY': 's'}),                     mock.patch('urllib.request.urlopen', side_effect=self.refusal(code, body)), mock.patch('builtins.print') as log:
+            with self.subTest(model=model, code=code), mock.patch.dict(os.environ, {'GEMINI_API_KEY': 'g', 'SUMOPOD_API_KEY': 's', 'GEMINI_RETRY_SECONDS': '0',
+                                                                                  'MYFLIPBOOK_DB': str(Path(self.tmp.name) / 'a.sqlite3')}),                     mock.patch('urllib.request.urlopen', side_effect=self.refusal(code, body)), mock.patch('builtins.print') as log:
                 with self.assertRaises(RuntimeError) as caught:
                     server.ai_chat('S', 'U', model)
             self.assertEqual(str(caught.exception), words)
@@ -113,6 +122,77 @@ class FriendlyErrors(unittest.TestCase):
         for words in (server.AI_QUOTA, server.AI_BUSY, server.AI_UNAVAILABLE):
             self.assertNotRegex(words, r'(?i)gemini|billing|google|api', 'members never hear of our provider')
         self.assertEqual(messages_en.english(server.AI_QUOTA), 'MyFlipbook AI is in heavy use right now. Please wait a moment and try again.')
+
+
+class Busy(unittest.TestCase):
+    """Many members at once: Gemini's limit (429) or overload (503) is absorbed by the other model
+    and by waiting as Gemini asks, before a member is told to wait; each one is noted for the
+    admin panel (Server → Batas AI)."""
+    def setUp(self):
+        import tempfile
+        self.tmp = tempfile.TemporaryDirectory(ignore_cleanup_errors=True)
+        self.addCleanup(self.tmp.cleanup)
+        self.env = {'GEMINI_API_KEY': 'g', 'GEMINI_FALLBACK_MODEL': 'gemini-3.1-flash-lite', 'MYFLIPBOOK_DB': str(Path(self.tmp.name) / 'a.sqlite3')}
+
+    def busy(self, code=429, delay='7s', quota='GenerateContentInputTokensPerModelPerMinute-PaidTier'):
+        import io, urllib.error
+        body = {'error': {'code': code, 'status': 'RESOURCE_EXHAUSTED', 'details': [
+            {'@type': 'type.googleapis.com/google.rpc.QuotaFailure', 'violations': [{'quotaId': quota}]},
+            {'@type': 'type.googleapis.com/google.rpc.RetryInfo', 'retryDelay': delay}]}}
+        return urllib.error.HTTPError('u', code, 'x', {}, io.BytesIO(json.dumps(body).encode()))
+
+    def events(self):
+        path = Path(self.tmp.name) / 'ai-limits.jsonl'
+        return [json.loads(line) for line in path.read_text(encoding='utf-8').splitlines()] if path.exists() else []
+
+    def test_limit_goes_to_the_other_model(self):
+        with mock.patch.dict(os.environ, self.env), mock.patch('builtins.print'), \
+             mock.patch('urllib.request.urlopen', side_effect=[self.busy(), reply(GEMINI_OK)]) as call, mock.patch('time.sleep') as sleep:
+            self.assertEqual(server.gemini_chat('S', 'U', 'gemini-3.5-flash-lite'), 'Intisari buku.')
+        self.assertIn('/gemini-3.1-flash-lite:', call.call_args_list[1].args[0].full_url)
+        sleep.assert_not_called()
+        [e] = self.events()
+        self.assertEqual((e['code'], e['model'], e['quota'], e['failed']), (429, 'gemini-3.5-flash-lite', ['GenerateContentInputTokensPerModelPerMinute-PaidTier'], False))
+
+    def test_both_busy_waits_as_asked_then_answers(self):
+        with mock.patch.dict(os.environ, self.env), mock.patch('builtins.print'), \
+             mock.patch('urllib.request.urlopen', side_effect=[self.busy(), self.busy(503, '3s'), reply(GEMINI_OK)]) as call, mock.patch('time.sleep') as sleep:
+            self.assertEqual(server.gemini_chat('S', 'U', 'gemini-3.5-flash-lite'), 'Intisari buku.')
+        sleep.assert_called_once_with(3.0)
+        self.assertIn('/gemini-3.5-flash-lite:', call.call_args_list[2].args[0].full_url, 'tried again from the first model')
+        self.assertEqual([e['failed'] for e in self.events()], [False, False])
+
+    def test_too_long_a_wait_tells_the_member(self):
+        # a daily limit asks for hours: no point waiting, the member hears it at once
+        with mock.patch.dict(os.environ, self.env), mock.patch('builtins.print'), \
+             mock.patch('urllib.request.urlopen', side_effect=[self.busy(delay='3600s'), self.busy(delay='3600s')]), mock.patch('time.sleep') as sleep:
+            with self.assertRaises(RuntimeError) as caught:
+                server.gemini_chat('S', 'U', 'gemini-3.5-flash-lite')
+        self.assertEqual(str(caught.exception), server.AI_QUOTA)
+        sleep.assert_not_called()
+        self.assertEqual([e['failed'] for e in self.events()], [False, False, True])
+
+    def test_other_refusals_are_not_retried(self):
+        import io, urllib.error
+        refused = urllib.error.HTTPError('u', 402, 'x', {}, io.BytesIO(b'{"error":{}}'))
+        with mock.patch.dict(os.environ, self.env), mock.patch('builtins.print'), \
+             mock.patch('urllib.request.urlopen', side_effect=[refused]) as call:
+            with self.assertRaises(RuntimeError):
+                server.gemini_chat('S', 'U', 'gemini-3.5-flash-lite')
+        self.assertEqual(call.call_count, 1); self.assertEqual(self.events(), [])
+
+    def test_admin_counts_the_last_day_and_week(self):
+        import admin_server
+        now = 1_800_000_000
+        rows = [dict(at=now - 60, code=429, model='m', quota=['PerMinute'], failed=False),
+                dict(at=now - 50, code=429, model='m', quota=[], failed=True),
+                dict(at=now - 3 * 86400, code=503, model='m', quota=[], failed=False),
+                dict(at=now - 9 * 86400, code=429, model='m', quota=['Old'], failed=True)]
+        (Path(self.tmp.name) / 'ai-limits.jsonl').write_text(''.join(json.dumps(r) + '\n' for r in rows) + 'broken\n', encoding='utf-8')
+        with mock.patch.dict(os.environ, self.env):
+            a = admin_server.ai_limits(now)
+        self.assertEqual(a['day'], {'hits': 1, 'failed': 1}); self.assertEqual(a['week'], {'hits': 2, 'failed': 1})
+        self.assertEqual(a['quotas'], {'PerMinute': 1, '-': 1}); self.assertEqual(a['last'], now - 50)
 
 
 if __name__ == '__main__':

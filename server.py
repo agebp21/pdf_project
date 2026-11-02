@@ -674,7 +674,7 @@ def summarize_book(title, text, lang='id-ID', length='sedang', focus='', chapter
     raise RuntimeError('AI tidak menghasilkan ringkasan. Coba lagi.')
 
 
-ASK_MAX_CHARS = 80_000      # of the document sent with one question
+ASK_MAX_CHARS = 40_000      # of the document sent with one question (40k: half the tokens of 80k, owner 2026-11-02)
 ASK_HISTORY = 6             # earlier turns kept
 WORK_MAX_CHARS = 20_000     # of the member's own work sent along (notes, summary, journal, slides)
 
@@ -1239,6 +1239,51 @@ AI_BUSY = 'Layanan AI sedang sibuk. Coba lagi beberapa saat lagi.'
 AI_QUOTA = 'AI MyFlipbook sedang banyak dipakai. Tunggu sebentar, lalu coba lagi.'
 
 
+# Gemini at once: more wait in the queue (AI_SLOT_WAIT seconds, then "banyak dipakai").
+AI_SLOTS = threading.BoundedSemaphore(max(1, int(os.environ.get('AI_CONCURRENCY', '') or 6)))
+AI_SLOT_WAIT = 120
+
+
+def gemini_retry_seconds():
+    """How long a busy Gemini is waited for, in all, before the member hears it (default 25)."""
+    try:
+        return max(0.0, float(os.environ.get('GEMINI_RETRY_SECONDS', '') or 25))
+    except ValueError:
+        return 25.0
+
+
+def retry_delay(detail):
+    """Seconds Gemini asks us to wait ("retryDelay": "17s"), or None."""
+    found = re.search(r'"retryDelay"\s*:\s*"(\d+(?:\.\d+)?)s"', str(detail))
+    return float(found[1]) if found else None
+
+
+def ai_limits_path():
+    return Path(os.environ.get('MYFLIPBOOK_DB') or ROOT / '.data' / 'myflipbook.sqlite3').parent / 'ai-limits.jsonl'
+
+
+AI_LIMITS_LOCK = threading.Lock()
+
+
+def note_ai_limit(code, model, detail, failed=False):
+    """One busy answer from Gemini for the admin panel (Server): when, which model, which of
+    its limits (quotaId, e.g. per minute or per day) and whether the member was turned away
+    (`failed`) or it was absorbed by the other model / a retry. Only the last ~2 weeks are kept."""
+    quotas = sorted(set(re.findall(r'"quotaId"\s*:\s*"([^"]+)"', str(detail))))
+    print(f'[ai] gemini busy ({code}) model={model} quota={",".join(quotas) or "-"} failed={failed}', flush=True)
+    line = json.dumps(dict(at=int(time.time()), code=code, model=model, quota=quotas, failed=failed)) + '\n'
+    path = ai_limits_path()
+    try:
+        with AI_LIMITS_LOCK:
+            path.parent.mkdir(parents=True, exist_ok=True)
+            if path.exists() and path.stat().st_size > 2_000_000:
+                path.write_text(''.join(path.read_text(encoding='utf-8').splitlines(True)[-5000:]), encoding='utf-8')
+            with path.open('a', encoding='utf-8') as out:
+                out.write(line)
+    except OSError:
+        pass
+
+
 def ai_refused(provider, code, detail):
     """A provider's refusal as words for the member (its details, which may name keys or
     billing, go to the server log only)."""
@@ -1266,6 +1311,10 @@ def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3, include_t
     thinking = os.environ.get('GEMINI_THINKING', 'low').strip().lower()
 
     fallback = os.environ.get('GEMINI_FALLBACK_MODEL', '').strip()
+    # Busy (429 our limit per minute, 503 overloaded): the other model has its own limit, so it is
+    # tried at once; both busy, we wait as Gemini asks (retryDelay) and try again, within
+    # GEMINI_RETRY_SECONDS, before the member hears "banyak dipakai".
+    models = [model] + ([fallback] if fallback and fallback != model and fallback.startswith('gemini-') else [])
 
     def ask(level, selected_model=model):
         config = {'temperature': temperature, 'maxOutputTokens': min(65536, max_tokens * 2)}
@@ -1279,26 +1328,45 @@ def gemini_chat(system, user, model, max_tokens=8000, temperature=0.3, include_t
                                          headers={'x-goog-api-key': key, 'Content-Type': 'application/json'})
         with urllib.request.urlopen(request, timeout=300) as response:
             return json.loads(response.read().decode('utf-8'))
-    try:
+
+    def call(selected):
+        """One model's answer; (code, detail) when it refuses."""
         try:
-            data = ask(thinking)
+            return ask(thinking, selected), None
         except urllib.error.HTTPError as cause:
             detail = cause.read().decode('utf-8', 'replace')
-            if cause.code == 503 and fallback and fallback != model and fallback.startswith('gemini-'):
-                print(f'[ai] Gemini model {model} overloaded; trying fallback {fallback}', flush=True)
-                try:
-                    data = ask(thinking, fallback)
-                except urllib.error.HTTPError as alternate:
-                    alternate_detail = alternate.read().decode('utf-8', 'replace')
-                    if not (thinking and alternate.code == 400 and 'thinking' in alternate_detail.lower()):
-                        raise ai_refused('gemini', alternate.code, alternate_detail) from alternate
-                    data = ask('', fallback)
-            elif not (thinking and cause.code == 400 and 'thinking' in detail.lower()):
-                raise ai_refused('gemini', cause.code, detail) from cause
-            else:
-                data = ask('')                                  # this model sets its own thinking
-    except urllib.error.HTTPError as cause:
-        raise ai_refused('gemini', cause.code, cause.read().decode('utf-8', 'replace')) from cause
+            if not (thinking and cause.code == 400 and 'thinking' in detail.lower()):
+                return None, (cause.code, detail)
+        try:
+            return ask('', selected), None                       # this model sets its own thinking
+        except urllib.error.HTTPError as cause:
+            return None, (cause.code, cause.read().decode('utf-8', 'replace'))
+
+    deadline = time.monotonic() + gemini_retry_seconds()
+    try:
+        if not AI_SLOTS.acquire(timeout=AI_SLOT_WAIT):         # a queue: at most AI_CONCURRENCY at Gemini at once
+            raise RuntimeError(AI_QUOTA)
+        try:
+            data, refused, tries = None, None, 0
+            while data is None:
+                for selected in models:
+                    data, refused = call(selected)
+                    if data is not None:
+                        break
+                    if refused[0] not in (429, 503):
+                        raise ai_refused('gemini', *refused)
+                    tries += 1
+                    note_ai_limit(refused[0], selected, refused[1])
+                    if selected != models[-1]:
+                        print(f'[ai] Gemini model {selected} busy ({refused[0]}); trying {models[-1]}', flush=True)
+                else:
+                    wait = max(1.0, retry_delay(refused[1]) or 2.0 * tries)     # a daily limit asks for hours: past the deadline
+                    if time.monotonic() + wait > deadline:
+                        note_ai_limit(refused[0], models[-1], refused[1], failed=True)
+                        raise ai_refused('gemini', *refused)
+                    time.sleep(wait)
+        finally:
+            AI_SLOTS.release()
     except (urllib.error.URLError, TimeoutError, OSError) as cause:
         raise RuntimeError('Layanan AI tidak bisa dihubungi. Cek koneksi internet server.') from cause
     candidates = data.get('candidates') or []
