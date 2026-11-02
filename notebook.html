@@ -229,8 +229,13 @@
   .wait-sec{margin-left:8px;font-size:12px;color:#A8A29E}
   @media (prefers-reduced-motion:reduce){.dots i{animation:none}}
   .ask-form{padding:8px 18px 12px;background:#fff}
-  .ai-left{margin:6px 4px 0;font-size:12px;color:#78716C;text-align:center}
+  .ai-left{display:grid;gap:5px;max-width:360px;margin:8px auto 0;font-size:12px;color:#78716C;text-align:center}
+  .ai-left[hidden]{display:none}
   .ai-left.is-out{color:#B91C1C;font-weight:700}
+  .ai-bar{display:block;height:6px;border-radius:999px;background:#EFE9DC;overflow:hidden}
+  .ai-bar i{display:block;height:100%;border-radius:inherit;background:#1A3C34;transition:width .4s ease}
+  .ai-bar.is-low i{background:#D97706}
+  .ai-bar.is-out i{background:#B91C1C}
   .composer{max-width:760px;margin:0 auto;display:flex;align-items:flex-end;gap:8px;border:1.5px solid #E4DED0;border-radius:24px;padding:8px 8px 8px 16px;background:#fff;box-shadow:0 6px 20px rgba(28,25,23,.06);transition:border-color .15s}
   .composer:focus-within{border-color:#FF5C28}
   .composer textarea{flex:1;min-width:0;border:0;outline:none;resize:none;max-height:180px;padding:7px 0;background:transparent;font:500 15px/1.5 'Plus Jakarta Sans',system-ui,sans-serif;color:#1C1917}
@@ -2049,9 +2054,16 @@ window.addEventListener('DOMContentLoaded', () => {
     if (!ai || ai.limit == null) { out.hidden = true; return; }
     const left = Math.max(0, ai.limit - ai.used);
     const at = ai.resetAt ? new Date(ai.resetAt * 1000).toLocaleTimeString(L('en-GB', 'id-ID'), {hour: '2-digit', minute: '2-digit'}) : '';
-    out.textContent = left
-      ? L(`AI allowance: ${left} of ${ai.limit} left`, `Sisa jatah AI: ${left} dari ${ai.limit}`) + (at ? L(` · refills at ${at}`, ` · terisi lagi pukul ${at}`) : '')
-      : L(`AI allowance used up · refills at ${at}`, `Jatah AI habis · terisi lagi pukul ${at}`);
+    const text = left
+      ? L(`AI quota used: ${ai.used} of ${ai.limit}`, `Penggunaan kuota AI: ${ai.used} dari ${ai.limit}`) + (at ? L(` · refills at ${at}`, ` · terisi lagi pukul ${at}`) : '')
+      : L(`AI quota used up · refills at ${at}`, `Kuota AI habis · terisi lagi pukul ${at}`);
+    // a bar of what is used: green, amber past 80%, red when used up
+    const pct = Math.min(100, Math.round(ai.used / ai.limit * 100));
+    const bar = Object.assign(document.createElement('span'), {className: 'ai-bar' + (pct >= 100 ? ' is-out' : pct >= 80 ? ' is-low' : '')});
+    bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(ai.limit));
+    bar.setAttribute('aria-valuenow', String(ai.used)); bar.setAttribute('aria-label', text);
+    bar.append(Object.assign(document.createElement('i'), {style: `width:${pct}%`}));
+    out.replaceChildren(Object.assign(document.createElement('span'), {textContent: text}), bar);
     out.classList.toggle('is-out', !left);
     out.hidden = false;
   }

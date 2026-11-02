@@ -1307,7 +1307,8 @@
      onAsk({page, quote, note, question, history}) → Promise<answer>: a note linked to a
      highlight opens as wide as the book with a chat under it, answered by the server's AI
      (only where a server can answer); askLabels: {intro, placeholder, send, thinking, add},
-     allowance() → Promise<{text, out}|null>: the member's AI allowance, shown under the chat} */
+     allowance() → Promise<{text, out, used, limit}|null>: the member's AI allowance, shown
+     under the chat (with a bar of what is used when used / limit are given)} */
   bind(options) {
     const self = this, pages = options.pages;
     let notes = self.load(options.key), editor = null, reader = null, list = null, editing = null, timer = 0, saved = true;
@@ -1549,7 +1550,20 @@
         if (!options.allowance) return;
         Promise.resolve().then(options.allowance).then(info => {
           allowance.hidden = !(info && info.text);
-          if (info && info.text) { allowance.textContent = info.text; allowance.classList.toggle('is-out', !!info.out); }
+          if (!(info && info.text)) return;
+          const line = document.createElement('span'); line.textContent = info.text;
+          while (allowance.firstChild) allowance.removeChild(allowance.firstChild);
+          allowance.appendChild(line);
+          if (info.limit > 0) {
+            // used: amber past 80%, red when used up
+            const pct = Math.min(100, Math.round((info.used || 0) / info.limit * 100));
+            const bar = document.createElement('span'); bar.className = 'book-note-chat-bar' + (pct >= 100 ? ' is-out' : pct >= 80 ? ' is-low' : '');
+            bar.setAttribute('role', 'progressbar'); bar.setAttribute('aria-valuemin', '0'); bar.setAttribute('aria-valuemax', String(info.limit));
+            bar.setAttribute('aria-valuenow', String(info.used || 0)); bar.setAttribute('aria-label', info.text);
+            const fill = document.createElement('i'); fill.style.width = pct + '%'; bar.appendChild(fill);
+            allowance.appendChild(bar);
+          }
+          allowance.classList.toggle('is-out', !!info.out);
         }, () => { allowance.hidden = true; });
       }
       form.appendChild(input); form.appendChild(send);

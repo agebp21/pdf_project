@@ -821,9 +821,9 @@
     if (!ai || ai.limit == null) return null;
     const left = Math.max(0, ai.limit - ai.used);
     const at = ai.resetAt ? new Date(ai.resetAt * 1000).toLocaleTimeString(L('en-GB', 'id-ID'), {hour: '2-digit', minute: '2-digit'}) : '';
-    return {out: !left, text: left
-      ? L(`AI allowance: ${left} of ${ai.limit} left`, `Sisa jatah AI: ${left} dari ${ai.limit}`) + (at ? L(` · refills at ${at}`, ` · terisi lagi pukul ${at}`) : '')
-      : L(`AI allowance used up · refills at ${at}`, `Jatah AI habis · terisi lagi pukul ${at}`)};
+    return {out: !left, used: ai.used, limit: ai.limit, text: left
+      ? L(`AI quota used: ${ai.used} of ${ai.limit}`, `Penggunaan kuota AI: ${ai.used} dari ${ai.limit}`) + (at ? L(` · refills at ${at}`, ` · terisi lagi pukul ${at}`) : '')
+      : L(`AI quota used up · refills at ${at}`, `Kuota AI habis · terisi lagi pukul ${at}`)};
   }
   // Chat under a highlight's note: the question about that passage, answered by the server's
   // AI (ASK_MODEL, Gemini) from its page and the pages beside it; page citations stay as "hlm. N".
