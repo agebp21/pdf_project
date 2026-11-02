@@ -694,7 +694,7 @@ def clean_work(work):
     return '\n'.join(line for line in lines if line)[:WORK_MAX_CHARS]
 
 
-def ask_document(title, text, question, history=(), work='', include_thoughts=False):
+def ask_document(title, text, question, history=(), work='', include_thoughts=False, passage=''):
     """An answer to a reader's question, from the document (and the reader's own notes on it,
     `work`) only, with source+page references. One or several sources: `text` carries bare
     `[Halaman N]` tags for one source, `[Sumber I: Name — Halaman N]` tags for several (see
@@ -728,10 +728,31 @@ def ask_document(title, text, question, history=(), work='', include_thoughts=Fa
               + (' Pembaca juga punya hasil kerja sendiri (catatan, ringkasan, draf jurnal, slide) di bagian "HASIL KERJA PEMBACA": '
                  'pakai untuk pertanyaan tentang pekerjaannya (mis. memeriksa, melengkapi, atau membandingkan dengan dokumen), '
                  'tetapi bedakan dengan jelas mana yang dari dokumen dan mana yang dari catatan pembaca.' if work else ''))
+    if passage:
+        # Chat under a highlight's note: a writing partner for developing the passage into a
+        # new article, free to use general knowledge beyond the book (said which is which).
+        system = ('Kamu mitra menulis dan asisten riset. Pembaca menyorot BAGIAN YANG DISTABILO dari sebuah dokumen dan '
+                  'ingin mengembangkannya, misalnya menjadi artikel atau tulisan versi baru. Jawab pertanyaan apa pun, '
+                  'TIDAK terbatas pada isi dokumen: boleh memakai pengetahuan umum, contoh, data, teori, dan sudut pandang '
+                  'lain, serta menulis ulang, memperluas, atau menyusun draf artikel baru bila diminta. Bedakan dengan jelas: '
+                  f'yang berasal dari dokumen beri rujukan halaman. {cite} Yang dari luar dokumen JANGAN diberi nomor halaman; '
+                  'bila perlu tandai "(di luar buku)". Bila meminta saran atau pendapat, beri saran praktis dan tandai sebagai '
+                  'saran. Jangan mengarang kutipan, judul buku, penulis, tautan, atau daftar pustaka; bila tidak yakin akan '
+                  'suatu fakta atau angka, katakan begitu. Ikuti maksud permintaan TERAKHIR; percakapan sebelumnya hanya '
+                  'konteks. Jawab dalam bahasa yang sama dengan pertanyaan; jawaban biasa ringkas dan langsung (jangan '
+                  'mengulang pertanyaannya), draf artikel boleh panjang dengan judul dan paragraf. Catatan pembaca ada di '
+                  '"HASIL KERJA PEMBACA". Tanpa ** atau tabel. '
+                  f'Sesudah jawaban (juga sesudah draf artikel), tulis satu baris terakhir yang diawali "{FOLLOW_UPS}:" lalu tiga '
+                  'pertanyaan lanjutan pendek (paling banyak 8 kata) yang dipisah " | ", isinya pertanyaan nyata yang membantu '
+                  f'pembaca mengembangkan tulisannya, dalam bahasa yang sama dengan pertanyaannya. Contoh bentuk: "{FOLLOW_UPS}: '
+                  'Apa contohnya di daerah lain? | Bagaimana dampaknya bagi mahasiswa? | Siapa yang paling dirugikan?"')
+    passage = clean_work(passage)[:HIGHLIGHT_MAX_CHARS]
     user = (f'Judul dokumen: {title}\n\n{ask_pages(text, question + " " + turns[-500:])}\n\n'
+            + (f'BAGIAN YANG DISTABILO:\n{passage}\n\n' if passage else '')
             + (f'HASIL KERJA PEMBACA:\n{work}\n\n' if work else '')
             + (f'Percakapan sebelumnya:\n{turns}\n' if turns else '') + f'PERMINTAAN TERAKHIR (jawab ini): {question}')
-    reply = ai_chat(system, user, model, max_tokens=3500, include_thoughts=include_thoughts)
+    # a passage chat may write a whole new article draft
+    reply = ai_chat(system, user, model, max_tokens=6000 if passage else 3500, include_thoughts=include_thoughts)
     thoughts = ''
     if include_thoughts:
         reply, thoughts = reply
@@ -740,6 +761,21 @@ def ask_document(title, text, question, history=(), work='', include_thoughts=Fa
         raise RuntimeError('AI tidak menjawab. Coba lagi.')
     reply = reply[:12000]
     return (reply, thoughts[:4000]) if include_thoughts else reply
+
+
+FOLLOW_UPS = 'PERTANYAAN LANJUTAN'
+
+
+def split_follow_ups(answer):
+    """An answer about a highlighted passage and the follow-up questions the AI offered on its
+    last line (`FOLLOW_UPS: a | b | c`): `(answer without that line, [up to 3 questions])`."""
+    found = re.search(rf'\n?[ \t]*{FOLLOW_UPS}\s*:\s*(.+?)\s*$', answer, re.S | re.I)
+    if not found:
+        return answer, []
+    asks = [' '.join(q.split()).strip(' -•*"\'') for q in re.split(r'\s*\|\s*|\n', found.group(1))]
+    # the format's placeholders copied as they are ("pertanyaan 1") are no questions
+    asks = [q for q in asks if len(q) >= 3 and not re.fullmatch(r'(pertanyaan|question)\s*\d', q, re.I)]
+    return answer[:found.start()].rstrip(), [q[:120] for q in asks][:3]
 
 
 CITE_PAIR = re.compile(r'\(?\s*(?:Sumber|Source)\s*(\d+)\s*[,:]?\s*(?:hlm\.?|hal\.?|p\.?)\s*(\d+)\s*\)?', re.I)
@@ -1107,8 +1143,9 @@ HIGHLIGHT_SUMMARY_MAX = 3000
 
 
 def highlight_summary_words(text):
-    """Target length: about half of the highlighted words, 40-300."""
-    return max(40, min(300, round(len(text.split()) * 0.5)))
+    """Target length: about a quarter of the highlighted words, 15-150 (a real condensation,
+    never as long as the passage)."""
+    return max(15, min(150, round(len(text.split()) * 0.25)))
 
 
 def summarize_highlight(text):
@@ -1121,12 +1158,13 @@ def summarize_highlight(text):
     text = text[:HIGHLIGHT_MAX_CHARS]
     words = highlight_summary_words(text)
     model = os.environ.get('SUMMARY_MODEL', '').strip() or os.environ.get('PODCAST_MODEL', 'claude-sonnet-5').strip()
-    system = ('Ringkas teks yang distabilo pembaca menjadi catatan di tepi halaman, dalam BAHASA YANG SAMA dengan teksnya. '
-              f'Panjang sekitar {words} kata (jangan lebih pendek dari itu bila isinya cukup). Pertahankan SEMUA poin utama, nama, angka, istilah penting, dan alur gagasannya; '
-              'buang pengulangan dan kalimat basa-basi. Setia pada isi: jangan menambah fakta, angka, atau pendapat. '
-              'Tulis sebagai PARAGRAF kalimat utuh yang runtut, JANGAN memakai butir/bullet/penomoran, '
-              'walaupun teks aslinya berupa daftar (gabungkan poin-poinnya menjadi kalimat). '
-              'Tanpa pembuka (jangan tulis "Ringkasan:"), tanpa markdown (tanpa **, #).')
+    system = ('Buat INTISARI dari teks yang distabilo pembaca, untuk catatan di tepi halaman, dalam BAHASA YANG SAMA dengan teksnya. '
+              f'Paling banyak sekitar {words} kata. Pahami dulu maksud teksnya, lalu tulis gagasan pokoknya dengan KATA-KATA SENDIRI: '
+              'apa yang ingin disampaikan penulis, bukan daftar isinya. JANGAN menyalin atau sekadar menyusun ulang kalimat aslinya, '
+              'jangan membahas poin satu per satu; gabungkan menjadi kesimpulan yang padat. Sebut nama, angka, atau istilah hanya bila '
+              'itu inti gagasannya. Setia pada isi: jangan menambah fakta, angka, atau pendapat. '
+              'Tulis sebagai PARAGRAF kalimat utuh, JANGAN memakai butir/bullet/penomoran. '
+              'Tanpa pembuka (jangan tulis "Ringkasan:" atau "Teks ini membahas"), tanpa markdown (tanpa **, #).')
     # Thinking models (Gemini) spend a good part of max_tokens reasoning before they answer.
     reply = ai_chat(system, text, model, max_tokens=4000, temperature=0.2)
     reply = re.sub(r'^\s*(ringkasan|summary|intisari)\s*:\s*', '', reply.replace('**', '').replace('##', ''), flags=re.I).strip()
@@ -4294,7 +4332,9 @@ class Handler(SimpleHTTPRequestHandler):
             data = json.loads(self.rfile.read(size).decode('utf-8'))
             text, index, names = self.sources_text(data)
             history = data.get('history') if isinstance(data.get('history'), list) else []
-            request = wants_external_research(data.get('question'), history)
+            # a question about one highlighted passage stays inside the book (no web search)
+            passage = data.get('passage') if isinstance(data.get('passage'), str) else ''
+            request = None if passage else wants_external_research(data.get('question'), history)
             if request:
                 results, origin = external_references(request)
                 auto_add = any(len(item.get('abstract', '').split()) >= 40 for item in results)
@@ -4306,15 +4346,17 @@ class Handler(SimpleHTTPRequestHandler):
                 self.send_json(200, {'answer': answer, 'citations': [], 'thoughts': '', 'webSources': results, 'autoAdd': auto_add})
                 return
             answer, thoughts = ask_document(str(data.get('title') or 'Dokumen')[:200], text, data.get('question'),
-                                            history, data.get('work'), include_thoughts=True)
+                                            history, data.get('work'), include_thoughts=True, passage=passage)
         except (ValueError, UnicodeDecodeError) as cause:
             self.send_json(400, {'error': 'Permintaan tidak valid.' if isinstance(cause, (json.JSONDecodeError, UnicodeDecodeError)) else str(cause)})
             return
         except RuntimeError as cause:
             self.send_json(502, {'error': str(cause)})
             return
+        answer, suggestions = split_follow_ups(answer) if passage else (answer, [])
         answer, citations = ask_citations(index, names, answer, data.get('question') or '')
-        self.send_json(200, {'answer': answer, 'citations': citations, 'thoughts': thoughts})
+        self.send_json(200, {'answer': answer, 'citations': citations, 'thoughts': thoughts,
+                             **({'suggestions': suggestions} if passage else {})})
 
     def write_route(self):
         """POST {kind: 'journal'|'slides'|'quiz'|'flashcards'|'table', title, text: {page: [lines]},

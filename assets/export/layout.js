@@ -1303,11 +1303,18 @@
      bookmark(index, on) → true when it changed the page's bookmark,
      blank: false → no ✎ / ＋ tab at all (notes come from highlights),
      onRemove(index, said): the reader deleted a quote note ("said" = the
-     quoted text) → its highlight goes too} */
+     quoted text) → its highlight goes too,
+     onAsk({page, quote, note, question, history}) → Promise<answer>: a note linked to a
+     highlight opens as wide as the book with a chat under it, answered by the server's AI
+     (only where a server can answer); askLabels: {intro, placeholder, send, thinking, add}} */
   bind(options) {
     const self = this, pages = options.pages;
     let notes = self.load(options.key), editor = null, reader = null, list = null, editing = null, timer = 0, saved = true;
     const label = i => (i === 0 ? 'Cover' : 'Page ' + (i + 1));
+    const words = Object.assign({intro: 'Ask anything, or develop this passage into new writing. The AI may draw on knowledge beyond the book.',
+      placeholder: 'Ask about this passage\u2026', send: 'Send', thinking: '\u2728 Thinking\u2026', add: '\uff0b Add to note',
+      starters: ['Develop it into a new article', 'Explain it more simply', 'Any practical suggestions?', 'Add data or examples from outside the book']}, options.askLabels);
+    const chats = {};          // page + highlighted text → that note's chat (this visit only)
     const count = () => Object.keys(notes).reduce((sum, k) => sum + notes[k].items.length, 0);
     const stop = event => event.stopPropagation();
     const guard = el => ['pointerdown', 'mousedown', 'touchstart'].forEach(name => el.addEventListener(name, stop));
@@ -1339,6 +1346,11 @@
     }
     function refresh() {
       pages.forEach((page, index) => tabs(index));
+      // An open card follows its note (an AI summary / translation arriving while it is read).
+      if (reader) {
+        const note = notes[reader.page] && notes[reader.page].items[reader.item];
+        if (note && reader.body.textContent !== note.text) reader.body.textContent = note.text;
+      }
       if (options.open) {
         options.open.textContent = '📝 ' + count();
         options.open.title = 'My notes (' + count() + ')';
@@ -1400,9 +1412,17 @@
       const row = document.createElement('div'); row.className = 'book-note-actions';
       row.appendChild(button('🗑 Delete', 'book-note-delete', () => { closeReader(); remove(index, item); }));
       row.appendChild(button('✎ Edit', 'book-note-done', () => { closeReader(); edit(index, item); }));
-      box.appendChild(head); box.appendChild(body); box.appendChild(row);
+      // A note on a highlight (its quote, summary or translation): as wide as the book, with a chat.
+      const asking = !!(note.q && options.onAsk);
+      box.appendChild(head); if (!asking) box.appendChild(body);
+      // The chat card closes with ✕ in its corner (Delete / Edit stay on the small cards).
+      if (asking) {
+        box.classList.add('is-chat'); box.addEventListener('wheel', stop); box.appendChild(chat(index, note.q, body));
+        const shut = button('✕', 'book-note-card-close', closeReader); shut.title = 'Close'; shut.setAttribute('aria-label', 'Close');
+        box.appendChild(shut);
+      } else box.appendChild(row);
       document.body.appendChild(box);
-      reader = {page: index, item, box};
+      reader = {page: index, item, box, body};
       tabs(index);
       // Beside its tab, on the page side, kept on screen. The tab is measured
       // after the stack is redrawn (the clicked one may have been replaced).
@@ -1411,6 +1431,14 @@
       // The reader may resize the card (corner handle); its last size is kept.
       let size = null;
       try { size = JSON.parse(localStorage.getItem('mf-note-card') || 'null'); } catch (e) {}
+      const book = asking && bookRect();
+      if (book) {
+        const wide = Math.min(book.right - book.left, window.innerWidth - 24);
+        box.style.width = wide + 'px';
+        box.style.height = Math.min(book.bottom - book.top, window.innerHeight - 24) + 'px';
+        box.style.left = Math.max(12, Math.min(book.left, window.innerWidth - wide - 12)) + 'px';
+        box.style.top = Math.max(12, Math.min(book.top, window.innerHeight - box.offsetHeight - 12)) + 'px';
+      } else {
       const width = Math.min(size && size.w > 200 ? size.w : 320, window.innerWidth - 24);
       box.style.width = width + 'px';
       if (size && size.h > 120) box.style.height = Math.min(size.h, window.innerHeight - 24) + 'px';
@@ -1419,6 +1447,7 @@
       left = Math.max(12, Math.min(left, window.innerWidth - width - 12));
       box.style.left = left + 'px';
       box.style.top = Math.max(12, Math.min(t.height ? t.top : 80, window.innerHeight - box.offsetHeight - 12)) + 'px';
+      }
       // ◢ grip: drag (mouse or finger) to make the card wider / longer.
       const grip = document.createElement('span');
       grip.className = 'book-note-grip'; grip.title = 'Drag to resize'; grip.setAttribute('aria-hidden', 'true');
@@ -1434,11 +1463,89 @@
         };
         const up = () => {
           grip.removeEventListener('pointermove', move); grip.removeEventListener('pointerup', up); grip.removeEventListener('pointercancel', up);
-          try { localStorage.setItem('mf-note-card', JSON.stringify({w: box.offsetWidth, h: box.offsetHeight})); } catch (e) {}
+          if (!book) try { localStorage.setItem('mf-note-card', JSON.stringify({w: box.offsetWidth, h: box.offsetHeight})); } catch (e) {}
         };
         grip.addEventListener('pointermove', move); grip.addEventListener('pointerup', up); grip.addEventListener('pointercancel', up);
       });
       document.addEventListener('pointerdown', outsideReader, true);
+    }
+    // The book on screen: the pages shown, together.
+    function bookRect() {
+      let r = null;
+      pages.forEach(page => {
+        const b = page.getBoundingClientRect();
+        if (b.width < 2 || b.height < 2 || b.right <= 0 || b.left >= window.innerWidth) return;
+        r = r ? {left: Math.min(r.left, b.left), top: Math.min(r.top, b.top), right: Math.max(r.right, b.right), bottom: Math.max(r.bottom, b.bottom)}
+          : {left: b.left, top: b.top, right: b.right, bottom: b.bottom};
+      });
+      return r && r.right - r.left > 200 ? r : null;
+    }
+    // Chat under a highlight's note: questions about the passage, answered by the AI;
+    // an answer can be added to the note.
+    // The note's text sits at the top of the chat: one window, one scroll.
+    function chat(index, said, body) {
+      const key = index + '\n' + said, log = chats[key] || (chats[key] = []);
+      const wrap = document.createElement('div'); wrap.className = 'book-note-chat';
+      const scroll = document.createElement('div'); scroll.className = 'book-note-chat-log';
+      const list = document.createElement('div'); list.className = 'book-note-chat-msgs';
+      scroll.appendChild(body); scroll.appendChild(list);
+      const form = document.createElement('form'); form.className = 'book-note-chat-form';
+      const input = document.createElement('input'); input.type = 'text'; input.maxLength = 500; input.placeholder = words.placeholder;
+      input.setAttribute('aria-label', words.placeholder);
+      const send = button(words.send, 'book-note-chat-send'); send.type = 'submit';
+      const find = () => (notes[index] ? notes[index].items : []).findIndex(n => n.q === said);
+      // Questions to click for a reader with no idea what to type: the starters, then the
+      // follow-ups the AI offered with its last answer.
+      const chips = document.createElement('div'); chips.className = 'book-note-chat-chips';
+      function paintChips() {
+        while (chips.firstChild) chips.removeChild(chips.firstChild);
+        const last = log[log.length - 1];
+        const offered = !log.length ? words.starters : last && last.role === 'assistant' && !last.pending ? (last.suggestions || []) : [];
+        offered.forEach(text => chips.appendChild(button(text, 'book-note-chat-chip', () => { input.value = text; form.requestSubmit ? form.requestSubmit() : form.onsubmit(new Event('submit')); })));
+        chips.hidden = !offered.length;
+      }
+      function paint() {
+        while (list.firstChild) list.removeChild(list.firstChild);
+        if (!log.length) { const p = document.createElement('p'); p.className = 'book-note-chat-intro'; p.textContent = words.intro; list.appendChild(p); }
+        log.forEach(turn => {
+          const m = document.createElement('div');
+          m.className = 'book-note-chat-msg is-' + turn.role + (turn.error ? ' is-error' : '') + (turn.pending ? ' is-pending' : '');
+          const t = document.createElement('p'); t.textContent = turn.text; m.appendChild(t);
+          if (turn.role === 'assistant' && !turn.pending && !turn.error && !turn.added) {
+            m.appendChild(button(words.add, 'book-note-chat-add', () => {
+              const i = find();
+              if (i < 0) return;
+              store(index, i, notes[index].items[i].text + '\n\n' + turn.text);
+              turn.added = true; paint();
+            }));
+          }
+          list.appendChild(m);
+        });
+        send.disabled = log.some(turn => turn.pending);
+        paintChips();
+        scroll.scrollTop = log.length ? scroll.scrollHeight : 0;
+      }
+      form.onsubmit = event => {
+        event.preventDefault();
+        const question = input.value.trim();
+        if (!question || log.some(turn => turn.pending)) return;
+        const history = log.filter(turn => !turn.pending && !turn.error).map(turn => ({role: turn.role, text: turn.text}));
+        const i = find();
+        const answer = {role: 'assistant', text: words.thinking, pending: true};
+        log.push({role: 'user', text: question}, answer); input.value = ''; paint();
+        Promise.resolve().then(() => options.onAsk({page: index, quote: said, note: i >= 0 ? notes[index].items[i].text : '', question, history}))
+          .then(reply => {
+            // a string, or {text, suggestions} (follow-up questions offered with it)
+            answer.text = String((reply && typeof reply === 'object' ? reply.text : reply) || '').trim();
+            answer.suggestions = reply && Array.isArray(reply.suggestions) ? reply.suggestions.filter(s => typeof s === 'string' && s.trim()).slice(0, 3) : [];
+            if (!answer.text) { answer.text = 'No answer came back. Try again.'; answer.error = true; }
+          }, cause => { answer.text = (cause && cause.message) || 'The AI could not answer. Try again.'; answer.error = true; })
+          .then(() => { answer.pending = false; if (wrap.isConnected) paint(); });
+      };
+      form.appendChild(input); form.appendChild(send);
+      wrap.appendChild(scroll); wrap.appendChild(chips); wrap.appendChild(form);
+      paint();
+      return wrap;
     }
     // Writing a note (item -1 = new).
     function closeEditor() {
@@ -2912,18 +3019,22 @@
     });
     return out;
   },
-  /* options: {summary (object, or a function returning it), button} */
+  /* options: {summary (object, or a function returning it), button, make, labels, onError}
+     make() → Promise: writes the summary with AI when the book has none yet (the caller
+     stores it, so summary() returns it afterwards); labels: {view, make, making}. */
   bind(options) {
     const self = this;
     const get = () => (typeof options.summary === 'function' ? options.summary() : options.summary) || null;
-    let panel = null, body = null;
+    let panel = null, body = null, making = false;
     const button = options.button;
+    const labels = Object.assign({view: '📋 Summary', make: '✨ Summarize book', making: '⏳ Summarizing…'}, options.labels);
+    const has = () => { const s = get(); return !!(s && s.text && s.text.trim()); };
     function paint() {
       if (!button) return;
-      const s = get();
-      button.hidden = !(s && s.text && s.text.trim());
-      button.textContent = '📋 Summary';
-      button.title = 'Summary of this book';
+      button.hidden = !has() && !options.make;
+      button.disabled = making;
+      button.textContent = making ? labels.making : has() ? labels.view : labels.make;
+      button.title = has() || !options.make ? 'Summary of this book' : 'Write a summary of this book with AI';
       button.classList.toggle('is-on', !!panel);
       button.setAttribute('aria-expanded', String(!!panel));
     }
@@ -2960,7 +3071,13 @@
       document.body.appendChild(panel);
       fill(); paint();
     }
-    if (button) button.onclick = () => { if (panel) close(); else open(); };
+    async function make() {
+      making = true; paint();
+      try { await options.make(); } catch (cause) { if (options.onError) options.onError((cause && cause.message) || 'The summary could not be made.'); }
+      making = false; paint();
+      if (has()) open();
+    }
+    if (button) button.onclick = () => { if (making) return; if (panel) close(); else if (has()) open(); else if (options.make) make(); };
     paint();
     return {open, close, active: () => !!panel, refresh() { if (panel) fill(); paint(); }};
   },

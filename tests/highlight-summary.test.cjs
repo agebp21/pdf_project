@@ -40,8 +40,13 @@ const $ = s => w.document.querySelector(s);
   drag(0, 250, 110, 390, 115); await tick();
   assert.deepEqual(asked, ['langkah seribu']);
   assert.deepEqual(items(0).map(n => [n.text, n.q]), [[N.SUMMARIZING, 'langkah seribu']]);
+  // The note opened while it still says "Summarizing…": the card shows the summary once it comes.
+  pages[0].querySelector('.book-note-tab.has-note').click();
+  assert.equal($('.book-note-card-text').textContent, N.SUMMARIZING);
   reply.ok('Satu langkah kecil punya banyak arti.'); await tick(); await tick();
   assert.deepEqual(items(0).map(n => [n.text, n.q, n.color]), [['✨ Satu langkah kecil punya banyak arti.', 'langkah seribu', H.COLORS.y]]);
+  assert.equal($('.book-note-card-text').textContent, '✨ Satu langkah kecil punya banyak arti.', 'open card follows its note');
+  notes.close();
   // Highlighting it again doesn't ask twice.
   drag(0, 330, 110, 380, 112);
   assert.equal(asked.length, 1);

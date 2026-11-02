@@ -309,7 +309,12 @@
       notes?.close();
       notes = FlipbookNotes.bind({key: keyFor(FlipbookNotes.key(name, newElements.length, ratio)), title: name.replace(/\.pdf$/i, ''),
         pages: newElements, goPage, open: $('#notes'), blank: false, bookmark: (index, on) => marks.set(index, on),
-        onRemove: (index, said) => highlights?.forget(index, said)});
+        onRemove: (index, said) => highlights?.forget(index, said), onAsk: askPassage,
+        askLabels: {intro: L('Ask anything, or develop this passage into new writing. The AI may draw on knowledge beyond the book.', 'Tanya apa saja, atau kembangkan bagian ini jadi tulisan baru. AI boleh memakai pengetahuan di luar buku.'),
+          placeholder: L('Ask about this passage…', 'Tanya tentang bagian ini…'), send: L('Send', 'Kirim'),
+          thinking: L('✨ Thinking…', '✨ Sedang menjawab…'), add: L('＋ Add to note', '＋ Tambahkan ke catatan'),
+          starters: [L('Develop it into a new article', 'Kembangkan jadi artikel baru'), L('Explain it more simply', 'Jelaskan lebih sederhana'),
+            L('Any practical suggestions?', 'Beri saran praktis'), L('Add data or examples from outside the book', 'Tambahkan data atau contoh di luar buku')]}});
       highlights?.close();
       highlights = FlipbookHighlights.bind({key: keyFor(FlipbookHighlights.key(name, newElements.length, ratio)),
         pages: newElements, words: bookWords, text: bookText, button: $('#highlight'),
@@ -354,7 +359,8 @@
         make: translateBook,
         onError: message => error(message)});
       summaryView?.close();
-      summaryView = FlipbookSummary.bind({summary: () => bookSummary, button: $('#summary')});
+      summaryView = FlipbookSummary.bind({summary: () => bookSummary, button: $('#summary'), make: bookSummaryAI, onError: error,
+        labels: {view: L('📋 Summary', '📋 Ringkasan'), make: L('✨ Summarize book', '✨ Ringkas buku'), making: L('⏳ Summarizing…', '⏳ Meringkas…')}});
       speech?.close();
       speech = FlipbookSpeech.bind({text: bookText, words: bookWords, pages: newElements, visible: visiblePages, button: $('#speak'),
         busy: () => highlights.active(), onStart: () => podcastView?.stop(), notice: message => { $('#load-status').textContent = message; },
@@ -785,6 +791,44 @@
     }
     if (!response.ok) throw Error(data.error || 'The summary could not be made.');
     return data.summary;
+  }
+  // Summary of the whole book (📋 button, when the book has none yet): the server's AI
+  // (SUMMARY_MODEL, Gemini) writes it; it is kept with the project and goes into exports.
+  async function bookSummaryAI() {
+    aiAllowed();
+    const caps = await serverCaps();
+    const lang = ['id-ID', 'en-US', 'ms-MY'].includes(bookLang) ? bookLang : L('en-US', 'id-ID');
+    const response = await fetch('/api/summary', {method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Build-Token': caps.token || ''},
+      body: JSON.stringify({title: $('#export-title').value.trim() || L('Book', 'Buku'), text: bookText, lang})});
+    let data = {};
+    try { data = await response.json(); } catch (e) {}
+    loginNeeded(response);
+    if (!response.ok && data.upgrade && window.MFDialog) {
+      MFDialog.confirm({title: L('Summary allowance used up', 'Kuota ringkasan habis'), message: data.error,
+        ok: L('Upgrade to Pro', 'Upgrade ke Pro'), cancel: L('Later', 'Nanti'), icon: '👑'}).then(go => { if (go) location.href = data.upgrade; });
+    }
+    if (!response.ok || !data.text) throw Error(data.error || L('The summary could not be made.', 'Ringkasan gagal dibuat.'));
+    bookSummary = {lang: data.lang || lang, text: data.text};
+    if (libraryId) archiveBook();                              // keep My Library up to date
+  }
+  // Chat under a highlight's note: the question about that passage, answered by the server's
+  // AI (ASK_MODEL, Gemini) from its page and the pages beside it; page citations stay as "hlm. N".
+  async function askPassage({page, quote, note, question, history}) {
+    aiAllowed();
+    const caps = await serverCaps();
+    const text = {};
+    for (let i = page - 1; i <= page + 1; i++) if (bookText[i]) text[i] = bookText[i];
+    const response = await fetch('/api/ask', {method: 'POST',
+      headers: {'Content-Type': 'application/json', 'X-Build-Token': caps.token || ''},
+      body: JSON.stringify({title: $('#export-title').value.trim() || L('Book', 'Buku'), text, question, history, passage: quote, work: note})});
+    let data = {};
+    try { data = await response.json(); } catch (e) {}
+    loginNeeded(response);
+    if (!response.ok) throw Error(data.error || L('The AI could not answer. Try again.', 'AI belum bisa menjawab. Coba lagi.'));
+    const cited = n => (data.citations || []).find(c => String(c.n) === n);
+    return {text: String(data.answer || '').replace(/\[(\d+)\]/g, (all, n) => cited(n) ? '(' + L('p. ', 'hlm. ') + cited(n).page + ')' : all),
+      suggestions: data.suggestions || []};
   }
   async function serverCaps() {
     let caps = null;

@@ -127,6 +127,51 @@ class AskTests(unittest.TestCase):
         self.assertIn('HANYA dari isi dokumen', system)
         self.assertIn('PERMINTAAN TERAKHIR (jawab ini): Apa isinya?', user); self.assertIn('Pembaca: Halo', user); self.assertIn('Asisten: Hai', user)
 
+    def test_highlighted_passage_question(self):
+        with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Saran: mulai dari guru (hlm. 2).')) as call:
+            server.ask_document('Buku', '[Halaman 2]\nIsi.', 'Ada saran?', [], 'Ringkasan catatan', passage='  Teks   yang distabilo ')
+        system, user = sent(call)
+        self.assertIn('BAGIAN YANG DISTABILO', system)
+        self.assertIn('TIDAK terbatas pada isi dokumen', system, 'may answer beyond the book')
+        self.assertNotIn('Jawab HANYA dari isi dokumen', system)
+        self.assertIn('Jangan mengarang kutipan', system, 'still no invented references')
+        self.assertIn('BAGIAN YANG DISTABILO:\nTeks yang distabilo', user)
+        self.assertIn('HASIL KERJA PEMBACA:\nRingkasan catatan', user)
+        with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Ya.')) as call:
+            server.ask_document('Buku', '[Halaman 2]\nIsi.', 'Apa isinya?')
+        self.assertNotIn('DISTABILO', sent(call)[0] + sent(call)[1], 'whole-book questions unchanged')
+        self.assertIn('Jawab HANYA dari isi dokumen', sent(call)[0], 'AI Summarizer stays inside its sources')
+
+    def test_follow_ups_split_off_the_answer(self):
+        self.assertEqual(server.split_follow_ups('Jawaban (hlm. 2).\nPERTANYAAN LANJUTAN: Apa contohnya? | "Siapa tokohnya?" | - Kapan terjadi?'),
+                         ('Jawaban (hlm. 2).', ['Apa contohnya?', 'Siapa tokohnya?', 'Kapan terjadi?']))
+        self.assertEqual(server.split_follow_ups('Hanya jawaban.'), ('Hanya jawaban.', []))
+        self.assertEqual(server.split_follow_ups('A\npertanyaan lanjutan: x | Satu dua | b | c | d')[1], ['Satu dua'], 'too short dropped')
+        self.assertEqual(server.split_follow_ups('Draf.\nPERTANYAAN LANJUTAN: pertanyaan 1 | pertanyaan 2 | Question 3'), ('Draf.', []),
+                         'copied placeholders are no questions')
+        with mock.patch.dict(os.environ, ENV), mock.patch('urllib.request.urlopen', return_value=reply('Ya.')) as call:
+            server.ask_document('Buku', '[Halaman 2]\nIsi.', 'Ada saran?', passage='teks')
+        self.assertIn('PERTANYAAN LANJUTAN:', sent(call)[0])
+
+    def test_passage_question_never_searches_the_web(self):
+        httpd = server.ThreadingHTTPServer(('127.0.0.1', 0), server.Handler)
+        thread = threading.Thread(target=httpd.serve_forever, daemon=True); thread.start()
+        body = {'title': 'B', 'text': {'4': [' '.join(['kata'] * 60)]}, 'question': 'tambahkan dari artikel ini', 'passage': 'kata kata'}
+        request = urllib.request.Request(f'http://127.0.0.1:{httpd.server_port}/api/ask', data=json.dumps(body).encode(), method='POST',
+                                         headers={'Content-Type': 'application/json', 'X-Build-Token': server.TOKEN})
+        try:
+            with mock.patch.object(server, 'external_references') as web, \
+                 mock.patch.object(server, 'ask_document', return_value=('Tambahan (hlm. 5).\nPERTANYAAN LANJUTAN: Apa lagi? | Kenapa begitu?', '')) as ask:
+                with urllib.request.urlopen(request) as r:
+                    self.assertEqual(r.status, 200)
+                    out = json.loads(r.read())
+            self.assertEqual(out['suggestions'], ['Apa lagi?', 'Kenapa begitu?'])
+            self.assertNotIn('PERTANYAAN', out['answer'])
+            web.assert_not_called()
+            self.assertEqual(ask.call_args.kwargs['passage'], 'kata kata')
+        finally:
+            httpd.shutdown(); httpd.server_close(); thread.join()
+
     def test_follow_up_format_request_gets_priority_over_old_answer(self):
         history = [{'role': 'user', 'text': 'Apa saja jenis kerisnya?'},
                    {'role': 'ai', 'text': '- Keris lurus (hlm. 2).\n- Keris berluk (hlm. 3).'}]
