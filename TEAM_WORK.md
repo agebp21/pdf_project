@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- NOTEBOOK-FOLLOWUPS (2 Nov, Claude): d9b5c0c live. Chat AI Summarizer memberi 3 pertanyaan lanjutan untuk diklik; menjawab di luar sumber dengan tanda "(di luar sumber)" (sumber tetap diutamakan, dengan halaman); tanpa pembuka "Berdasarkan dokumen". Jawaban di luar sumber berasal dari pengetahuan Gemini, belum dicek ke web. Backup /root/pdf_project-code-backup-notebook-followups-20261102113751.tgz.
+
 - HOME-NO-NOTE-TABS (2 Nov, Claude): eea00d5 live. Buku contoh beranda tanpa tab catatan di tepi halaman (CSS `.hh-demo .book-note-stack`). Backup /root/pdf_project-code-backup-home-no-note-tabs-20261102110133.tgz.
 
 - READER-AI-CHAT (2 Nov, Claude): 4c0b50e live. Pembaca flipbook: "✨ Ringkas buku" lewat Gemini; ringkasan stabilo jadi intisari sungguhan; catatan ringkasan/terjemahan selebar buku dengan chat AI (boleh di luar buku, tanpa web search, pilihan pertanyaan lanjutan, jawaban bisa masuk catatan, tutup ✕). Catatan/stabilo masih tersimpan di browser saja (belum sinkron akun). Backup /root/pdf_project-code-backup-reader-ai-chat-20261102102427.tgz.
