@@ -13,20 +13,14 @@
   let opening = false;
   const overlays = new Map();
   let disposeLayout = null;
-  // Loading and background OCR share one nonblocking progress orb over the book.
+  // Loading and background OCR share a compact progress status in the left panel.
   function loading(text, part) {
     const box = $('#load-status'), on = text != null;
     const progress = Number.isFinite(part) ? Math.round(Math.min(1, Math.max(0, part)) * 100) : null;
-    const orb = $('#reader-loading');
     if (on) box.textContent = text + (progress == null ? '' : ' ' + progress + '%');
     box.classList.toggle('is-loading', on);
-    if (orb) {
-      orb.hidden = !on;
-      orb.classList.toggle('is-indeterminate', on && progress == null);
-      orb.style.setProperty('--reader-progress', (progress ?? 0) + '%');
-      $('#reader-loading-percent').textContent = progress == null ? '' : progress + '%';
-      $('#reader-loading-text').textContent = on ? text : '';
-    }
+    box.classList.toggle('is-indeterminate', on && progress == null);
+    box.style.setProperty('--reader-progress', (progress ?? 0) + '%');
   }
   // The whole page goes full screen and the preview fills it (class), so the
   // tools that open on the page body (highlighter bar, notes, search, dialogs)
@@ -257,7 +251,7 @@
       const container = document.createElement('div'); container.id = 'pdf-book'; container.append(...sheets);
       zoom?.reset();
       zoomBox.replaceChildren(container);
-      $('#reader-stage').replaceChildren(zoomBox, $('#reader-loading'));
+      $('#reader-stage').replaceChildren(zoomBox);
       const ratio = natural.width / natural.height;
       bookRatio = ratio;
       const width = ratio > 1 ? 460 : 380;

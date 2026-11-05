@@ -18,20 +18,14 @@ body.clay .preview:not(:fullscreen):not(.reading-fullscreen) .controls{padding-b
 
 body:has(.preview.reading-fullscreen){overflow:hidden}
 body:has(.preview.reading-fullscreen) .topbar,body:has(.preview.reading-fullscreen) .sh-wrap,body:has(.preview:fullscreen) .sh-wrap{display:none}
-/* Progress stays visible over the pages without intercepting turns, drags or taps. */
-#reader-stage{position:relative}
-#load-status{position:absolute;width:1px;height:1px;margin:0;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap}
-.reader-loading{position:absolute;inset:0;z-index:20;display:grid;place-items:center;pointer-events:none;user-select:none}
-.reader-loading[hidden]{display:none}
-.reader-loading__circle{position:relative;width:clamp(150px,18vw,186px);aspect-ratio:1;border-radius:50%;background:rgba(24,55,44,.35);opacity:.28;filter:drop-shadow(0 10px 20px rgba(33,61,50,.1))}
-.reader-loading__ring{position:absolute;inset:0;border-radius:50%;background:conic-gradient(rgba(255,255,255,.9) var(--reader-progress,0%),rgba(255,255,255,.25) 0)}
-.reader-loading.is-indeterminate .reader-loading__ring{background:conic-gradient(rgba(255,255,255,.9) 0 25%,rgba(255,255,255,.25) 25%);animation:reader-loading-spin 1.15s linear infinite}
-.reader-loading__content{position:absolute;inset:7px;border-radius:50%;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:7px;padding:18px;text-align:center;background:rgba(24,55,44,.72);backdrop-filter:blur(5px);-webkit-backdrop-filter:blur(5px);color:#fff;text-shadow:0 1px 3px rgba(0,0,0,.55)}
-.reader-loading__content strong{font-size:26px;line-height:1;font-weight:800;color:#fff}
-.reader-loading__content strong:empty{display:none}
-.reader-loading__content span{font-size:11px;line-height:1.35;font-weight:650;overflow-wrap:anywhere}
-@keyframes reader-loading-spin{to{transform:rotate(360deg)}}
-@media(prefers-reduced-motion:reduce){.reader-loading.is-indeterminate .reader-loading__ring{animation:none}}
+/* Progress lives under Add source in the left panel, clear of the book. */
+#load-status{box-sizing:border-box;margin:10px 0 12px;padding:8px 10px;border:1px solid #dce9df;border-radius:10px;background:#f4f8f2;color:#3e6654;font-size:11px;line-height:1.4;overflow-wrap:anywhere}
+#load-status:empty{display:none}
+#load-status.is-loading{padding-bottom:13px}
+#load-status.is-loading::after{content:"";display:block;height:3px;margin-top:7px;border-radius:3px;background:linear-gradient(90deg,#39775b var(--reader-progress,0%),#dce9df 0)}
+#load-status.is-loading.is-indeterminate::after{background:linear-gradient(90deg,#dce9df 0%,#39775b 50%,#dce9df 100%);background-size:200% 100%;animation:reader-loading-sweep 1.2s linear infinite}
+@keyframes reader-loading-sweep{to{background-position:-200% 0}}
+@media(prefers-reduced-motion:reduce){#load-status.is-loading.is-indeterminate::after{animation:none}}
 /* Full screen like the normal reader: title bar, the book, then the buttons below it — the book is sized to the
    space between them, so the buttons never cover the bottom of a page. */
 .preview:fullscreen,.preview.reading-fullscreen{display:flex;flex-direction:column}

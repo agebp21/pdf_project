@@ -1,5 +1,7 @@
 # Koordinasi tim AI
 
+- FLIPBOOK-LOADING-LEFT (5 Nov, Codex): indikator bulat di tengah buku dihapus; progres pemuatan PDF/OCR tampil ringkas di panel kiri, di bawah Tambah sumber, dengan garis progres tipis. File: `flipbook.html`, `assets/flipbook.css`, `assets/flipbook.js`. QA lokal: sintaks JS dan diff check lulus; browser desktop 1440 px dan HP 390 px lulus untuk tata letak; unggah PDF satu halaman lulus pada kedua ukuran dengan auth mock; `tests/organize-reader.test.cjs` lulus. Belum live: agen PC ini hanya push ke `v2` sesuai `release/README.md`; PC owner yang deploy.
+
 - AI-CREDITS (2 Nov, Claude): 70c0c55 live. Batas AI bulanan Medium 300 / Pro 700; paket Kredit AI (accounts.AI_PACKS: ai100 Rp25.000, ai300 Rp65.000) di halaman Akun, kolom users.ai_credits, dipakai setelah kuota bulan habis. Backup DB .data/myflipbook-backup-20261102152637-before-ai-credits.sqlite3; kode /root/pdf_project-code-backup-ai-credits-20261102152646.tgz. Pembelian nyata (Duitku) belum diuji.
 - AI-LOAD (2 Nov, Claude): 7221614 live. Antrean Gemini (AI_CONCURRENCY 6), 429 → model cadangan, tunggu+coba lagi (GEMINI_RETRY_SECONDS 25), catatan .data/ai-limits.jsonl + panel admin Server "Batas AI (Gemini)", ASK_MAX_CHARS 40k. Backup /root/pdf_project-code-backup-ai-load-20261102145214.tgz.
 - AI-MONTH (2 Nov, Claude): 0c2b693 live. Batas AI per bulan Medium 600 / Pro 1.500 di atas jatah 5 jam (server.AI_MONTH, .env QUOTA_<TIER>_AI_MONTH). Backup /root/pdf_project-code-backup-ai-month-20261102140846.tgz.
