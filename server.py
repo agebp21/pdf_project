@@ -248,14 +248,14 @@ def payments_paused(user=None):
 # e.g. QUOTA_BASIC_AI=5, QUOTA_MEDIUM_TRANSLATE=400000, QUOTA_WINDOW_HOURS=5.
 QUOTAS = {
     'basic': {'office': 10, 'ai': 5, 'translate': 40_000},
-    'medium': {'office': None, 'ai': 50, 'translate': 400_000},
-    'pro': {'office': None, 'ai': 150, 'translate': None},
+    'medium': {'office': None, 'ai': accounts.AI_WINDOW['medium'], 'translate': 400_000},
+    'pro': {'office': None, 'ai': accounts.AI_WINDOW['pro'], 'translate': None},
 }
 QUOTA_LABELS = {'office': 'konversi', 'ai': 'AI', 'translate': 'terjemahan buku'}
 # AI questions per calendar month (Jakarta time) on top of the 5-hour window, so a plan used
 # round the clock still costs less in Gemini than it earns (owner, 2026-11-02: ~Rp100–215 per
 # question vs Rp89.500 / Rp179.000; 300/700 keeps it under ~half). Change with .env QUOTA_MEDIUM_AI_MONTH / QUOTA_PRO_AI_MONTH.
-AI_MONTH = {'medium': 300, 'pro': 700}
+AI_MONTH = accounts.AI_MONTH
 SUMMARY_ROUTES = ('/api/summary', '/api/highlight-summary')     # what counts against the monthly summary words
 
 
@@ -273,13 +273,7 @@ def summary_words_limit(user):
 
 def ai_month_limit(user):
     """The member's AI questions per month, None = no monthly limit (Basic has no AI at all)."""
-    tier = user['plan']
-    if tier not in accounts.PAID:
-        return None
-    value = os.environ.get(f'QUOTA_{tier.upper()}_AI_MONTH', '').strip()
-    if value:
-        return None if value.lower() in ('0', 'none', 'unlimited') else int(value)
-    return AI_MONTH.get(tier)
+    return accounts.ai_limit(user['plan'], 'month')
 
 
 def month_label(ts):
@@ -301,6 +295,8 @@ def quota_limit(user, kind):
     # Free members (during their trial — afterwards these features need a plan) get
     # the small allowance: that is what makes piles of new accounts not worth it.
     tier = user['plan'] if user['plan'] in accounts.PAID else accounts.FREE_PLAN
+    if kind == 'ai' and tier in accounts.PAID:
+        return accounts.ai_limit(tier, 'window')
     value = os.environ.get(f'QUOTA_{tier.upper()}_{kind.upper()}', '').strip()
     if value:
         return None if value.lower() in ('0', 'none', 'unlimited') else int(value)

@@ -222,10 +222,48 @@ def order_tracking(q='', status='', audience='', page=1):
         db.close()
 
 
-def member_row(r, now):
+def ai_usage_rows(db, rows, now):
+    """Read AI question counts for one member page in a single read-only query."""
+    if not rows:
+        return {}
+    month_start, month_end = accounts.month_bounds(now)
+    try:
+        window = max(1, int(float(os.environ.get('QUOTA_WINDOW_HOURS', '5')) * 3600))
+    except ValueError:
+        window = 5 * 3600
+    window_start = now - window
+    counts = {}
+    if has_table(db, 'usage'):
+        ids = [r['id'] for r in rows]
+        slots = ','.join('?' for _ in ids)
+        query = f'''SELECT user_id,
+                    SUM(CASE WHEN at>=? AND at<? THEN amount ELSE 0 END) AS month_used,
+                    SUM(CASE WHEN at>? THEN amount ELSE 0 END) AS window_used,
+                    MIN(CASE WHEN at>? THEN at END) AS window_first
+                    FROM usage WHERE kind='ai' AND at>=? AND user_id IN ({slots}) GROUP BY user_id'''
+        args = [month_start, month_end, window_start, window_start, min(month_start, window_start), *ids]
+        counts = {r['user_id']: r for r in db.execute(query, args)}
+    result = {}
+    for r in rows:
+        usage = counts.get(r['id'])
+        tier = r['plan'] if paid_active(r, now) and r['plan'] in accounts.PAID else 'basic'
+        first = usage['window_first'] if usage else None
+        result[r['id']] = dict(
+            month=dict(used=usage['month_used'] if usage else 0,
+                       limit=accounts.ai_limit(tier, 'month'), resetAt=month_end),
+            window=dict(used=usage['window_used'] if usage else 0,
+                        limit=accounts.ai_limit(tier, 'window'), resetAt=first + window if first else None,
+                        hours=window / 3600),
+            credits=r['ai_credits'] if 'ai_credits' in r.keys() else 0,
+        )
+    return result
+
+
+def member_row(r, now, ai_usage=None):
     return dict(id=r['id'], email=r['email'], name=r['name'], plan=r['plan'], planExpiresAt=r['plan_expires_at'],
                 paid=paid_active(r, now), verified=bool(r['verified']), google=bool(r['google_sub']), createdAt=r['created_at'],
-                books=r['books'] if 'books' in r.keys() else 0, bytes=r['bytes'] if 'bytes' in r.keys() else 0)
+                books=r['books'] if 'books' in r.keys() else 0, bytes=r['bytes'] if 'bytes' in r.keys() else 0,
+                aiUsage=ai_usage)
 
 
 def members(q='', page=1, per=50, now=None, plan='', verified='', start='', end=''):
@@ -259,8 +297,9 @@ def members(q='', page=1, per=50, now=None, plan='', verified='', start='', end=
                  '(SELECT COALESCE(SUM(size), 0) FROM library_books b WHERE b.user_id=u.id) AS bytes') if lib else '0 AS books, 0 AS bytes'
         rows = db.execute(f'SELECT u.*, {books} FROM users u {where} ORDER BY u.created_at DESC LIMIT ? OFFSET ?',
                           args + [per, (page - 1) * per]).fetchall()
+        ai_usage = ai_usage_rows(db, rows, now)
     db.close()
-    return dict(total=total, page=page, per=per, items=[member_row(r, now) for r in rows])
+    return dict(total=total, page=page, per=per, items=[member_row(r, now, ai_usage[r['id']]) for r in rows])
 
 
 def member(user_id, now=None):
@@ -272,7 +311,7 @@ def member(user_id, now=None):
         r = db.execute('SELECT * FROM users WHERE id=?', (user_id,)).fetchone()
         if not r:
             return None
-        out = member_row(r, now)
+        out = member_row(r, now, ai_usage_rows(db, [r], now)[r['id']])
         out['orders'] = [dict(id=o['id'], plan=o['plan'], cycle=o['cycle'], amount=o['amount'], currency=o['currency'],
                               status=o['status'], provider=o['provider'], createdAt=o['created_at'], paidAt=o['paid_at'])
                          for o in db.execute('SELECT * FROM orders WHERE user_id=? ORDER BY created_at DESC LIMIT 100', (user_id,))]

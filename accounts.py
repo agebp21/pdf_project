@@ -31,6 +31,7 @@ import contextlib
 import hashlib
 import hmac
 import json
+import os
 import re
 import secrets
 import sqlite3
@@ -99,6 +100,21 @@ PLANS = {
                                   'My Library: 200 books'])),
 }
 PAID = ('medium', 'pro')
+AI_WINDOW = {'medium': 50, 'pro': 150}
+AI_MONTH = {'medium': 300, 'pro': 700}
+
+
+def ai_limit(plan, period='month'):
+    """Active paid-plan AI allowance, including the same environment overrides as the member site."""
+    if plan not in PAID:
+        return None
+    key = f'QUOTA_{plan.upper()}_AI' + ('_MONTH' if period == 'month' else '')
+    value = os.environ.get(key, '').strip()
+    if value:
+        return None if value.lower() in ('0', 'none', 'unlimited') else int(value)
+    return (AI_MONTH if period == 'month' else AI_WINDOW)[plan]
+
+
 # AI credit packs (owner, 2026-11-02): more AI questions for a Medium/Pro member who used up the
 # month's allowance (server.AI_MONTH). Rupiah only; credits never expire but are spent only while
 # the plan is active. ~Rp125 of Gemini per question, so a pack keeps about half as margin.

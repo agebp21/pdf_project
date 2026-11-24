@@ -1,5 +1,7 @@
 # Handoff — PDF Project & Flipbook
 
+Update 2026-11-24 (admin, siap rilis): daftar Member menampilkan pertanyaan AI terpakai/jatah bulan berjalan per member. Detail member menampilkan pemakaian bulan ini (reset awal bulan WIB), jendela 5 jam, waktu reset, dan sisa kredit AI. Batas AI dibagi dengan layanan member melalui `accounts.ai_limit`, termasuk override lingkungan; data dari tabel `usage` dan `users.ai_credits` yang sudah ada, tanpa migrasi. QA dan status push dicatat di TEAM_WORK.md.
+
 Update 2026-10-29: card file Gabung PDF memiliki tombol × dengan konfirmasi. Penghapusan file memperbarui index halaman dan cache sehingga gabungan/drag file lain tetap tepat. QA tercatat di TEAM_WORK.md.
 
 Update 2026-10-29: fixed OCR font not returning after moving a picture away; OCR lines now group into paragraphs for text wrap and are fitted against current image geometry. Local QA in TEAM_WORK.md.

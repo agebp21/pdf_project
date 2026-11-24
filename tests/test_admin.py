@@ -120,6 +120,25 @@ class AdminTests(unittest.TestCase):
         self.assertEqual(self.call('GET', '/api/members?plan=medium')[1]['total'], 0)
         self.assertEqual(self.call('GET', '/api/members?plan=basic')[1]['total'], 2)
 
+    def test_member_ai_usage_matches_member_allowances(self):
+        self.login()
+        now = int(time.time())
+        month_start, _ = accounts.month_bounds(now)
+        with sqlite3.connect(self.db) as db:
+            db.execute('INSERT INTO usage VALUES(?,?,?,?)', (self.alice['id'], 'ai', 7, now - 30))
+            db.execute('INSERT INTO usage VALUES(?,?,?,?)', (self.alice['id'], 'ai', 4, month_start - 30))
+            db.execute('UPDATE users SET ai_credits=11 WHERE id=?', (self.alice['id'],))
+        with mock.patch.dict(os.environ, {'QUOTA_MEDIUM_AI_MONTH': '25', 'QUOTA_MEDIUM_AI': '9'}):
+            rows = self.call('GET', '/api/members')[1]['items']
+            alice = next(r for r in rows if r['id'] == self.alice['id'])
+            bob = next(r for r in rows if r['id'] == self.bob['id'])
+            self.assertEqual((alice['aiUsage']['month']['used'], alice['aiUsage']['month']['limit']), (7, 25))
+            self.assertEqual((alice['aiUsage']['window']['used'], alice['aiUsage']['window']['limit']), (7, 9))
+            self.assertEqual(alice['aiUsage']['credits'], 11)
+            self.assertIsNone(bob['aiUsage']['month']['limit'])
+            detail = self.call('GET', f'/api/members/{self.alice["id"]}')[1]
+            self.assertEqual(detail['aiUsage'], alice['aiUsage'])
+
     def test_order_tracking(self):
         self.assertEqual(self.call('GET', '/api/orders')[0], 401)
         self.login()
