@@ -61,6 +61,18 @@ class HomeSamplesTest(unittest.TestCase):
         with self.assertRaises(ValueError):
             home_samples.upload(io.BytesIO(b'%PDF-not-valid'), 14, 'Rusak')
 
+    def test_rename_builtin_and_uploaded_without_reupload(self):
+        home_samples.rename('magazine', 'Katalog Menu Baru')
+        self.assertEqual(home_samples.labels()['magazine'], 'Katalog Menu Baru')
+        self.assertEqual(next(row for row in home_samples.admin_samples() if row['slot'] == 'magazine')['title'], 'Katalog Menu Baru')
+        pdf = self.pdf()
+        item = home_samples.upload(io.BytesIO(pdf), len(pdf), 'Contoh awal')
+        home_samples.rename(item['slot'], 'Contoh setelah edit')
+        self.assertEqual(home_samples.public_samples()[0]['title'], 'Contoh setelah edit')
+        self.assertEqual(home_samples.public_samples()[0]['id'], item['id'])
+        with self.assertRaises(ValueError):
+            home_samples.rename('tidak-ada', 'Salah')
+
     def test_admin_upload_and_public_preview_routes(self):
         import admin_server
         import server
@@ -90,6 +102,13 @@ class HomeSamplesTest(unittest.TestCase):
                 urlopen(f'http://127.0.0.1:{public.server_port}/.data/home-samples/{item["id"]}/source.pdf')
             self.assertEqual(blocked.exception.code, 404)
             blocked.exception.close()
+            request = Request(f'http://127.0.0.1:{admin.server_port}/api/home-samples/rename',
+                              data=json.dumps({'slot':'travel','title':'Buku Pilihan'}).encode(),
+                              headers={'Content-Type':'application/json','X-Admin':'1'}, method='POST')
+            with urlopen(request) as response:
+                self.assertEqual(response.status, 200)
+            with urlopen(f'http://127.0.0.1:{public.server_port}/api/home-samples') as response:
+                self.assertEqual(json.load(response)['labels']['travel'], 'Buku Pilihan')
         finally:
             for host in (admin, public):
                 host.shutdown()

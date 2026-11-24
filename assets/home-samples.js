@@ -13,9 +13,18 @@
     journal: {title:['Jurnal ilmiah.','Academic journal.'],topics:[['Abstrak','Abstract'],['Pendahuluan','Introduction'],['Tinjauan pustaka','Literature review'],['Metode','Method'],['Pembahasan','Discussion'],['Kesimpulan','Conclusion'],['Daftar pustaka','References'],['Lampiran','Appendix']],intro:['Contoh artikel jurnal akademik dengan abstrak, kutipan, dan tata letak dua kolom.','A sample academic journal article with an abstract, citations, and a two-column layout.']}
   };
   const uploaded = {};
+  const labels = {};
   window.HomeSampleOverrides = uploaded;
+  window.HomeSampleLabels = labels;
   const grid = document.querySelector('.hh-sample-grid');
   if (typeof fetch === 'function') fetch('/api/home-samples').then(response => response.ok ? response.json() : {items: []}).then(data => {
+    Object.assign(labels, data.labels || {});
+    Object.entries(labels).forEach(([slot,title]) => {
+      const button = Array.from(grid.querySelectorAll('.hh-sample')).find(node => node.dataset.sample === slot);
+      if (button && typeof title === 'string') {
+        const label = button.querySelector('b'); label.removeAttribute('data-en'); label.textContent = title;
+      }
+    });
     (data.items || []).forEach(item => {
       if (!item || !item.id || !item.cover || !item.pageBase || !Number.isInteger(item.pages)) return;
       const key = item.slot;
@@ -74,7 +83,7 @@
         const image = document.createElement('img'); image.src = 'assets/samples/catalog-1/page-01.webp'; image.alt = 'Nivora Home furniture catalog'; image.className = 'hh-catalog-cover'; closedCover.append(image);
       }
       document.querySelectorAll('.hh-sample').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.sample === selected)));
-      const note = document.getElementById('hh-sample-notice'); note.removeAttribute('data-en'); note.textContent = en() ? 'Nivora Home catalog · 12 pages' : 'Katalog Nivora Home · 12 halaman';
+      const note = document.getElementById('hh-sample-notice'); note.removeAttribute('data-en'); note.textContent = labels[selected] ? labels[selected] + (en() ? ' · 12 pages' : ' · 12 halaman') : en() ? 'Nivora Home catalog · 12 pages' : 'Katalog Nivora Home · 12 halaman';
       return;
     }
     if (closedCover && closedCover.querySelector('.hh-catalog-cover,.hh-magazine-cover,.hh-journal-cover,.hh-upload-cover')) closedCover.innerHTML = originalCover;
@@ -98,7 +107,7 @@
     });
     document.querySelectorAll('[data-sample].hh-sample').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.sample === selected)));
     const notice = document.getElementById('hh-sample-notice'); notice.removeAttribute('data-en');
-    notice.textContent = (en() ? 'Preview selected: ' : 'Contoh dipilih: ') + sample.title[lang];
+    notice.textContent = (en() ? 'Preview selected: ' : 'Contoh dipilih: ') + (labels[selected] || sample.title[lang]);
   }
   function select(event) {
     selected = event.currentTarget.dataset.sample; render();

@@ -28,6 +28,50 @@ def records():
     return [item for item in value if isinstance(item, dict) and ID.fullmatch(str(item.get('id', '')))]
 
 
+def labels():
+    file = storage() / 'labels.json'
+    if not file.is_file():
+        return {}
+    value = json.loads(file.read_text(encoding='utf-8'))
+    if not isinstance(value, dict):
+        raise ValueError('Nama sampel rusak.')
+    return {slot: title for slot, title in value.items() if slot in SLOTS and isinstance(title, str)}
+
+
+def save_labels(value):
+    folder = storage()
+    folder.mkdir(parents=True, exist_ok=True)
+    target = folder / 'labels.json'
+    temp = folder / ('labels-' + secrets.token_hex(4) + '.tmp')
+    try:
+        temp.write_text(json.dumps(value, ensure_ascii=False, indent=2), encoding='utf-8')
+        os.replace(temp, target)
+    finally:
+        temp.unlink(missing_ok=True)
+
+
+def rename(slot, title):
+    title = str(title).strip()
+    if not title or len(title) > 80 or any(ord(char) < 32 for char in title):
+        raise ValueError('Nama sampel harus 1–80 karakter.')
+    with LOCK:
+        current = records()
+        item = next((row for row in current if row['slot'] == slot), None)
+        if slot not in SLOTS and not item:
+            raise ValueError('Sampel tidak ditemukan.')
+        if item:
+            item['title'] = title
+            save_records(current)
+        if slot in SLOTS:
+            value = labels()
+            if title == SLOTS[slot]:
+                value.pop(slot, None)
+            else:
+                value[slot] = title
+            save_labels(value)
+    return title
+
+
 def public_samples():
     return [dict(id=item['id'], slot=item['slot'], title=item['title'], pages=item['pages'],
                  cover=f"/api/home-samples/{item['id']}/page-1.webp",
@@ -37,8 +81,10 @@ def public_samples():
 def admin_samples():
     current = records()
     by_slot = {item['slot']: item for item in current}
-    return [dict(slot=slot, defaultTitle=label, sample=by_slot.get(slot)) for slot, label in SLOTS.items()] + [
-        dict(slot=item['slot'], defaultTitle=None, sample=item) for item in current if item['slot'] not in SLOTS]
+    names = labels()
+    return [dict(slot=slot, title=names.get(slot, by_slot[slot]['title'] if slot in by_slot else label),
+                 defaultTitle=label, sample=by_slot.get(slot)) for slot, label in SLOTS.items()] + [
+        dict(slot=item['slot'], title=item['title'], defaultTitle=None, sample=item) for item in current if item['slot'] not in SLOTS]
 
 
 def render_page(pdf, target, index):
@@ -140,6 +186,10 @@ def upload(source, size, title, slot='new'):
             except OSError:
                 shutil.rmtree(final, ignore_errors=True)
                 raise
+            if item['slot'] in SLOTS:
+                names = labels()
+                names[item['slot']] = item['title']
+                save_labels(names)
             if previous:
                 shutil.rmtree(folder / previous['id'], ignore_errors=True)
         return item

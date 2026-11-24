@@ -2,6 +2,10 @@
 
 ## 📌 Status terkini
 
+- HOME-SAMPLE-NAMES (24 Nov, Codex): nama semua contoh home (termasuk Catalog 2 pada screenshot owner) dapat diubah dari admin tanpa unggah PDF lagi. Label dan notice home ikut berubah; file `.data/home-samples/labels.json` wajib dipertahankan. Tes Python 4, JSDOM dan browser admin→home HP 390px lulus. Akan dirilis bersama kontrol kuota AI.
+
+- ADMIN-AI-QUOTA (24 Nov, Codex): kontrol jatah AI Medium/Pro per bulan dan per 5 jam di admin selesai lokal. `accounts.ai_limit` membaca `.data/ai-quotas.json` (prioritas atas `.env`) sehingga enforcement, laporan member, dan admin sama. 0 = tanpa batas; jendela tanpa batas tetap tunduk pada kuota bulanan, penggunaan AI tetap dicatat. Tes baru 4, kuota 4, admin 11 lulus; browser admin desktop/HP lulus tanpa overflow/error JS. Suite penuh Python 290 dengan 13 gagal + 1 error paywall/podcast lama; JS 62 dengan 2 QA browser gagal resolve Playwright lama. Siap rilis.
+
 - PRICING-PROMO (24 Nov, Codex): kode `40c555c` live dari `v2`. Admin bisa ubah harga paket/kredit AI, buat promo otomatis/kode berbatas tanggal, serta hapus promo. Harga publik dan checkout memakai `pricing.py` yang sama; USD tetap harga varian penyedia, order lama tidak berubah. Tes baru 4, Duitku 8, SEO 8, admin 11 lulus; browser lokal desktop 1366px dan HP 390px lulus tanpa overflow/error JS; 4 tes pricing di VPS lulus. Suite penuh Python 285 (13 gagal + 1 error paywall/podcast lama); JS 62 (2 QA browser gagal resolve Playwright lama). Backup dan verifikasi live dicatat di `DEPLOY.md`.
 
 - HOME-SAMPLES (24 Nov, Codex): kode `8aaa08b` live dari `v2`. Pengelolaan PDF sampel beranda di admin dan pratinjau flipbook di situs umum aktif. PyMuPDF/Pillow terpasang; layanan web/admin aktif, lima rute HTTPS 200, tiga tes sampel di VPS lulus, log error kosong. Tes lokal modul+rute HTTP 3, admin 11, JSDOM flipbook lulus; visual browser belum diuji. Backup dan hasil tes lengkap dicatat di `DEPLOY.md`.

@@ -41,6 +41,7 @@ import urllib.error
 import urllib.parse
 import urllib.request
 import pricing
+import ai_quota_settings
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -109,6 +110,9 @@ def ai_limit(plan, period='month'):
     """Active paid-plan AI allowance, including the same environment overrides as the member site."""
     if plan not in PAID:
         return None
+    override = ai_quota_settings.limit(plan, period)
+    if override is not None:
+        return None if override == 0 else override
     key = f'QUOTA_{plan.upper()}_AI' + ('_MONTH' if period == 'month' else '')
     value = os.environ.get(key, '').strip()
     if value:

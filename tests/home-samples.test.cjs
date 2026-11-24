@@ -8,7 +8,7 @@ const {JSDOM} = require('../.build/qa-runtime/node_modules/jsdom');
   w.HTMLElement.prototype.scrollIntoView = function () {};
   w.HTMLElement.prototype.getBoundingClientRect = function () { return {left:0,top:0,width:450,height:625,right:450,bottom:625}; };
   w.I18N = {get:()=> 'id'};
-  w.fetch = async () => ({ok:true, json:async () => ({items:[{id:'abcdefabcdefabcdefabcdef',slot:'custom-abcdefabcdefabcdefabcdef',title:'PDF Unggahan',pages:3,cover:'/api/home-samples/abcdefabcdefabcdefabcdef/page-1.webp',pageBase:'/api/home-samples/abcdefabcdefabcdefabcdef/page-'}]})});
+  w.fetch = async () => ({ok:true, json:async () => ({labels:{magazine:'Menu Pilihan'},items:[{id:'abcdefabcdefabcdefabcdef',slot:'custom-abcdefabcdefabcdefabcdef',title:'PDF Unggahan',pages:3,cover:'/api/home-samples/abcdefabcdefabcdefabcdef/page-1.webp',pageBase:'/api/home-samples/abcdefabcdefabcdefabcdef/page-'}]})});
   let pageCount=0;
   w.St = {PageFlip: class {
     constructor(box) {this.box=box;this.index=0;this.handlers={};w.__qaFlip=this;}
@@ -27,6 +27,7 @@ const {JSDOM} = require('../.build/qa-runtime/node_modules/jsdom');
   const click = id => w.document.querySelector('.hh-sample[data-sample='+id+']').click();
   const wait = () => new Promise(resolve=>setTimeout(resolve,100));
   click('interior'); await wait();
+  assert.equal(w.document.querySelector('.hh-sample[data-sample=magazine] b').textContent,'Menu Pilihan');
   assert.equal(pageCount,12);assert.equal(w.document.querySelectorAll('.hh-catalog-page').length,12);
   assert.equal(w.document.querySelectorAll('.hh-sample-back').length,0,'PDF final page is the back cover');
   w.__qaFlip.turnToPage(10);

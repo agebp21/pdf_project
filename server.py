@@ -3816,11 +3816,11 @@ class Handler(SimpleHTTPRequestHandler):
         if not user:
             return
         limit = quota_limit(user, kind)
-        if limit is None:
+        if limit is None and kind != 'ai':
             return
         store, window, now = get_accounts(), quota_window(), int(time.time())
         used, first = store.usage_in(user['id'], kind, now - window)
-        if used + amount > limit:
+        if limit is not None and used + amount > limit:
             back = time.strftime('%H:%M', time.localtime((first or now) + window))
             raise accounts.AccountError(429, f'Jatah {QUOTA_LABELS[kind]} habis untuk sementara — terisi lagi pukul {back}. '
                                              'Upgrade ke Medium atau Pro untuk jatah lebih besar.')
@@ -4768,7 +4768,7 @@ class Handler(SimpleHTTPRequestHandler):
         path = unquote(urlsplit(self.path).path)
         if path == '/api/home-samples':
             try:
-                self.send_json(200, {'items': home_samples.public_samples()})
+                self.send_json(200, {'items': home_samples.public_samples(), 'labels': home_samples.labels()})
             except (ValueError, OSError) as cause:
                 self.send_json(500, {'error': str(cause)})
             return

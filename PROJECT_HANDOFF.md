@@ -1262,3 +1262,14 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Admin `/admin/#pricing`: ubah harga Rupiah Medium/Pro bulanan/tahunan dan kredit AI 100/300; buat/hapus promo otomatis atau kode promo, pilih paket/periode, persentase, tanggal mulai/akhir (WIB). Satu promo per order; kode yang dimasukkan menggantikan promo otomatis. Konfigurasi atomik di `.data/pricing.json` (jangan dihapus saat deploy), tanpa migrasi atau variabel lingkungan baru.
 - Harga efektif dari `pricing.quote` dipakai bersama oleh `/harga`, beranda, `/api/billing/plans`, tampilan akun, dan checkout; order yang sudah ada mempertahankan amount saat dibuat. Kode promo di halaman akun berlaku hanya untuk IDR; USD tetap mengikuti harga varian Lemon Squeezy dan tidak diedit di panel. Promo tampil sebagai badge dan harga asal dicoret.
 - Tes: `tests/test_pricing.py` (4 lulus) untuk admin, harga, promo otomatis/kode/tanggal, checkout, order lama; QA browser lokal desktop 1366px + HP 390px lulus. Suite penuh Python 285 dengan 13 gagal + 1 error lama di paywall/podcast; JS 62 dengan 2 QA browser gagal resolve Playwright lama. Simpan `.data/pricing.json` saat deploy; restart web dan admin untuk memasang kode baru, perubahan harga sesudahnya berlaku tanpa restart.
+
+# 2026-11-24 — Kontrol kuota AI admin (siap rilis)
+
+- Admin `/admin/#ai-quotas`: ubah batas AI Medium/Pro per bulan dan per 5 jam untuk semua member paket tersebut, serta pulihkan angka bawaan. Angka 0 berarti tanpa batas; jendela tanpa batas tetap tunduk pada batas bulanan dan penggunaan AI tanpa batas tetap dicatat. Konfigurasi di `.data/ai-quotas.json`; saat belum disimpan, `.env` dan default `accounts.AI_MONTH`/`AI_WINDOW` tetap berlaku. Setelah disimpan, angka admin diutamakan dibanding override `.env`. Tidak ada migrasi atau env baru. Simpan file ini pada deploy berikutnya.
+- `accounts.ai_limit` menjadi satu sumber bagi enforcement di server, `/api/auth/usage` milik member, dan daftar/rincian member di admin. Pemakaian lama tetap dihitung; perubahan batas berlaku untuk permintaan berikutnya.
+- Tes baru `tests/test_ai_quota_admin.py` (4 lulus), tes kuota 4 dan admin 11 lulus, browser admin desktop 1366px dan HP 390px lulus. Suite penuh dicek sebelum deploy.
+
+# 2026-11-24 — Nama sampel beranda bisa diubah admin (siap rilis)
+
+- Admin `/admin/#home-samples`: setiap kartu punya Nama contoh + Simpan nama, termasuk empat slot bawaan walau belum ada PDF unggahan. Nama tersimpan di `.data/home-samples/labels.json` untuk bawaan dan metadata sampel untuk unggahan. Publik `GET /api/home-samples` memuat `labels` dan home mengganti label contoh serta teks pratinjau tanpa mengganti PDF. Nama baru tetap ada sesudah unggahan PDF bawaan dihapus.
+- Tes: `tests/test_home_samples.py` (4 lulus), `node tests/home-samples.test.cjs` lulus, browser lokal admin → home di HP 390px lulus tanpa error JS.

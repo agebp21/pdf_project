@@ -181,6 +181,7 @@
       <button data-tab="orders">Status Order</button>
       <button data-tab="home-samples">Sampel beranda</button>
       <button data-tab="pricing">Harga &amp; Promo</button>
+      <button data-tab="ai-quotas">Kuota AI</button>
       <button data-tab="password">Ganti Password</button>
     </nav>
     <button class="out" id="logout">Keluar</button>
@@ -274,6 +275,17 @@
       </div>
       <div class="panel" style="margin-top:18px"><h3>Daftar promo</h3><div id="promo-list"></div></div>
     </section>
+    <section data-view="ai-quotas" hidden>
+      <h2>Kuota AI</h2>
+      <p class="muted">Atur batas pertanyaan AI untuk semua member Medium dan Pro. Isi 0 untuk tanpa batas. Perubahan berlaku untuk permintaan berikutnya; pemakaian yang sudah tercatat tetap dihitung. Detail penggunaan tiap member ada di Status Member.</p>
+      <div class="panel" style="max-width:650px">
+        <form id="ai-quota-form">
+          <div class="grid" id="ai-quota-fields"></div>
+          <p id="ai-quota-message" role="status"></p>
+          <div class="row"><button class="btn" type="submit">Simpan kuota</button><button class="ghost" type="button" id="ai-quota-reset">Pulihkan bawaan</button></div>
+        </form>
+      </div>
+    </section>
     <section data-view="password" hidden>
       <h2>Ganti password admin</h2>
       <div class="panel" style="max-width:520px">
@@ -338,16 +350,41 @@ $('#logout').onclick = async () => { await api('/api/logout', {method: 'POST', b
 
 document.querySelectorAll('header nav button').forEach(b => b.onclick = () => open(b.dataset.tab));
 function open(tab, record = true) {
-  if (!['overview','members','verified','orders','uploads','visits','server','password','home-samples','pricing'].includes(tab)) tab = 'members';
+  if (!['overview','members','verified','orders','uploads','visits','server','password','home-samples','pricing','ai-quotas'].includes(tab)) tab = 'members';
   if (record && location.hash !== '#' + tab) history.pushState({tab}, '', '#' + tab);
   else if (!record) history.replaceState({tab}, '', '#' + tab);
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.tab === tab)));
   document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== tab; });
-  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(1), server: loadServer, password: async () => {}, 'home-samples': loadHomeSamples, pricing: loadPricing};
+  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(1), server: loadServer, password: async () => {}, 'home-samples': loadHomeSamples, pricing: loadPricing, 'ai-quotas': loadAiQuotas};
   loaders[tab]()
     .catch(e => { document.querySelector(`[data-view="${tab}"]`).insertAdjacentHTML('afterbegin', `<p class="err">${esc(e.message)}</p>`); });
 }
 addEventListener('popstate', () => { if (!$('#app').hidden) open(location.hash.slice(1) || 'overview', false); });
+const AI_QUOTA_LABELS = {medium_month:'Medium · per bulan',medium_window:'Medium · per 5 jam',pro_month:'Pro · per bulan',pro_window:'Pro · per 5 jam'};
+async function loadAiQuotas() {
+  const data = await api('/api/ai-quotas');
+  $('#ai-quota-fields').innerHTML = Object.entries(AI_QUOTA_LABELS).map(([key,label]) =>
+    `<label>${esc(label)} (pertanyaan)<input type="number" name="${key}" min="0" max="100000" step="1" required value="${Number(data.limits[key])}"></label>`).join('');
+  $('#ai-quota-reset').disabled = !data.custom;
+}
+$('#ai-quota-form').onsubmit = async event => {
+  event.preventDefault();
+  const button = event.submitter, message = $('#ai-quota-message');
+  button.disabled = true; message.textContent = 'Menyimpan…';
+  try {
+    const limits = Object.fromEntries(Object.keys(AI_QUOTA_LABELS).map(key => [key, Number($('#ai-quota-form').elements[key].value)]));
+    await api('/api/ai-quotas', {method:'POST', body:JSON.stringify({limits})});
+    message.textContent = 'Kuota tersimpan dan berlaku untuk permintaan berikutnya.';
+    await loadAiQuotas();
+  } catch(error) { message.textContent = error.message; }
+  finally { button.disabled = false; }
+};
+$('#ai-quota-reset').onclick = async () => {
+  if (!confirm('Pulihkan semua batas kuota AI ke nilai bawaan server?')) return;
+  const button = $('#ai-quota-reset'); button.disabled = true;
+  try { await api('/api/ai-quotas/reset', {method:'POST', body:'{}'}); await loadAiQuotas(); $('#ai-quota-message').textContent = 'Kuota bawaan dipulihkan.'; }
+  catch(error) { $('#ai-quota-message').textContent = error.message; button.disabled = false; }
+};
 const PRICE_LABELS = {medium_monthly:'Medium bulanan',medium_yearly:'Medium tahunan',pro_monthly:'Pro bulanan',pro_yearly:'Pro tahunan',ai100_credit:'Kredit AI 100',ai300_credit:'Kredit AI 300'};
 async function loadPricing() {
   const data = await api('/api/pricing');
@@ -388,11 +425,11 @@ async function loadHomeSamples() {
   const data = await api('/api/home-samples');
   $('#sample-slot').querySelectorAll('option[data-custom]').forEach(option => option.remove());
   data.items.filter(row => row.sample && !row.defaultTitle).forEach(row => {
-    const option = new Option('Ganti ' + row.sample.title, row.slot); option.dataset.custom = '1'; $('#sample-slot').append(option);
+    const option = new Option('Ganti ' + row.title, row.slot); option.dataset.custom = '1'; $('#sample-slot').append(option);
   });
   $('#sample-list').innerHTML = data.items.map(row => {
     const sample = row.sample;
-    return `<div class="panel" style="min-width:180px"><b>${esc(sample?.title || row.defaultTitle || 'Contoh baru')}</b><p class="muted">${sample ? num(sample.pages) + ' halaman' : 'Contoh bawaan'}</p>${sample ? `<button class="ghost" type="button" data-edit-sample="${esc(row.slot)}">Ganti PDF</button> <button class="ghost" type="button" data-remove-sample="${esc(row.slot)}">${row.defaultTitle ? 'Kembalikan bawaan' : 'Hapus contoh'}</button>` : ''}</div>`;
+    return `<div class="panel" style="min-width:180px"><b>${esc(row.title)}</b><label>Nama contoh<input data-sample-name="${esc(row.slot)}" maxlength="80" value="${esc(row.title)}"></label><button class="ghost" type="button" data-rename-sample="${esc(row.slot)}">Simpan nama</button><p class="muted">${sample ? num(sample.pages) + ' halaman' : 'Contoh bawaan'}</p>${sample ? `<button class="ghost" type="button" data-edit-sample="${esc(row.slot)}">Ganti PDF</button> <button class="ghost" type="button" data-remove-sample="${esc(row.slot)}">${row.defaultTitle ? 'Kembalikan bawaan' : 'Hapus contoh'}</button>` : ''}</div>`;
   }).join('');
 }
 $('#sample-form').onsubmit = async event => {
@@ -411,6 +448,15 @@ $('#sample-form').onsubmit = async event => {
   finally { button.disabled = false; }
 };
 $('#sample-list').onclick = async event => {
+  const rename = event.target.closest('[data-rename-sample]');
+  if (rename) {
+    const slot = rename.dataset.renameSample;
+    const title = rename.closest('.panel').querySelector('[data-sample-name]').value.trim();
+    rename.disabled = true;
+    try { await api('/api/home-samples/rename', {method:'POST', body:JSON.stringify({slot,title})}); await loadHomeSamples(); $('#sample-message').textContent = 'Nama contoh tersimpan.'; }
+    catch(error) { $('#sample-message').textContent = error.message; rename.disabled = false; }
+    return;
+  }
   const edit = event.target.closest('[data-edit-sample]');
   if (edit) { $('#sample-slot').value = edit.dataset.editSample; $('#sample-title').value = edit.closest('.panel').querySelector('b').textContent; $('#sample-file').focus(); return; }
   const button = event.target.closest('[data-remove-sample]'); if (!button) return;

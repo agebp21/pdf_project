@@ -34,6 +34,7 @@ import geo
 import visits
 import home_samples
 import pricing
+import ai_quota_settings
 
 ROOT = Path(__file__).resolve().parent
 
@@ -865,6 +866,10 @@ class AdminHandler(BaseHTTPRequestHandler):
                 settings = pricing.config()
                 self.send_json(200, {'prices': {key: settings['prices'].get(key, value) for key, value in defaults.items()},
                                      'promos': settings['promos']})
+            elif url.path == '/api/ai-quotas':
+                self.send_json(200, {'limits': {f'{plan}_{period}': accounts.ai_limit(plan, period)
+                                                for plan in accounts.PAID for period in ('month', 'window')},
+                                     'custom': bool(ai_quota_settings.overrides())})
             else:
                 self.send_json(404, {'error': 'Tidak ditemukan.'})
         except (ValueError, sqlite3.Error) as cause:
@@ -942,6 +947,17 @@ class AdminHandler(BaseHTTPRequestHandler):
             except (ValueError, AttributeError, OSError) as cause:
                 self.send_json(400, {'error': str(cause)})
             return
+        if url.path == '/api/home-samples/rename':
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                if not 0 < size <= 4096:
+                    raise ValueError('Permintaan tidak valid.')
+                body = json.loads(self.rfile.read(size))
+                home_samples.rename(body.get('slot', ''), body.get('title', ''))
+                self.send_json(200, {'ok': True})
+            except (ValueError, AttributeError, OSError) as cause:
+                self.send_json(400, {'error': str(cause)})
+            return
         if url.path in ('/api/pricing/prices', '/api/pricing/promos', '/api/pricing/promos/remove'):
             try:
                 size = int(self.headers.get('Content-Length', '0'))
@@ -958,6 +974,21 @@ class AdminHandler(BaseHTTPRequestHandler):
                     result = {'ok': True}
                 log_admin('pricing changed: ' + url.path + ' by ' + SESSION_USERS.get(self.token(), 'local'))
                 self.send_json(200, result)
+            except (ValueError, AttributeError, KeyError, TypeError, OSError) as cause:
+                self.send_json(400, {'error': str(cause)})
+            return
+        if url.path in ('/api/ai-quotas', '/api/ai-quotas/reset'):
+            try:
+                if url.path.endswith('/reset'):
+                    ai_quota_settings.file_path().unlink(missing_ok=True)
+                else:
+                    size = int(self.headers.get('Content-Length', '0'))
+                    if not 0 < size <= 4096:
+                        raise ValueError('Permintaan tidak valid.')
+                    body = json.loads(self.rfile.read(size))
+                    ai_quota_settings.save(body.get('limits'))
+                log_admin('AI quota changed: ' + url.path + ' by ' + SESSION_USERS.get(self.token(), 'local'))
+                self.send_json(200, {'ok': True})
             except (ValueError, AttributeError, KeyError, TypeError, OSError) as cause:
                 self.send_json(400, {'error': str(cause)})
             return
