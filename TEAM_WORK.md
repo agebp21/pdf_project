@@ -2,7 +2,7 @@
 
 ## 📌 Status terkini
 
-- PRICING-PROMO (24 Nov, Codex): panel Harga & Promo dan alur harga IDR siap rilis. Admin bisa ubah harga paket/kredit AI, buat promo otomatis/kode berbatas tanggal, serta hapus promo. Harga publik dan checkout memakai `pricing.py` yang sama; USD tetap harga varian penyedia, order lama tidak berubah. Tes baru 4, Duitku 8, SEO 8, admin 11 lulus; browser lokal desktop 1366px dan HP 390px lulus untuk formulir admin, harga otomatis, kode promo, tanpa overflow/error JS. Suite penuh Python 285 (13 gagal + 1 error paywall/podcast lama); JS 62 (2 QA browser gagal resolve Playwright lama). Status commit/deploy dicatat sesudah rilis.
+- PRICING-PROMO (24 Nov, Codex): kode `40c555c` live dari `v2`. Admin bisa ubah harga paket/kredit AI, buat promo otomatis/kode berbatas tanggal, serta hapus promo. Harga publik dan checkout memakai `pricing.py` yang sama; USD tetap harga varian penyedia, order lama tidak berubah. Tes baru 4, Duitku 8, SEO 8, admin 11 lulus; browser lokal desktop 1366px dan HP 390px lulus tanpa overflow/error JS; 4 tes pricing di VPS lulus. Suite penuh Python 285 (13 gagal + 1 error paywall/podcast lama); JS 62 (2 QA browser gagal resolve Playwright lama). Backup dan verifikasi live dicatat di `DEPLOY.md`.
 
 - HOME-SAMPLES (24 Nov, Codex): kode `8aaa08b` live dari `v2`. Pengelolaan PDF sampel beranda di admin dan pratinjau flipbook di situs umum aktif. PyMuPDF/Pillow terpasang; layanan web/admin aktif, lima rute HTTPS 200, tiga tes sampel di VPS lulus, log error kosong. Tes lokal modul+rute HTTP 3, admin 11, JSDOM flipbook lulus; visual browser belum diuji. Backup dan hasil tes lengkap dicatat di `DEPLOY.md`.
 

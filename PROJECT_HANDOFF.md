@@ -1257,7 +1257,7 @@ Pasang di VPS (belum dilakukan, butuh akses VPS):
 - Python pada *kedua* layanan (`server.py` dan `admin_server.py`) memakai `pymupdf` 1.28.2 dan `Pillow` 12.0.0 di VPS. Kedua layanan berbagi direktori `.data` dan izin tulis pada `.data/home-samples/`. Jangan hapus `.data/home-samples/` saat pembaruan kode.
 - Uji lokal: `python -m unittest discover -s tests -p test_home_samples.py`, `node tests/home-samples.test.cjs`, dan `test_admin.py`.
 
-# 2026-11-24 — Harga dan promo admin (siap rilis)
+# 2026-11-24 — Harga dan promo admin (live `40c555c`)
 
 - Admin `/admin/#pricing`: ubah harga Rupiah Medium/Pro bulanan/tahunan dan kredit AI 100/300; buat/hapus promo otomatis atau kode promo, pilih paket/periode, persentase, tanggal mulai/akhir (WIB). Satu promo per order; kode yang dimasukkan menggantikan promo otomatis. Konfigurasi atomik di `.data/pricing.json` (jangan dihapus saat deploy), tanpa migrasi atau variabel lingkungan baru.
 - Harga efektif dari `pricing.quote` dipakai bersama oleh `/harga`, beranda, `/api/billing/plans`, tampilan akun, dan checkout; order yang sudah ada mempertahankan amount saat dibuat. Kode promo di halaman akun berlaku hanya untuk IDR; USD tetap mengikuti harga varian Lemon Squeezy dan tidak diedit di panel. Promo tampil sebagai badge dan harga asal dicoret.
