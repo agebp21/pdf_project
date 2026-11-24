@@ -33,8 +33,15 @@ import admin_report
 import geo
 import visits
 import home_samples
+import pricing
 
 ROOT = Path(__file__).resolve().parent
+
+
+def price_defaults():
+    return {f'{plan}_{cycle}': value[cycle]
+            for plan, value in accounts.PLANS.items() if plan != 'basic' for cycle in ('monthly', 'yearly')} | {
+                f'{plan}_credit': value['amount'] for plan, value in accounts.AI_PACKS.items()}
 COOKIE = 'mf_admin'
 SESSION_SECONDS = 12 * 3600
 MAX_FAILURES, FAILURE_WINDOW = 5, 15 * 60
@@ -853,6 +860,11 @@ class AdminHandler(BaseHTTPRequestHandler):
                 self.send_json(200, server_status())
             elif url.path == '/api/home-samples':
                 self.send_json(200, {'items': home_samples.admin_samples()})
+            elif url.path == '/api/pricing':
+                defaults = price_defaults()
+                settings = pricing.config()
+                self.send_json(200, {'prices': {key: settings['prices'].get(key, value) for key, value in defaults.items()},
+                                     'promos': settings['promos']})
             else:
                 self.send_json(404, {'error': 'Tidak ditemukan.'})
         except (ValueError, sqlite3.Error) as cause:
@@ -928,6 +940,25 @@ class AdminHandler(BaseHTTPRequestHandler):
                 home_samples.remove(body.get('slot', ''))
                 self.send_json(200, {'ok': True})
             except (ValueError, AttributeError, OSError) as cause:
+                self.send_json(400, {'error': str(cause)})
+            return
+        if url.path in ('/api/pricing/prices', '/api/pricing/promos', '/api/pricing/promos/remove'):
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                if not 0 < size <= 8192:
+                    raise ValueError('Permintaan tidak valid.')
+                body = json.loads(self.rfile.read(size))
+                if url.path == '/api/pricing/prices':
+                    pricing.save_prices(body.get('prices'), price_defaults())
+                    result = {'ok': True}
+                elif url.path == '/api/pricing/promos':
+                    result = {'promo': pricing.add_promo(body, price_defaults())}
+                else:
+                    pricing.remove_promo(body.get('id'))
+                    result = {'ok': True}
+                log_admin('pricing changed: ' + url.path + ' by ' + SESSION_USERS.get(self.token(), 'local'))
+                self.send_json(200, result)
+            except (ValueError, AttributeError, KeyError, TypeError, OSError) as cause:
                 self.send_json(400, {'error': str(cause)})
             return
         if url.path == '/api/change-password':

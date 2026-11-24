@@ -14,6 +14,7 @@ import re
 import time
 
 import accounts
+import pricing
 import articles
 
 SITE = 'https://myflipbookpro.com'
@@ -641,7 +642,7 @@ HARGA_FAQ_EN = {
 def harga_html():
     faq = [('Bagaimana cara membayar?', 'Masuk ke akun, pilih paket, lalu bayar lewat QRIS, transfer bank (virtual account), atau e-wallet. Paket aktif otomatis setelah pembayaran berhasil.')]
     data = [{'@context': 'https://schema.org', '@type': 'Product', 'name': f'{BRAND} {p["name"]}', 'description': PLAN_DESC.get(k, ''),
-             'brand': BRAND, 'offers': {'@type': 'Offer', 'price': str(p['monthly']), 'priceCurrency': 'IDR', 'url': SITE + '/harga'}}
+             'brand': BRAND, 'offers': {'@type': 'Offer', 'price': str(pricing.quote(k, 'monthly', p['monthly'])['amount']), 'priceCurrency': 'IDR', 'url': SITE + '/harga'}}
             for k, p in accounts.PLANS.items() if p['monthly']]
     data.append({'@context': 'https://schema.org', '@type': 'FAQPage', 'mainEntity': [
         {'@type': 'Question', 'name': q, 'acceptedAnswer': {'@type': 'Answer', 'text': a}} for q, a in faq]})
@@ -857,7 +858,7 @@ def footer_links():
     return f'<nav aria-label="Alat PDF" style="text-align:center;font-size:11px;font-weight:600;margin-top:10px;line-height:2">{links}</nav>'.encode('utf-8')
 
 
-# ---------- Prices: built from accounts.PLANS (the prices checkout charges), never typed twice.
+# ---------- Prices: use the same pricing.quote as checkout (defaults from accounts.PLANS).
 PLAN_DESC = {'basic': 'Untuk mencoba dan kebutuhan PDF sehari-hari.',
              'medium': 'Untuk guru, dosen, mahasiswa, dan penulis.',
              'pro': 'Untuk penerbit, UMKM, sekolah, dan instansi.'}
@@ -881,24 +882,30 @@ def plan_cards():
     out = []
     check = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>'
     for key, p in accounts.PLANS.items():
+        month = pricing.quote(key, 'monthly', p['monthly']) if key != 'basic' else {'amount': 0, 'original': 0, 'promo': ''}
+        year = pricing.quote(key, 'yearly', p['yearly']) if key != 'basic' else {'amount': 0, 'original': 0, 'promo': ''}
         hot = key == POPULAR
         head = (f'<div class="plan{" hot" if hot else ""}" data-plan="{key}"><div class="ph"><h3>{esc(p["name"])}</h3>'
                 + (both('Paling populer', 'Most popular', 'span', ' class="badge"') if hot else '') + '</div>'
                 + both(esc(PLAN_DESC.get(key, '')), PLAN_DESC_EN.get(key, ''), 'p', ' class="pd"'))
         feats = '<ul>' + ''.join(f'<li>{check}' + both(esc(f), e) + '</li>' for f, e in zip(p['features']['id'], p['features']['en'])) + '</ul>'
-        if not p['monthly']:
+        if not month['amount']:
             price = (both('Gratis', 'Free', 'span', ' class="big"') + '</div>'
                      + both('Tanpa biaya langganan.', 'No subscription fee.', 'p', ' class="pn"'))
             out.append(f'{head}<div class="pp">{price}{feats}<a class="pc" href="/account.html#plans">'
                        + both('Coba gratis →', 'Try free →') + '</a></div>')
             continue
-        per_month = round(p['yearly'] / 12 / 100) * 100
-        save = round(100 - p['yearly'] * 100 / (p['monthly'] * 12))
+        per_month = round(year['amount'] / 12 / 100) * 100
+        save = max(0, round(100 - year['amount'] * 100 / (month['amount'] * 12)))
         usd = lambda idr: f'≈ US${idr // USD_RATE} · '
-        monthly = (f'<div class="pm"><div class="pp"><span class="big">{rupiah(p["monthly"])}</span>' + both('/bulan', '/month', 'span', ' class="per"') + '</div>'
-                   + both(f'atau {rupiah(per_month)}/bulan jika bayar tahunan', f'{usd(p["monthly"])}or {rupiah(per_month)}/month billed yearly', 'p', ' class="pn"') + '</div>')
-        yearly = (f'<div class="pyr"><div class="pp"><span class="big">{rupiah(per_month)}</span>' + both('/bulan', '/month', 'span', ' class="per"') + '</div>'
-                  + both(f'ditagih {rupiah(p["yearly"])}/tahun · hemat {save}%', f'{usd(per_month)}billed {rupiah(p["yearly"])}/year · save {save}%', 'p', ' class="pn"') + '</div>')
+        was_month = f'<s class="was">{rupiah(month["original"])}</s>' if month['original'] > month['amount'] else ''
+        was_year = f'<s class="was">{rupiah(year["original"])}</s>' if year['original'] > year['amount'] else ''
+        month_badge = f'<span class="badge">{esc(month["promo"])}</span>' if month['promo'] else ''
+        year_badge = f'<span class="badge">{esc(year["promo"])}</span>' if year['promo'] else ''
+        monthly = (f'<div class="pm">{month_badge}<div class="pp">{was_month}<span class="big">{rupiah(month["amount"])}</span>' + both('/bulan', '/month', 'span', ' class="per"') + '</div>'
+                   + both(f'atau {rupiah(per_month)}/bulan jika bayar tahunan', f'{usd(month["amount"])}or {rupiah(per_month)}/month billed yearly', 'p', ' class="pn"') + '</div>')
+        yearly = (f'<div class="pyr">{year_badge}<div class="pp"><span class="big">{rupiah(per_month)}</span>' + both('/bulan', '/month', 'span', ' class="per"') + '</div>'
+                  + was_year + both(f'ditagih {rupiah(year["amount"])}/tahun · hemat {save}%', f'{usd(per_month)}billed {rupiah(year["amount"])}/year · save {save}%', 'p', ' class="pn"') + '</div>')
         cta = both(f'Pilih {p["name"]} →', f'Choose {p["name"]} →')
         out.append(f'{head}{monthly}{yearly}{feats}'
                    f'<a class="pc pm" href="/account.html?cycle=monthly#plans">{cta}</a><a class="pc pyr" href="/account.html?cycle=yearly#plans">{cta}</a></div>')
@@ -907,7 +914,9 @@ def plan_cards():
 
 def savings():
     """The yearly saving of each paid plan, in percent."""
-    return [round(100 - p['yearly'] * 100 / (p['monthly'] * 12)) for p in accounts.PLANS.values() if p['monthly']]
+    return [max(0, round(100 - pricing.quote(k, 'yearly', p['yearly'])['amount'] * 100 /
+                  (pricing.quote(k, 'monthly', p['monthly'])['amount'] * 12)))
+            for k, p in accounts.PLANS.items() if p['monthly']]
 
 
 def plan_section(heading='h2'):
@@ -1058,9 +1067,7 @@ def respond(path):
             CACHE[slug] = segment_html(slug[6:]).encode('utf-8')
         return CACHE[slug], 'text/html; charset=utf-8'
     if path == '/harga':
-        if 'harga' not in CACHE:
-            CACHE['harga'] = harga_html().encode('utf-8')
-        return CACHE['harga'], 'text/html; charset=utf-8'
+        return harga_html().encode('utf-8'), 'text/html; charset=utf-8'
     if path in ('/artikel', '/artikel/'):
         if 'artikel' not in CACHE:
             CACHE['artikel'] = articles_index().encode('utf-8')

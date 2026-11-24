@@ -155,6 +155,13 @@
         </div>
       </div>
     </div>
+    <div class="promo-entry" id="promoEntry" style="display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin:14px 0">
+      <label for="promoInput" id="promoLabel">Kode promo</label>
+      <input id="promoInput" type="text" maxlength="24" autocomplete="off" placeholder="HEMAT20" style="min-width:140px;padding:10px;border:1px solid #d8cec0;border-radius:12px">
+      <button type="button" class="clay-btn clay-btn-dark" id="promoApply">Terapkan</button>
+      <button type="button" class="clay-btn" id="promoClear" hidden>Hapus kode</button>
+      <span id="promoStatus" role="status" class="clay-muted"></span>
+    </div>
     <div class="plans3" id="plans"></div>
     <p class="fine clay-muted" data-i18n="acct.draft">Rupiah (QRIS, bank transfer, e-wallet) for Indonesia; US dollars (card, PayPal) everywhere else.</p>
   </section>
@@ -185,7 +192,7 @@
   let savedCurrency=null;try{savedCurrency=localStorage.getItem('mf-currency');}catch(e){}
   const date=s=>new Date(s*1000).toLocaleDateString(lang(),{day:'numeric',month:'short',year:'numeric'});
   const orderParam=new URLSearchParams(location.search).get('order');
-  let state={user:null,plans:[],aiPacks:[],providers:{},paymentsEnabled:{},orders:[],cycle:new URLSearchParams(location.search).get('cycle')==='yearly'?'yearly':'monthly',methods:[],
+  let state={user:null,plans:[],aiPacks:[],providers:{},paymentsEnabled:{},orders:[],promoCode:new URLSearchParams(location.search).get('promo')||'',cycle:new URLSearchParams(location.search).get('cycle')==='yearly'?'yearly':'monthly',methods:[],
     currency:savedCurrency==='IDR'||savedCurrency==='USD'?savedCurrency:defaultCurrency()};
   const payable=()=>state.paymentsEnabled[state.currency]!==false;
   const priceOf=(plan,cycle)=>state.currency==='USD'?plan.usd[cycle]:plan[cycle];
@@ -222,7 +229,7 @@
     medium:['Untuk guru, dosen, mahasiswa, dan penulis.','For teachers, lecturers, students and writers.'],
     pro:['Untuk penerbit, UMKM, sekolah, dan instansi.','For publishers, small businesses, schools and institutions.']};
   const CHECK='<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
-  const saveOf=plan=>{const m=priceOf(plan,'monthly');return m?Math.round((1-priceOf(plan,'yearly')/(m*12))*100):0;};
+  const saveOf=plan=>{const m=priceOf(plan,'monthly');return m?Math.max(0,Math.round((1-priceOf(plan,'yearly')/(m*12))*100)):0;};
   // The highlighted plan: the one picked, else the next step up (Medium from Basic, Pro from Medium).
   const picked=()=>state.pick||(state.user&&state.user.plan!=='basic'?'pro':'medium');
   function renderPlans(){
@@ -239,6 +246,8 @@
       const badges=el('div',{className:'badges'});
       if(plan.id==='medium')badges.append(el('span',{className:'badge',textContent:id?'Paling populer':'Most popular'}));
       if(current)badges.append(el('span',{className:'badge mine',textContent:t('acct.active','Your plan')}));
+      const promoName=state.currency==='IDR'?(state.cycle==='yearly'?plan.promoYearly:plan.promoMonthly):'';
+      if(promoName)badges.append(el('span',{className:'badge',textContent:promoName}));
       card.append(el('div',{className:'ph'},el('h3',{textContent:plan.name}),badges),
         el('p',{className:'pd',textContent:(PLAN_DESC[plan.id]||['',''])[id?0:1]}));
       const pp=el('div',{className:'pp'}),note=el('p',{className:'pn'});
@@ -256,6 +265,7 @@
         }else{
           pp.append(el('span',{className:'big',textContent:money(month,state.currency)}),el('span',{className:'per',textContent:per}));
           note.textContent=id?`ditagih ${money(y,state.currency)}/tahun · hemat ${saveOf(plan)}%`:`billed ${money(y,state.currency)}/year · save ${saveOf(plan)}%`;
+          if(state.currency==='IDR'&&plan.listYearly>y)note.prepend(el('s',{textContent:money(plan.listYearly,'IDR')+' ' }));
         }
       }
       const list=el('ul');
@@ -263,7 +273,7 @@
       card.append(pp,note,list);
       if(!state.user){
         // Guest: pricing is public; choosing a plan goes through login first.
-        card.append(el('a',{className:'pc',href:'login.html?mode=register&next='+encodeURIComponent('account.html'),
+        card.append(el('a',{className:'pc',href:'login.html?mode=register&next='+encodeURIComponent('account.html'+(state.promoCode?'?promo='+encodeURIComponent(state.promoCode):'')),
           textContent:plan.free?t('acct.startFree','Start free')+' →':t('acct.choose','Choose')+' '+plan.name+' →'}));
       }else if(current){
         // the member's own plan: marked as current; a paid one can still be extended (paid per period)
@@ -362,7 +372,8 @@
       // an AI credit pack is paid in Rupiah, once (cycle "credit")
       const currency=cycle==='credit'?'IDR':state.currency;
       const method=currency==='IDR'&&state.methods.length?$('method').value:undefined;
-      const result=await MFAuth.api('POST','/api/billing/checkout',{plan,cycle:cycle||state.cycle,method,currency});
+      const result=await MFAuth.api('POST','/api/billing/checkout',{plan,cycle:cycle||state.cycle,method,currency,
+        promoCode:currency==='IDR'?state.promoCode:''});
       location.href=result.redirectUrl; // Gateway payment page (Duitku/Midtrans/Tripay), or back here (mock) with ?order=
     }catch(error){notice('err',error.message);button.disabled=false;}
   }
@@ -372,19 +383,19 @@
     if(me.offline){notice('err',t('auth.offline','Accounts need the MyFlipbook server (python server.py).'));return;}
     if(!me.user){
       if(orderParam){location.replace('login.html?next='+encodeURIComponent('account.html'+location.search));return;}
-      const plans=await MFAuth.api('GET','/api/billing/plans');
+      const plans=await MFAuth.api('GET','/api/billing/plans'+(state.promoCode?'?promo='+encodeURIComponent(state.promoCode):''));
       state=Object.assign(state,{user:null,plans:plans.plans,providers:plans.providers||{},paymentsEnabled:plans.paymentsEnabled||{}});
       $('pageTitle').setAttribute('data-i18n','acct.pricingTitle');
       $('ordersSection').hidden=true;
-      const login=el('a',{className:'clay-btn clay-btn-dark',href:'login.html?next='+encodeURIComponent('account.html'),textContent:t('auth.login','Log in')});
+      const login=el('a',{className:'clay-btn clay-btn-dark',href:'login.html?next='+encodeURIComponent('account.html'+(state.promoCode?'?promo='+encodeURIComponent(state.promoCode):'')),textContent:t('auth.login','Log in')});
       if(state.paymentsEnabled.IDR===false&&state.paymentsEnabled.USD===false)notice('warn',t('acct.disabled','Online payment is not enabled on this server yet.'));
       else notice('info',t('acct.guest','Log in or create an account to subscribe. The free tools need no account.'),login);
       if(window.I18N)I18N.apply();
-      renderPlans();
+      renderPlans();renderPromo();
       return;
     }
     $('ordersSection').hidden=false;
-    const [plans,orders]=await Promise.all([MFAuth.api('GET','/api/billing/plans'),MFAuth.api('GET','/api/billing/orders')]);
+    const [plans,orders]=await Promise.all([MFAuth.api('GET','/api/billing/plans'+(state.promoCode?'?promo='+encodeURIComponent(state.promoCode):'')),MFAuth.api('GET','/api/billing/orders')]);
     state=Object.assign(state,{user:me.user,plans:plans.plans,aiPacks:plans.aiPacks||[],providers:plans.providers||{},paymentsEnabled:plans.paymentsEnabled||{},orders:orders.orders});
     if((state.providers.IDR==='tripay'||state.providers.IDR==='duitku')&&!state.methods.length){
       // Gateway channels (QRIS, VA, e-wallet) grouped as the gateway reports them.
@@ -399,7 +410,7 @@
       });
 
     }
-    renderProfile();renderPlans();renderOrders();renderOrderNotice();
+    renderProfile();renderPlans();renderOrders();renderOrderNotice();renderPromo();
     renderReferral();
     renderUsage();
   }
@@ -447,6 +458,39 @@
     box.hidden=false;
     if(location.hash==='#ai-credits')box.scrollIntoView({block:'center'});
   }
+
+  function renderPromo(){
+    const id=lang()==='id-ID',usd=state.currency==='USD';
+    $('promoLabel').textContent=id?'Kode promo':'Promo code';
+    $('promoApply').textContent=id?'Terapkan':'Apply';
+    $('promoClear').textContent=id?'Hapus kode':'Remove code';
+    $('promoInput').disabled=usd;$('promoApply').disabled=usd;
+    $('promoClear').hidden=!state.promoCode;
+    $('promoInput').value=state.promoCode;
+    $('promoStatus').textContent=usd?(id?'Promo hanya untuk pembayaran Rupiah.':'Promotions apply to rupiah payments only.'):
+      state.promoCode?(id?'Kode aktif; harga yang berlaku tampil di kartu paket.':'Code applied; current prices appear on the plan cards.'):'';
+  }
+  async function changePromo(code){
+    const response=await MFAuth.api('GET','/api/billing/plans'+(code?'?promo='+encodeURIComponent(code):''));
+    state.promoCode=code;
+    state.plans=response.plans;state.aiPacks=response.aiPacks||[];
+    const url=new URL(location.href);
+    if(code)url.searchParams.set('promo',code);else url.searchParams.delete('promo');
+    history.replaceState(null,'',url);
+    renderPlans();renderPromo();
+    if(state.user)renderUsage();
+  }
+  $('promoApply').onclick=async()=>{
+    const code=$('promoInput').value.trim().toUpperCase();
+    if(!code){$('promoStatus').textContent=lang()==='id-ID'?'Isi kode promo dulu.':'Enter a promo code first.';return;}
+    $('promoApply').disabled=true;
+    try{await changePromo(code);}catch(error){$('promoStatus').textContent=error.message;}
+    finally{$('promoApply').disabled=state.currency==='USD';}
+  };
+  $('promoClear').onclick=async()=>{
+    try{await changePromo('');}catch(error){$('promoStatus').textContent=error.message;}
+  };
+  $('promoInput').addEventListener('keydown',event=>{if(event.key==='Enter'){event.preventDefault();$('promoApply').click();}});
   // Invite friends: every 10 friends who subscribe through the link = 1 month free.
   async function renderReferral(){
     let r;
@@ -467,10 +511,10 @@
   document.querySelectorAll('[data-cycle]').forEach(b=>b.addEventListener('click',()=>{state.cycle=b.dataset.cycle;renderPlans();}));
   document.querySelectorAll('[data-currency]').forEach(b=>b.addEventListener('click',()=>{
     state.currency=b.dataset.currency;try{localStorage.setItem('mf-currency',state.currency);}catch(e){}
-    renderPlans();if(state.user&&!orderParam)renderOrderNotice();
+    renderPlans();renderPromo();if(state.user&&!orderParam)renderOrderNotice();
   }));
   $('logout').addEventListener('click',async()=>{await MFAuth.api('POST','/api/auth/logout',{});location.href='index.html';});
-  document.addEventListener('langchange',()=>{if(state.user){renderProfile();renderPlans();renderOrders();renderOrderNotice();}else if(state.plans.length)load();});
+  document.addEventListener('langchange',()=>{if(state.user){renderProfile();renderPlans();renderOrders();renderOrderNotice();renderPromo();}else if(state.plans.length)load();});
   load().catch(error=>notice('err',error.message));
 })();
 </script>

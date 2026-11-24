@@ -180,6 +180,7 @@
       <button data-tab="verified">Email terverifikasi</button>
       <button data-tab="orders">Status Order</button>
       <button data-tab="home-samples">Sampel beranda</button>
+      <button data-tab="pricing">Harga &amp; Promo</button>
       <button data-tab="password">Ganti Password</button>
     </nav>
     <button class="out" id="logout">Keluar</button>
@@ -248,6 +249,31 @@
       </div>
       <div id="sample-list" class="grid" style="margin-top:20px"></div>
     </section>
+    <section data-view="pricing" hidden>
+      <h2>Harga &amp; Promo</h2>
+      <p class="muted">Harga Rupiah di sini berlaku untuk halaman harga dan checkout baru. Harga dolar mengikuti harga varian di penyedia pembayaran luar negeri. Order yang sudah dibuat tetap memakai harga saat order dibuat.</p>
+      <div class="panel">
+        <h3>Harga dasar</h3>
+        <form id="pricing-form"><div class="grid" id="pricing-fields"></div><p id="pricing-message" role="status"></p><button class="btn" type="submit">Simpan harga</button></form>
+      </div>
+      <div class="panel" style="margin-top:18px">
+        <h3>Buat promo</h3>
+        <p class="muted">Kosongkan kode untuk promo otomatis bagi semua pembeli. Isi kode untuk promo yang hanya aktif saat kode digunakan. Satu diskon berlaku per order.</p>
+        <form id="promo-form">
+          <div class="grid">
+            <label>Nama promo<input id="promo-name" maxlength="60" required placeholder="Contoh: Promo akhir tahun"></label>
+            <label>Kode promo (opsional)<input id="promo-code" maxlength="24" placeholder="Contoh: HEMAT20"></label>
+            <label>Diskon (%)<input id="promo-percent" type="number" min="1" max="80" required></label>
+            <label>Paket<select id="promo-plan"><option value="all">Semua paket</option><option value="medium">Medium</option><option value="pro">Pro</option><option value="ai100">Kredit AI 100</option><option value="ai300">Kredit AI 300</option></select></label>
+            <label>Periode<select id="promo-cycle"><option value="all">Semua periode</option><option value="monthly">Bulanan</option><option value="yearly">Tahunan</option><option value="credit">Kredit AI</option></select></label>
+            <label>Mulai (opsional)<input id="promo-starts" type="date"></label>
+            <label>Berakhir (opsional)<input id="promo-ends" type="date"></label>
+          </div>
+          <p id="promo-message" role="status"></p><button class="btn" type="submit">Buat promo</button>
+        </form>
+      </div>
+      <div class="panel" style="margin-top:18px"><h3>Daftar promo</h3><div id="promo-list"></div></div>
+    </section>
     <section data-view="password" hidden>
       <h2>Ganti password admin</h2>
       <div class="panel" style="max-width:520px">
@@ -312,16 +338,52 @@ $('#logout').onclick = async () => { await api('/api/logout', {method: 'POST', b
 
 document.querySelectorAll('header nav button').forEach(b => b.onclick = () => open(b.dataset.tab));
 function open(tab, record = true) {
-  if (!['overview','members','verified','orders','uploads','visits','server','password','home-samples'].includes(tab)) tab = 'members';
+  if (!['overview','members','verified','orders','uploads','visits','server','password','home-samples','pricing'].includes(tab)) tab = 'members';
   if (record && location.hash !== '#' + tab) history.pushState({tab}, '', '#' + tab);
   else if (!record) history.replaceState({tab}, '', '#' + tab);
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.tab === tab)));
   document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== tab; });
-  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(1), server: loadServer, password: async () => {}, 'home-samples': loadHomeSamples};
+  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(1), server: loadServer, password: async () => {}, 'home-samples': loadHomeSamples, pricing: loadPricing};
   loaders[tab]()
     .catch(e => { document.querySelector(`[data-view="${tab}"]`).insertAdjacentHTML('afterbegin', `<p class="err">${esc(e.message)}</p>`); });
 }
 addEventListener('popstate', () => { if (!$('#app').hidden) open(location.hash.slice(1) || 'overview', false); });
+const PRICE_LABELS = {medium_monthly:'Medium bulanan',medium_yearly:'Medium tahunan',pro_monthly:'Pro bulanan',pro_yearly:'Pro tahunan',ai100_credit:'Kredit AI 100',ai300_credit:'Kredit AI 300'};
+async function loadPricing() {
+  const data = await api('/api/pricing');
+  $('#pricing-fields').innerHTML = Object.entries(PRICE_LABELS).map(([key,label]) => `<label>${esc(label)} (Rp)<input type="number" name="${key}" min="10000" max="100000000" step="1" required value="${Number(data.prices[key])}"></label>`).join('');
+  $('#promo-list').innerHTML = data.promos.length ? `<table><tr><th>Promo</th><th>Potongan</th><th>Berlaku</th><th></th></tr>${data.promos.map(p => `<tr><td><b>${esc(p.name)}</b><br><span class="muted">${p.code ? 'Kode: '+esc(p.code) : 'Otomatis'}</span></td><td>${num(p.percent)}%</td><td>${esc(p.plan)} · ${esc(p.cycle)}<br>${esc(p.starts || 'Sekarang')} – ${esc(p.ends || 'Tanpa akhir')}</td><td><button class="ghost" type="button" data-promo-remove="${esc(p.id)}">Hapus</button></td></tr>`).join('')}</table>` : '<p class="muted">Belum ada promo.</p>';
+}
+$('#pricing-form').onsubmit = async event => {
+  event.preventDefault();
+  const message = $('#pricing-message'), button = event.submitter;
+  button.disabled = true; message.textContent = 'Menyimpan…';
+  try {
+    const prices = Object.fromEntries(Object.keys(PRICE_LABELS).map(key => [key, Number($('#pricing-form').elements[key].value)]));
+    await api('/api/pricing/prices', {method:'POST',body:JSON.stringify({prices})});
+    message.textContent = 'Harga berhasil disimpan dan berlaku untuk checkout baru.'; await loadPricing();
+  } catch(error) { message.textContent = error.message; }
+  finally { button.disabled = false; }
+};
+$('#promo-form').onsubmit = async event => {
+  event.preventDefault();
+  const message = $('#promo-message'), button = event.submitter;
+  button.disabled = true; message.textContent = 'Menyimpan…';
+  try {
+    await api('/api/pricing/promos', {method:'POST',body:JSON.stringify({name:$('#promo-name').value,code:$('#promo-code').value,
+      percent:Number($('#promo-percent').value),plan:$('#promo-plan').value,cycle:$('#promo-cycle').value,
+      starts:$('#promo-starts').value,ends:$('#promo-ends').value})});
+    $('#promo-form').reset(); message.textContent = 'Promo berhasil dibuat.'; await loadPricing();
+  } catch(error) { message.textContent = error.message; }
+  finally { button.disabled = false; }
+};
+$('#promo-list').onclick = async event => {
+  const button = event.target.closest('[data-promo-remove]'); if (!button) return;
+  if (!confirm('Hapus promo ini?')) return;
+  button.disabled = true;
+  try { await api('/api/pricing/promos/remove', {method:'POST',body:JSON.stringify({id:button.dataset.promoRemove})}); await loadPricing(); }
+  catch(error) { $('#promo-message').textContent = error.message; button.disabled = false; }
+};
 async function loadHomeSamples() {
   const data = await api('/api/home-samples');
   $('#sample-slot').querySelectorAll('option[data-custom]').forEach(option => option.remove());

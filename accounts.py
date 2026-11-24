@@ -20,11 +20,11 @@ Payments go through a provider object:
   * MockProvider — local development only: an order can be marked paid from
     the account page. Never enabled on a public host unless explicitly asked.
 
-PLANS below are the starting prices (IDR) the owner set on 2026-10-12; to be raised as the site grows.
-The public price list (/harga and the home page) is built from PLANS, so a change here updates it too.
+PLANS below are the default prices (IDR) the owner set on 2026-10-12.
+The admin may override IDR prices in .data/pricing.json; checkout and public pages read the same values.
 list_monthly: the normal price, shown struck through next to the launch price (display only;
 checkout always charges monthly / yearly).
-Change them here; everything else (UI, checkout, entitlements) follows.
+Change the defaults here only when changing what a fresh installation starts with.
 """
 import base64
 import contextlib
@@ -40,6 +40,7 @@ import time
 import urllib.error
 import urllib.parse
 import urllib.request
+import pricing
 from pathlib import Path
 from urllib.parse import urlencode
 
@@ -329,7 +330,7 @@ class DuitkuProvider:
                 return self._methods
             try:
                 moment = time.strftime('%Y-%m-%d %H:%M:%S')
-                amount = str(PLANS['medium']['monthly'])
+                amount = str(pricing.quote('medium', 'monthly', PLANS['medium']['monthly'])['amount'])
                 signature = hashlib.sha256((self.merchant_code + amount + moment + self.api_key).encode()).hexdigest()
                 data = self._call('/api/merchant/paymentmethod/getpaymentmethod',
                                   {'merchantCode': self.merchant_code, 'amount': amount,
@@ -837,11 +838,22 @@ class Accounts:
             raise AccountError(400, 'Mata uang tidak didukung.')
         return self.usd_provider if currency == 'USD' else self.provider
 
-    def plans(self):
-        return [dict(id=key, name=p['name'], monthly=p['monthly'], yearly=p['yearly'], listMonthly=p.get('list_monthly') or 0, free=key == FREE_PLAN,
+    def plans(self, promo_code=''):
+        def prices(key, plan):
+            if key == FREE_PLAN:
+                return (dict(amount=0, original=0, promo='', percent=0), dict(amount=0, original=0, promo='', percent=0))
+            return (pricing.quote(key, 'monthly', plan['monthly'], promo_code),
+                    pricing.quote(key, 'yearly', plan['yearly'], promo_code))
+        rows = []
+        for key, p in PLANS.items():
+            month, year = prices(key, p)
+            rows.append(dict(id=key, name=p['name'], monthly=month['amount'], yearly=year['amount'],
+                     listMonthly=month['original'] if month['percent'] else p.get('list_monthly') or 0,
+                     listYearly=year['original'] if year['percent'] else 0,
+                     promoMonthly=month['promo'], promoYearly=year['promo'], free=key == FREE_PLAN,
                      usd=dict(monthly=p['usd_monthly'], yearly=p['usd_yearly']),
-                     features=p['features'], entitlements=p['entitlements'])
-                for key, p in PLANS.items()]
+                     features=p['features'], entitlements=p['entitlements']))
+        return rows
 
     def orders(self, user_id):
         with self.connect() as db:
@@ -887,7 +899,7 @@ class Accounts:
     def payment_methods(self):
         return self.provider.methods() if hasattr(self.provider, 'methods') else []
 
-    def checkout(self, user, plan, cycle, base_url='', method=None, currency='IDR'):
+    def checkout(self, user, plan, cycle, base_url='', method=None, currency='IDR', promo_code=''):
         if plan in AI_PACKS:
             if currency != 'IDR':
                 raise AccountError(400, 'Kredit AI hanya bisa dibeli dalam Rupiah.')
@@ -897,8 +909,16 @@ class Accounts:
         elif plan not in PLANS or plan == FREE_PLAN or cycle not in CYCLE_SECONDS:
             raise AccountError(400, 'Paket atau periode tidak valid.')
         provider = self.provider_for(currency)
-        amount = (AI_PACKS[plan]['amount'] if plan in AI_PACKS else
-                  PLANS[plan]['usd_' + cycle] if currency == 'USD' else PLANS[plan][cycle])
+        if currency == 'USD' and promo_code:
+            raise AccountError(400, 'Kode promo hanya berlaku untuk pembayaran Rupiah.')
+        if currency == 'USD':
+            amount = PLANS[plan]['usd_' + cycle]
+        else:
+            fallback = AI_PACKS[plan]['amount'] if plan in AI_PACKS else PLANS[plan][cycle]
+            try:
+                amount = pricing.quote(plan, cycle, fallback, promo_code)['amount']
+            except ValueError as cause:
+                raise AccountError(400, str(cause)) from cause
         order = dict(id=f'MF-{int(time.time())}-{secrets.token_hex(4)}', plan=plan, cycle=cycle,
                      amount=amount, currency=currency)
         with self.connect() as db:

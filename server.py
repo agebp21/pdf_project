@@ -58,6 +58,7 @@ import book_seal
 import invoice
 import visits
 import home_samples
+import pricing
 
 ROOT = Path(__file__).resolve().parent
 SHARE_THEME = (ROOT / 'assets/export/share-theme.css').read_bytes()
@@ -4200,8 +4201,15 @@ class Handler(SimpleHTTPRequestHandler):
         elif path == '/api/billing/plans':
             providers = {c: store.provider_for(c).name for c in accounts.CURRENCIES}
             paused = payments_paused(self.current_user())
-            self.send_json(200, {'plans': store.plans(), 'provider': store.provider.name, 'providers': providers,
-                                 'aiPacks': [dict(id=k, name=p['name'], questions=p['questions'], amount=p['amount']) for k, p in accounts.AI_PACKS.items()],
+            promo_code = (parse_qs(urlsplit(self.path).query).get('promo') or [''])[0]
+            try:
+                plans = store.plans(promo_code)
+                packs = [dict(id=k, name=p['name'], questions=p['questions'],
+                              amount=pricing.quote(k, 'credit', p['amount'], promo_code)['amount']) for k, p in accounts.AI_PACKS.items()]
+            except ValueError as cause:
+                raise accounts.AccountError(400, str(cause)) from cause
+            self.send_json(200, {'plans': plans, 'provider': store.provider.name, 'providers': providers,
+                                 'aiPacks': packs,
                                  'paymentsEnabled': {c: name != 'none' and not paused for c, name in providers.items()},
                                  'paymentsPaused': paused})
         elif re.fullmatch(r'/api/billing/orders/[A-Za-z0-9-]{1,64}/invoice\.pdf', path):
@@ -4329,7 +4337,7 @@ class Handler(SimpleHTTPRequestHandler):
             if payments_paused(user):
                 raise accounts.AccountError(503, 'Pembayaran online sementara dinonaktifkan. Coba lagi nanti.')
             self.send_json(200, store.checkout(user, data.get('plan'), data.get('cycle'), self.base_url(),
-                                               data.get('method'), str(data.get('currency') or 'IDR')))
+                                               data.get('method'), str(data.get('currency') or 'IDR'), data.get('promoCode') or ''))
         elif path == '/api/billing/mock/pay':
             store.mock_pay(user, str(data.get('orderId', '')))
             self.send_json(200, {'user': self.current_user()})
@@ -4957,7 +4965,7 @@ class Handler(SimpleHTTPRequestHandler):
             # Search pages: tool landing pages, robots.txt, sitemap.xml.
             self.send_response(200)
             self.send_header('Content-Type', found[1])
-            self.send_header('Cache-Control', 'public, max-age=3600')
+            self.send_header('Cache-Control', 'no-cache' if path == '/harga' else 'public, max-age=3600')
             self.send_header('Content-Length', str(len(found[0])))
             self.end_headers()
             self.wfile.write(found[0])
