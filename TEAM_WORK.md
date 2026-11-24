@@ -2,6 +2,8 @@
 
 ## 📌 Status terkini
 
+- HOME-SAMPLE-BILINGUAL (24 Nov, Codex): kode `f0d200d` live. Admin menyimpan nama ID dan EN untuk semua sampel; label home mengikuti bahasa aktif, termasuk contoh PDF unggahan. Nama lama tetap terbaca. Tes lokal Python sampel 4, admin 11, JSDOM lulus; VPS sampel 4 lulus, empat rute HTTPS 200. Backup dan checksum di `DEPLOY.md`.
+
 - HOME-SAMPLE-NAMES (24 Nov, Codex): kode `70d1c2f` live. Nama semua contoh home (termasuk Catalog 2 pada screenshot owner) dapat diubah dari admin tanpa unggah PDF lagi. Label dan notice home ikut berubah; file `.data/home-samples/labels.json` wajib dipertahankan. Tes Python 4, JSDOM dan browser admin→home HP 390px lulus; 4 tes di VPS lulus. Nama live belum diubah oleh admin.
 
 - ADMIN-AI-QUOTA (24 Nov, Codex): kode `70d1c2f` live. `accounts.ai_limit` membaca `.data/ai-quotas.json` (prioritas atas `.env`) sehingga enforcement, laporan member, dan admin sama. 0 = tanpa batas; jendela tanpa batas tetap tunduk pada kuota bulanan, penggunaan AI tetap dicatat. Tes baru 4, kuota 4, admin 11 lulus; browser admin desktop/HP lulus; 4 tes di VPS lulus. Suite penuh Python 290 dengan 13 gagal + 1 error paywall/podcast lama; JS 62 dengan 2 QA browser gagal resolve Playwright lama. Nilai live belum diubah oleh admin.
