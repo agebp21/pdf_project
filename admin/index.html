@@ -242,7 +242,8 @@
       <div class="panel" style="max-width:620px">
         <form id="sample-form">
           <label>Tempat sampel<select id="sample-slot"><option value="new">Tambah contoh baru</option><option value="interior">Ganti Katalog 1</option><option value="travel">Ganti Buku</option><option value="magazine">Ganti Katalog 2</option><option value="journal">Ganti Jurnal</option></select></label>
-          <label>Judul contoh<input id="sample-title" type="text" maxlength="80" required placeholder="Contoh: Katalog furnitur"></label>
+          <label>Nama Indonesia<input id="sample-title" type="text" maxlength="80" required placeholder="Contoh: Katalog furnitur"></label>
+          <label>English name<input id="sample-title-en" type="text" maxlength="80" required placeholder="Example: Furniture catalog"></label>
           <label>Berkas PDF<input id="sample-file" type="file" accept="application/pdf,.pdf" required></label>
           <p id="sample-message" role="status"></p>
           <button class="btn" id="sample-upload" type="submit">Unggah PDF</button>
@@ -429,7 +430,7 @@ async function loadHomeSamples() {
   });
   $('#sample-list').innerHTML = data.items.map(row => {
     const sample = row.sample;
-    return `<div class="panel" style="min-width:180px"><b>${esc(row.title)}</b><label>Nama contoh<input data-sample-name="${esc(row.slot)}" maxlength="80" value="${esc(row.title)}"></label><button class="ghost" type="button" data-rename-sample="${esc(row.slot)}">Simpan nama</button><p class="muted">${sample ? num(sample.pages) + ' halaman' : 'Contoh bawaan'}</p>${sample ? `<button class="ghost" type="button" data-edit-sample="${esc(row.slot)}">Ganti PDF</button> <button class="ghost" type="button" data-remove-sample="${esc(row.slot)}">${row.defaultTitle ? 'Kembalikan bawaan' : 'Hapus contoh'}</button>` : ''}</div>`;
+    return `<div class="panel" style="min-width:180px"><b>${esc(row.title)}</b><label>Nama Indonesia<input data-sample-name-id maxlength="80" value="${esc(row.title)}"></label><label>English name<input data-sample-name-en maxlength="80" value="${esc(row.titleEn || row.title)}"></label><button class="ghost" type="button" data-rename-sample="${esc(row.slot)}">Simpan nama</button><p class="muted">${sample ? num(sample.pages) + ' halaman' : 'Contoh bawaan'}</p>${sample ? `<button class="ghost" type="button" data-edit-sample="${esc(row.slot)}">Ganti PDF</button> <button class="ghost" type="button" data-remove-sample="${esc(row.slot)}">${row.defaultTitle ? 'Kembalikan bawaan' : 'Hapus contoh'}</button>` : ''}</div>`;
   }).join('');
 }
 $('#sample-form').onsubmit = async event => {
@@ -438,7 +439,7 @@ $('#sample-form').onsubmit = async event => {
   if (!file || !file.size) { message.textContent = 'Pilih berkas PDF yang tidak kosong.'; return; }
   button.disabled = true; message.textContent = 'Mengunggah dan menyiapkan halaman pertama…';
   try {
-    const query = new URLSearchParams({slot: $('#sample-slot').value, title: $('#sample-title').value.trim()});
+    const query = new URLSearchParams({slot: $('#sample-slot').value, title: $('#sample-title').value.trim(), titleEn: $('#sample-title-en').value.trim()});
     const response = await fetch('api/home-samples/upload?' + query, {method: 'POST', credentials: 'same-origin', headers: {'X-Admin': '1', 'Content-Type': 'application/pdf'}, body: file});
     const data = await response.json();
     if (!response.ok) throw Error(data.error || 'Unggah gagal.');
@@ -451,14 +452,15 @@ $('#sample-list').onclick = async event => {
   const rename = event.target.closest('[data-rename-sample]');
   if (rename) {
     const slot = rename.dataset.renameSample;
-    const title = rename.closest('.panel').querySelector('[data-sample-name]').value.trim();
+    const title = rename.closest('.panel').querySelector('[data-sample-name-id]').value.trim();
+    const titleEn = rename.closest('.panel').querySelector('[data-sample-name-en]').value.trim();
     rename.disabled = true;
-    try { await api('/api/home-samples/rename', {method:'POST', body:JSON.stringify({slot,title})}); await loadHomeSamples(); $('#sample-message').textContent = 'Nama contoh tersimpan.'; }
+    try { await api('/api/home-samples/rename', {method:'POST', body:JSON.stringify({slot,title,titleEn})}); await loadHomeSamples(); $('#sample-message').textContent = 'Nama contoh tersimpan.'; }
     catch(error) { $('#sample-message').textContent = error.message; rename.disabled = false; }
     return;
   }
   const edit = event.target.closest('[data-edit-sample]');
-  if (edit) { $('#sample-slot').value = edit.dataset.editSample; $('#sample-title').value = edit.closest('.panel').querySelector('b').textContent; $('#sample-file').focus(); return; }
+  if (edit) { $('#sample-slot').value = edit.dataset.editSample; $('#sample-title').value = edit.closest('.panel').querySelector('[data-sample-name-id]').value; $('#sample-title-en').value = edit.closest('.panel').querySelector('[data-sample-name-en]').value; $('#sample-file').focus(); return; }
   const button = event.target.closest('[data-remove-sample]'); if (!button) return;
   const slot = button.dataset.removeSample;
   if (!confirm('Hapus PDF sampel ini dari beranda?')) return;

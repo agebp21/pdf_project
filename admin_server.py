@@ -887,7 +887,7 @@ class AdminHandler(BaseHTTPRequestHandler):
             try:
                 size = int(self.headers.get('Content-Length', '0'))
                 query = parse_qs(url.query)
-                item = home_samples.upload(self.rfile, size, (query.get('title') or [''])[0], (query.get('slot') or ['new'])[0])
+                item = home_samples.upload(self.rfile, size, (query.get('title') or [''])[0], (query.get('slot') or ['new'])[0], (query.get('titleEn') or [None])[0])
                 self.send_json(200, {'item': item})
             except (ValueError, OSError) as cause:
                 self.send_json(400, {'error': str(cause)})
@@ -953,7 +953,7 @@ class AdminHandler(BaseHTTPRequestHandler):
                 if not 0 < size <= 4096:
                     raise ValueError('Permintaan tidak valid.')
                 body = json.loads(self.rfile.read(size))
-                home_samples.rename(body.get('slot', ''), body.get('title', ''))
+                home_samples.rename(body.get('slot', ''), body.get('title', ''), body.get('titleEn'))
                 self.send_json(200, {'ok': True})
             except (ValueError, AttributeError, OSError) as cause:
                 self.send_json(400, {'error': str(cause)})

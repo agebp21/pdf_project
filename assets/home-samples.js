@@ -14,17 +14,25 @@
   };
   const uploaded = {};
   const labels = {};
+  const defaultLabels = {interior:['Katalog 1','Catalog 1'],travel:['Buku','Book'],magazine:['Katalog 2','Catalog 2'],journal:['Jurnal','Journal']};
+  const name = slot => {
+    const item = uploaded[slot];
+    if (item) return (en() ? item.titleEn : item.title) || item.title;
+    const value = labels[slot];
+    if (value) return typeof value === 'string' ? (en() ? defaultLabels[slot]?.[1] || value : value) : (en() ? value.en : value.id);
+    return defaultLabels[slot]?.[en() ? 1 : 0] || slot;
+  };
+  function paintLabels() {
+    grid.querySelectorAll('.hh-sample').forEach(button => {
+      const label = button.querySelector('b');
+      if (label) { label.removeAttribute('data-en'); label.textContent = name(button.dataset.sample); }
+    });
+  }
   window.HomeSampleOverrides = uploaded;
   window.HomeSampleLabels = labels;
   const grid = document.querySelector('.hh-sample-grid');
   if (typeof fetch === 'function') fetch('/api/home-samples').then(response => response.ok ? response.json() : {items: []}).then(data => {
     Object.assign(labels, data.labels || {});
-    Object.entries(labels).forEach(([slot,title]) => {
-      const button = Array.from(grid.querySelectorAll('.hh-sample')).find(node => node.dataset.sample === slot);
-      if (button && typeof title === 'string') {
-        const label = button.querySelector('b'); label.removeAttribute('data-en'); label.textContent = title;
-      }
-    });
     (data.items || []).forEach(item => {
       if (!item || !item.id || !item.cover || !item.pageBase || !Number.isInteger(item.pages)) return;
       const key = item.slot;
@@ -40,8 +48,9 @@
       const cover = button.querySelector('.hh-sample-cover');
       cover.replaceChildren();
       const image = document.createElement('img'); image.src = item.cover; image.alt = ''; image.loading = 'lazy'; cover.append(image);
-      const label = button.querySelector('b'); label.removeAttribute('data-en'); label.textContent = item.title;
     });
+    paintLabels();
+    render();
   }).catch(() => {});
   let selected = null;
   const closedCover = document.querySelector('#hh-book .hh-cover');
@@ -56,12 +65,12 @@
       [closedCover, demoCover].forEach(cover => {
         if (!cover) return;
         cover.replaceChildren();
-        const image = document.createElement('img'); image.src = override.cover; image.alt = override.title;
+        const image = document.createElement('img'); image.src = override.cover; image.alt = name(selected);
         image.className = 'hh-upload-cover'; cover.append(image);
       });
       document.querySelectorAll('.hh-sample').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.sample === selected)));
       const note = document.getElementById('hh-sample-notice'); note.removeAttribute('data-en');
-      note.textContent = override.title + ' · ' + override.pages + (en() ? ' pages' : ' halaman');
+      note.textContent = name(selected) + ' · ' + override.pages + (en() ? ' pages' : ' halaman');
       return;
     }
     const sample = samples[selected], lang = en() ? 1 : 0;
@@ -83,7 +92,7 @@
         const image = document.createElement('img'); image.src = 'assets/samples/catalog-1/page-01.webp'; image.alt = 'Nivora Home furniture catalog'; image.className = 'hh-catalog-cover'; closedCover.append(image);
       }
       document.querySelectorAll('.hh-sample').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.sample === selected)));
-      const note = document.getElementById('hh-sample-notice'); note.removeAttribute('data-en'); note.textContent = labels[selected] ? labels[selected] + (en() ? ' · 12 pages' : ' · 12 halaman') : en() ? 'Nivora Home catalog · 12 pages' : 'Katalog Nivora Home · 12 halaman';
+      const note = document.getElementById('hh-sample-notice'); note.removeAttribute('data-en'); note.textContent = labels[selected] ? name(selected) + (en() ? ' · 12 pages' : ' · 12 halaman') : en() ? 'Nivora Home catalog · 12 pages' : 'Katalog Nivora Home · 12 halaman';
       return;
     }
     if (closedCover && closedCover.querySelector('.hh-catalog-cover,.hh-magazine-cover,.hh-journal-cover,.hh-upload-cover')) closedCover.innerHTML = originalCover;
@@ -107,7 +116,7 @@
     });
     document.querySelectorAll('[data-sample].hh-sample').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.sample === selected)));
     const notice = document.getElementById('hh-sample-notice'); notice.removeAttribute('data-en');
-    notice.textContent = (en() ? 'Preview selected: ' : 'Contoh dipilih: ') + (labels[selected] || sample.title[lang]);
+    notice.textContent = (en() ? 'Preview selected: ' : 'Contoh dipilih: ') + (labels[selected] ? name(selected) : sample.title[lang]);
   }
   function select(event) {
     selected = event.currentTarget.dataset.sample; render();
@@ -116,5 +125,5 @@
     document.dispatchEvent(new Event('langchange'));
   }
   document.querySelectorAll('.hh-sample[data-sample]').forEach(button => button.addEventListener('click', select));
-  document.addEventListener('langchange', render);
+  document.addEventListener('langchange', () => { paintLabels(); render(); });
 })();

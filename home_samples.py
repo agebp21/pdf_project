@@ -10,6 +10,7 @@ import time
 
 ROOT = Path(__file__).resolve().parent
 SLOTS = {'interior': 'Katalog 1', 'travel': 'Buku', 'magazine': 'Katalog 2', 'journal': 'Jurnal'}
+SLOTS_EN = {'interior': 'Catalog 1', 'travel': 'Book', 'magazine': 'Catalog 2', 'journal': 'Journal'}
 ID = re.compile(r'^[0-9a-f]{24}$')
 LOCK = threading.RLock()
 
@@ -35,7 +36,15 @@ def labels():
     value = json.loads(file.read_text(encoding='utf-8'))
     if not isinstance(value, dict):
         raise ValueError('Nama sampel rusak.')
-    return {slot: title for slot, title in value.items() if slot in SLOTS and isinstance(title, str)}
+    result = {}
+    for slot, title in value.items():
+        if slot not in SLOTS:
+            continue
+        if isinstance(title, str):
+            result[slot] = {'id': title, 'en': SLOTS_EN[slot]}
+        elif isinstance(title, dict) and isinstance(title.get('id'), str) and isinstance(title.get('en'), str):
+            result[slot] = {'id': title['id'], 'en': title['en']}
+    return result
 
 
 def save_labels(value):
@@ -50,10 +59,13 @@ def save_labels(value):
         temp.unlink(missing_ok=True)
 
 
-def rename(slot, title):
+def rename(slot, title, title_en=None):
     title = str(title).strip()
     if not title or len(title) > 80 or any(ord(char) < 32 for char in title):
         raise ValueError('Nama sampel harus 1–80 karakter.')
+    title_en = str(title_en if title_en is not None else SLOTS_EN.get(slot, title)).strip()
+    if not title_en or len(title_en) > 80 or any(ord(char) < 32 for char in title_en):
+        raise ValueError('Nama sampel bahasa Inggris harus 1–80 karakter.')
     with LOCK:
         current = records()
         item = next((row for row in current if row['slot'] == slot), None)
@@ -61,19 +73,20 @@ def rename(slot, title):
             raise ValueError('Sampel tidak ditemukan.')
         if item:
             item['title'] = title
+            item['titleEn'] = title_en
             save_records(current)
         if slot in SLOTS:
             value = labels()
-            if title == SLOTS[slot]:
+            if title == SLOTS[slot] and title_en == SLOTS_EN[slot]:
                 value.pop(slot, None)
             else:
-                value[slot] = title
+                value[slot] = {'id': title, 'en': title_en}
             save_labels(value)
     return title
 
 
 def public_samples():
-    return [dict(id=item['id'], slot=item['slot'], title=item['title'], pages=item['pages'],
+    return [dict(id=item['id'], slot=item['slot'], title=item['title'], titleEn=item.get('titleEn') or SLOTS_EN.get(item['slot'], item['title']), pages=item['pages'],
                  cover=f"/api/home-samples/{item['id']}/page-1.webp",
                  pageBase=f"/api/home-samples/{item['id']}/page-") for item in records()]
 
@@ -82,9 +95,10 @@ def admin_samples():
     current = records()
     by_slot = {item['slot']: item for item in current}
     names = labels()
-    return [dict(slot=slot, title=names.get(slot, by_slot[slot]['title'] if slot in by_slot else label),
+    return [dict(slot=slot, title=names[slot]['id'] if slot in names else by_slot[slot]['title'] if slot in by_slot else label,
+                 titleEn=names[slot]['en'] if slot in names else (by_slot[slot].get('titleEn') or SLOTS_EN[slot]) if slot in by_slot else SLOTS_EN[slot],
                  defaultTitle=label, sample=by_slot.get(slot)) for slot, label in SLOTS.items()] + [
-        dict(slot=item['slot'], title=item['title'], defaultTitle=None, sample=item) for item in current if item['slot'] not in SLOTS]
+        dict(slot=item['slot'], title=item['title'], titleEn=item.get('titleEn') or item['title'], defaultTitle=None, sample=item) for item in current if item['slot'] not in SLOTS]
 
 
 def render_page(pdf, target, index):
@@ -135,10 +149,13 @@ def save_records(items):
         temp.unlink(missing_ok=True)
 
 
-def upload(source, size, title, slot='new'):
+def upload(source, size, title, slot='new', title_en=None):
     title = str(title).strip()
     if not title or len(title) > 80 or any(ord(char) < 32 for char in title):
         raise ValueError('Judul sampel harus 1–80 karakter.')
+    title_en = str(title_en if title_en is not None else SLOTS_EN.get(slot, title)).strip()
+    if not title_en or len(title_en) > 80 or any(ord(char) < 32 for char in title_en):
+        raise ValueError('Judul sampel bahasa Inggris harus 1–80 karakter.')
     if slot != 'new' and slot not in SLOTS and not (slot.startswith('custom-') and ID.fullmatch(slot[7:]) and any(row['slot'] == slot for row in records())):
         raise ValueError('Slot sampel tidak dikenal.')
     if size <= 0:
@@ -175,7 +192,7 @@ def upload(source, size, title, slot='new'):
             raise ValueError('PDF tidak bisa dibaca.') from cause
         render_page(pdf, temp / 'page-1.webp', 0)
         item = dict(id=sample_id, slot=slot if slot != 'new' else 'custom-' + sample_id,
-                    title=title, pages=pages, updatedAt=int(time.time()))
+                    title=title, titleEn=title_en, pages=pages, updatedAt=int(time.time()))
         with LOCK:
             existing = records()
             previous = next((row for row in existing if row['slot'] == item['slot']), None)
@@ -188,7 +205,7 @@ def upload(source, size, title, slot='new'):
                 raise
             if item['slot'] in SLOTS:
                 names = labels()
-                names[item['slot']] = item['title']
+                names[item['slot']] = {'id': item['title'], 'en': item['titleEn']}
                 save_labels(names)
             if previous:
                 shutil.rmtree(folder / previous['id'], ignore_errors=True)

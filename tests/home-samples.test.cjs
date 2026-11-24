@@ -7,8 +7,9 @@ const {JSDOM} = require('../.build/qa-runtime/node_modules/jsdom');
   w.matchMedia = () => ({matches:true});
   w.HTMLElement.prototype.scrollIntoView = function () {};
   w.HTMLElement.prototype.getBoundingClientRect = function () { return {left:0,top:0,width:450,height:625,right:450,bottom:625}; };
-  w.I18N = {get:()=> 'id'};
-  w.fetch = async () => ({ok:true, json:async () => ({labels:{magazine:'Menu Pilihan'},items:[{id:'abcdefabcdefabcdefabcdef',slot:'custom-abcdefabcdefabcdefabcdef',title:'PDF Unggahan',pages:3,cover:'/api/home-samples/abcdefabcdefabcdefabcdef/page-1.webp',pageBase:'/api/home-samples/abcdefabcdefabcdefabcdef/page-'}]})});
+  let language = 'id';
+  w.I18N = {get:()=> language};
+  w.fetch = async () => ({ok:true, json:async () => ({labels:{magazine:{id:'Menu Pilihan',en:'Featured Menu'}},items:[{id:'abcdefabcdefabcdefabcdef',slot:'custom-abcdefabcdefabcdefabcdef',title:'PDF Unggahan',titleEn:'Uploaded PDF',pages:3,cover:'/api/home-samples/abcdefabcdefabcdefabcdef/page-1.webp',pageBase:'/api/home-samples/abcdefabcdefabcdefabcdef/page-'}]})});
   let pageCount=0;
   w.St = {PageFlip: class {
     constructor(box) {this.box=box;this.index=0;this.handlers={};w.__qaFlip=this;}
@@ -28,6 +29,11 @@ const {JSDOM} = require('../.build/qa-runtime/node_modules/jsdom');
   const wait = () => new Promise(resolve=>setTimeout(resolve,100));
   click('interior'); await wait();
   assert.equal(w.document.querySelector('.hh-sample[data-sample=magazine] b').textContent,'Menu Pilihan');
+  language = 'en'; w.document.dispatchEvent(new w.Event('langchange'));
+  assert.equal(w.document.querySelector('.hh-sample[data-sample=magazine] b').textContent,'Featured Menu');
+  assert.equal(w.document.querySelector('.hh-sample[data-sample=custom-abcdefabcdefabcdefabcdef] b').textContent,'Uploaded PDF');
+  assert.equal(w.document.querySelector('.hh-sample[data-sample=travel] b').textContent,'Book');
+  language = 'id'; w.document.dispatchEvent(new w.Event('langchange'));
   assert.equal(pageCount,12);assert.equal(w.document.querySelectorAll('.hh-catalog-page').length,12);
   assert.equal(w.document.querySelectorAll('.hh-sample-back').length,0,'PDF final page is the back cover');
   w.__qaFlip.turnToPage(10);

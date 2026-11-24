@@ -62,13 +62,15 @@ class HomeSamplesTest(unittest.TestCase):
             home_samples.upload(io.BytesIO(b'%PDF-not-valid'), 14, 'Rusak')
 
     def test_rename_builtin_and_uploaded_without_reupload(self):
-        home_samples.rename('magazine', 'Katalog Menu Baru')
-        self.assertEqual(home_samples.labels()['magazine'], 'Katalog Menu Baru')
+        home_samples.rename('magazine', 'Katalog Menu Baru', 'New Menu Catalog')
+        self.assertEqual(home_samples.labels()['magazine'], {'id': 'Katalog Menu Baru', 'en': 'New Menu Catalog'})
         self.assertEqual(next(row for row in home_samples.admin_samples() if row['slot'] == 'magazine')['title'], 'Katalog Menu Baru')
+        self.assertEqual(next(row for row in home_samples.admin_samples() if row['slot'] == 'magazine')['titleEn'], 'New Menu Catalog')
         pdf = self.pdf()
         item = home_samples.upload(io.BytesIO(pdf), len(pdf), 'Contoh awal')
-        home_samples.rename(item['slot'], 'Contoh setelah edit')
+        home_samples.rename(item['slot'], 'Contoh setelah edit', 'Edited sample')
         self.assertEqual(home_samples.public_samples()[0]['title'], 'Contoh setelah edit')
+        self.assertEqual(home_samples.public_samples()[0]['titleEn'], 'Edited sample')
         self.assertEqual(home_samples.public_samples()[0]['id'], item['id'])
         with self.assertRaises(ValueError):
             home_samples.rename('tidak-ada', 'Salah')
@@ -103,12 +105,12 @@ class HomeSamplesTest(unittest.TestCase):
             self.assertEqual(blocked.exception.code, 404)
             blocked.exception.close()
             request = Request(f'http://127.0.0.1:{admin.server_port}/api/home-samples/rename',
-                              data=json.dumps({'slot':'travel','title':'Buku Pilihan'}).encode(),
+                              data=json.dumps({'slot':'travel','title':'Buku Pilihan','titleEn':'Selected Book'}).encode(),
                               headers={'Content-Type':'application/json','X-Admin':'1'}, method='POST')
             with urlopen(request) as response:
                 self.assertEqual(response.status, 200)
             with urlopen(f'http://127.0.0.1:{public.server_port}/api/home-samples') as response:
-                self.assertEqual(json.load(response)['labels']['travel'], 'Buku Pilihan')
+                self.assertEqual(json.load(response)['labels']['travel'], {'id':'Buku Pilihan','en':'Selected Book'})
         finally:
             for host in (admin, public):
                 host.shutdown()
