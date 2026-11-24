@@ -2,7 +2,7 @@
 
 ## 📌 Status terkini
 
-- HOME-SAMPLES (24 Nov, Codex): pengelolaan PDF sampel beranda di admin dan pratinjau flipbook di situs umum selesai secara lokal. Tes Python modul+rute HTTP 3, admin 11, JSDOM flipbook lulus; sintaks dan diff lulus. PDF asal tidak bisa dibuka lewat rute publik. Belum live; perlu `pymupdf` + `Pillow` pada layanan web/admin saat deploy. Status commit/push dicatat setelah selesai.
+- HOME-SAMPLES (24 Nov, Codex): `dd319ea` sudah dipush ke `v2`. Pengelolaan PDF sampel beranda di admin dan pratinjau flipbook di situs umum selesai secara lokal. Tes Python modul+rute HTTP 3, admin 11, JSDOM flipbook lulus; sintaks dan diff lulus. PDF asal tidak bisa dibuka lewat rute publik. Visual browser belum diuji. Belum live; perlu `pymupdf` + `Pillow` pada layanan web/admin saat deploy.
 
 - ADMIN-AI-USAGE (24 Nov, Codex): panel Status Member kini menampilkan pemakaian/jatah pertanyaan AI bulan ini di tiap baris, serta rincian 5 jam, reset, dan sisa kredit saat member diklik. `accounts.py` menjadi sumber batas AI bersama `server.py` dan `admin_server.py` agar override `.env` konsisten. Tidak ada migrasi DB. File: `accounts.py`, `server.py`, `admin_server.py`, `admin/index.html`, `tests/test_admin.py`. QA lokal: test_admin 11, test_quota 4, test_summary_words 4 lulus; JS inline dan Python syntax, diff check lulus; browser lokal desktop 1440 px dan HP 390 px dengan database contoh lulus tanpa error. Suite penuh: JS 60/62 (dua tes beranda gagal resolve Playwright); Python 278 dengan 13 kegagalan paywall/podcast lama dan 1 error cetak HTML→PDF karena browser lokal gagal. Tidak terkait area admin/kuota. Belum live; perlu deploy `myflipbook` dan `myflipbook-admin` oleh PC owner sesuai `release/README.md`.
 
