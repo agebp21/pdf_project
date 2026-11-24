@@ -57,6 +57,7 @@ import seo
 import book_seal
 import invoice
 import visits
+import home_samples
 
 ROOT = Path(__file__).resolve().parent
 SHARE_THEME = (ROOT / 'assets/export/share-theme.css').read_bytes()
@@ -4757,6 +4758,29 @@ class Handler(SimpleHTTPRequestHandler):
             self.send_json(403, {'error': 'Akses hanya dari localhost proyek.'})
             return
         path = unquote(urlsplit(self.path).path)
+        if path == '/api/home-samples':
+            try:
+                self.send_json(200, {'items': home_samples.public_samples()})
+            except (ValueError, OSError) as cause:
+                self.send_json(500, {'error': str(cause)})
+            return
+        sample_image = re.fullmatch(r'/api/home-samples/([0-9a-f]{24})/page-([1-9][0-9]*)\.webp', path)
+        if sample_image:
+            try:
+                file = home_samples.page_file(sample_image.group(1), int(sample_image.group(2)))
+                if not file:
+                    self.send_error(404)
+                    return
+                body = file.read_bytes()
+                self.send_response(200)
+                self.send_header('Content-Type', 'image/webp')
+                self.send_header('Content-Length', str(len(body)))
+                self.send_header('Cache-Control', 'public, max-age=86400, immutable')
+                self.end_headers()
+                self.wfile.write(body)
+            except (ValueError, OSError, RuntimeError) as cause:
+                self.send_json(500, {'error': str(cause)})
+            return
         if path.startswith('/api/worker/'):
             self.worker_route('GET')
             return

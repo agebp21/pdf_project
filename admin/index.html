@@ -179,6 +179,7 @@
       <button data-tab="visits">Pengunjung</button>
       <button data-tab="verified">Email terverifikasi</button>
       <button data-tab="orders">Status Order</button>
+      <button data-tab="home-samples">Sampel beranda</button>
       <button data-tab="password">Ganti Password</button>
     </nav>
     <button class="out" id="logout">Keluar</button>
@@ -233,6 +234,20 @@
       <div id="visit-view"></div>
     </section>
     <section data-view="server" hidden></section>
+    <section data-view="home-samples" hidden>
+      <h2>Sampel PDF beranda</h2>
+      <p class="muted">Ganti contoh bawaan atau tambah buku baru untuk pratinjau di halaman utama. PDF dirender menjadi gambar halaman; pengunjung tidak mengunduh PDF asal.</p>
+      <div class="panel" style="max-width:620px">
+        <form id="sample-form">
+          <label>Tempat sampel<select id="sample-slot"><option value="new">Tambah contoh baru</option><option value="interior">Ganti Katalog 1</option><option value="travel">Ganti Buku</option><option value="magazine">Ganti Katalog 2</option><option value="journal">Ganti Jurnal</option></select></label>
+          <label>Judul contoh<input id="sample-title" type="text" maxlength="80" required placeholder="Contoh: Katalog furnitur"></label>
+          <label>Berkas PDF<input id="sample-file" type="file" accept="application/pdf,.pdf" required></label>
+          <p id="sample-message" role="status"></p>
+          <button class="btn" id="sample-upload" type="submit">Unggah PDF</button>
+        </form>
+      </div>
+      <div id="sample-list" class="grid" style="margin-top:20px"></div>
+    </section>
     <section data-view="password" hidden>
       <h2>Ganti password admin</h2>
       <div class="panel" style="max-width:520px">
@@ -297,16 +312,52 @@ $('#logout').onclick = async () => { await api('/api/logout', {method: 'POST', b
 
 document.querySelectorAll('header nav button').forEach(b => b.onclick = () => open(b.dataset.tab));
 function open(tab, record = true) {
-  if (!['overview','members','verified','orders','uploads','visits','server','password'].includes(tab)) tab = 'members';
+  if (!['overview','members','verified','orders','uploads','visits','server','password','home-samples'].includes(tab)) tab = 'members';
   if (record && location.hash !== '#' + tab) history.pushState({tab}, '', '#' + tab);
   else if (!record) history.replaceState({tab}, '', '#' + tab);
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.tab === tab)));
   document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== tab; });
-  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(1), server: loadServer, password: async () => {}};
+  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(1), server: loadServer, password: async () => {}, 'home-samples': loadHomeSamples};
   loaders[tab]()
     .catch(e => { document.querySelector(`[data-view="${tab}"]`).insertAdjacentHTML('afterbegin', `<p class="err">${esc(e.message)}</p>`); });
 }
 addEventListener('popstate', () => { if (!$('#app').hidden) open(location.hash.slice(1) || 'overview', false); });
+async function loadHomeSamples() {
+  const data = await api('/api/home-samples');
+  $('#sample-slot').querySelectorAll('option[data-custom]').forEach(option => option.remove());
+  data.items.filter(row => row.sample && !row.defaultTitle).forEach(row => {
+    const option = new Option('Ganti ' + row.sample.title, row.slot); option.dataset.custom = '1'; $('#sample-slot').append(option);
+  });
+  $('#sample-list').innerHTML = data.items.map(row => {
+    const sample = row.sample;
+    return `<div class="panel" style="min-width:180px"><b>${esc(sample?.title || row.defaultTitle || 'Contoh baru')}</b><p class="muted">${sample ? num(sample.pages) + ' halaman' : 'Contoh bawaan'}</p>${sample ? `<button class="ghost" type="button" data-edit-sample="${esc(row.slot)}">Ganti PDF</button> <button class="ghost" type="button" data-remove-sample="${esc(row.slot)}">${row.defaultTitle ? 'Kembalikan bawaan' : 'Hapus contoh'}</button>` : ''}</div>`;
+  }).join('');
+}
+$('#sample-form').onsubmit = async event => {
+  event.preventDefault();
+  const file = $('#sample-file').files[0], message = $('#sample-message'), button = $('#sample-upload');
+  if (!file || !file.size) { message.textContent = 'Pilih berkas PDF yang tidak kosong.'; return; }
+  button.disabled = true; message.textContent = 'Mengunggah dan menyiapkan halaman pertama…';
+  try {
+    const query = new URLSearchParams({slot: $('#sample-slot').value, title: $('#sample-title').value.trim()});
+    const response = await fetch('api/home-samples/upload?' + query, {method: 'POST', credentials: 'same-origin', headers: {'X-Admin': '1', 'Content-Type': 'application/pdf'}, body: file});
+    const data = await response.json();
+    if (!response.ok) throw Error(data.error || 'Unggah gagal.');
+    $('#sample-form').reset(); message.textContent = 'Sampel berhasil diperbarui.';
+    await loadHomeSamples();
+  } catch (error) { message.textContent = error.message; }
+  finally { button.disabled = false; }
+};
+$('#sample-list').onclick = async event => {
+  const edit = event.target.closest('[data-edit-sample]');
+  if (edit) { $('#sample-slot').value = edit.dataset.editSample; $('#sample-title').value = edit.closest('.panel').querySelector('b').textContent; $('#sample-file').focus(); return; }
+  const button = event.target.closest('[data-remove-sample]'); if (!button) return;
+  const slot = button.dataset.removeSample;
+  if (!confirm('Hapus PDF sampel ini dari beranda?')) return;
+  button.disabled = true;
+  try { await api('/api/home-samples/remove', {method: 'POST', body: JSON.stringify({slot})}); await loadHomeSamples(); }
+  catch (error) { $('#sample-message').textContent = error.message; button.disabled = false; }
+};
 $('#password-form').onsubmit = async event => {
   event.preventDefault(); $('#password-error').textContent = ''; $('#password-ok').textContent = '';
   try {

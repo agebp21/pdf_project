@@ -8,6 +8,7 @@ const {JSDOM} = require('../.build/qa-runtime/node_modules/jsdom');
   w.HTMLElement.prototype.scrollIntoView = function () {};
   w.HTMLElement.prototype.getBoundingClientRect = function () { return {left:0,top:0,width:450,height:625,right:450,bottom:625}; };
   w.I18N = {get:()=> 'id'};
+  w.fetch = async () => ({ok:true, json:async () => ({items:[{id:'abcdefabcdefabcdefabcdef',slot:'custom-abcdefabcdefabcdefabcdef',title:'PDF Unggahan',pages:3,cover:'/api/home-samples/abcdefabcdefabcdefabcdef/page-1.webp',pageBase:'/api/home-samples/abcdefabcdefabcdefabcdef/page-'}]})});
   let pageCount=0;
   w.St = {PageFlip: class {
     constructor(box) {this.box=box;this.index=0;this.handlers={};w.__qaFlip=this;}
@@ -38,6 +39,14 @@ const {JSDOM} = require('../.build/qa-runtime/node_modules/jsdom');
   click('interior');await wait();assert.equal(w.document.getElementById('hh-demo').hidden,false);
   click('travel');await wait();assert.equal(pageCount,10);assert.equal(w.document.querySelectorAll('#hh-demo-book .hh-page').length,10);
   click('interior');await wait();assert.equal(pageCount,12);
+  click('custom-abcdefabcdefabcdefabcdef');await wait();
+  assert.equal(pageCount,4,'odd PDF pages receive one back cover');
+  assert.equal(w.document.querySelectorAll('#hh-demo-book .hh-catalog-page').length,3);
+  assert.match(w.document.querySelector('#hh-book .hh-upload-cover').src,/page-1\.webp$/);
+  click('travel');await wait();assert.equal(pageCount,10,'built-in sample restores after uploaded PDF');
+  w.HomeSampleOverrides.travel = {id:'111111111111111111111111',title:'Satu halaman',pages:1,pageBase:'/api/home-samples/111111111111111111111111/page-'};
+  click('interior');await wait();click('travel');await wait();
+  assert.equal(pageCount,2,'single-page PDF includes a closing back cover');
   dom.window.close();
-  console.log('PASS two catalog12/book10 samples, catalog close/reopen and repeated switching (mock engine)');
+  console.log('PASS built-in and uploaded PDF samples, switching and back cover (mock engine)');
 })().catch(error=>{console.error(error);process.exit(1);});

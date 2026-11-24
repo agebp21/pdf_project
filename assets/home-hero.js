@@ -6,14 +6,28 @@
   if (!book || !demo) return;
   var hero = demo.closest('.hh');
   var flip = null, loading = null, opener = null, settle = null, busy = false, tools = null;
-  var originalPages = null, catalogPages = null, magazinePages = null, journalPages = null, showingCatalog = false, showingMagazine = false, showingJournal = false;
+  var originalPages = null, catalogPages = null, magazinePages = null, journalPages = null, showingCatalog = false, showingMagazine = false, showingJournal = false, activeSampleId = '', uploadedPages = {};
   function applySample() {
     if (!flip || busy) return;
     var catalog = hero.dataset.sample === 'interior';
     var magazine = hero.dataset.sample === 'magazine';
     var journal = hero.dataset.sample === 'journal';
-    if (catalog === showingCatalog && magazine === showingMagazine && journal === showingJournal) return;
+    var uploaded = window.HomeSampleOverrides && window.HomeSampleOverrides[hero.dataset.sample];
+    var sampleId = uploaded ? uploaded.id : '';
+    if (catalog === showingCatalog && magazine === showingMagazine && journal === showingJournal && sampleId === activeSampleId) return;
     if (tools) tools.pause();
+    if (uploaded && !uploadedPages[sampleId]) {
+      var list = [];
+      for (var u = 1; u <= uploaded.pages; u++) {
+        var item = document.createElement('div'); item.className = 'hh-page hh-catalog-page'; item.dataset.density = 'soft';
+        var picture = document.createElement('img'); picture.src = uploaded.pageBase + u + '.webp'; picture.alt = uploaded.title + ' · ' + u; picture.decoding = 'async';
+        if (u > 2) picture.loading = 'lazy';
+        item.appendChild(picture); list.push(item);
+      }
+      if (list.length % 2) { var back = document.createElement('div'); back.className = 'hh-page hh-back hh-sample-back'; back.dataset.density = 'hard'; list.push(back); }
+      else list[list.length - 1].dataset.density = 'hard';
+      uploadedPages[sampleId] = list;
+    }
     if (catalog && !catalogPages) {
       catalogPages = [];
       for (var i=1; i<=12; i++) {
@@ -43,8 +57,8 @@
       var journalBack = document.createElement('div'); journalBack.className = 'hh-page hh-back hh-sample-back'; journalBack.dataset.density = 'hard';
       journalPages.push(journalBack);
     }
-    showingCatalog = catalog; showingMagazine = magazine; showingJournal = journal;
-    flip.updateFromHtml(catalog ? catalogPages : magazine ? magazinePages : journal ? journalPages : originalPages);
+    showingCatalog = catalog || !!uploaded; showingMagazine = magazine; showingJournal = journal; activeSampleId = sampleId;
+    flip.updateFromHtml(uploaded ? uploadedPages[sampleId] : catalog ? catalogPages : magazine ? magazinePages : journal ? journalPages : originalPages);
     flip.turnToPage(0); if (settle) settle(); status();
   }
   var EN = function () { return window.I18N && I18N.get && I18N.get() === 'en'; };

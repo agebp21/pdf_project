@@ -12,6 +12,28 @@
     learning: {title:['Belajar dari ide.','Learning through ideas.'],topics:[['Tujuan belajar','Learning goals'],['Amati sekitar','Observe your surroundings'],['Susun pertanyaan','Ask questions'],['Eksperimen kecil','Small experiments'],['Catat temuan','Record findings'],['Diskusi bersama','Discuss together'],['Coba mandiri','Practice independently'],['Refleksi belajar','Learning reflection']],intro:['Modul contoh untuk mengembangkan ide: amati, coba, catat, lalu bagikan hasil belajar.','A sample module for developing ideas: observe, experiment, record, and share what you learn.']},
     journal: {title:['Jurnal ilmiah.','Academic journal.'],topics:[['Abstrak','Abstract'],['Pendahuluan','Introduction'],['Tinjauan pustaka','Literature review'],['Metode','Method'],['Pembahasan','Discussion'],['Kesimpulan','Conclusion'],['Daftar pustaka','References'],['Lampiran','Appendix']],intro:['Contoh artikel jurnal akademik dengan abstrak, kutipan, dan tata letak dua kolom.','A sample academic journal article with an abstract, citations, and a two-column layout.']}
   };
+  const uploaded = {};
+  window.HomeSampleOverrides = uploaded;
+  const grid = document.querySelector('.hh-sample-grid');
+  if (typeof fetch === 'function') fetch('/api/home-samples').then(response => response.ok ? response.json() : {items: []}).then(data => {
+    (data.items || []).forEach(item => {
+      if (!item || !item.id || !item.cover || !item.pageBase || !Number.isInteger(item.pages)) return;
+      const key = item.slot;
+      uploaded[key] = item;
+      let button = Array.from(grid.querySelectorAll('.hh-sample')).find(node => node.dataset.sample === key);
+      if (!button) {
+        button = document.createElement('button'); button.type = 'button'; button.className = 'hh-sample'; button.dataset.sample = key;
+        button.setAttribute('aria-pressed', 'false');
+        button.innerHTML = '<span class="hh-sample-cover" aria-hidden="true"></span><b></b>';
+        grid.append(button);
+        button.addEventListener('click', select);
+      }
+      const cover = button.querySelector('.hh-sample-cover');
+      cover.replaceChildren();
+      const image = document.createElement('img'); image.src = item.cover; image.alt = ''; image.loading = 'lazy'; cover.append(image);
+      const label = button.querySelector('b'); label.removeAttribute('data-en'); label.textContent = item.title;
+    });
+  }).catch(() => {});
   let selected = null;
   const closedCover = document.querySelector('#hh-book .hh-cover');
   const originalCover = closedCover ? closedCover.innerHTML : '';
@@ -19,6 +41,20 @@
   const originalDemoCover = demoCover ? demoCover.innerHTML : '';
   function render() {
     if (!selected) return;
+    const override = uploaded[selected];
+    if (override) {
+      hero.dataset.sample = selected;
+      [closedCover, demoCover].forEach(cover => {
+        if (!cover) return;
+        cover.replaceChildren();
+        const image = document.createElement('img'); image.src = override.cover; image.alt = override.title;
+        image.className = 'hh-upload-cover'; cover.append(image);
+      });
+      document.querySelectorAll('.hh-sample').forEach(button => button.setAttribute('aria-pressed', String(button.dataset.sample === selected)));
+      const note = document.getElementById('hh-sample-notice'); note.removeAttribute('data-en');
+      note.textContent = override.title + ' · ' + override.pages + (en() ? ' pages' : ' halaman');
+      return;
+    }
     const sample = samples[selected], lang = en() ? 1 : 0;
     hero.dataset.sample = selected;
     if (demoCover) {
@@ -30,7 +66,7 @@
         demoCover.replaceChildren();
         const cover = document.createElement('img'); cover.src = 'assets/samples/catalog-3/page-01.webp'; cover.alt = 'Journal sample cover';
         cover.style.cssText = 'position:absolute;inset:0;width:100%;height:100%;object-fit:contain'; demoCover.append(cover);
-      } else if (demoCover.querySelector('img[alt="RushBite Express catalog cover"],img[alt="Journal sample cover"]')) demoCover.innerHTML = originalDemoCover;
+      } else if (demoCover.querySelector('img[alt="RushBite Express catalog cover"],img[alt="Journal sample cover"],.hh-upload-cover')) demoCover.innerHTML = originalDemoCover;
     }
     if (selected === 'interior') {
       if (closedCover) {
@@ -41,7 +77,7 @@
       const note = document.getElementById('hh-sample-notice'); note.removeAttribute('data-en'); note.textContent = en() ? 'Nivora Home catalog · 12 pages' : 'Katalog Nivora Home · 12 halaman';
       return;
     }
-    if (closedCover && closedCover.querySelector('.hh-catalog-cover,.hh-magazine-cover,.hh-journal-cover')) closedCover.innerHTML = originalCover;
+    if (closedCover && closedCover.querySelector('.hh-catalog-cover,.hh-magazine-cover,.hh-journal-cover,.hh-upload-cover')) closedCover.innerHTML = originalCover;
     if (selected === 'magazine' && closedCover) {
       closedCover.replaceChildren();
       const image = document.createElement('img'); image.src = 'assets/samples/catalog-2/page-01.webp'; image.alt = 'RushBite Express catalog cover'; image.className = 'hh-magazine-cover'; closedCover.append(image);
@@ -64,11 +100,12 @@
     const notice = document.getElementById('hh-sample-notice'); notice.removeAttribute('data-en');
     notice.textContent = (en() ? 'Preview selected: ' : 'Contoh dipilih: ') + sample.title[lang];
   }
-  document.querySelectorAll('.hh-sample[data-sample]').forEach(button => button.addEventListener('click', () => {
-    selected = button.dataset.sample; render();
+  function select(event) {
+    selected = event.currentTarget.dataset.sample; render();
     document.dispatchEvent(new Event('hh-sample-selected'));
     // Existing reading tools refresh their text and language caches through this event.
     document.dispatchEvent(new Event('langchange'));
-  }));
+  }
+  document.querySelectorAll('.hh-sample[data-sample]').forEach(button => button.addEventListener('click', select));
   document.addEventListener('langchange', render);
 })();

@@ -5,10 +5,11 @@
   python admin_server.py --grant EMAIL PLAN DAYS|lifetime   # give a member a plan without payment
 
 Its own login (ADMIN_USERNAME + ADMIN_PASSWORD_HASH in .env), not a member
-account; its own port, so the member site never serves it. It only reads the
+account; its own port, so the member site never serves it. It reads the
 databases (SQLite read-only): members, payments, what members keep in My
 Library (titles, sizes, exports — never the books' contents) and the visitor
-statistics written by server.py (visits.py).
+statistics written by server.py (visits.py). It also manages homepage sample
+PDFs in .data/home-samples/.
 """
 import argparse
 from datetime import date, datetime, time as datetime_time, timedelta, timezone
@@ -31,6 +32,7 @@ import accounts
 import admin_report
 import geo
 import visits
+import home_samples
 
 ROOT = Path(__file__).resolve().parent
 COOKIE = 'mf_admin'
@@ -849,6 +851,8 @@ class AdminHandler(BaseHTTPRequestHandler):
                 self.wfile.write(body)
             elif url.path == '/api/server':
                 self.send_json(200, server_status())
+            elif url.path == '/api/home-samples':
+                self.send_json(200, {'items': home_samples.admin_samples()})
             else:
                 self.send_json(404, {'error': 'Tidak ditemukan.'})
         except (ValueError, sqlite3.Error) as cause:
@@ -856,6 +860,23 @@ class AdminHandler(BaseHTTPRequestHandler):
 
     def do_POST(self):
         url = urlsplit(self.path)
+        if url.path == '/api/home-samples/upload':
+            if self.headers.get('X-Admin') != '1' or self.headers.get_content_type() != 'application/pdf':
+                self.send_json(403, {'error': 'Permintaan ditolak.'})
+                return
+            if not self.signed_in():
+                self.send_json(401, {'error': 'Masuk sebagai admin dulu.'})
+                return
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                query = parse_qs(url.query)
+                item = home_samples.upload(self.rfile, size, (query.get('title') or [''])[0], (query.get('slot') or ['new'])[0])
+                self.send_json(200, {'item': item})
+            except (ValueError, OSError) as cause:
+                self.send_json(400, {'error': str(cause)})
+            except RuntimeError as cause:
+                self.send_json(503, {'error': str(cause)})
+            return
         # JSON only, from this page (a form on another site cannot set the header).
         if self.headers.get('X-Admin') != '1' or self.headers.get_content_type() != 'application/json':
             self.send_json(403, {'error': 'Permintaan ditolak.'})
@@ -897,6 +918,17 @@ class AdminHandler(BaseHTTPRequestHandler):
             return
         if not self.signed_in():
             self.send_json(401, {'error': 'Masuk sebagai admin dulu.'})
+            return
+        if url.path == '/api/home-samples/remove':
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                if not 0 < size <= 4096:
+                    raise ValueError('Permintaan tidak valid.')
+                body = json.loads(self.rfile.read(size))
+                home_samples.remove(body.get('slot', ''))
+                self.send_json(200, {'ok': True})
+            except (ValueError, AttributeError, OSError) as cause:
+                self.send_json(400, {'error': str(cause)})
             return
         if url.path == '/api/change-password':
             try:
