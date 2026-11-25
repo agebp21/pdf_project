@@ -2,6 +2,8 @@
 
 ## 📌 Status terkini
 
+- HOME-ARTICLE-CARD (25 Nov, Codex): kode `da33e6e` live. Kartu Privacy di beranda diganti kartu Artikel & Tutorial menuju `/artikel`; teks mengikuti ID/EN. Tes SEO 8 dan JSDOM lulus, live beranda/katalog artikel/i18n terverifikasi. Backup/checksum di `DEPLOY.md`.
+
 - HOME-SAMPLE-BILINGUAL (24 Nov, Codex): kode `f0d200d` live. Admin menyimpan nama ID dan EN untuk semua sampel; label home mengikuti bahasa aktif, termasuk contoh PDF unggahan. Nama lama tetap terbaca. Tes lokal Python sampel 4, admin 11, JSDOM lulus; VPS sampel 4 lulus, empat rute HTTPS 200. Backup dan checksum di `DEPLOY.md`.
 
 - HOME-SAMPLE-NAMES (24 Nov, Codex): kode `70d1c2f` live. Nama semua contoh home (termasuk Catalog 2 pada screenshot owner) dapat diubah dari admin tanpa unggah PDF lagi. Label dan notice home ikut berubah; file `.data/home-samples/labels.json` wajib dipertahankan. Tes Python 4, JSDOM dan browser admin→home HP 390px lulus; 4 tes di VPS lulus. Nama live belum diubah oleh admin.
