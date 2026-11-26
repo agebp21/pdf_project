@@ -2,6 +2,10 @@
 
 ## 📌 Status terkini
 
+- WEEKLY-EMAIL-LOGO (26 Nov, Claude, PC owner): kode `9a9f11b` live dari `v2`. Footer email Laporan Mingguan memakai logo inline (`cid:mfbp-logo`) dan teks "laporan otomatis" dihapus; hanya `weekly_report.py`. Pengiriman otomatis tetap MATI (`enabled=false`). Belum dicek di kotak masuk sungguhan: kirim satu tes manual dari Admin → Laporan Mingguan.
+
+- ADMIN-WEEKLY-AUTO-OFF (26 Nov, Claude, PC owner): pengiriman otomatis Laporan Mingguan DIMATIKAN atas permintaan owner (`enabled=false` di `.data/weekly-report.json`; konfigurasi saja, kode tetap `161aea1`). Kirim manual dan pratinjau PDF tetap jalan; hidupkan lagi lewat sakelar "Kirim otomatis" di panel. Jangan menimpa `.data/weekly-report.json` saat deploy. Detail di `DEPLOY.md`.
+
 - ADMIN-LOGO (26 Nov, Claude, PC owner): kode `161aea1` live dari `v2`. Logo MyFlipbook Pro menggantikan teks di header admin (plakat putih + label ADMIN) dan layar login; logo tertanam sekali sebagai variabel CSS di `admin/index.html`. Tes 24 lulus di tree arsip; render Chrome headless 1280/500 px lulus. Restart `myflipbook-admin` saja; backup dan checksum di `DEPLOY.md`. Belum dicek: 390 px asli dan layar login lewat alur login nyata.
 
 - ADMIN-WEEKLY-UI (26 Nov, Claude, PC owner): kode `d48fc93` live dari `v2`. Tab Laporan Mingguan didesain ulang (kartu, tombol pil hari, sakelar, penghitung karakter, label status). Hanya `admin/index.html`; ID dan logika JS tetap. Tes 24 lulus di tree arsip; render Chrome headless 1280/500 px lulus. Restart `myflipbook-admin` saja; backup dan checksum di `DEPLOY.md`. Belum dicek: 390 px asli, pil SMTP hijau, baris riwayat berlabel.
