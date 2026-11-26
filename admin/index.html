@@ -156,6 +156,59 @@
   .info span{display:block;font-size:11.5px;color:var(--muted)} .info b{font-weight:600;font-size:13.5px;word-break:break-word}
   #member-table tr.sel td{background:#eef4ec}
   .yes{color:var(--good);font-weight:600} .no{color:#adb5bd}
+
+  /* Laporan Mingguan */
+  .wk{max-width:980px}
+  .wk-lead{max-width:720px;margin:0 0 16px;line-height:1.6}
+  .wk-status{display:inline-flex;align-items:center;gap:9px;margin:0 0 20px;padding:8px 16px;border:1px solid var(--line);border-radius:999px;background:#fff;font-size:13px}
+  .wk-status::before{content:"";flex:none;width:8px;height:8px;border-radius:50%;background:var(--good);box-shadow:0 0 0 3px rgba(47,158,68,.16)}
+  .wk-status.warn::before{background:var(--warn);box-shadow:0 0 0 3px rgba(232,89,12,.16)}
+  .wk-grid{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:18px;align-items:stretch}
+  .wk-card{background:var(--card);border:1px solid var(--line);border-radius:16px;padding:22px 24px;box-shadow:0 1px 2px rgba(31,42,38,.04),0 6px 18px -12px rgba(31,42,38,.18)}
+  .wk>.wk-card+.wk-card{margin-top:18px}
+  .wk-card h3{margin:0;font-size:16px;color:var(--pine)}
+  .wk-card .sub{margin:3px 0 18px;color:var(--muted);font-size:12.5px;line-height:1.5}
+  .wk-field{display:grid;gap:7px;margin:0 0 18px;font-size:12.5px;font-weight:600;color:var(--muted)}
+  .wk-field:last-child{margin-bottom:0}
+  .wk-field textarea,.wk-field select,.wk-field input[type=email]{width:100%;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;color:var(--ink);font:inherit;font-weight:400;line-height:1.5}
+  .wk-field textarea{resize:vertical;min-height:96px}
+  .wk-field select{width:auto;min-width:130px;cursor:pointer}
+  .wk-field textarea:focus,.wk-field select:focus,.wk-field input:focus{outline:0;border-color:var(--pine);box-shadow:0 0 0 3px rgba(26,60,52,.12)}
+  .wk-label{display:flex;justify-content:space-between;align-items:baseline;gap:12px}
+  .wk-count{font-weight:400;font-size:11.5px;font-variant-numeric:tabular-nums}
+  .wk-switch{display:flex;align-items:center;justify-content:space-between;gap:14px;margin:0 0 20px;padding:12px 14px;border:1px solid var(--line);border-radius:12px;background:#fff;cursor:pointer;font-weight:600;font-size:13.5px}
+  .wk-switch small{display:block;margin-top:1px;color:var(--muted);font-weight:400;font-size:12px}
+  .wk-switch input{appearance:none;-webkit-appearance:none;flex:none;position:relative;width:44px;height:25px;margin:0;border-radius:999px;background:#cfc8b8;cursor:pointer;transition:background .15s}
+  .wk-switch input::after{content:"";position:absolute;top:3px;left:3px;width:19px;height:19px;border-radius:50%;background:#fff;box-shadow:0 1px 3px rgba(0,0,0,.25);transition:transform .15s}
+  .wk-switch input:checked{background:var(--pine)}
+  .wk-switch input:checked::after{transform:translateX(19px)}
+  .wk-switch input:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+  .wk-days{display:flex;flex-wrap:wrap;gap:8px}
+  .wk-day{position:relative;display:inline-block}
+  .wk-day input{position:absolute;inset:0;width:100%;height:100%;margin:0;opacity:0;cursor:pointer}
+  .wk-day span{display:inline-block;min-width:44px;padding:7px 13px;border:1px solid var(--line);border-radius:999px;background:#fff;color:var(--muted);font-size:13px;font-weight:600;text-align:center;transition:background .12s,color .12s,border-color .12s}
+  .wk-day input:checked+span{background:var(--pine);border-color:var(--pine);color:#fff}
+  .wk-day input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+  .wk-actions{display:flex;flex-wrap:wrap;align-items:center;gap:12px;margin:20px 0}
+  .wk-actions button.btn,.wk-actions a.wk-link,.wk-send button{display:inline-flex;align-items:center;justify-content:center;min-height:40px;box-sizing:border-box;padding:9px 20px;border-radius:10px;font:inherit;font-weight:600;text-decoration:none;cursor:pointer}
+  .wk-actions a.wk-link,.wk-send button{background:#fff;color:var(--pine);border:1px solid var(--line)}
+  .wk-actions a.wk-link:hover,.wk-send button:hover:not(:disabled){border-color:var(--pine)}
+  .wk-actions button.btn:disabled,.wk-send button:disabled{opacity:.6;cursor:progress}
+  .wk-msg{min-height:20px;margin:0;color:var(--muted);font-size:13px}
+  .wk-send{display:flex;gap:10px}
+  .wk-send input{flex:1;min-width:0;box-sizing:border-box;border:1px solid var(--line);border-radius:10px;padding:10px 12px;background:#fff;font:inherit}
+  .wk-send input:focus{outline:0;border-color:var(--pine);box-shadow:0 0 0 3px rgba(26,60,52,.12)}
+  .wk-hint{margin:10px 0 0;color:var(--muted);font-size:12px}
+  .wk-table{overflow-x:auto}
+  .wk-table table{width:100%;border-collapse:collapse}
+  .wk-table th{padding:8px 10px 8px 0}
+  .wk-table td{padding:11px 10px 11px 0;vertical-align:middle}
+  .wk-table tr:last-child td{border-bottom:0}
+  .wk-badge{display:inline-block;padding:2px 11px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+  .wk-badge.ok{background:#e6f4ea;color:#237a3b}
+  .wk-badge.warn{background:#fff1e6;color:#b4470c}
+  .wk-badge.bad{background:#fde8e8;color:#b42318}
+  @media(max-width:820px){.wk-grid{grid-template-columns:1fr}.wk-card{padding:18px}.wk-send{flex-direction:column}}
   @media (max-width:640px){header{flex-wrap:wrap;padding:12px 16px} input[type=search]{min-width:0;flex:1}}
 </style>
 </head>
@@ -289,23 +342,43 @@
       </div>
     </section>
     <section data-view="weekly-report" hidden>
-      <h2>Laporan Mingguan</h2>
-      <p class="muted">PDF otomatis berisi analisis pengunjung, traffic, pasar, progress produk, dan follow-up member gratis agar upgrade. Dikirim lewat email pada hari dan jam yang dipilih. Lampiran memuat email member, jadi kirim hanya ke anggota tim. Data pesaing dan tren pasar luar tidak diambil otomatis; tulis di kolom catatan agar ikut tercetak.</p>
-      <div class="panel" style="max-width:720px">
+      <div class="wk">
+        <h2>Laporan Mingguan</h2>
+        <p class="muted wk-lead">PDF otomatis berisi analisis pengunjung, traffic, pasar, progress produk, dan follow-up member gratis agar upgrade. Dikirim lewat email pada hari dan jam yang dipilih. Lampiran memuat email member, jadi kirim hanya ke anggota tim. Data pesaing dan tren pasar luar tidak diambil otomatis; tulis di kolom catatan agar ikut tercetak.</p>
+        <p id="weekly-smtp" class="wk-status" role="status"></p>
         <form id="weekly-form">
-          <p id="weekly-smtp" role="status"></p>
-          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="weekly-enabled"> Kirim otomatis sesuai jadwal</label>
-          <label>Penerima (satu per baris atau pisahkan dengan koma)<textarea id="weekly-recipients" rows="3" required></textarea></label>
-          <div><b>Hari pengiriman</b><div id="weekly-days"></div></div>
-          <label>Jam kirim<select id="weekly-hour"></select></label>
-          <label>Catatan pasar dan pesaing (ikut dicetak, maksimal 2.000 karakter)<textarea id="weekly-market" rows="4" maxlength="2000"></textarea></label>
-          <label>Sedang dikerjakan dan rencana produk (ikut dicetak, maksimal 2.000 karakter)<textarea id="weekly-product" rows="4" maxlength="2000"></textarea></label>
-          <p id="weekly-message" role="status"></p>
-          <div class="row"><button class="btn" type="submit">Simpan pengaturan</button><a class="ghost" href="api/weekly-report.pdf">Unduh pratinjau PDF</a></div>
-          <div class="row"><input type="email" id="weekly-test" placeholder="Kirim tes ke satu email (kosongkan untuk semua penerima tersimpan)" aria-label="Email tujuan tes"><button class="ghost" type="button" id="weekly-send">Kirim sekarang</button></div>
+          <div class="wk-grid">
+            <div class="wk-card">
+              <h3>Jadwal pengiriman</h3>
+              <p class="sub">Atur siapa yang menerima laporan, kapan, dan apakah dikirim otomatis.</p>
+              <label class="wk-switch"><span>Kirim otomatis sesuai jadwal<small>Matikan untuk menjeda tanpa menghapus pengaturan.</small></span><input type="checkbox" id="weekly-enabled"></label>
+              <div class="wk-field"><span>Hari pengiriman</span><div id="weekly-days" class="wk-days"></div></div>
+              <label class="wk-field">Jam kirim (WIB)<select id="weekly-hour"></select></label>
+              <label class="wk-field">Penerima (satu per baris atau pisahkan dengan koma)<textarea id="weekly-recipients" rows="3" required></textarea></label>
+            </div>
+            <div class="wk-card">
+              <h3>Catatan di dalam PDF</h3>
+              <p class="sub">Dua kolom ini ikut tercetak di laporan. Isi dengan hal yang tidak diambil otomatis.</p>
+              <label class="wk-field"><span class="wk-label">Catatan pasar dan pesaing<span class="wk-count" id="weekly-market-count"></span></span><textarea id="weekly-market" rows="6" maxlength="2000"></textarea></label>
+              <label class="wk-field"><span class="wk-label">Sedang dikerjakan dan rencana produk<span class="wk-count" id="weekly-product-count"></span></span><textarea id="weekly-product" rows="6" maxlength="2000"></textarea></label>
+            </div>
+          </div>
+          <div class="wk-actions">
+            <button class="btn" type="submit">Simpan pengaturan</button>
+            <a class="wk-link" href="api/weekly-report.pdf">Unduh pratinjau PDF</a>
+            <p id="weekly-message" class="wk-msg" role="status"></p>
+          </div>
         </form>
-        <h3>Riwayat pengiriman</h3>
-        <table id="weekly-runs"></table>
+        <div class="wk-card">
+          <h3>Kirim sekarang</h3>
+          <p class="sub">Untuk tes, isi satu email. Kosongkan kolom untuk mengirim ke semua penerima yang tersimpan.</p>
+          <div class="wk-send"><input type="email" id="weekly-test" placeholder="email@contoh.com" aria-label="Email tujuan tes"><button type="button" id="weekly-send">Kirim sekarang</button></div>
+        </div>
+        <div class="wk-card">
+          <h3>Riwayat pengiriman</h3>
+          <p class="sub">Catatan setiap pengiriman otomatis maupun manual.</p>
+          <div class="wk-table"><table id="weekly-runs"></table></div>
+        </div>
       </div>
     </section>
     <section data-view="password" hidden>
@@ -408,19 +481,26 @@ $('#ai-quota-reset').onclick = async () => {
   catch(error) { $('#ai-quota-message').textContent = error.message; button.disabled = false; }
 };
 const WEEKDAY_NAMES = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+const WEEKLY_BADGE = {sent: 'ok', outbox: 'warn', gagal: 'bad'};
 const WEEKLY_STATUS = {sent: 'Terkirim', outbox: 'Disimpan di outbox (SMTP belum diatur)', gagal: 'Gagal'};
+function weeklyCounts() {
+  for (const key of ['market', 'product']) $('#weekly-' + key + '-count').textContent = $('#weekly-' + key).value.length.toLocaleString('id-ID') + ' / 2.000';
+}
+$('#weekly-market').addEventListener('input', weeklyCounts); $('#weekly-product').addEventListener('input', weeklyCounts);
 function fillWeekly(data) {
   const c = data.config;
   $('#weekly-enabled').checked = c.enabled;
   $('#weekly-recipients').value = c.recipients.join('\n');
-  $('#weekly-days').innerHTML = WEEKDAY_NAMES.map((name, i) => `<label style="display:inline-flex;gap:4px;margin-right:12px"><input type="checkbox" value="${i}" ${c.days.includes(i) ? 'checked' : ''}> ${name}</label>`).join('');
+  $('#weekly-days').innerHTML = WEEKDAY_NAMES.map((name, i) => `<label class="wk-day"><input type="checkbox" value="${i}" aria-label="${name}" ${c.days.includes(i) ? 'checked' : ''}><span>${name.slice(0, 3)}</span></label>`).join('');
   $('#weekly-hour').innerHTML = Array.from({length: 24}, (_, h) => `<option value="${h}" ${h === c.hour ? 'selected' : ''}>${String(h).padStart(2, '0')}.00</option>`).join('');
   $('#weekly-market').value = c.notes.market; $('#weekly-product').value = c.notes.product;
   $('#weekly-smtp').textContent = data.smtpReady
     ? 'Email (SMTP) siap. ' + (data.nextRun ? 'Pengiriman otomatis berikutnya: ' + when(data.nextRun) + '.' : 'Pengiriman otomatis sedang nonaktif.')
     : 'SMTP belum diatur di .env server (SMTP_HOST, SMTP_USER, SMTP_PASS), sehingga laporan belum bisa dikirim.';
+  $('#weekly-smtp').className = 'wk-status' + (data.smtpReady ? '' : ' warn');
+  weeklyCounts();
   $('#weekly-runs').innerHTML = '<tr><th>Waktu</th><th>Jenis</th><th>Penerima</th><th>Status</th><th>Keterangan</th></tr>' + (data.runs.length
-    ? data.runs.map(r => `<tr><td>${when(r.at)}</td><td>${r.manual ? 'Manual' : 'Otomatis'}</td><td>${num(r.to)}</td><td>${esc(WEEKLY_STATUS[r.status] || r.status)}</td><td>${esc(r.error || (r.bytes ? size(r.bytes) : ''))}</td></tr>`).join('')
+    ? data.runs.map(r => `<tr><td>${when(r.at)}</td><td>${r.manual ? 'Manual' : 'Otomatis'}</td><td>${num(r.to)}</td><td><span class="wk-badge ${WEEKLY_BADGE[r.status] || ''}">${esc(WEEKLY_STATUS[r.status] || r.status)}</span></td><td>${esc(r.error || (r.bytes ? size(r.bytes) : ''))}</td></tr>`).join('')
     : '<tr><td colspan="5" class="muted">Belum ada pengiriman.</td></tr>');
 }
 async function loadWeekly() { fillWeekly(await api('/api/weekly-report')); }
