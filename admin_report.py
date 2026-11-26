@@ -8,8 +8,11 @@ The numbers are the ones the admin panel shows (admin_server.overview,
 visitor_stats, server_status); the team's own accounts are left out of the
 visitor and growth figures there, as on screen.
 """
+import functools
+import struct
 import time
 import zlib
+from pathlib import Path
 
 import invoice
 from invoice import INK, MUTED, ACCENT, LINE, PAGE_W, PAGE_H, money
@@ -17,6 +20,66 @@ from invoice import INK, MUTED, ACCENT, LINE, PAGE_W, PAGE_H, money
 M = 46                      # page margin
 BOTTOM = 70                 # lowest y for content (footer below)
 HEAD = (0.96, 0.95, 0.92)
+
+
+@functools.lru_cache(maxsize=4)
+def load_logo(path):
+    """A PNG (8-bit RGB or RGBA, not interlaced) decoded for write_pages; None when it cannot be used."""
+    try:
+        data = Path(path).read_bytes()
+        if data[:8] != b'\x89PNG\r\n\x1a\n':
+            return None
+        pos, idat, head = 8, [], None
+        while pos + 8 <= len(data):
+            size, chunk = struct.unpack('>I4s', data[pos:pos + 8])
+            body = data[pos + 8:pos + 8 + size]
+            if chunk == b'IHDR':
+                head = struct.unpack('>IIBBBBB', body[:13])
+            elif chunk == b'IDAT':
+                idat.append(body)
+            elif chunk == b'IEND':
+                break
+            pos += size + 12
+        w, h, depth, ctype, _, _, interlace = head
+        if depth != 8 or ctype not in (2, 6) or interlace:
+            return None
+        bpp = 3 if ctype == 2 else 4
+        raw, stride = zlib.decompress(b''.join(idat)), w * bpp
+        rows, prev = [], bytearray(stride)
+        for y in range(h):
+            ftype = raw[y * (stride + 1)]
+            cur = bytearray(raw[y * (stride + 1) + 1:(y + 1) * (stride + 1)])
+            if ftype == 1:
+                for i in range(bpp, stride):
+                    cur[i] = (cur[i] + cur[i - bpp]) & 255
+            elif ftype == 2:
+                for i in range(stride):
+                    cur[i] = (cur[i] + prev[i]) & 255
+            elif ftype == 3:
+                for i in range(stride):
+                    cur[i] = (cur[i] + (((cur[i - bpp] if i >= bpp else 0) + prev[i]) >> 1)) & 255
+            elif ftype == 4:
+                for i in range(stride):
+                    a = cur[i - bpp] if i >= bpp else 0
+                    b, c = prev[i], (prev[i - bpp] if i >= bpp else 0)
+                    pa, pb, pc = abs(b - c), abs(a - c), abs(a + b - 2 * c)
+                    cur[i] = (cur[i] + (a if pa <= pb and pa <= pc else b if pb <= pc else c)) & 255
+            elif ftype != 0:
+                return None
+            rows.append(cur)
+            prev = cur
+        rgb, alpha = bytearray(), bytearray()
+        for row in rows:
+            if bpp == 4:
+                line = bytearray(w * 3)
+                line[0::3], line[1::3], line[2::3] = row[0::4], row[1::4], row[2::4]
+                rgb += line
+                alpha += row[3::4]
+            else:
+                rgb += row
+        return dict(w=w, h=h, rgb=zlib.compress(bytes(rgb)), alpha=zlib.compress(bytes(alpha)) if alpha else None)
+    except (OSError, ValueError, TypeError, IndexError, zlib.error, struct.error):
+        return None
 
 
 def mask_email(email):
@@ -44,8 +107,10 @@ def day_label(ts):
 class Report:
     """Pages of drawing operations; text flows down and starts a new page when full."""
 
-    def __init__(self, title, subtitle):
+    def __init__(self, title, subtitle, logo=None):
+        """logo: path of a PNG; with it the header is white with the logo (the audit report passes none)."""
         self.title, self.subtitle = title, subtitle
+        self.logo = load_logo(str(logo)) if logo else None
         self.pages = []
         self.new_page()
 
@@ -53,7 +118,18 @@ class Report:
         self.c = invoice._Canvas()
         self.pages.append(self.c)
         first = len(self.pages) == 1
-        if first:
+        if self.logo and first:
+            self._logo_at(M, PAGE_H - 70, 40)
+            self.c.line(M, PAGE_H - 82, PAGE_W - M, ACCENT, 2.2)
+            self.c.text(M, PAGE_H - 108, self.title, 16, True, INK)
+            self.c.text(M, PAGE_H - 125, self.subtitle, 9, False, MUTED)
+            self.y = PAGE_H - 156
+        elif self.logo:
+            self._logo_at(M, PAGE_H - 52, 18)
+            self.c.text(PAGE_W - M, PAGE_H - 44, self.subtitle, 9, False, MUTED, right=True)
+            self.c.line(M, PAGE_H - 60, PAGE_W - M)
+            self.y = PAGE_H - 84
+        elif first:
             self.c.rect(0, PAGE_H - 108, PAGE_W, 108, ACCENT)
             self.c.text(M, PAGE_H - 56, self.title, 20, True, (1, 0.97, 0.92))
             self.c.text(M, PAGE_H - 78, self.subtitle, 10, False, (0.89, 0.95, 0.76))
@@ -64,12 +140,16 @@ class Report:
             self.c.line(M, PAGE_H - 48, PAGE_W - M)
             self.y = PAGE_H - 74
 
+    def _logo_at(self, x, y, height):
+        width = height * self.logo['w'] / self.logo['h']
+        self.c.ops.append(f'q {width:.1f} 0 0 {height} {x} {y} cm /Im1 Do Q')
+
     def room(self, height):
         if self.y - height < BOTTOM:
             self.new_page()
 
     def heading(self, text):
-        self.room(40)
+        self.room(96)           # judul + header tabel + beberapa baris: jangan tertinggal sendirian di dasar halaman
         self.y -= 6
         self.c.text(M, self.y, text, 13, True, ACCENT)
         self.y -= 8
@@ -120,6 +200,7 @@ class Report:
             self.y -= 20
 
         self.room(48)
+        self.y -= 8             # jarak dari teks di atasnya supaya header tabel tidak menimpa baris terakhirnya
         header()
         if not rows:
             self.c.text(M + 6, self.y, '(tidak ada data pada periode ini)', 9, False, MUTED)
@@ -138,7 +219,7 @@ class Report:
                 else:
                     self.c.text(xs[i] + 6, self.y, text, 9, False, INK)
             self.y -= 15
-            self.c.line(M, self.y + 4, M + sum(widths), LINE, 0.5)
+            self.c.line(M, self.y + 11, M + sum(widths), LINE, 0.5)
         self.y -= 10
 
     def pdf(self, generated):
@@ -147,12 +228,15 @@ class Report:
             page.line(M, 54, PAGE_W - M)
             page.text(M, 40, f'MyFlipbook Pro · laporan admin · dibuat {generated}', 8, False, MUTED)
             page.text(PAGE_W - M, 40, f'Halaman {n} dari {total}', 8, False, MUTED, right=True)
-        return write_pages(['\n'.join(p.ops).encode('latin-1') for p in self.pages], self.title)
+        return write_pages(['\n'.join(p.ops).encode('latin-1') for p in self.pages], self.title, image=self.logo)
 
 
-def write_pages(contents, title, size=(PAGE_W, PAGE_H)):
-    """A multi-page PDF (invoice._write makes one page); size: (width, height) in points."""
+def write_pages(contents, title, size=(PAGE_W, PAGE_H), image=None):
+    """A multi-page PDF (invoice._write makes one page); size: (width, height) in points.
+
+    image: load_logo() result, drawn by the pages' operations as /Im1."""
     n = len(contents)
+    xobject = f' /XObject << /Im1 {6 + 2 * n} 0 R >>' if image else ''
     font1, font2 = 3 + 2 * n, 4 + 2 * n
     info = 5 + 2 * n
     objects = [b'<< /Type /Catalog /Pages 2 0 R >>',
@@ -160,11 +244,19 @@ def write_pages(contents, title, size=(PAGE_W, PAGE_H)):
     for i, content in enumerate(contents):
         stream = zlib.compress(content)
         objects.append(f'<< /Type /Page /Parent 2 0 R /MediaBox [0 0 {size[0]} {size[1]}] '
-                       f'/Resources << /Font << /F1 {font1} 0 R /F2 {font2} 0 R >> >> /Contents {4 + 2 * i} 0 R >>'.encode())
+                       f'/Resources << /Font << /F1 {font1} 0 R /F2 {font2} 0 R >>{xobject} >> /Contents {4 + 2 * i} 0 R >>'.encode())
         objects.append(f'<< /Length {len(stream)} /Filter /FlateDecode >>\nstream\n'.encode() + stream + b'\nendstream')
     objects.append(b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica /Encoding /WinAnsiEncoding >>')
     objects.append(b'<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica-Bold /Encoding /WinAnsiEncoding >>')
     objects.append(f'<< /Title {invoice._text(title)} /Producer (MyFlipbook) >>'.encode('latin-1'))
+    if image:
+        pic = (f'<< /Type /XObject /Subtype /Image /Width {image["w"]} /Height {image["h"]} /ColorSpace /DeviceRGB '
+               f'/BitsPerComponent 8{f" /SMask {7 + 2 * n} 0 R" if image["alpha"] else ""} /Filter /FlateDecode /Length {len(image["rgb"])} >>')
+        objects.append(pic.encode() + b'\nstream\n' + image['rgb'] + b'\nendstream')
+        if image['alpha']:
+            mask = (f'<< /Type /XObject /Subtype /Image /Width {image["w"]} /Height {image["h"]} /ColorSpace /DeviceGray '
+                    f'/BitsPerComponent 8 /Filter /FlateDecode /Length {len(image["alpha"])} >>')
+            objects.append(mask.encode() + b'\nstream\n' + image['alpha'] + b'\nendstream')
     out = bytearray(b'%PDF-1.4\n%\xe2\xe3\xcf\xd3\n')
     offsets = []
     for number, body in enumerate(objects, 1):

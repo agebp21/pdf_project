@@ -25,11 +25,13 @@ import sqlite3
 import sys
 import threading
 import time
+import types
 from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 from urllib.parse import parse_qs, urlsplit
 
 import accounts
 import admin_report
+import weekly_report
 import geo
 import visits
 import home_samples
@@ -555,6 +557,12 @@ def report_csv(days=30):
     return '\n'.join(rows) + '\n'
 
 
+def report_ctx():
+    """What weekly_report needs from this module (it cannot import admin_server: that runs as __main__)."""
+    return types.SimpleNamespace(root=ROOT, data_dir=db_path().parent, db_path=db_path, read_only=read_only, has_table=has_table,
+                                 team_ids=team_ids, overview=overview, visitor_stats=visitor_stats, log=log_admin)
+
+
 def report_pdf(days=30, now=None):
     """The audit report (admin_report.build) with the same numbers as the panel, plus the period's orders."""
     now = int(now or time.time())
@@ -857,6 +865,17 @@ class AdminHandler(BaseHTTPRequestHandler):
                 self.common_headers()
                 self.end_headers()
                 self.wfile.write(body)
+            elif url.path == '/api/weekly-report':
+                self.send_json(200, weekly_report.status(db_path().parent))
+            elif url.path == '/api/weekly-report.pdf':
+                body = weekly_report.build_pdf(weekly_report.collect(report_ctx()))
+                self.send_response(200)
+                self.send_header('Content-Type', 'application/pdf')
+                self.send_header('Content-Disposition', f'attachment; filename="laporan-mingguan-myflipbook-{time.strftime("%Y%m%d")}.pdf"')
+                self.send_header('Content-Length', str(len(body)))
+                self.common_headers()
+                self.end_headers()
+                self.wfile.write(body)
             elif url.path == '/api/server':
                 self.send_json(200, server_status())
             elif url.path == '/api/home-samples':
@@ -992,6 +1011,27 @@ class AdminHandler(BaseHTTPRequestHandler):
             except (ValueError, AttributeError, KeyError, TypeError, OSError) as cause:
                 self.send_json(400, {'error': str(cause)})
             return
+        if url.path in ('/api/weekly-report', '/api/weekly-report/send'):
+            try:
+                size = int(self.headers.get('Content-Length', '0'))
+                if not 0 < size <= 12288:
+                    raise ValueError('Permintaan tidak valid.')
+                body = json.loads(self.rfile.read(size))
+                user = SESSION_USERS.get(self.token(), 'local')
+                if url.path.endswith('/send'):
+                    to = weekly_report.parse_recipients(body.get('to')) if isinstance(body, dict) and body.get('to') else None
+                    entry = weekly_report.run(report_ctx(), recipients=to, manual=True)
+                    if entry['status'] == 'gagal':
+                        self.send_json(502, {'error': entry['error'] or 'Laporan gagal dikirim.'})
+                    else:
+                        self.send_json(200, {'status': entry['status'], 'to': entry['to']})
+                else:
+                    weekly_report.save_config(db_path().parent, body)
+                    log_admin('weekly report settings changed by ' + user)
+                    self.send_json(200, weekly_report.status(db_path().parent))
+            except (ValueError, AttributeError, KeyError, TypeError, OSError, sqlite3.Error) as cause:
+                self.send_json(400, {'error': str(cause)})
+            return
         if url.path == '/api/change-password':
             try:
                 size = int(self.headers.get('Content-Length', '0'))
@@ -1103,6 +1143,9 @@ def main():
     load_env(ROOT / '.env')
     CONFIG['proxy'], CONFIG['secure'] = args.proxy, args.secure
     CONFIG['local_no_login'] = args.local_no_login
+    # Laporan mingguan otomatis: tidak dijalankan pada pratinjau lokal; WEEKLY_REPORT_SCHEDULER=0 mematikannya.
+    if not args.local_no_login and os.environ.get('WEEKLY_REPORT_SCHEDULER', '1').strip() != '0':
+        weekly_report.start(report_ctx())
     httpd = ThreadingHTTPServer((args.host, args.port), AdminHandler)
     print(f'MyFlipbook admin: http://{args.host}:{args.port}  (database: {db_path()})'
           + ('' if admin_configured() else '  — login not set: ADMIN_USERNAME + ADMIN_PASSWORD_HASH in .env'))

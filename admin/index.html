@@ -182,6 +182,7 @@
       <button data-tab="home-samples">Sampel beranda</button>
       <button data-tab="pricing">Harga &amp; Promo</button>
       <button data-tab="ai-quotas">Kuota AI</button>
+      <button data-tab="weekly-report">Laporan Mingguan</button>
       <button data-tab="password">Ganti Password</button>
     </nav>
     <button class="out" id="logout">Keluar</button>
@@ -287,6 +288,26 @@
         </form>
       </div>
     </section>
+    <section data-view="weekly-report" hidden>
+      <h2>Laporan Mingguan</h2>
+      <p class="muted">PDF otomatis berisi analisis pengunjung, traffic, pasar, progress produk, dan follow-up member gratis agar upgrade. Dikirim lewat email pada hari dan jam yang dipilih. Lampiran memuat email member, jadi kirim hanya ke anggota tim. Data pesaing dan tren pasar luar tidak diambil otomatis; tulis di kolom catatan agar ikut tercetak.</p>
+      <div class="panel" style="max-width:720px">
+        <form id="weekly-form">
+          <p id="weekly-smtp" role="status"></p>
+          <label style="display:flex;gap:8px;align-items:center"><input type="checkbox" id="weekly-enabled"> Kirim otomatis sesuai jadwal</label>
+          <label>Penerima (satu per baris atau pisahkan dengan koma)<textarea id="weekly-recipients" rows="3" required></textarea></label>
+          <div><b>Hari pengiriman</b><div id="weekly-days"></div></div>
+          <label>Jam kirim<select id="weekly-hour"></select></label>
+          <label>Catatan pasar dan pesaing (ikut dicetak, maksimal 2.000 karakter)<textarea id="weekly-market" rows="4" maxlength="2000"></textarea></label>
+          <label>Sedang dikerjakan dan rencana produk (ikut dicetak, maksimal 2.000 karakter)<textarea id="weekly-product" rows="4" maxlength="2000"></textarea></label>
+          <p id="weekly-message" role="status"></p>
+          <div class="row"><button class="btn" type="submit">Simpan pengaturan</button><a class="ghost" href="api/weekly-report.pdf">Unduh pratinjau PDF</a></div>
+          <div class="row"><input type="email" id="weekly-test" placeholder="Kirim tes ke satu email (kosongkan untuk semua penerima tersimpan)" aria-label="Email tujuan tes"><button class="ghost" type="button" id="weekly-send">Kirim sekarang</button></div>
+        </form>
+        <h3>Riwayat pengiriman</h3>
+        <table id="weekly-runs"></table>
+      </div>
+    </section>
     <section data-view="password" hidden>
       <h2>Ganti password admin</h2>
       <div class="panel" style="max-width:520px">
@@ -351,12 +372,12 @@ $('#logout').onclick = async () => { await api('/api/logout', {method: 'POST', b
 
 document.querySelectorAll('header nav button').forEach(b => b.onclick = () => open(b.dataset.tab));
 function open(tab, record = true) {
-  if (!['overview','members','verified','orders','uploads','visits','server','password','home-samples','pricing','ai-quotas'].includes(tab)) tab = 'members';
+  if (!['overview','members','verified','orders','uploads','visits','server','password','home-samples','pricing','ai-quotas','weekly-report'].includes(tab)) tab = 'members';
   if (record && location.hash !== '#' + tab) history.pushState({tab}, '', '#' + tab);
   else if (!record) history.replaceState({tab}, '', '#' + tab);
   document.querySelectorAll('header nav button').forEach(b => b.setAttribute('aria-current', String(b.dataset.tab === tab)));
   document.querySelectorAll('[data-view]').forEach(v => { v.hidden = v.dataset.view !== tab; });
-  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(1), server: loadServer, password: async () => {}, 'home-samples': loadHomeSamples, pricing: loadPricing, 'ai-quotas': loadAiQuotas};
+  const loaders = {overview: loadOverview, members: () => loadMembers(1), verified: () => loadVerified(1), orders: () => loadOrders(1), uploads: loadUploads, visits: () => loadVisits(1), server: loadServer, password: async () => {}, 'home-samples': loadHomeSamples, pricing: loadPricing, 'ai-quotas': loadAiQuotas, 'weekly-report': loadWeekly};
   loaders[tab]()
     .catch(e => { document.querySelector(`[data-view="${tab}"]`).insertAdjacentHTML('afterbegin', `<p class="err">${esc(e.message)}</p>`); });
 }
@@ -385,6 +406,47 @@ $('#ai-quota-reset').onclick = async () => {
   const button = $('#ai-quota-reset'); button.disabled = true;
   try { await api('/api/ai-quotas/reset', {method:'POST', body:'{}'}); await loadAiQuotas(); $('#ai-quota-message').textContent = 'Kuota bawaan dipulihkan.'; }
   catch(error) { $('#ai-quota-message').textContent = error.message; button.disabled = false; }
+};
+const WEEKDAY_NAMES = ['Senin','Selasa','Rabu','Kamis','Jumat','Sabtu','Minggu'];
+const WEEKLY_STATUS = {sent: 'Terkirim', outbox: 'Disimpan di outbox (SMTP belum diatur)', gagal: 'Gagal'};
+function fillWeekly(data) {
+  const c = data.config;
+  $('#weekly-enabled').checked = c.enabled;
+  $('#weekly-recipients').value = c.recipients.join('\n');
+  $('#weekly-days').innerHTML = WEEKDAY_NAMES.map((name, i) => `<label style="display:inline-flex;gap:4px;margin-right:12px"><input type="checkbox" value="${i}" ${c.days.includes(i) ? 'checked' : ''}> ${name}</label>`).join('');
+  $('#weekly-hour').innerHTML = Array.from({length: 24}, (_, h) => `<option value="${h}" ${h === c.hour ? 'selected' : ''}>${String(h).padStart(2, '0')}.00</option>`).join('');
+  $('#weekly-market').value = c.notes.market; $('#weekly-product').value = c.notes.product;
+  $('#weekly-smtp').textContent = data.smtpReady
+    ? 'Email (SMTP) siap. ' + (data.nextRun ? 'Pengiriman otomatis berikutnya: ' + when(data.nextRun) + '.' : 'Pengiriman otomatis sedang nonaktif.')
+    : 'SMTP belum diatur di .env server (SMTP_HOST, SMTP_USER, SMTP_PASS), sehingga laporan belum bisa dikirim.';
+  $('#weekly-runs').innerHTML = '<tr><th>Waktu</th><th>Jenis</th><th>Penerima</th><th>Status</th><th>Keterangan</th></tr>' + (data.runs.length
+    ? data.runs.map(r => `<tr><td>${when(r.at)}</td><td>${r.manual ? 'Manual' : 'Otomatis'}</td><td>${num(r.to)}</td><td>${esc(WEEKLY_STATUS[r.status] || r.status)}</td><td>${esc(r.error || (r.bytes ? size(r.bytes) : ''))}</td></tr>`).join('')
+    : '<tr><td colspan="5" class="muted">Belum ada pengiriman.</td></tr>');
+}
+async function loadWeekly() { fillWeekly(await api('/api/weekly-report')); }
+$('#weekly-form').onsubmit = async event => {
+  event.preventDefault();
+  const button = event.submitter, message = $('#weekly-message');
+  button.disabled = true; message.textContent = 'Menyimpan…';
+  try {
+    const body = {enabled: $('#weekly-enabled').checked, recipients: $('#weekly-recipients').value,
+      days: [...document.querySelectorAll('#weekly-days input:checked')].map(i => Number(i.value)), hour: Number($('#weekly-hour').value),
+      notes: {market: $('#weekly-market').value, product: $('#weekly-product').value}};
+    fillWeekly(await api('/api/weekly-report', {method: 'POST', body: JSON.stringify(body)}));
+    message.textContent = 'Pengaturan tersimpan.';
+  } catch(error) { message.textContent = error.message; }
+  finally { button.disabled = false; }
+};
+$('#weekly-send').onclick = async () => {
+  const test = $('#weekly-test').value.trim(), message = $('#weekly-message'), button = $('#weekly-send');
+  if (!confirm(test ? 'Kirim laporan sekarang ke ' + test + '?' : 'Kirim laporan sekarang ke semua penerima yang tersimpan?')) return;
+  button.disabled = true; message.textContent = 'Menyusun dan mengirim laporan…';
+  try {
+    const result = await api('/api/weekly-report/send', {method: 'POST', body: JSON.stringify(test ? {to: test} : {})});
+    message.textContent = result.status === 'sent' ? 'Laporan terkirim ke ' + result.to + ' penerima.' : 'SMTP belum diatur; email disimpan di folder outbox server.';
+    await loadWeekly();
+  } catch(error) { message.textContent = error.message; await loadWeekly().catch(() => {}); }
+  finally { button.disabled = false; }
 };
 const PRICE_LABELS = {medium_monthly:'Medium bulanan',medium_yearly:'Medium tahunan',pro_monthly:'Pro bulanan',pro_yearly:'Pro tahunan',ai100_credit:'Kredit AI 100',ai300_credit:'Kredit AI 300'};
 async function loadPricing() {
