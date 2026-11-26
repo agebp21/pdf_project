@@ -4,6 +4,8 @@
 
 ## Mulai di sini
 
+Ringkasan lokasi proyek, Git, dan akses rilis terbaru: [HANDOFF_MYFLIPBOOKPRO_AGENTS.md](HANDOFF_MYFLIPBOOKPRO_AGENTS.md).
+
 1. Baca file ini, **laporan terbaru [HANDOFF_2026-10-23.md](HANDOFF_2026-10-23.md)** (status live, keputusan owner, jebakan teknis), dan [PROJECT_HANDOFF.md](PROJECT_HANDOFF.md).
 2. Jalankan `git status --short` dan lihat diff sebelum mengedit. Perubahan lokal bisa merupakan pekerjaan pengguna atau agen lain; jangan ditimpa atau dibuang.
 3. Cocokkan tugas terbaru pengguna dengan status aktual kode. Catatan handoff adalah konteks, bukan pengganti pemeriksaan kode.
