@@ -34,6 +34,7 @@ from invoice import ACCENT, INK, LINE, MUTED, PAGE_W, money
 
 M = admin_report.M
 LOGO = Path(__file__).resolve().parent / 'assets' / 'img' / 'logo.png'     # logo di header PDF; tanpa file ini header polos
+LOGO_CID = 'mfbp-logo'      # logo yang sama dilampirkan inline di email (cid:), tanpa gambar dari internet
 WEEKDAYS = ('Senin', 'Selasa', 'Rabu', 'Kamis', 'Jumat', 'Sabtu', 'Minggu')
 DEFAULT_RECIPIENTS = ('sarvamayahybrid@gmail.com', 'wiyanjenarmahesa@gmail.com')
 TESTER = 'duitku-tester@myflipbookpro.com'          # akun uji pembayaran: bukan member sungguhan
@@ -643,13 +644,16 @@ def compose(d):
     text = (f'Halo Tim,\n\nBerikut ringkasan laporan mingguan MyFlipbook Pro periode {day_label(d["start"])} s.d. {day_label(now)}:\n\n'
             + '\n'.join('- ' + x for x in lines)
             + '\n\nLaporan lengkap (pengunjung, traffic, analisis pasar, progress produk, dan follow-up member gratis) ada pada lampiran PDF. '
-              'Lampiran memuat data pribadi member; jangan diteruskan di luar tim.\n\nSalam,\nMyFlipbook Pro (laporan otomatis)')
+              'Lampiran memuat data pribadi member; jangan diteruskan di luar tim.\n\nSalam,\nMyFlipbook Pro')
     esc = lambda x: x.replace('&', '&amp;').replace('<', '&lt;').replace('>', '&gt;')
     html = ('<div style="font-family:Arial,sans-serif;max-width:560px;margin:auto;color:#1c1917">'
             f'<p>Halo Tim,</p><p>Berikut ringkasan laporan mingguan <b>MyFlipbook Pro</b> periode {day_label(d["start"])} s.d. {day_label(now)}:</p>'
             '<ul>' + ''.join(f'<li>{esc(x)}</li>' for x in lines) + '</ul>'
             '<p>Laporan lengkap ada pada lampiran PDF. Lampiran memuat data pribadi member; jangan diteruskan di luar tim.</p>'
-            '<p style="color:#78716c">MyFlipbook Pro, laporan otomatis</p></div>')
+            + ('<p style="margin:24px 0 0"><img src="cid:' + LOGO_CID + '" alt="MyFlipbook Pro" width="180" '
+                'style="display:block;width:180px;height:auto;border:0"></p>'
+                if LOGO.is_file() else '<p style="color:#78716c">MyFlipbook Pro</p>')
+             + '</div>')
     return subject, text, html
 
 
@@ -662,6 +666,8 @@ def send_report(data_dir, recipients, subject, text, html, pdf, filename):
     message['Subject'] = subject
     message.set_content(text)
     message.add_alternative(html, subtype='html')
+    if f'cid:{LOGO_CID}' in html and LOGO.is_file():
+        message.get_payload()[1].add_related(LOGO.read_bytes(), 'image', 'png', cid=f'<{LOGO_CID}>', disposition='inline', filename='logo.png')
     message.add_attachment(pdf, maintype='application', subtype='pdf', filename=filename)
     host = os.environ.get('SMTP_HOST', '').strip()
     if not host:
