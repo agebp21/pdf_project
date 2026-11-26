@@ -2,6 +2,8 @@
 
 ## 📌 Status terkini
 
+- ADMIN-WEEKLY-UI (26 Nov, Claude, PC owner): kode `d48fc93` live dari `v2`. Tab Laporan Mingguan didesain ulang (kartu, tombol pil hari, sakelar, penghitung karakter, label status). Hanya `admin/index.html`; ID dan logika JS tetap. Tes 24 lulus di tree arsip; render Chrome headless 1280/500 px lulus. Restart `myflipbook-admin` saja; backup dan checksum di `DEPLOY.md`. Belum dicek: 390 px asli, pil SMTP hijau, baris riwayat berlabel.
+
 - ADMIN-WEEKLY-REPORT (26 Nov, Claude, PC owner): kode `c765487` live dari `v2`. Admin punya tab "Laporan Mingguan" (pratinjau PDF berlogo, pengaturan penerima/hari/jam + dua kolom catatan, Kirim sekarang/tes, riwayat). File: `weekly_report.py` (baru), `admin_server.py`, `admin_report.py`, `admin/index.html`, `tests/test_weekly_report.py`. Tes di tree arsip: laporan mingguan 13 + admin 11 lulus; suite penuh punya kegagalan lama yang sama seperti HEAD bersih (paywall/podcast/dependensi lokal). Restart `myflipbook-admin` saja; backup dan checksum di `DEPLOY.md`. Keterbatasan: tab belum dilihat di browser, email SMTP sungguhan belum diuji; pengiriman otomatis pertama Sabtu 28 Nov 08.00 WIB ke dua penerima bawaan. Pengaturan/riwayat di `.data` wajib dipertahankan saat deploy berikutnya.
 
 - HOME-ARTICLE-CARD (25 Nov, Codex): kode `da33e6e` live. Kartu Privacy di beranda diganti kartu Artikel & Tutorial menuju `/artikel`; teks mengikuti ID/EN. Tes SEO 8 dan JSDOM lulus, live beranda/katalog artikel/i18n terverifikasi. Backup/checksum di `DEPLOY.md`.
