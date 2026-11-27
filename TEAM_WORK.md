@@ -2,6 +2,8 @@
 
 ## 📌 Status terkini
 
+- AI-BOOK-TEMPLATES (27 Nov, Codex, `75f7896`, siap di `v2`, belum live): AI Ringkasan punya menu Buat buku, tiga template (nonfiksi, modul, panduan), judul bab bisa diubah/tambah/hapus, dan tiap bab dapat ditulis AI dari sumber terpilih. Draf buku tersimpan per notebook akun dan dapat diekspor DOCX/PDF atau dijadikan Flipbook. QA browser lokal desktop/HP tanpa overflow; PDF sumber → jawaban AI tiruan → rujukan → reload draf lulus; tes ringkasan JS dan 27 tes notebook work Python lulus. Suite Python penuh: 303 tes, 13 gagal di ekspektasi lama paywall AI (402 vs 503) dan podcast (502 vs 200), di luar berkas perubahan ini. PC owner perlu meninjau lalu deploy sesuai `release/README.md`.
+
 - AI-DOCUMENT-CHAT-UNIFIED (27 Nov, Codex): kode `1d7e7ac` live. Strip putih terpisah di bawah dokumen dihapus; composer Chat dan indikator kuota mengikuti latar panel tengah. QA desktop/HP tanpa overflow, tes ringkasan JS dan 27 tes Python lulus. Backup/verifikasi di `DEPLOY.md`.
 
 - AI-SUMMARY-WIDE (27 Nov, Codex): kode `62d05cd` live. Bingkai panel tengah dilepas, area Intisari dan Chat melebar; sidebar sumber/studio tetap. QA desktop/HP tanpa overflow, tes ringkasan JS dan 27 tes Python lulus. Backup dan verifikasi live di `DEPLOY.md`.
