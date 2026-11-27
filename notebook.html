@@ -188,6 +188,9 @@
   .book-chapter input{flex:1;min-width:0}
   .book-chapter button,.book-tools button{border:1px solid #E4DED0;background:#fff;border-radius:10px;padding:8px 11px;font:700 12px 'Plus Jakarta Sans',sans-serif;color:#1A3C34;cursor:pointer}
   .book-chapter button:hover,.book-tools button:hover{border-color:#FF5C28;color:#C2410C}
+  .book-drag{cursor:grab;touch-action:none}
+  .book-chapter.dragging{opacity:.45}
+  .book-chapter.drag-target{outline:2px solid #FF5C28;outline-offset:2px;border-radius:8px}
   @media(max-width:600px){.book-chapter{flex-wrap:wrap}.book-chapter input{flex-basis:100%}}
   .draft-text{min-height:42vh;white-space:pre-wrap;outline:none;border:1px solid #E4DED0;border-radius:12px;padding:18px;font:400 15px/1.75 'Plus Jakarta Sans',sans-serif;color:#1C1917}
   .draft-text:focus{border-color:#FF5C28}
@@ -824,12 +827,30 @@ window.addEventListener('DOMContentLoaded', () => {
     $('#draft-text').innerText = d.text;
     renderBookChapters(); remember();
   }
+  function moveBookChapter(d, from, to) {
+    if (from === to || from < 0 || to < 0 || from >= d.bookChapters.length || to >= d.bookChapters.length) return;
+    const ranges = d.bookChapters.map((_, i) => bookRange(d, i));
+    if (ranges.some(range => !range)) { status('#draft-status', L('Restore the chapter headings in the book text before rearranging.', 'Pulihkan judul bab di teks buku sebelum mengubah urutan.'), true); return; }
+    const prefix = d.text.slice(0, ranges[0].start);
+    const bodies = ranges.map((range, i) => d.text.slice(range.start + chapterHeading(d, i).length, range.end));
+    const [name] = d.bookChapters.splice(from, 1); d.bookChapters.splice(to, 0, name);
+    const [body] = bodies.splice(from, 1); bodies.splice(to, 0, body);
+    d.text = prefix + bodies.map((part, i) => chapterHeading(d, i) + part).join('');
+    $('#draft-text').innerText = d.text; renderBookChapters(); remember();
+  }
   function renderBookChapters() {
     const d = currentDraft(), list = $('#book-chapters'); list.replaceChildren();
     if (!d || d.kind !== 'buku') return;
     $('#book-template').value = d.bookTemplate || 'nonfiksi';
     (d.bookChapters || []).forEach((name, i) => {
       const row = document.createElement('div'); row.className = 'book-chapter';
+      const drag = document.createElement('span'); drag.className = 'book-drag'; drag.draggable = true; drag.textContent = '⠿';
+      drag.title = L('Drag to rearrange', 'Seret untuk mengubah urutan'); drag.setAttribute('aria-hidden', 'true');
+      drag.addEventListener('dragstart', e => { e.dataTransfer.setData('text/plain', String(i)); e.dataTransfer.effectAllowed = 'move'; row.classList.add('dragging'); });
+      row.addEventListener('dragend', () => { row.classList.remove('dragging'); list.querySelectorAll('.drag-target').forEach(el => el.classList.remove('drag-target')); });
+      row.addEventListener('dragover', e => { e.preventDefault(); e.dataTransfer.dropEffect = 'move'; row.classList.add('drag-target'); });
+      row.addEventListener('dragleave', () => row.classList.remove('drag-target'));
+      row.addEventListener('drop', e => { e.preventDefault(); row.classList.remove('drag-target'); moveBookChapter(d, Number(e.dataTransfer.getData('text/plain')), i); });
       const number = document.createElement('b'); number.textContent = `${i + 1}.`;
       const input = document.createElement('input'); input.className = 'field'; input.maxLength = 100; input.value = name;
       input.setAttribute('aria-label', L(`Chapter ${i + 1} title`, `Judul bab ${i + 1}`));
@@ -840,6 +861,10 @@ window.addEventListener('DOMContentLoaded', () => {
       });
       const generate = document.createElement('button'); generate.type = 'button'; generate.textContent = L('Write with AI', 'Tulis dengan AI');
       generate.addEventListener('click', () => generateBookChapter(i, generate));
+      const up = document.createElement('button'); up.type = 'button'; up.textContent = '↑'; up.disabled = i === 0;
+      up.setAttribute('aria-label', L(`Move chapter ${i + 1} up`, `Geser bab ${i + 1} ke atas`)); up.addEventListener('click', () => moveBookChapter(d, i, i - 1));
+      const down = document.createElement('button'); down.type = 'button'; down.textContent = '↓'; down.disabled = i === d.bookChapters.length - 1;
+      down.setAttribute('aria-label', L(`Move chapter ${i + 1} down`, `Geser bab ${i + 1} ke bawah`)); down.addEventListener('click', () => moveBookChapter(d, i, i + 1));
       const remove = document.createElement('button'); remove.type = 'button'; remove.textContent = '×'; remove.title = L('Delete chapter', 'Hapus bab');
       remove.setAttribute('aria-label', L(`Delete chapter ${i + 1}`, `Hapus bab ${i + 1}`));
       remove.addEventListener('click', async () => {
@@ -850,7 +875,7 @@ window.addEventListener('DOMContentLoaded', () => {
         for (let index = i; index < d.bookChapters.length; index++) d.text = d.text.replace(oldHeadings[index + 1], chapterHeading(d, index));
         $('#draft-text').innerText = d.text; renderBookChapters(); remember();
       });
-      row.append(number, input, generate, remove); list.append(row);
+      row.append(drag, number, input, up, down, generate, remove); list.append(row);
     });
   }
   async function generateBookChapter(i, button) {
