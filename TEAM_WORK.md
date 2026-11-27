@@ -2,6 +2,8 @@
 
 ## 📌 Status terkini
 
+- AI-PUBLISHING-FORMATS (27 Nov, Codex, siap di `v2`, belum live): menu AI Ringkasan kini dapat membuat E-book, Artikel, dan Jurnal. Ada template khusus per format (3 buku, 2 artikel, 2 jurnal), bagian dapat diatur dan ditulis AI dari sumber, serta tombol Pratinjau sebelum ekspor DOCX/PDF/Flipbook. QA Playwright desktop 1440/HP 390: template, judul, urutan, pratinjau, bahasa Inggris, tanpa overflow/error JS; draf artikel tersimpan dan pulih setelah reload. Uji AI bab dengan respons tiruan, tes ringkasan JS, dan 27 tes notebook work Python lulus. PC owner yang men-deploy.
+
 - AI-BOOK-REORDER (27 Nov, Codex, siap di `v2`, belum live): daftar bab buku dapat diubah urutannya dengan drag pada desktop atau tombol ↑/↓ pada HP/keyboard. Judul, isi, dan nomor bab berpindah bersama sehingga draf dan ekspor tetap sesuai urutan baru. QA Playwright desktop 1440/HP 390: tombol dan drag memindahkan isi dengan benar, tanpa error JS/overflow; tes ringkasan JS dan 27 tes notebook work Python lulus. PC owner yang men-deploy.
 
 - AI-BOOK-TEMPLATES (27 Nov, Codex, `75f7896`, siap di `v2`, belum live): AI Ringkasan punya menu Buat buku, tiga template (nonfiksi, modul, panduan), judul bab bisa diubah/tambah/hapus, dan tiap bab dapat ditulis AI dari sumber terpilih. Draf buku tersimpan per notebook akun dan dapat diekspor DOCX/PDF atau dijadikan Flipbook. QA browser lokal desktop/HP tanpa overflow; PDF sumber → jawaban AI tiruan → rujukan → reload draf lulus; tes ringkasan JS dan 27 tes notebook work Python lulus. Suite Python penuh: 303 tes, 13 gagal di ekspektasi lama paywall AI (402 vs 503) dan podcast (502 vs 200), di luar berkas perubahan ini. PC owner perlu meninjau lalu deploy sesuai `release/README.md`.
