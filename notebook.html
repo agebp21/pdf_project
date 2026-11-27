@@ -29,8 +29,8 @@
   body{margin:0;min-height:100dvh;background:#FBFAF7;color:#1C1917}
   body::before{content:"";position:fixed;inset:0;pointer-events:none;opacity:.5;z-index:-1;
     background:radial-gradient(700px 420px at 50% 0%,#EDE9FE 0%,transparent 60%),radial-gradient(600px 500px at 95% 30%,#F3EFE6 0%,transparent 55%)}
-  .wrap{max-width:1500px;margin:0 auto;padding:12px 16px 56px}
-  .workspace{display:grid;grid-template-columns:320px minmax(0,1fr) 320px;grid-template-areas:"src view studio";gap:16px;align-items:start;margin-top:18px}
+  .wrap{max-width:1700px;margin:0 auto;padding:12px 16px 56px}
+  .workspace{display:grid;grid-template-columns:300px minmax(0,1fr) 300px;grid-template-areas:"src view studio";gap:12px;align-items:start;margin-top:18px}
   .sources{grid-area:src}.viewer{grid-area:view}.studio{grid-area:studio}
   .scope-bar{display:flex;align-items:center;gap:12px;margin:14px 0 -3px;padding:9px 13px;border:1px solid #E8E2D4;border-radius:13px;background:#fff;color:#57534E;font-size:12px}
   .scope-bar strong{color:#1A3C34;white-space:nowrap}.scope-bar span{min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -113,7 +113,7 @@
   .thoughts summary::-webkit-details-marker{display:none}
   .thoughts summary::before{content:'✦ ';}
   .thoughts-text{padding:0 12px 10px;font-size:12.5px;line-height:1.6;color:#57534E;white-space:pre-wrap}
-  .viewer{background:#fff;border:1px solid #ECE7DD;border-radius:20px;overflow:hidden;min-height:min(72vh,calc(100vh - 170px));display:flex;flex-direction:column}
+  .viewer{background:transparent;border:0;border-radius:0;overflow:hidden;min-height:min(72vh,calc(100vh - 170px));display:flex;flex-direction:column}
   .viewer-top{display:flex;flex-wrap:wrap;align-items:center;justify-content:flex-start;gap:10px;padding:10px 14px;background:#fff;color:#78716C;
     border-bottom:1px solid #F1ECE2;font-size:11px;font-weight:800;letter-spacing:.12em}
   .vtabs{display:flex;gap:6px;letter-spacing:0}
@@ -122,8 +122,9 @@
   .vtabs button[aria-selected=true]{background:#1C1917;border-color:#1C1917;color:#fff}
   .vtabs button[data-view=summary],.vtabs button[data-view=translate],.vtabs button[data-view=ask]{font-weight:800}
   .vtabs button[data-view=ask][aria-selected=true]{background:#FF5C28;border-color:#FF5C28}
-  .viewer-body{flex:1;padding:26px 22px;overflow:auto;max-height:78vh;background:#fff;display:flex;flex-direction:column;align-items:center}
+  .viewer-body{flex:1;padding:18px 6px;overflow:auto;max-height:78vh;background:transparent;display:flex;flex-direction:column;align-items:center}
   .sheet{width:100%;max-width:760px;min-height:min(60vh,calc(100vh - 220px));box-sizing:border-box;background:transparent;padding:14px 8px 40px;flex:none}
+  .sheet.overview{max-width:none}
   .viewer-empty{display:grid;place-content:center;text-align:center;color:#78716C;gap:4px}
   .doc-bar{max-width:800px;margin:0 auto 14px;justify-content:flex-end}
   .side .clay-btn-primary:not(:disabled),.side .clay-btn-ghost{background:#fff;color:#1C1917;border-color:#E4DED0;box-shadow:none}
@@ -154,7 +155,7 @@
   .viewer.document-chat .ask{flex:none;height:auto;background:#fff}
   .viewer.document-chat .overview{min-height:0;padding-bottom:8px}
   .viewer.document-chat .overview .chat-summary{border:0;padding-bottom:0}
-  .viewer.document-chat .chat-flow{width:100%;max-width:760px;padding:0 8px 24px}
+  .viewer.document-chat .chat-flow{width:100%;max-width:none;padding:0 8px 24px}
   .viewer.document-chat .chat-top{padding:0}
   .viewer.document-chat .chat-title{display:none}
   .viewer.document-chat .ask-log{padding:8px 0;gap:16px;overflow:visible}
@@ -238,7 +239,7 @@
   .ai-bar.is-out i{background:#B91C1C}
   .ai-buy{justify-self:center;padding:5px 14px;border-radius:999px;background:#1A3C34;color:#fff;font-weight:700;text-decoration:none}
   .ai-buy:hover{background:#244f45}
-  .composer{max-width:760px;margin:0 auto;display:flex;align-items:flex-end;gap:8px;border:1.5px solid #E4DED0;border-radius:24px;padding:8px 8px 8px 16px;background:#fff;box-shadow:0 6px 20px rgba(28,25,23,.06);transition:border-color .15s}
+  .composer{width:100%;max-width:none;margin:0 auto;display:flex;align-items:flex-end;gap:8px;border:1.5px solid #E4DED0;border-radius:24px;padding:8px 8px 8px 16px;background:#fff;box-shadow:0 6px 20px rgba(28,25,23,.06);transition:border-color .15s}
   .composer:focus-within{border-color:#FF5C28}
   .composer textarea{flex:1;min-width:0;border:0;outline:none;resize:none;max-height:180px;padding:7px 0;background:transparent;font:500 15px/1.5 'Plus Jakarta Sans',system-ui,sans-serif;color:#1C1917}
   .ask-send{flex:none;width:38px;height:38px;border-radius:50%;border:0;display:grid;place-items:center;color:#fff;background:#1C1917;cursor:pointer;transition:background .15s,transform .15s}
@@ -251,7 +252,7 @@
   .vpanel .result{max-height:none;border:0;background:transparent;padding:0;font-size:15px;line-height:1.75}
   .vpanel textarea.result{width:100%;box-sizing:border-box;min-height:60vh;border:1px solid #EFE9DC;border-radius:10px;padding:12px 14px;background:#fff}
   .vpanel .mini{margin-top:14px}
-  @media (max-width:1180px){.workspace{grid-template-columns:320px minmax(0,1fr);grid-template-areas:"src view" "studio studio"}}
+  @media (max-width:1180px){.workspace{grid-template-columns:300px minmax(0,1fr);grid-template-areas:"src view" "studio studio"}}
   @media (max-width:900px){.workspace{grid-template-columns:1fr;grid-template-areas:"src" "view" "studio"}.viewer{min-height:50vh}.viewer-body{max-height:none;padding:12px}.sheet{min-height:50vh;padding:10px 4px 30px}}
   /* "Open My Library" popup — same card look as the shared Add-source dialog (assets/add-source.js) */
   .lib-dialog{position:fixed;inset:0;z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px;background:rgba(28,25,23,.45);backdrop-filter:blur(3px)}
