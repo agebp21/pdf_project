@@ -2,6 +2,8 @@
 
 ## 📌 Status terkini
 
+- AI-SUMMARY-WIDE (27 Nov, Codex): kode `62d05cd` live. Bingkai panel tengah dilepas, area Intisari dan Chat melebar; sidebar sumber/studio tetap. QA desktop/HP tanpa overflow, tes ringkasan JS dan 27 tes Python lulus. Backup dan verifikasi live di `DEPLOY.md`.
+
 - WEEKLY-EMAIL-LOGO (26 Nov, Claude, PC owner): kode `9a9f11b` live dari `v2`. Footer email Laporan Mingguan memakai logo inline (`cid:mfbp-logo`) dan teks "laporan otomatis" dihapus; hanya `weekly_report.py`. Pengiriman otomatis tetap MATI (`enabled=false`). Belum dicek di kotak masuk sungguhan: kirim satu tes manual dari Admin → Laporan Mingguan.
 
 - ADMIN-WEEKLY-AUTO-OFF (26 Nov, Claude, PC owner): pengiriman otomatis Laporan Mingguan DIMATIKAN atas permintaan owner (`enabled=false` di `.data/weekly-report.json`; konfigurasi saja, kode tetap `161aea1`). Kirim manual dan pratinjau PDF tetap jalan; hidupkan lagi lewat sakelar "Kirim otomatis" di panel. Jangan menimpa `.data/weekly-report.json` saat deploy. Detail di `DEPLOY.md`.
