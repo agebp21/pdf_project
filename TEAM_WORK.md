@@ -2,6 +2,8 @@
 
 ## 📌 Status terkini
 
+- AI-DOCUMENT-CHAT-UNIFIED (27 Nov, Codex): kode `1d7e7ac` live. Strip putih terpisah di bawah dokumen dihapus; composer Chat dan indikator kuota mengikuti latar panel tengah. QA desktop/HP tanpa overflow, tes ringkasan JS dan 27 tes Python lulus. Backup/verifikasi di `DEPLOY.md`.
+
 - AI-SUMMARY-WIDE (27 Nov, Codex): kode `62d05cd` live. Bingkai panel tengah dilepas, area Intisari dan Chat melebar; sidebar sumber/studio tetap. QA desktop/HP tanpa overflow, tes ringkasan JS dan 27 tes Python lulus. Backup dan verifikasi live di `DEPLOY.md`.
 
 - WEEKLY-EMAIL-LOGO (26 Nov, Claude, PC owner): kode `9a9f11b` live dari `v2`. Footer email Laporan Mingguan memakai logo inline (`cid:mfbp-logo`) dan teks "laporan otomatis" dihapus; hanya `weekly_report.py`. Pengiriman otomatis tetap MATI (`enabled=false`). Belum dicek di kotak masuk sungguhan: kirim satu tes manual dari Admin → Laporan Mingguan.
